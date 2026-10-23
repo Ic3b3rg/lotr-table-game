@@ -34,6 +34,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
+      schemaVersion: 1,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
@@ -50,7 +51,25 @@ export class Store {
     const secret = this.db.prepare('SELECT value FROM settings WHERE key = ?').get('cookie-secret');
     if (typeof secret?.value !== 'string') throw new Error('Chiave locale non disponibile');
     this.cookieSecret = secret.value;
+    this.upgradeUnversionedSession();
     this.read(); // Fail on incompatible data; never replace it with a blank table.
+  }
+
+  private upgradeUnversionedSession() {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
+      if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
+      const raw: unknown = JSON.parse(row.data);
+      if (raw && typeof raw === 'object' && !Array.isArray(raw) && !('schemaVersion' in raw)) {
+        const migrated = StateSchema.parse({ ...raw, schemaVersion: 1 });
+        this.db.prepare('UPDATE session SET data = ? WHERE id = 1').run(JSON.stringify(migrated));
+      }
+      this.db.exec('COMMIT');
+    } catch (error) {
+      if (this.db.isTransaction) this.db.exec('ROLLBACK');
+      throw error;
+    }
   }
 
   read(): State {
@@ -215,6 +234,7 @@ export function advance(state: State) {
 
 export function publicSession(state: State) {
   return {
+    schemaVersion: state.schemaVersion,
     id: state.id,
     generation: state.generation,
     revision: state.revision,

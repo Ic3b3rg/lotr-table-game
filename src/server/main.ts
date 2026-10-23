@@ -46,11 +46,14 @@ const server = createServer(async (req, res) => {
   try {
     const host = req.headers.host ?? '';
     const session = publicSession(store.read());
-    const allowedHosts = new Set([
-      `127.0.0.1:${port}`,
-      `localhost:${port}`,
-      ...addresses(port, session.id).map((item) => `${item.address}:${port}`),
-    ]);
+    const lanAddresses = addresses(port, session.id, config.bind);
+    const servedHosts =
+      config.bind === '0.0.0.0'
+        ? ['127.0.0.1', 'localhost', ...lanAddresses.map((item) => item.address)]
+        : config.bind === '127.0.0.1'
+          ? [config.bind, 'localhost']
+          : [config.bind];
+    const allowedHosts = new Set(servedHosts.map((address) => `${address}:${port}`));
     if (!allowedHosts.has(host))
       throw new ApiError(403, 'HOST_DENIED', 'Apri l’indirizzo mostrato dal PC.');
     if (req.headers.origin && req.headers.origin !== `http://${host}`)
@@ -63,13 +66,16 @@ const server = createServer(async (req, res) => {
       limitRecovery(req.socket.remoteAddress ?? 'unknown');
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
     const canManageBackups = () =>
-      Boolean(identity(req, store) || req.socket.remoteAddress === '127.0.0.1');
+      Boolean(
+        identity(req, store) ||
+          (req.socket.remoteAddress && req.socket.remoteAddress === req.socket.localAddress),
+      );
     if (req.method === 'GET' && url.pathname === '/api/me')
       return json(res, { player: identity(req, store), canManageBackups: canManageBackups() });
     if (req.method === 'GET' && url.pathname === '/api/host')
-      return json(res, { addresses: addresses(port, session.id) });
+      return json(res, { addresses: lanAddresses, isLoopbackOnly: config.bind.startsWith('127.') });
     if (req.method === 'GET' && url.pathname === '/api/qr') {
-      const selected = addresses(port, session.id).find(
+      const selected = lanAddresses.find(
         (item) => item.address === url.searchParams.get('address'),
       );
       if (!selected) throw new ApiError(422, 'INVALID_ADDRESS', 'Scegli un indirizzo del PC.');
@@ -168,7 +174,7 @@ server.listen(config.port, config.bind, () => {
   const actual = server.address();
   if (!actual || typeof actual === 'string') throw new Error('Indirizzo host non disponibile');
   port = actual.port;
-  console.log(`HOST_READY http://127.0.0.1:${port}`);
+  console.log(`HOST_READY http://${config.bind === '0.0.0.0' ? '127.0.0.1' : config.bind}:${port}`);
   console.log('Apri il tavolo nel browser. Per fermare l’host premi Ctrl+C.');
 });
 function stop() {

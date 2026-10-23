@@ -90,6 +90,9 @@ async function poll() {
 async function invitation() {
   try {
     const host = HostSchema.parse(await request('/api/host'));
+    element('#no-network').textContent = host.isLoopbackOnly
+      ? 'L’host è avviato solo su questo PC. Consulta le istruzioni di avvio per abilitare il collegamento dei telefoni.'
+      : 'Collega il PC alla rete Wi-Fi o Ethernet per mostrare il QR.';
     const select = element<HTMLSelectElement>('#address');
     const previous = select.value;
     select.replaceChildren(

@@ -33,6 +33,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
+  schemaVersion: z.literal(1),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -76,6 +77,7 @@ export const BackupPreviewSchema = z.object({
   }),
 });
 export const HostSchema = z.object({
+  isLoopbackOnly: z.boolean(),
   addresses: z.array(z.object({ address: z.ipv4(), label: z.string(), joinUrl: z.url() })),
 });
 export type Session = z.infer<typeof SessionSchema>;
