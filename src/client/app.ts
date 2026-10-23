@@ -1,30 +1,23 @@
-import { HostSchema, SessionSchema, type Session } from '../shared/protocol';
+import { HostSchema, IdentitySchema, SessionSchema, type Session } from '../shared/protocol';
 import { element, text } from './dom';
+import { request } from './api';
+import { setOnline } from './actions';
+import { personalView } from './personal';
 
 const personal = location.pathname === '/join';
 element('#personal').hidden = !personal;
 element('#invitation').hidden = personal;
-let connected = false;
 let revision = -1;
-
-async function request(path: string, body?: unknown): Promise<unknown> {
-  const response = await fetch(path, {
-    ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(5000),
-  });
-  const result: unknown = await response.json();
-  if (!response.ok) {
-    const message = typeof result === 'object' && result !== null && 'error' in result && typeof result.error === 'object' && result.error !== null && 'message' in result.error ? String(result.error.message) : 'Il PC non ha completato la richiesta.';
-    throw new Error(message);
-  }
-  return result;
-}
+let generation = '';
+let refreshing: Promise<void> | null = null;
+const personalController = personal ? personalView(sync) : null;
 
 function renderSession(session: Session) {
-  if (revision === session.revision) return;
+  if (generation === session.generation && revision === session.revision) return;
+  generation = session.generation;
   revision = session.revision;
   element('#count').textContent = `${session.players.length} / 5`;
-  element('#saved').textContent = `Aggiornato alle ${new Date(session.updatedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+  element('#saved').textContent = `Salvato sul PC · ${new Date(session.updatedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
   const rows = Array.from({ length: 5 }, (_, index) => {
     const player = session.players[index];
     const row = text('li', '', `player${player ? '' : ' empty'}`);
@@ -38,37 +31,31 @@ function renderSession(session: Session) {
 }
 
 function setConnection(value: boolean) {
-  connected = value;
+  setOnline(value);
   const status = element('#connection');
   status.textContent = value ? 'Collegato al PC' : 'Collegamento interrotto · riprovo…';
   status.classList.toggle('offline', !value);
-  element<HTMLButtonElement>('#join-form button').disabled = !value;
 }
 
-async function refresh() {
-  try { renderSession(SessionSchema.parse(await request('/api/session'))); setConnection(true); }
-  catch { setConnection(false); }
-  finally { setTimeout(refresh, 1000); }
+function sync(): Promise<void> {
+  refreshing ??= (async () => {
+    try {
+      const session = SessionSchema.parse(await request('/api/session'));
+      const me = personalController ? IdentitySchema.parse(await request('/api/me')) : null;
+      renderSession(session);
+      personalController?.update(session, me?.player ?? null);
+      const requestedSession = new URL(location.href).searchParams.get('session');
+      if (personal && requestedSession && requestedSession !== session.id) {
+        element('#notice').textContent = 'Questo QR appartiene a un’altra sessione. Inquadra il QR corrente sul PC.';
+        element('#notice').hidden = false;
+        setConnection(false);
+      } else { setConnection(true); }
+    } catch { setConnection(false); }
+    finally { refreshing = null; }
+  })();
+  return refreshing;
 }
-
-element<HTMLFormElement>('#join-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  if (!connected) return;
-  const error = element('#form-error');
-  error.hidden = true;
-  const button = element<HTMLButtonElement>('#join-form button');
-  button.disabled = true;
-  try {
-    await request('/api/players', { name: element<HTMLInputElement>('#player-name').value });
-    element('#join-form').hidden = true;
-    element('#joined').hidden = false;
-    element('#personal-title').textContent = 'Benvenuto al tavolo.';
-    element('#welcome').textContent = element<HTMLInputElement>('#player-name').value;
-  } catch (cause) {
-    error.textContent = cause instanceof Error ? cause.message : 'Ingresso non riuscito.';
-    error.hidden = false;
-  } finally { button.disabled = !connected; }
-});
+async function poll() { await sync(); setTimeout(poll, 1000); }
 
 async function invitation() {
   try {
@@ -91,5 +78,5 @@ async function invitation() {
     update();
   } catch { element('#no-network').hidden = false; }
 }
-void refresh();
+void poll();
 if (!personal) void invitation();

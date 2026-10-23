@@ -1,15 +1,17 @@
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
 import QRCode from 'qrcode';
-import { JoinSchema, type Session } from '../shared/protocol';
+import { JoinSchema, RecoverSchema } from '../shared/protocol';
 import { ApiError } from './errors';
 import { headers, input, json } from './http';
 import { addresses } from './network';
+import { Store, publicSession } from './store';
+import { identity, joinPlayer, recoverPlayer, setIdentity } from './identity';
 
 const config = z.object({ port: z.coerce.number().int().min(0).max(65535), bind: z.ipv4() }).parse({ port: process.env.LOTR_PORT ?? 4317, bind: process.env.LOTR_BIND ?? '0.0.0.0' });
-const session: Session = { id: randomUUID(), revision: 0, updatedAt: new Date().toISOString(), players: [] };
+process.umask(0o077);
+const store = new Store();
 let port = config.port;
 const staticFiles = new Map([['/', 'index.html'], ['/join', 'index.html'], ['/app.js', 'app.js'], ['/style.css', 'style.css']]);
 
@@ -19,11 +21,13 @@ const server = createServer(async (req, res) => {
   headers(res);
   try {
     const host = req.headers.host ?? '';
+    const session = publicSession(store.read());
     const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, ...addresses(port, session.id).map(item => `${item.address}:${port}`)]);
     if (!allowedHosts.has(host)) throw new ApiError(403, 'HOST_DENIED', 'Apri l’indirizzo mostrato dal PC.');
     if (req.headers.origin && req.headers.origin !== `http://${host}`) throw new ApiError(403, 'ORIGIN_DENIED', 'Apri la sessione direttamente dal suo indirizzo.');
     const url = new URL(req.url ?? '/', `http://${host}`);
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
+    if (req.method === 'GET' && url.pathname === '/api/me') return json(res, { player: identity(req, store) });
     if (req.method === 'GET' && url.pathname === '/api/host') return json(res, { addresses: addresses(port, session.id) });
     if (req.method === 'GET' && url.pathname === '/api/qr') {
       const selected = addresses(port, session.id).find(item => item.address === url.searchParams.get('address'));
@@ -34,12 +38,15 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/players') {
       const body = await input(req, JoinSchema);
-      if (session.players.length >= 5) throw new ApiError(409, 'TABLE_FULL', 'Il tavolo ha già cinque giocatori.');
-      const player = { id: randomUUID(), name: body.name };
-      session.players.push(player);
-      session.revision++;
-      session.updatedAt = new Date().toISOString();
-      return json(res, { player, session }, 201);
+      const player = joinPlayer(store, body);
+      setIdentity(res, store, player);
+      return json(res, { player, session: publicSession(store.read()) }, 201);
+    }
+    if (req.method === 'POST' && url.pathname === '/api/recover') {
+      const body = await input(req, RecoverSchema);
+      const player = recoverPlayer(store, body.recoveryCode, body.generation);
+      setIdentity(res, store, player);
+      return json(res, { player });
     }
     const asset = staticFiles.get(url.pathname);
     if (req.method === 'GET' && asset) {
@@ -65,5 +72,6 @@ server.listen(config.port, config.bind, () => {
   console.log(`HOST_READY http://127.0.0.1:${port}`);
   console.log('Apri il tavolo nel browser. Per fermare l’host premi Ctrl+C.');
 });
-process.once('SIGTERM', () => server.close());
-process.once('SIGINT', () => server.close());
+function stop() { server.close(() => store.close()); }
+process.once('SIGTERM', stop);
+process.once('SIGINT', stop);

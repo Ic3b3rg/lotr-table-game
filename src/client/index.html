@@ -32,9 +32,11 @@
         <a class="button secondary wide" href="/join" target="_blank" rel="noopener">Partecipa da questo PC <span aria-hidden="true">↗</span></a>
       </section>
       <section id="personal" class="personal panel" aria-labelledby="personal-title" hidden>
-        <p class="eyebrow">IL TUO POSTO NELLA COMPAGNIA</p><h2 id="personal-title">Come ti chiami?</h2>
-        <form id="join-form"><label for="player-name">Nome del giocatore</label><input id="player-name" name="name" maxlength="32" autocomplete="nickname" required placeholder="Il tuo nome"><button class="button wide" type="submit">Entra al tavolo <span aria-hidden="true">→</span></button></form>
-        <div id="joined" hidden><p id="welcome" class="welcome"></p><p>Il tuo posto è pronto. Questo è il primo passo verso il tavolo di gioco.</p></div>
+        <p class="eyebrow">IL TUO POSTO NELLA COMPAGNIA</p><h2 id="personal-title" tabindex="-1">Come ti chiami?</h2>
+        <form id="join-form"><label for="player-name">Nome del giocatore</label><input id="player-name" name="name" maxlength="32" autocomplete="nickname" required placeholder="Il tuo nome"><button class="button wide" type="submit" data-write>Entra al tavolo <span aria-hidden="true">→</span></button></form>
+        <div id="joined" hidden><p id="welcome" class="welcome"></p><p>Il browser ricorda il tuo posto. Se cambi dispositivo, usa il codice personale.</p></div>
+        <div id="recovery-note" class="recovery-note" hidden><label for="my-code">Il tuo codice personale</label><input id="my-code" readonly spellcheck="false" aria-describedby="code-help"><p class="footnote" id="code-help">Conservalo per recuperare il posto su un altro dispositivo. Tocca il codice per selezionarlo; è visibile solo qui, durante l’ingresso.</p></div>
+        <details id="recover-details"><summary>Hai già un posto? Recuperalo</summary><form id="recover-form"><label for="recover-code">Codice personale</label><input id="recover-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"><button class="button secondary wide" type="submit" data-write>Riprendi il tuo posto</button></form></details>
         <p class="form-error" id="form-error" role="alert" hidden></p>
         <a class="text-link" href="/">Apri la vista condivisa</a>
       </section>
