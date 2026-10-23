@@ -1,6 +1,6 @@
 # Primo traguardo: una sessione locale recuperabile
 
-**Stato: approvata dal proprietario il 23 ottobre 2026.** La specifica e i ticket definitivi sono pubblicati su GitHub. Questa bozza non costituisce una riduzione del perimetro del gioco completo.
+**Stato: approvata dal proprietario il 23 ottobre 2026.** La specifica e i ticket definitivi sono pubblicati su GitHub. Questo traguardo non costituisce una riduzione del perimetro del gioco completo.
 
 Riferimenti: [mappa del progetto](https://github.com/Ic3b3rg/lotr-table-game/issues/1), [decisione sulla sessione](https://github.com/Ic3b3rg/lotr-table-game/issues/6), [ricerca sull'host locale](../research/offline-host-options.md), [perimetro confermato](../adr/0001-gioco-digitale-completo-in-rete-locale.md).
 
