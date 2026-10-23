@@ -30,6 +30,8 @@ Questo rende disponibili testi italiani originali dell'app. Non dimostra che tut
 
 Il successivo [confronto dei componenti base](base-component-coverage.md) censisce 703 modelli e verifica 155 percorsi immagine. Il prodotto base collega sei eroi, sei ruoli, 78 modelli oggetto con quantità complessiva 83 e 44 facce delle 22 tessere viaggio. Le abilità condividono modelli e presentano discrepanze di riferimenti e quantità: non si può trasformare direttamente l'inventario dell'app nelle 343 carte fisiche. La matrice documenta per ogni famiglia identità, quantità, immagini e testi ancora da verificare; i campioni distinguono nomi italiani da istruzioni o effetti completi.
 
+La [riconciliazione delle identità delle carte](base-card-identity-reconciliation.md) risolve tutte le 32 associazioni oggetto rimaste aperte dopo il confronto del solo nome interno e spiega le discrepanze delle abilità. Conserva separate associazioni confermate, candidate e conflitti senza correzione supportata; non traduce ancora il corpus e non certifica tutti gli effetti stampati.
+
 ## Dati strutturati e limite della decodifica
 
 `resources.assets` contiene, fra l'altro, 414 Texture2D e 9.106 MonoBehaviour; `sharedassets0.assets` contiene 2.354 MonoBehaviour, inclusi oggetti nominati come avventure. Questi conteggi descrivono contenitori misti, non il catalogo della sola scatola base.
