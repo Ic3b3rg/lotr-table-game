@@ -6,7 +6,11 @@ export function addresses(port: number, sessionId: string): HostInfo['addresses'
   for (const [label, interfaces] of Object.entries(networkInterfaces())) {
     for (const item of interfaces ?? []) {
       if (item.family === 'IPv4' && !item.internal) {
-        result.push({ address: item.address, label: `${label} · ${item.address}`, joinUrl: `http://${item.address}:${port}/join?session=${sessionId}` });
+        result.push({
+          address: item.address,
+          label: `${label} · ${item.address}`,
+          joinUrl: `http://${item.address}:${port}/join?session=${sessionId}`,
+        });
       }
     }
   }

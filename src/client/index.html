@@ -1,55 +1,171 @@
 <!doctype html>
 <html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#172a24">
-  <title>Viaggi · Tavolo locale</title>
-  <link rel="stylesheet" href="/style.css">
-  <script type="module" src="/app.js"></script>
-</head>
-<body>
-  <header class="masthead">
-    <a class="brand" href="/" aria-label="Viaggi, tavolo condiviso"><span class="brand-mark" aria-hidden="true">✧</span><span>VIAGGI<small>NELLA TERRA DI MEZZO</small></span></a>
-    <p class="connection" id="connection" role="status">Collegamento al PC…</p>
-  </header>
-  <main>
-    <div class="page-heading"><p class="eyebrow">IL TUO TAVOLO, NELLA STESSA STANZA</p><h1>La compagnia si riunisce.</h1><p class="lede">Un PC al centro. Un posto per ognuno.</p></div>
-    <p id="notice" class="notice" role="status" hidden></p>
-    <div class="table-layout">
-      <section class="company panel" aria-labelledby="company-title">
-        <div class="section-heading"><div><p class="eyebrow">I COMPAGNI DI VIAGGIO</p><h2 id="company-title">Il tavolo</h2></div><span id="count" class="count">0 / 5</span></div>
-        <ol id="players" class="players"></ol>
-        <p class="footnote" id="session-note">La vista condivisa non occupa un posto giocatore.</p>
-      </section>
-      <section id="invitation" class="invitation panel" aria-labelledby="invitation-title">
-        <p class="eyebrow">PRENDI POSTO</p><h2 id="invitation-title">Entra con il telefono</h2>
-        <p>Collegati alla stessa rete Wi-Fi del PC e inquadra il codice.</p>
-        <div class="qr-frame"><img id="qr" width="224" height="224" alt="QR per entrare nella sessione" hidden><p id="no-network" hidden>Collega il PC alla rete Wi-Fi o Ethernet per mostrare il QR.</p></div>
-        <label for="address">Indirizzo del PC</label><select id="address"></select>
-        <a id="join-url" class="join-url"></a>
-        <p class="footnote">Puoi anche digitare l’indirizzo nel browser. Internet non serve.</p>
-        <a class="button secondary wide" href="/join" target="_blank" rel="noopener">Partecipa da questo PC <span aria-hidden="true">↗</span></a>
-      </section>
-      <section id="personal" class="personal panel" aria-labelledby="personal-title" hidden>
-        <p class="eyebrow">IL TUO POSTO NELLA COMPAGNIA</p><h2 id="personal-title" tabindex="-1">Come ti chiami?</h2>
-        <form id="join-form"><label for="player-name">Nome del giocatore</label><input id="player-name" name="name" maxlength="32" autocomplete="nickname" required placeholder="Il tuo nome"><button class="button wide" type="submit" data-write>Entra al tavolo <span aria-hidden="true">→</span></button></form>
-        <div id="joined" hidden><p id="welcome" class="welcome"></p><p>Il browser ricorda il tuo posto. Se cambi dispositivo, usa il codice personale.</p></div>
-        <div id="recovery-note" class="recovery-note" hidden><label for="my-code">Il tuo codice personale</label><input id="my-code" readonly spellcheck="false" aria-describedby="code-help"><p class="footnote" id="code-help">Conservalo per recuperare il posto su un altro dispositivo. Tocca il codice per selezionarlo; è visibile solo qui, durante l’ingresso.</p></div>
-        <details id="recover-details"><summary>Hai già un posto? Recuperalo</summary><form id="recover-form"><label for="recover-code">Codice personale</label><input id="recover-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"><button class="button secondary wide" type="submit" data-write>Riprendi il tuo posto</button></form></details>
-        <p class="form-error" id="form-error" role="alert" hidden></p>
-        <a class="text-link" href="/">Apri la vista condivisa</a>
-      </section>
-      <section class="demo panel" aria-labelledby="demo-title">
-        <p class="eyebrow">PRIMA DI PARTIRE</p><h2 id="demo-title">Prova il collegamento</h2>
-        <p id="demo-status" class="demo-status" role="status" tabindex="-1">Collegamento al tavolo…</p><p id="demo-help" class="footnote"></p>
-        <div id="demo-controls" hidden><button id="new-demo" class="button" data-write>Apri una nuova prova <span aria-hidden="true">→</span></button>
-          <form id="demo-form" hidden><label class="check-label"><input id="agreed" type="checkbox" required> Il gruppo ha concordato il segnale da inviare.</label><div class="button-row"><button class="button" type="submit" value="A" data-write>Conferma segnale A</button><button class="button secondary" type="submit" value="B" data-write>Conferma segnale B</button></div></form>
-        </div>
-        <p class="form-error" id="demo-error" role="alert" hidden></p><p class="footnote">È solo una prova di collegamento, senza effetti sulla campagna.</p>
-      </section>
-    </div>
-    <footer class="page-footer"><span class="small-mark" aria-hidden="true">✧</span><p>Sessione dimostrativa · collegamento del tavolo<br><span>Carte, mappa e campagna saranno aggiunte nei prossimi traguardi.</span></p><p id="saved" class="save-note">Stato locale</p></footer>
-  </main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#172a24" />
+    <title>Viaggi · Tavolo locale</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="Viaggi, tavolo condiviso"
+        ><span class="brand-mark" aria-hidden="true">✧</span
+        ><span>VIAGGI<small>NELLA TERRA DI MEZZO</small></span></a
+      >
+      <p class="connection" id="connection" role="status">Collegamento al PC…</p>
+    </header>
+    <main>
+      <div class="page-heading">
+        <p class="eyebrow">IL TUO TAVOLO, NELLA STESSA STANZA</p>
+        <h1>La compagnia si riunisce.</h1>
+        <p class="lede">Un PC al centro. Un posto per ognuno.</p>
+      </div>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <div class="table-layout">
+        <section class="company panel" aria-labelledby="company-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">I COMPAGNI DI VIAGGIO</p>
+              <h2 id="company-title">Il tavolo</h2>
+            </div>
+            <span id="count" class="count">0 / 5</span>
+          </div>
+          <ol id="players" class="players"></ol>
+          <p class="footnote" id="session-note">
+            La vista condivisa non occupa un posto giocatore.
+          </p>
+        </section>
+        <section id="invitation" class="invitation panel" aria-labelledby="invitation-title">
+          <p class="eyebrow">PRENDI POSTO</p>
+          <h2 id="invitation-title">Entra con il telefono</h2>
+          <p>Collegati alla stessa rete Wi-Fi del PC e inquadra il codice.</p>
+          <div class="qr-frame">
+            <img id="qr" width="224" height="224" alt="QR per entrare nella sessione" hidden />
+            <p id="no-network" hidden>
+              Collega il PC alla rete Wi-Fi o Ethernet per mostrare il QR.
+            </p>
+          </div>
+          <label for="address">Indirizzo del PC</label
+          ><select id="address"></select>
+          <a id="join-url" class="join-url"></a>
+          <p class="footnote">Puoi anche digitare l’indirizzo nel browser. Internet non serve.</p>
+          <a class="button secondary wide" href="/join" target="_blank" rel="noopener"
+            >Partecipa da questo PC <span aria-hidden="true">↗</span></a
+          >
+        </section>
+        <section id="personal" class="personal panel" aria-labelledby="personal-title" hidden>
+          <p class="eyebrow">IL TUO POSTO NELLA COMPAGNIA</p>
+          <h2 id="personal-title" tabindex="-1">Come ti chiami?</h2>
+          <form id="join-form">
+            <label for="player-name">Nome del giocatore</label
+            ><input
+              id="player-name"
+              name="name"
+              maxlength="32"
+              autocomplete="nickname"
+              required
+              placeholder="Il tuo nome"
+            /><button class="button wide" type="submit" data-write>
+              Entra al tavolo <span aria-hidden="true">→</span>
+            </button>
+          </form>
+          <div id="joined" hidden>
+            <p id="welcome" class="welcome"></p>
+            <p>Il browser ricorda il tuo posto. Se cambi dispositivo, usa il codice personale.</p>
+          </div>
+          <div id="recovery-note" class="recovery-note" hidden>
+            <label for="my-code">Il tuo codice personale</label
+            ><input id="my-code" readonly spellcheck="false" aria-describedby="code-help" />
+            <p class="footnote" id="code-help">
+              Conservalo per recuperare il posto su un altro dispositivo. Tocca il codice per
+              selezionarlo; è visibile solo qui, durante l’ingresso.
+            </p>
+          </div>
+          <details id="recover-details">
+            <summary>Hai già un posto? Recuperalo</summary>
+            <form id="recover-form">
+              <label for="recover-code">Codice personale</label
+              ><input
+                id="recover-code"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="64"
+                required
+                placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+              /><button class="button secondary wide" type="submit" data-write>
+                Riprendi il tuo posto
+              </button>
+            </form>
+          </details>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+          <a class="text-link" href="/">Apri la vista condivisa</a>
+        </section>
+        <section class="demo panel" aria-labelledby="demo-title">
+          <p class="eyebrow">PRIMA DI PARTIRE</p>
+          <h2 id="demo-title">Prova il collegamento</h2>
+          <p id="demo-status" class="demo-status" role="status" tabindex="-1">
+            Collegamento al tavolo…
+          </p>
+          <p id="demo-help" class="footnote"></p>
+          <div id="demo-controls" hidden>
+            <button id="new-demo" class="button" data-write>
+              Apri una nuova prova <span aria-hidden="true">→</span>
+            </button>
+            <form id="demo-form" hidden>
+              <label class="check-label"
+                ><input id="agreed" type="checkbox" required /> Il gruppo ha concordato il segnale
+                da inviare.</label
+              >
+              <div class="button-row">
+                <button class="button" type="submit" value="A" data-write>Conferma segnale A</button
+                ><button class="button secondary" type="submit" value="B" data-write>
+                  Conferma segnale B
+                </button>
+              </div>
+            </form>
+          </div>
+          <p class="form-error" id="demo-error" role="alert" hidden></p>
+          <p class="footnote">È solo una prova di collegamento, senza effetti sulla campagna.</p>
+        </section>
+        <section id="backups" class="backups panel" aria-labelledby="backup-title" hidden>
+          <p class="eyebrow">CONSERVA IL VIAGGIO</p>
+          <h2 id="backup-title">Una copia del tavolo</h2>
+          <p class="footnote">
+            Il PC salva già ogni azione. Esporta una copia per conservarla anche altrove.
+          </p>
+          <button id="export-backup" class="button secondary" data-write>
+            Esporta la sessione <span aria-hidden="true">↓</span>
+          </button>
+          <details>
+            <summary>Ripristina da un file</summary>
+            <label for="backup-file">Copia della sessione (.json)</label
+            ><input id="backup-file" type="file" accept=".json,application/json" />
+            <div id="restore-preview" hidden>
+              <p id="restore-summary" class="footnote"></p>
+              <p class="footnote">
+                Il tavolo attuale verrà sostituito. Conservane prima una copia se vuoi mantenerlo.
+              </p>
+              <button id="restore-backup" class="button wide" data-write>
+                Controlla e ripristina
+              </button>
+            </div>
+          </details>
+          <p id="backup-status" class="footnote" role="status"></p>
+          <p id="backup-error" class="form-error" role="alert" hidden></p>
+        </section>
+      </div>
+      <footer class="page-footer">
+        <span class="small-mark" aria-hidden="true">✧</span>
+        <p>
+          Sessione dimostrativa · collegamento del tavolo<br /><span
+            >Carte, mappa e campagna saranno aggiunte nei prossimi traguardi.</span
+          >
+        </p>
+        <p id="saved" class="save-note">Stato locale</p>
+      </footer>
+    </main>
+  </body>
 </html>

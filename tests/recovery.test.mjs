@@ -2,10 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startHost, joinPlayer } from './host-helper.mjs';
 
-test('una conferma di ingresso sopravvive a un arresto improvviso e il codice recupera lo stesso posto', async t => {
+test('una conferma di ingresso sopravvive a un arresto improvviso e il codice recupera lo stesso posto', async (t) => {
   const first = await startHost();
   let current = first;
-  t.after(async () => { await current.stop(); await first.dispose(); });
+  t.after(async () => {
+    await current.stop();
+    await first.dispose();
+  });
   const player = await joinPlayer(first, 'Ada');
   assert.equal(player.status, 201);
   const before = await (await first.request('/api/session')).json();
@@ -15,7 +18,10 @@ test('una conferma di ingresso sopravvive a un arresto improvviso e il codice re
   assert.deepEqual(after, before);
   const me = await (await current.request('/api/me', undefined, player.cookie)).json();
   assert.equal(me.player.id, player.body.player.id);
-  const recovered = await current.request('/api/recover', { recoveryCode: player.recoveryCode.toLowerCase(), generation: after.generation });
+  const recovered = await current.request('/api/recover', {
+    recoveryCode: player.recoveryCode.toLowerCase(),
+    generation: after.generation,
+  });
   assert.equal(recovered.status, 200);
   assert.equal((await recovered.json()).player.id, player.body.player.id);
   assert.ok(recovered.headers.get('set-cookie')?.includes('HttpOnly'));
@@ -24,18 +30,25 @@ test('una conferma di ingresso sopravvive a un arresto improvviso e il codice re
   assert.equal(JSON.stringify(after).includes('recoveryHash'), false);
 });
 
-test('recuperare a tavolo pieno e ripetere un ingresso non aggiunge giocatori', async t => {
+test('recuperare a tavolo pieno e ripetere un ingresso non aggiunge giocatori', async (t) => {
   const host = await startHost();
   t.after(() => host.dispose());
   const first = await joinPlayer(host, 'Ada');
-  for (const name of ['Ada', 'Ciro', 'Dora', 'Elio']) assert.equal((await joinPlayer(host, name)).status, 201);
+  for (const name of ['Ada', 'Ciro', 'Dora', 'Elio'])
+    assert.equal((await joinPlayer(host, name)).status, 201);
   const replay = await host.request('/api/players', first.input);
   assert.equal(replay.status, 201);
   assert.equal((await replay.json()).player.id, first.body.player.id);
   const before = await (await host.request('/api/session')).json();
-  const invalid = await host.request('/api/recover', { recoveryCode: 'F'.repeat(24), generation: before.generation });
+  const invalid = await host.request('/api/recover', {
+    recoveryCode: 'F'.repeat(24),
+    generation: before.generation,
+  });
   assert.equal(invalid.status, 401);
-  const recovered = await host.request('/api/recover', { recoveryCode: first.recoveryCode, generation: before.generation });
+  const recovered = await host.request('/api/recover', {
+    recoveryCode: first.recoveryCode,
+    generation: before.generation,
+  });
   assert.equal(recovered.status, 200);
   assert.equal((await recovered.json()).player.id, first.body.player.id);
   const after = await (await host.request('/api/session')).json();
@@ -44,7 +57,7 @@ test('recuperare a tavolo pieno e ripetere un ingresso non aggiunge giocatori', 
   assert.equal(changedIntent.status, 409);
 });
 
-test('un cookie malformato non provoca un errore del server o accesso a un giocatore', async t => {
+test('un cookie malformato non provoca un errore del server o accesso a un giocatore', async (t) => {
   const host = await startHost();
   t.after(() => host.dispose());
   const player = await joinPlayer(host, 'Ada');

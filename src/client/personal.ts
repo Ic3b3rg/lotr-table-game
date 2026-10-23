@@ -10,14 +10,22 @@ export function personalView(sync: () => Promise<void>) {
   let previousPlayer: string | null = null;
   const error = element('#form-error');
   const showError = (cause: unknown) => {
-    error.textContent = cause instanceof RequestError ? cause.message : 'Collegamento interrotto. Attendi la riconnessione e riprova la stessa richiesta.';
+    error.textContent =
+      cause instanceof RequestError
+        ? cause.message
+        : 'Collegamento interrotto. Attendi la riconnessione e riprova la stessa richiesta.';
     error.hidden = false;
   };
-  element<HTMLFormElement>('#join-form').addEventListener('submit', event => {
+  element<HTMLFormElement>('#join-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void action(async () => {
       error.hidden = true;
-      pendingJoin ??= { name: element<HTMLInputElement>('#player-name').value.trim(), requestId: randomIntent(), recoveryCode: randomIntent(), generation };
+      pendingJoin ??= {
+        name: element<HTMLInputElement>('#player-name').value.trim(),
+        requestId: randomIntent(),
+        recoveryCode: randomIntent(),
+        generation,
+      };
       const code = element<HTMLInputElement>('#my-code');
       code.value = pendingJoin.recoveryCode.match(/.{4}/g)?.join('-') ?? pendingJoin.recoveryCode;
       element('#recovery-note').hidden = false;
@@ -32,20 +40,25 @@ export function personalView(sync: () => Promise<void>) {
       }
     });
   });
-  element<HTMLFormElement>('#recover-form').addEventListener('submit', event => {
+  element<HTMLFormElement>('#recover-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void action(async () => {
       error.hidden = true;
       try {
-        await request('/api/recover', { recoveryCode: element<HTMLInputElement>('#recover-code').value, generation });
+        await request('/api/recover', {
+          recoveryCode: element<HTMLInputElement>('#recover-code').value,
+          generation,
+        });
         element<HTMLInputElement>('#recover-code').value = '';
         element<HTMLDetailsElement>('#recover-details').open = false;
         await sync();
         element('#personal-title').focus();
-      } catch (cause) { showError(cause); }
+      } catch (cause) {
+        showError(cause);
+      }
     });
   });
-  element<HTMLInputElement>('#my-code').addEventListener('click', event => {
+  element<HTMLInputElement>('#my-code').addEventListener('click', (event) => {
     if (event.target instanceof HTMLInputElement) event.target.select();
   });
   return {
@@ -54,14 +67,17 @@ export function personalView(sync: () => Promise<void>) {
         pendingJoin = null;
         element('#recovery-note').hidden = true;
         element<HTMLInputElement>('#my-code').value = '';
-        element('#notice').textContent = 'La sessione è cambiata. Recupera il tuo posto con il codice personale.';
+        element('#notice').textContent =
+          'La sessione è cambiata. Recupera il tuo posto con il codice personale.';
         element('#notice').hidden = false;
       }
       generation = session.generation;
       element('#join-form').hidden = Boolean(player);
       element('#joined').hidden = !player;
       element('#recover-details').hidden = Boolean(player);
-      element('#personal-title').textContent = player ? 'Il tuo posto è pronto.' : 'Come ti chiami?';
+      element('#personal-title').textContent = player
+        ? 'Il tuo posto è pronto.'
+        : 'Come ti chiami?';
       element('#welcome').textContent = player?.name ?? '';
       if (previousPlayer && !player) element('#recovery-note').hidden = true;
       previousPlayer = player?.id ?? null;

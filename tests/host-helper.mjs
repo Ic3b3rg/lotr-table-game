@@ -7,19 +7,36 @@ import { randomBytes, randomUUID } from 'node:crypto';
 
 export async function startHost(extraEnv = {}) {
   const ownsDirectory = !extraEnv.LOTR_DATA_DIR;
-  const dataDir = extraEnv.LOTR_DATA_DIR ?? await mkdtemp(join(tmpdir(), 'lotr-host-test-'));
+  const dataDir = extraEnv.LOTR_DATA_DIR ?? (await mkdtemp(join(tmpdir(), 'lotr-host-test-')));
   const child = spawn(process.execPath, ['dist/host.mjs'], {
-    env: { ...process.env, LOTR_BIND: '127.0.0.1', LOTR_PORT: '0', LOTR_DATA_DIR: dataDir, ...extraEnv },
+    env: {
+      ...process.env,
+      LOTR_BIND: '127.0.0.1',
+      LOTR_PORT: '0',
+      LOTR_DATA_DIR: dataDir,
+      ...extraEnv,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let diagnostics = '';
-  child.stderr.on('data', chunk => { diagnostics += chunk; });
+  child.stderr.on('data', (chunk) => {
+    diagnostics += chunk;
+  });
   const url = await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { child.kill(); reject(new Error(`Host non avviato: ${diagnostics}`)); }, 8000);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`Host terminato (${code}): ${diagnostics}`)); });
-    child.stdout.on('data', chunk => {
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`Host non avviato: ${diagnostics}`));
+    }, 8000);
+    child.once('exit', (code) => {
+      clearTimeout(timer);
+      reject(new Error(`Host terminato (${code}): ${diagnostics}`));
+    });
+    child.stdout.on('data', (chunk) => {
       const match = String(chunk).match(/HOST_READY (http:\/\/[^\s]+)/);
-      if (match) { clearTimeout(timer); resolve(match[1]); }
+      if (match) {
+        clearTimeout(timer);
+        resolve(match[1]);
+      }
     });
   });
   return {
@@ -38,7 +55,10 @@ export async function startHost(extraEnv = {}) {
     async request(path, body, cookie) {
       return fetch(url + path, {
         method: body === undefined ? 'GET' : 'POST',
-        headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(cookie ? { cookie } : {}) },
+        headers: {
+          ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+          ...(cookie ? { cookie } : {}),
+        },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
     },
@@ -51,5 +71,11 @@ export async function joinPlayer(host, name) {
   const input = { name, requestId: randomUUID(), recoveryCode, generation: session.generation };
   const response = await host.request('/api/players', input);
   const body = await response.json();
-  return { status: response.status, body, recoveryCode, input, cookie: response.headers.get('set-cookie')?.split(';')[0] };
+  return {
+    status: response.status,
+    body,
+    recoveryCode,
+    input,
+    cookie: response.headers.get('set-cookie')?.split(';')[0],
+  };
 }
