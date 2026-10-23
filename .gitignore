@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.*
+*.sqlite*
+.scratch/
+.DS_Store
+coverage/
+artifacts/
