@@ -2,12 +2,13 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
 import QRCode from 'qrcode';
-import { JoinSchema, RecoverSchema } from '../shared/protocol';
+import { CommandSchema, JoinSchema, RecoverSchema } from '../shared/protocol';
 import { ApiError } from './errors';
 import { headers, input, json } from './http';
 import { addresses } from './network';
 import { Store, publicSession } from './store';
 import { identity, joinPlayer, recoverPlayer, setIdentity } from './identity';
+import { performCommand } from './commands';
 
 const config = z.object({ port: z.coerce.number().int().min(0).max(65535), bind: z.ipv4() }).parse({ port: process.env.LOTR_PORT ?? 4317, bind: process.env.LOTR_BIND ?? '0.0.0.0' });
 process.umask(0o077);
@@ -47,6 +48,13 @@ const server = createServer(async (req, res) => {
       const player = recoverPlayer(store, body.recoveryCode, body.generation);
       setIdentity(res, store, player);
       return json(res, { player });
+    }
+    if (req.method === 'POST' && url.pathname === '/api/commands') {
+      const player = identity(req, store);
+      if (!player) throw new ApiError(401, 'SEAT_REQUIRED', 'Entra o recupera il tuo posto per continuare.');
+      const command = await input(req, CommandSchema);
+      const receipt = performCommand(store, player.id, command);
+      return json(res, { receipt, session: publicSession(store.read()) });
     }
     const asset = staticFiles.get(url.pathname);
     if (req.method === 'GET' && asset) {

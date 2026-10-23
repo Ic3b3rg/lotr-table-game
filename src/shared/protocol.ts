@@ -6,15 +6,25 @@ export const RecoveryCodeSchema = z.string().max(64).transform(value => value.re
 export const JoinSchema = z.strictObject({ name: NameSchema, requestId: IntentIdSchema, recoveryCode: RecoveryCodeSchema, generation: z.uuid() });
 export const RecoverSchema = z.strictObject({ recoveryCode: RecoveryCodeSchema, generation: z.uuid() });
 export const PlayerSchema = z.strictObject({ id: z.uuid(), name: NameSchema });
+export const DemoSchema = z.strictObject({ id: z.uuid(), choice: z.enum(['A', 'B']).nullable(), resolvedBy: z.uuid().nullable() });
 export const SessionSchema = z.strictObject({
   id: z.uuid(), generation: z.uuid(), revision: z.int().nonnegative(), updatedAt: z.iso.datetime(),
   players: z.array(PlayerSchema).max(5),
+  demo: DemoSchema.nullable().default(null),
 });
 export const IdentitySchema = z.object({ player: PlayerSchema.nullable() });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
+export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({ ...CommandBase, type: z.literal('OPEN_DEMO'), expectedDemoId: z.uuid().nullable() }),
+  z.strictObject({ ...CommandBase, type: z.literal('RESOLVE_DEMO'), demoId: z.uuid(), choice: z.enum(['A', 'B']), agreed: z.literal(true) }),
+]);
+export const ReceiptSchema = z.strictObject({ requestId: IntentIdSchema, type: z.enum(['OPEN_DEMO', 'RESOLVE_DEMO']), appliedRevision: z.int().nonnegative(), demoId: z.uuid(), choice: z.enum(['A', 'B']).nullable() });
 export const HostSchema = z.object({
   addresses: z.array(z.object({ address: z.ipv4(), label: z.string(), joinUrl: z.url() })),
 });
 export type Session = z.infer<typeof SessionSchema>;
 export type HostInfo = z.infer<typeof HostSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
+export type Command = z.infer<typeof CommandSchema>;
+export type Receipt = z.infer<typeof ReceiptSchema>;

@@ -3,14 +3,17 @@ import { element, text } from './dom';
 import { request } from './api';
 import { setOnline } from './actions';
 import { personalView } from './personal';
+import { demoView } from './demo';
 
 const personal = location.pathname === '/join';
 element('#personal').hidden = !personal;
 element('#invitation').hidden = personal;
+document.body.classList.toggle('personal-mode', personal);
 let revision = -1;
 let generation = '';
 let refreshing: Promise<void> | null = null;
 const personalController = personal ? personalView(sync) : null;
+const demoController = demoView(sync);
 
 function renderSession(session: Session) {
   if (generation === session.generation && revision === session.revision) return;
@@ -44,6 +47,7 @@ function sync(): Promise<void> {
       const me = personalController ? IdentitySchema.parse(await request('/api/me')) : null;
       renderSession(session);
       personalController?.update(session, me?.player ?? null);
+      demoController.update(session, me?.player ?? null);
       const requestedSession = new URL(location.href).searchParams.get('session');
       if (personal && requestedSession && requestedSession !== session.id) {
         element('#notice').textContent = 'Questo QR appartiene a un’altra sessione. Inquadra il QR corrente sul PC.';

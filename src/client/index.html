@@ -40,6 +40,14 @@
         <p class="form-error" id="form-error" role="alert" hidden></p>
         <a class="text-link" href="/">Apri la vista condivisa</a>
       </section>
+      <section class="demo panel" aria-labelledby="demo-title">
+        <p class="eyebrow">PRIMA DI PARTIRE</p><h2 id="demo-title">Prova il collegamento</h2>
+        <p id="demo-status" class="demo-status" role="status" tabindex="-1">Collegamento al tavolo…</p><p id="demo-help" class="footnote"></p>
+        <div id="demo-controls" hidden><button id="new-demo" class="button" data-write>Apri una nuova prova <span aria-hidden="true">→</span></button>
+          <form id="demo-form" hidden><label class="check-label"><input id="agreed" type="checkbox" required> Il gruppo ha concordato il segnale da inviare.</label><div class="button-row"><button class="button" type="submit" value="A" data-write>Conferma segnale A</button><button class="button secondary" type="submit" value="B" data-write>Conferma segnale B</button></div></form>
+        </div>
+        <p class="form-error" id="demo-error" role="alert" hidden></p><p class="footnote">È solo una prova di collegamento, senza effetti sulla campagna.</p>
+      </section>
     </div>
     <footer class="page-footer"><span class="small-mark" aria-hidden="true">✧</span><p>Sessione dimostrativa · collegamento del tavolo<br><span>Carte, mappa e campagna saranno aggiunte nei prossimi traguardi.</span></p><p id="saved" class="save-note">Stato locale</p></footer>
   </main>
