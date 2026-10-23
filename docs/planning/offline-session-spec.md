@@ -4,6 +4,8 @@
 
 Riferimenti: [mappa del progetto](https://github.com/Ic3b3rg/lotr-table-game/issues/1), [decisione sulla sessione](https://github.com/Ic3b3rg/lotr-table-game/issues/6), [ricerca sull'host locale](../research/offline-host-options.md), [perimetro confermato](../adr/0001-gioco-digitale-completo-in-rete-locale.md).
 
+Tracker: [specifica e task collegati](https://github.com/Ic3b3rg/lotr-table-game/issues/8).
+
 ## Problem Statement
 
 Il gruppo vuole giocare a Viaggi nella Terra di Mezzo interamente in digitale, allo stesso tavolo e senza Internet. Prima di integrare regole, carte e campagna serve un percorso concreto per aprire una sessione sul PC, collegare i telefoni e conservare ciò che accade. Attualmente il repository contiene documentazione e ricerche, ma nessuna applicazione eseguibile.

@@ -2,6 +2,8 @@
 
 **Stato: suddivisione e prove approvate dal proprietario il 23 ottobre 2026.** Questo documento conserva la proposta approvata; lo stato dei task è sul tracker GitHub. [Specifica](offline-session-spec.md).
 
+Tracker: [specifica e task collegati](https://github.com/Ic3b3rg/lotr-table-game/issues/9).
+
 ## Suddivisione approvata
 
 1. **Aprire il tavolo e accogliere fino a cinque giocatori tramite QR.** Nessun blocco di implementazione. Consegna: avvio locale, vista condivisa, ingresso da telefono o PC e partecipanti visibili su tutti gli schermi.
