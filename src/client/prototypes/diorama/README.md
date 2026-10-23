@@ -35,6 +35,8 @@ Il codice della prova viene conservato sul ramo `prototype/diorama-25d`, come fo
 
 Il 23 ottobre 2026 il proprietario ha riferito di aver completato una battaglia e apprezzato la prova. Il punto da correggere riguarda personaggio e nemici troppo grandi rispetto al terreno. La rifinitura li riduce di circa un terzo, con una scala comune legata alla profondità e aggiornata durante la camminata; anche la freccia e i testi degli esiti seguono la nuova altezza. Le proporzioni della scena rimangono dimostrative e non attestano la fedeltà al gioco originale.
 
+Il proprietario ha poi confermato la direzione 2.5D dopo il chiarimento sulle mappe: le quattro zone sono il campo di prova, mentre il gioco completo dovrà rispettare estensione, collegamenti ed esplorazione degli scenari originali. La domanda di coinvolgimento della prova è risolta positivamente; questo non equivale a una nuova verifica su telefoni fisici o Windows.
+
 ## Verifiche
 
 TypeScript e formattazione controllati. Prova in Chrome su Mac con viewport 1440×900 e 390×844, quest'ultimo con tocco e movimento ridotto emulati: viaggio, Tiro mirato, attacco, vittoria, crescita, Guardia e fase Ombra. Bersagli delle zone da 44 CSS pixel anche quando la mappa è ridotta; nessun overflow orizzontale nel formato telefono verificato. Nessun errore o avviso console durante i flussi controllati.
