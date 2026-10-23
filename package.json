@@ -10,6 +10,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node dist/host.mjs",
+    "prototype": "node scripts/prototype.mjs",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check src scripts tests package.json tsconfig.json",
     "test": "npm run build && node --test tests/*.test.mjs"

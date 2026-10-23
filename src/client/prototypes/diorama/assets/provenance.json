@@ -1,0 +1,34 @@
+{
+  "purpose": "Risorse originali della prova visiva 2.5D, non catalogo del gioco",
+  "assets": [
+    {
+      "file": "terrain.png",
+      "prompt": "Edit this approved 2.5D fantasy game concept into a CLEAN ENVIRONMENT PLATE ONLY, landscape 16:10. Preserve exactly its painterly forest, winding left path, luminous river, stone bridge across the ravine, far ruined arch and distant trees, lighting, spatial perspective and visual quality. Remove ALL user interface, portraits, cards, buttons, top strip, every word and label, all glowing zone boundaries, all path dots, all target markers. Remove EVERY character and creature, including the ranger, elf and dwarf at lower left and the enemies near the far ruin. Reconstruct continuous original-looking scenery where they were, including the bottom quarter which must now show real forest terrain and river. Keep the left foreground path broadly open and walkable and the central bridge clearly readable. This will be the background for separately animated game characters. Do not add objects, people or lettering. Full-frame clean original scene, opaque background.",
+      "tool": "image_gen",
+      "date": "2026-10-23"
+    },
+    {
+      "file": "ranger.png",
+      "prompt": "Use the ranger hero from the reference only as a character and painterly style reference. Create a production-oriented 2D CHARACTER SPRITE ATLAS on REAL TRANSPARENT background. Exactly FOUR equal-width columns and TWO equal-height rows, eight total cells, no gutters or borders, no text, no shadows outside the figure. Every cell contains the SAME full-body human male ranger, dark brown shoulder-length hair and beard, moss-green cloak, brown leather outfit and boots, carrying a long bow and quiver. Three-quarter isometric camera viewed from slightly above, face and body facing toward upper right of screen, feet near the same baseline, consistent figure size centered in each cell, generous clearance from cell edges. Row one cells 1-4: four successive distinct walk cycle poses moving upper right, alternating legs and cloak motion. Row two cell 1: relaxed standing idle holding bow; cell 2: planted aiming bow, fully drawn arrow toward upper right; cell 3: recoiling from impact with cloak swept back; cell 4: relaxed victorious stance raising bow slightly. Exactly eight clearly separated full-body figures in exact 4x2 rectangular grid; same scale and baseline in all cells. Detailed hand-painted premium fantasy CRPG sprite style matching the reference scenery, crisp silhouette, visually readable at small size, not a photograph and not pixel art. No terrain, ground plane, UI, drop-shadow disks, labels, arrows, weapons floating between figures, or watermark. True alpha transparency.",
+      "tool": "image_gen",
+      "date": "2026-10-23"
+    },
+    {
+      "file": "sentinel.png",
+      "prompt": "Create a production-oriented 2D fantasy ENEMY SPRITE ATLAS with REAL TRANSPARENT background. Exactly FOUR equal-width columns in ONE row, four total equal cells, no borders, no text or labels. Same full-body small dark-armored humanoid woodland sentinel with weathered dark iron helmet, ragged brown cloth, sword and small wooden shield, in every cell. Isometric camera viewed from slightly above, facing lower-left toward an opponent. Hand-painted premium realistic fantasy CRPG sprite illustration, crisp readable silhouette, earthy colors and slate armor matching a mossy forest ruin environment. Four cells left to right: 1 standing idle, 2 recoiling backward from impact, 3 lunging sword attack toward lower-left, 4 collapsed defeated on ground. Same scale and feet baseline, whole figure contained in each cell with margin; last collapsed figure centered in its own cell. This is a separated game sprite sheet, not a scene or character lineup on a ground plane. No scenery, ground shadows, disks, extra characters, UI, letters or watermark. True transparent alpha background.",
+      "tool": "image_gen",
+      "date": "2026-10-23"
+    },
+    {
+      "file": "portrait.png",
+      "prompt": "Using the selected male ranger portrait in the lower-left of the reference as the only character/style reference, create a refined original painterly CHARACTER PORTRAIT asset. Portrait 3:4 composition, head, shoulders and chest of the same dark-haired bearded human ranger with expressive face, weathered green cloak clasp, brown leather, visible quiver, calm determined gaze toward upper right. Rich premium fantasy RPG illustrated portrait, detailed hand-painted face and fabric, warm rim light against a subdued deep evergreen forest background. Face occupies the upper half with clear silhouette and strong readable expression. No labels, frame, UI, lettering, stats, cards, buttons or watermark. Opaque image.",
+      "tool": "image_gen",
+      "date": "2026-10-23"
+    }
+  ],
+  "font": {
+    "name": "Cormorant Garamond",
+    "source": "https://github.com/google/fonts/tree/main/ofl/cormorantgaramond",
+    "license": "OFL.txt"
+  }
+}

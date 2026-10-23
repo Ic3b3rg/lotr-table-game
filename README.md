@@ -37,6 +37,8 @@ Se ci sono più indirizzi, scegliere quello della Wi-Fi/Ethernet condivisa con i
 
 ## Sviluppo e verifiche
 
+Sul ramo `prototype/diorama-25d` è disponibile la [prova visiva del diorama](src/client/prototypes/diorama/README.md): avviarla con `npm run prototype` e aprire [la scena](http://127.0.0.1:4320/prototype/diorama). È indipendente dal tavolo salvato e usa valori e abilità dimostrativi.
+
 ```sh
 npm run typecheck
 npm run format:check

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101c20" />
+    <title>Il guado dimenticato · Prototipo 2.5D</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="i-bow" viewBox="0 0 24 24">
+          <path d="M5 3c10 0 16 6 16 16M5 3l16 16M4 20 19 5m-7 0h7v7" />
+        </symbol>
+        <symbol id="i-step" viewBox="0 0 24 24">
+          <path
+            d="m6 4 3 1 2 7-3 2-4-4ZM8 16l4 1 1 4-5 1-3-2Zm9-14 3 3-1 6-4-1-1-5Zm-2 12 4 1 1 4-5 2-2-3Z"
+          />
+        </symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24">
+          <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+          <path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6Z" />
+        </symbol>
+        <symbol id="i-book" viewBox="0 0 24 24">
+          <path d="M12 5v16M12 5C8 2 3 3 3 3v16s5-1 9 2c4-3 9-2 9-2V3s-5-1-9 2Z" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14" /></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+        <symbol id="i-target" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="7" />
+          <path d="M12 1v6m0 10v6M1 12h6m10 0h6" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="m5 5 14 14M5 19 19 5" /></symbol>
+        <symbol id="i-sound" viewBox="0 0 24 24">
+          <path d="M3 9h4l5-5v16l-5-5H3Zm13-2c3 3 3 7 0 10m3-13c5 5 5 11 0 16" />
+        </symbol>
+        <symbol id="i-leaf" viewBox="0 0 24 24">
+          <path d="M4 21 19 6M5 17C-1 7 9 1 21 3c1 12-6 21-16 14Z" />
+        </symbol>
+      </defs>
+    </svg>
+    <header class="topbar">
+      <a class="wordmark" href="/prototype/diorama">Viaggi<span>Un eroe, un'avventura</span></a>
+      <div class="phase" aria-live="polite">
+        <span id="phase-name">Fase Azione</span><span id="round">Round 1</span>
+      </div>
+      <div class="top-actions">
+        <button id="history-open">
+          <svg><use href="#i-book" /></svg><span>Cronaca</span>
+        </button>
+        <button id="sound" aria-pressed="false">
+          <svg><use href="#i-sound" /></svg><span>Audio spento</span>
+        </button>
+        <button id="help-open" class="help-button" aria-label="Come provare il diorama">?</button>
+      </div>
+    </header>
+    <main id="prototype" aria-label="Prototipo di una scena tattica">
+      <div
+        id="stage"
+        class="stage"
+        tabindex="0"
+        aria-label="Terreno di gioco. Trascina per spostare la visuale."
+      >
+        <div id="world" class="world">
+          <img
+            class="terrain"
+            src="/assets/terrain.png"
+            width="1600"
+            height="1000"
+            alt="Bosco dipinto con un sentiero, un ponte di pietra sul fiume e rovine."
+            draggable="false"
+          />
+          <svg id="zones" class="zone-outlines" viewBox="0 0 1600 1000" aria-hidden="true">
+            <path id="outline-0" d="M230 530 Q290 440 400 465L565 545 570 650Q420 735 275 650Z" />
+            <path id="outline-1" d="M440 465 555 365Q650 325 790 365L805 475 565 545Z" />
+            <path id="outline-2" d="M790 365 960 354 1150 415 1120 475 805 475Z" />
+            <path id="outline-3" d="M1025 240 1150 210 1370 240 1360 340 1150 415 1035 350Z" />
+            <path id="route" class="route" d="" />
+          </svg>
+          <div id="zone-buttons"></div>
+          <button id="hero" class="actor hero" aria-label="Aragorn: apri la scheda dell'eroe">
+            <span class="ground-ring" aria-hidden="true"></span
+            ><span class="actor-sprite" id="hero-sprite" aria-hidden="true"></span
+            ><span class="actor-label">Aragorn</span>
+          </button>
+          <button
+            id="enemy"
+            class="actor enemy"
+            aria-label="Seleziona la sentinella, bersaglio di prova"
+          >
+            <span class="ground-ring" aria-hidden="true"></span
+            ><span class="actor-sprite" id="enemy-sprite" aria-hidden="true"></span
+            ><span class="enemy-label">Sentinella<span id="enemy-health">3 / 3</span></span>
+          </button>
+          <div id="effects" class="effects" aria-hidden="true"></div>
+        </div>
+        <section class="objective" aria-labelledby="scene-title">
+          <h1 id="scene-title">Il guado dimenticato</h1>
+          <p id="objective">Raggiungi il ponte e libera il guado.</p>
+          <span>Scena dimostrativa originale</span>
+        </section>
+        <div class="camera-controls" aria-label="Visuale della mappa">
+          <button id="zoom-in" aria-label="Avvicina la visuale">
+            <svg><use href="#i-plus" /></svg></button
+          ><button id="zoom-out" aria-label="Allontana la visuale">
+            <svg><use href="#i-minus" /></svg></button
+          ><button id="center" aria-label="Centra su Aragorn">
+            <svg><use href="#i-target" /></svg>
+          </button>
+        </div>
+        <div id="phase-banner" class="phase-banner" hidden></div>
+        <div id="victory" class="victory" hidden>
+          <p>Il guado è libero.</p>
+          <span>La compagnia può riprendere il cammino.</span
+          ><button id="camp-open">All'accampamento</button>
+        </div>
+        <p id="loading" class="loading" role="status">Il bosco prende forma…</p>
+      </div>
+      <div class="hud">
+        <button
+          id="character-open"
+          class="hero-card"
+          aria-label="Scheda di Aragorn, ruolo, equipaggiamento e crescita"
+        >
+          <img src="/assets/portrait.png" alt="Ritratto illustrato di Aragorn" /><span
+            class="hero-card-copy"
+            ><strong>Aragorn</strong><span>Guardiano · prova visiva</span
+            ><span class="hero-stats"
+              ><span>Danni <b id="damage">0</b></span
+              ><span id="guard-state">Nessuna protezione</span></span
+            ></span
+          >
+        </button>
+        <section class="skill-hand" aria-label="Abilità dimostrative">
+          <button class="skill" id="skill-0" aria-pressed="false">
+            <span class="card-art art-step"></span><svg><use href="#i-step" /></svg
+            ><strong>Passo rapido</strong><span>Un movimento extra</span
+            ><small>Abilità di prova</small></button
+          ><button class="skill" id="skill-1" aria-pressed="false">
+            <span class="card-art art-aim"></span><svg><use href="#i-bow" /></svg
+            ><strong>Tiro mirato</strong><span>Potenzia un attacco</span
+            ><small>Abilità di prova</small></button
+          ><button class="skill" id="skill-2" aria-pressed="false">
+            <span class="card-art art-guard"></span><svg><use href="#i-shield" /></svg
+            ><strong>Guardia</strong><span>Proteggi l'eroe</span><small>Abilità di prova</small>
+          </button>
+        </section>
+        <section class="action-panel" aria-label="Azioni dell'eroe">
+          <div class="turn-status">
+            <span id="actions-count">2 azioni disponibili</span
+            ><button id="end-turn">Termina turno</button>
+          </div>
+          <nav class="action-modes" aria-label="Tipo di azione">
+            <button id="mode-move" aria-pressed="true">
+              <svg><use href="#i-step" /></svg>Viaggia</button
+            ><button id="mode-attack" aria-pressed="false">
+              <svg><use href="#i-bow" /></svg>Attacca</button
+            ><button id="mode-interact" aria-pressed="false">
+              <svg><use href="#i-eye" /></svg>Interagisci
+            </button>
+          </nav>
+          <div class="action-copy">
+            <strong id="action-title">Scegli una destinazione</strong>
+            <p id="action-help">Tocca una zona vicina sul terreno.</p>
+          </div>
+          <div class="confirm-row">
+            <button id="confirm" class="primary" disabled>Conferma movimento</button
+            ><button id="cancel" class="quiet" hidden>Annulla</button>
+          </div>
+          <p id="feedback" class="feedback" role="status" aria-live="polite">Aragorn è pronto.</p>
+        </section>
+      </div>
+    </main>
+    <footer class="prototype-footer">
+      <span>Prototipo 2.5D · valori ed effetti dimostrativi</span
+      ><label><input type="checkbox" id="reduce-motion" /> Movimento ridotto</label
+      ><button id="restart">Ricomincia la prova</button>
+    </footer>
+    <dialog id="character-dialog" class="character-dialog">
+      <button class="dialog-close" data-close aria-label="Chiudi la scheda">
+        <svg><use href="#i-close" /></svg>
+      </button>
+      <div class="character-art"><img src="/assets/portrait.png" alt="Aragorn, il tuo eroe" /></div>
+      <section class="character-details">
+        <h2>Aragorn</h2>
+        <p class="role-name">Guardiano · anteprima del personaggio</p>
+        <p>Un volto, le tue abilità e le scelte che lo faranno crescere.</p>
+        <dl>
+          <dt>Equipaggiamento</dt>
+          <dd>Arco da viaggio · oggetto dimostrativo</dd>
+          <dt>Abilità preparate</dt>
+          <dd>Passo rapido, Tiro mirato, Guardia</dd>
+          <dt>Danni nella prova</dt>
+          <dd id="sheet-damage">0</dd>
+          <dt>Esperienza della prova</dt>
+          <dd id="sheet-xp">0</dd>
+        </dl>
+        <div class="growth">
+          <svg><use href="#i-leaf" /></svg>
+          <div>
+            <h3 id="growth-title">La crescita comincia dal viaggio.</h3>
+            <p id="growth-copy">
+              Libera il guado per provare l'accampamento e acquisire un'abilità dimostrativa.
+            </p>
+            <button id="learn" class="primary" hidden>
+              Acquisisci Difesa salda · 1 esperienza
+            </button>
+          </div>
+        </div>
+        <p class="fine-print">
+          Questa scheda esplora l'interfaccia. Nomi delle abilità, costi ed effetti della prova non
+          costituiscono il catalogo ufficiale.
+        </p>
+        <button class="quiet" data-close>Torna al terreno</button>
+      </section>
+    </dialog>
+    <dialog id="history-dialog" class="small-dialog">
+      <button class="dialog-close" data-close aria-label="Chiudi la cronaca">
+        <svg><use href="#i-close" /></svg>
+      </button>
+      <h2>La cronaca del guado</h2>
+      <ol id="history-list"></ol>
+      <button class="quiet" data-close>Torna al terreno</button>
+    </dialog>
+    <dialog id="story-dialog" class="small-dialog">
+      <button class="dialog-close" data-close aria-label="Chiudi la scena">
+        <svg><use href="#i-close" /></svg>
+      </button>
+      <h2>Tracce nel muschio</h2>
+      <p>
+        Tra le pietre del ponte riconosci impronte recenti. Oltre l'acqua, una figura sorveglia le
+        rovine. Il sentiero prosegue proprio da quella parte.
+      </p>
+      <p class="fine-print">Scena originale per la prova visiva.</p>
+      <button class="primary" data-close>Riprendi il viaggio</button>
+    </dialog>
+    <dialog id="help-dialog" class="small-dialog">
+      <button class="dialog-close" data-close aria-label="Chiudi le istruzioni">
+        <svg><use href="#i-close" /></svg>
+      </button>
+      <h2>Un turno da vivere</h2>
+      <p>
+        La prova serve a sentire il controllo dell'eroe: movimento, abilità e combattimento. È
+        indipendente dal tavolo salvato.
+      </p>
+      <ol>
+        <li>Tocca una zona vicina e conferma. Un viaggio permette due movimenti.</li>
+        <li>Prova una carta abilità; leggine l'effetto e conferma.</li>
+        <li>Dal ponte puoi selezionare la sentinella e confermare l'attacco.</li>
+        <li>Termina il turno per vedere la fase Ombra; dopo la vittoria visita l'accampamento.</li>
+      </ol>
+      <p>
+        Trascina il terreno per esplorarlo; usa i comandi della visuale per avvicinarti o tornare
+        all'eroe. Audio facoltativo e movimento ridotto sono disponibili.
+      </p>
+      <p class="fine-print">
+        Un eroe e un bersaglio, valori inventati per la dimostrazione. Non è il motore completo
+        delle regole. Nessun salvataggio: ricaricando la pagina la prova ricomincia. Nessuna
+        sincronizzazione tra dispositivi.
+      </p>
+      <button class="primary" data-close>Entra nel bosco</button>
+    </dialog>
+  </body>
+</html>
