@@ -16,6 +16,10 @@ La mappa è un ambiente dipinto a strati; l'eroe è una figura separata che si m
 
 Selezione e anteprima precedono la conferma. Il personaggio ha pose separate per camminata, attacco e reazione; gli effetti seguono l'esito, senza calcolarlo. La camera si può spostare e centrare. Movimento ridotto e audio disattivabile sono disponibili. Su telefono la mappa resta esplorabile e i comandi si dispongono sotto di essa.
 
+## Riscontro sulla scala
+
+Il 23 ottobre 2026 il proprietario ha completato una battaglia e apprezzato la prova; ha indicato come sproporzionati personaggio e nemici rispetto al terreno. La rifinitura riduce le figure di circa un terzo e usa la stessa profondità del suolo per entrambe, con variazione continua durante il movimento. Nomi e comandi conservano la leggibilità e un'area di tocco minima da 44 CSS pixel. La scala è una scelta visiva del diorama, non una proporzione certificata dell'originale.
+
 ## Limite del prototipo
 
 La scena e le abilità della prova sono dichiaratamente dimostrative, con stato soltanto in memoria. La prova non stabilisce valori, carte o eccezioni alle regole del catalogo definitivo. Il salvataggio della sessione reale non viene letto o modificato.

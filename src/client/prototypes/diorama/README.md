@@ -31,6 +31,10 @@ Ambiente, ritratto e atlanti delle pose sono risorse generate per questo prototi
 
 Il codice della prova viene conservato sul ramo `prototype/diorama-25d`, come fonte per la successiva implementazione. Non va promosso direttamente a motore completo delle regole. Mappa reale, contenuti italiani, mazzi, multiplayer e salvataggio della partita richiedono i rispettivi moduli di prodotto.
 
+## Riscontro del proprietario
+
+Il 23 ottobre 2026 il proprietario ha riferito di aver completato una battaglia e apprezzato la prova. Il punto da correggere riguarda personaggio e nemici troppo grandi rispetto al terreno. La rifinitura li riduce di circa un terzo, con una scala comune legata alla profondità e aggiornata durante la camminata; anche la freccia e i testi degli esiti seguono la nuova altezza. Le proporzioni della scena rimangono dimostrative e non attestano la fedeltà al gioco originale.
+
 ## Verifiche
 
 TypeScript e formattazione controllati. Prova in Chrome su Mac con viewport 1440×900 e 390×844, quest'ultimo con tocco e movimento ridotto emulati: viaggio, Tiro mirato, attacco, vittoria, crescita, Guardia e fase Ombra. Bersagli delle zone da 44 CSS pixel anche quando la mappa è ridotta; nessun overflow orizzontale nel formato telefono verificato. Nessun errore o avviso console durante i flussi controllati.

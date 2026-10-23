@@ -136,7 +136,12 @@ function canAttack() {
 function frame(sprite: HTMLElement, index: number, rows: number) {
   sprite.style.backgroundPosition = `${((index % 4) * 100) / 3}% ${rows === 1 ? 0 : Math.floor(index / 4) * 100}%`;
 }
-function position(actor: HTMLElement, location: Place, size: number) {
+function actorHeight(location: Place) {
+  // Both figures follow the painted ground's depth, including between zones.
+  return 74 + location.y * 0.07;
+}
+function position(actor: HTMLElement, location: Place) {
+  const size = actorHeight(location);
   actor.style.left = `${location.x}px`;
   actor.style.top = `${location.y}px`;
   actor.style.height = `${size}px`;
@@ -207,8 +212,8 @@ function render() {
   );
   enemy.classList.toggle('defeated', state.enemyHealth === 0);
   if (!busy) {
-    position(hero, place(state.zone), 176 - state.zone * 13);
-    position(enemy, enemyPosition(), 151 - state.enemyZone * 6);
+    position(hero, place(state.zone));
+    position(enemy, enemyPosition());
     frame(heroSprite, state.phase === 'victory' ? 7 : 4, 2);
     frame(enemySprite, state.enemyHealth === 0 ? 3 : 0, 1);
   }
@@ -363,8 +368,11 @@ async function moveActor(actor: HTMLElement, from: Place, to: Place, walking: bo
   await new Promise<void>((resolve) => {
     function tick(now: number) {
       const t = reduced() ? 1 : Math.min(1, (now - start) / duration);
-      actor.style.left = `${from.x + (to.x - from.x) * t}px`;
-      actor.style.top = `${from.y + (to.y - from.y) * t}px`;
+      position(actor, {
+        name: to.name,
+        x: from.x + (to.x - from.x) * t,
+        y: from.y + (to.y - from.y) * t,
+      });
       if (walking) frame(heroSprite, Math.floor((now - start) / 140) % 4, 2);
       if (t < 1) requestAnimationFrame(tick);
       else resolve();
@@ -381,7 +389,7 @@ async function floating(message: string, location: Place, hurt = false) {
   node.className = `floating${hurt ? ' hurt' : ''}`;
   node.textContent = message;
   node.style.left = `${location.x - 22}px`;
-  node.style.top = `${location.y - 150}px`;
+  node.style.top = `${location.y - actorHeight(location) - 20}px`;
   element('#effects').append(node);
   await animate(
     node,
@@ -421,8 +429,8 @@ function tone(type: 'move' | 'bow' | 'hit' | 'win') {
 async function shoot(from: Place, to: Place) {
   const arrow = document.createElement('span');
   arrow.className = 'arrow';
-  const start = { x: from.x + 30, y: from.y - 95 },
-    end = { x: to.x - 15, y: to.y - 80 };
+  const start = { x: from.x + actorHeight(from) * 0.14, y: from.y - actorHeight(from) * 0.55 },
+    end = { x: to.x, y: to.y - actorHeight(to) * 0.5 };
   const angle = Math.atan2(end.y - start.y, end.x - start.x);
   arrow.style.left = `${start.x}px`;
   arrow.style.top = `${start.y}px`;
