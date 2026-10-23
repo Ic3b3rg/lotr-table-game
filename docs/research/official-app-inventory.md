@@ -28,6 +28,8 @@ Le 1.536 chiavi italiane della campagna coincidono esattamente con quelle della 
 
 Questo rende disponibili testi italiani originali dell'app. Non dimostra che tutte le carte fisiche siano rappresentate integralmente: la tabella principale contiene anche nomi di abilità, eroi e oggetti, oltre all'interfaccia e a contenuti ulteriori. Il confronto carta per carta con il [workbook](card-workbook-inventory.md) e le [immagini](card-archives-audit.md) rimane necessario.
 
+Il successivo [confronto dei componenti base](base-component-coverage.md) censisce 703 modelli e verifica 155 percorsi immagine. Il prodotto base collega sei eroi, sei ruoli, 78 modelli oggetto con quantità complessiva 83 e 44 facce delle 22 tessere viaggio. Le abilità condividono modelli e presentano discrepanze di riferimenti e quantità: non si può trasformare direttamente l'inventario dell'app nelle 343 carte fisiche. La matrice documenta per ogni famiglia identità, quantità, immagini e testi ancora da verificare; i campioni distinguono nomi italiani da istruzioni o effetti completi.
+
 ## Dati strutturati e limite della decodifica
 
 `resources.assets` contiene, fra l'altro, 414 Texture2D e 9.106 MonoBehaviour; `sharedassets0.assets` contiene 2.354 MonoBehaviour, inclusi oggetti nominati come avventure. Questi conteggi descrivono contenitori misti, non il catalogo della sola scatola base.
