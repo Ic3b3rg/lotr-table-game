@@ -13,3 +13,5 @@ Carte: [inventario del workbook fornito dall'utente](../research/card-workbook-i
 Questa fase chiarisce materiali, fedeltà e funzionamento della sessione. Il primo traguardo tecnico può procedere senza attendere tutti i contenuti: [specifica della sessione locale](offline-session-spec.md) e [quattro ticket approvati](offline-session-tickets.md). Suddivisione, dipendenze e prove sono approvate; lo stato dei task resta su GitHub.
 
 L'implementazione della sessione è disponibile con [evidenze automatiche e nei browser](../testing/offline-session-verification.md) e [revisione indipendente](../reviews/2026-10-23-offline-session.md). La prova fisica su Mac, Windows e telefoni senza Internet rimane nel [ticket LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
+
+Il proprietario ha approvato i [criteri di fedeltà e il primo incremento di preparazione](game-fidelity-checks.md): eroi, ruoli, equipaggiamento e mazzi reali persistenti, poi prove, movimento, combattimento e scenari.
