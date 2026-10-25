@@ -33,7 +33,7 @@ test('il backup ripristina su un host vuoto partecipanti, esito e protezione dai
   assert.equal(response.status, 200);
   assert.ok(response.headers.get('content-disposition')?.includes('.json'));
   const backup = await response.json();
-  assert.equal(backup.payload.state.schemaVersion, 1);
+  assert.equal(backup.payload.state.schemaVersion, 2);
   const blank = await (await destination.request('/api/session')).json();
   const restored = await destination.request('/api/restores', {
     backup,

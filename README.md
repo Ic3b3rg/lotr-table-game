@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il primo traguardo è la sessione sul PC con accesso dei telefoni via QR; regole, carte e campagna complete sono i traguardi successivi. [Specifica e task](https://github.com/Ic3b3rg/lotr-table-game/issues/8).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR e conserva la preparazione della compagnia: eroi, ruoli, equipaggiamento e mazzi iniziali. Effetti, prove, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Specifica e task della preparazione](https://github.com/Ic3b3rg/lotr-table-game/issues/20).
 
 ## Preparazione iniziale
 
@@ -35,6 +35,35 @@ La sezione **Prova il collegamento** serve solo a verificare una scelta condivis
 
 Se ci sono più indirizzi, scegliere quello della Wi-Fi/Ethernet condivisa con i telefoni. Le reti ospiti possono impedire la comunicazione tra dispositivi. Per cambiare porta impostare `LOTR_PORT`; `LOTR_BIND` seleziona l'indirizzo di ascolto (predefinito `0.0.0.0`, tutte le interfacce IPv4).
 
+## Carte e preparazione della compagnia
+
+I contenuti reali si installano tramite un pacchetto privato: `catalog.json` e, facoltativamente, una cartella `assets/` accanto al file. Non sono distribuiti in questa repository. Copiare questi elementi nella cartella dati indicata sopra, oppure impostare `LOTR_CONTENT_PACK` al percorso del catalogo. Senza pacchetto la lobby funziona e segnala che le carte sono assenti.
+
+Per usare il pacchetto privato già preparato in questo worktree, su macOS:
+
+```sh
+LOTR_CONTENT_PACK="$PWD/.scratch/private-content/catalog.json" LOTR_DATA_DIR="$PWD/.scratch/user-table" LOTR_PORT=4321 npm start
+```
+
+Su Windows, dopo aver copiato il pacchetto privato nello stesso percorso relativo, da PowerShell:
+
+```powershell
+$env:LOTR_CONTENT_PACK = (Resolve-Path .scratch/private-content/catalog.json).Path
+$env:LOTR_DATA_DIR = "$PWD/.scratch/user-table"
+$env:LOTR_PORT = "4321"
+npm start
+```
+
+Aprire [il tavolo della compagnia](http://127.0.0.1:4321). Il percorso dati distinto conserva questa sessione separatamente dalle prove tecniche.
+
+Da **Eroi e carte**, entrare al tavolo e scegliere i propri eroi: da due a quattro in solitario, uno per persona con due–cinque partecipanti. Ruoli e oggetti suggeriti sono modificabili; le copie già assegnate restano riservate. I limiti individuali dell'eroe, le mani, l'armatura e il rango iniziale vengono controllati dall'host. Il PC condiviso può consultare tutte le schede senza entrare.
+
+Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Non sono ancora disponibili cambi al campo o azioni dell'avventura.
+
+Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
+
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup della sessione vengono migrati allo schema 2. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 2.
+
 ## Sviluppo e verifiche
 
 ```sh
@@ -46,6 +75,8 @@ npm test
 [Scelte tecniche e fonti](docs/development.md), [mappa di pianificazione](docs/planning/README.md), [inventario del workbook carte](docs/research/card-workbook-inventory.md).
 
 [Risultati delle verifiche e prova sui dispositivi](docs/testing/offline-session-verification.md), [revisione di standard e specifica](docs/reviews/2026-10-23-offline-session.md).
+
+[Verifiche della preparazione reale](docs/testing/party-preparation-verification.md), [revisione indipendente della preparazione](docs/reviews/2026-10-25-party-preparation.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 

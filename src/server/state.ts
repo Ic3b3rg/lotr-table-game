@@ -1,13 +1,28 @@
 import { z } from 'zod';
 import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol';
+import { CatalogSchema } from '../shared/catalog';
+import { PreparationSchema, preparationProblem } from '../shared/preparation';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
   requestId: IntentIdSchema,
 });
-export const StateSchema = SessionSchema.extend({
+const BaseStateSchema = SessionSchema.omit({ catalog: true, preparation: true }).extend({
+  content: CatalogSchema.nullable(),
+  preparation: PreparationSchema.nullable().default(null),
   players: z.array(PrivatePlayerSchema).max(5),
-}).superRefine((state, ctx) => {
+});
+export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
+  if (state.preparation) {
+    const problem = state.content
+      ? preparationProblem(
+          state.content,
+          state.players.map((player) => player.id),
+          state.preparation,
+        )
+      : 'Catalogo della compagnia assente.';
+    if (problem) ctx.addIssue({ code: 'custom', message: problem });
+  }
   for (const key of ['id', 'recoveryHash', 'requestId'] as const) {
     if (new Set(state.players.map((player) => player[key])).size !== state.players.length)
       ctx.addIssue({ code: 'custom', message: 'Identità duplicate nel salvataggio.' });
@@ -22,3 +37,17 @@ export const StateSchema = SessionSchema.extend({
   }
 });
 export type State = z.infer<typeof StateSchema>;
+
+const LegacyStateSchema = BaseStateSchema.omit({ content: true, preparation: true }).extend({
+  schemaVersion: z.literal(1),
+});
+export function parseState(raw: unknown): State {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 1) {
+      const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
+      return StateSchema.parse({ ...previous, schemaVersion: 2, content: null });
+    }
+  }
+  return StateSchema.parse(raw);
+}

@@ -22,3 +22,5 @@ await build({
 });
 await cp('src/client/index.html', 'dist/public/index.html');
 await cp('src/client/style.css', 'dist/public/style.css');
+
+await cp('src/client/assets', 'dist/public/assets', { recursive: true });
