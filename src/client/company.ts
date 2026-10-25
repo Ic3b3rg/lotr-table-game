@@ -3,9 +3,11 @@ import type { Player, Session } from '../shared/protocol';
 import { request } from './api';
 import { element, text } from './dom';
 import { cardButton, createCardReader, picture } from './cards';
+import { createPreparation } from './preparation';
 
-export function createCompany() {
+export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
+  const preparation = createPreparation(sync, reader);
   const status = element('#content-status');
   const heroes = element('#hero-catalog');
   const cards = element('#catalog-cards');
@@ -71,9 +73,10 @@ export function createCompany() {
     }
   }
   return {
-    update(session: Session, _player: Player | null) {
+    update(session: Session, player: Player | null) {
       const nextKey = `${session.generation}:${session.catalog?.id ?? ''}`;
       if (key !== nextKey && !loading) void load(session);
+      preparation.update(session, player, catalog);
     },
   };
 }

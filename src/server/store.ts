@@ -7,6 +7,7 @@ import { ReceiptSchema, type Receipt } from '../shared/protocol';
 import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
+import { preparationView } from '../shared/preparation';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
 export type { State } from './state';
 
@@ -43,6 +44,7 @@ export class Store {
       players: [],
       demo: null,
       content: null,
+      preparation: null,
     };
     this.db
       .prepare('INSERT OR IGNORE INTO session (id, data) VALUES (1, ?)')
@@ -249,6 +251,7 @@ export function publicSession(state: State) {
     updatedAt: state.updatedAt,
     players: state.players.map(({ id, name }) => ({ id, name })),
     demo: state.demo,
+    preparation: preparationView(state.preparation),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
 }

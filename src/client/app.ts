@@ -18,7 +18,7 @@ let invitationUpdatedAt = 0;
 const personalController = personal ? personalView(sync) : null;
 const demoController = demoView(sync);
 const backupController = backupView(sync);
-const companyController = createCompany();
+const companyController = createCompany(sync);
 
 function renderSession(session: Session) {
   if (generation === session.generation && revision === session.revision) return;
