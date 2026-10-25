@@ -84,7 +84,9 @@ Seguire l’organizzazione attuale; non importare il motore sintetico del protot
 - [x] Eseguire test e osservare i fallimenti; implementare validazione, estrazione debolezze e mescolamento, salvataggio e ricevuta atomici, proiezione e migrazioni dei backup.
 - [x] Mostrare preparata, mazzo coperto con conteggio e composizione consultabile, oggetti e capacità dell’eroe. Rendere chiaro che la preparazione è completata e il motore dell’avventura segue nel prossimo incremento.
 - [x] Eseguire `npm test`, `npm run typecheck`, `npm run format:check`; verificare da browser desktop e telefono preparazione reale, ricarica e recupero, tastiera, movimento ridotto e console/rete. Documentare risultati effettivi e prove fisiche ancora pendenti.
-- [ ] Committare; eseguire revisione indipendente degli assi specifica e standard sul diff completo, correggere i difetti dimostrati e ripetere solo le verifiche pertinenti. Aprire PR sulla fondazione e collegarla al thread T3; mantenere le issue aperte fino all’integrazione secondo il tracker.
+- [x] Committare; eseguire revisione indipendente degli assi specifica e standard sul diff completo, correggere i difetti dimostrati e ripetere solo le verifiche pertinenti. Aprire PR sulla fondazione e collegarla al thread T3; mantenere le issue aperte fino all’integrazione secondo il tracker.
+
+Consegna: [PR 24](https://github.com/Ic3b3rg/lotr-table-game/pull/24) su `feat/offline-session-foundation`, sopra la PR 13. [Verifiche effettive](../testing/party-preparation-verification.md) e [rilievi e correzioni](../reviews/2026-10-25-party-preparation.md). Nessun merge eseguito.
 
 ## Plan self-review
 
