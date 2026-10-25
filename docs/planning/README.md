@@ -15,3 +15,5 @@ Questa fase chiarisce materiali, fedeltà e funzionamento della sessione. Il pri
 L'implementazione della sessione è disponibile con [evidenze automatiche e nei browser](../testing/offline-session-verification.md) e [revisione indipendente](../reviews/2026-10-23-offline-session.md). La prova fisica su Mac, Windows e telefoni senza Internet rimane nel [ticket LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 
 Il proprietario ha approvato i [criteri di fedeltà e il primo incremento di preparazione](game-fidelity-checks.md): eroi, ruoli, equipaggiamento e mazzi reali persistenti, poi prove, movimento, combattimento e scenari.
+
+Incremento autorizzato: [preparazione della compagnia](party-preparation-spec.md), con [piano di implementazione](party-preparation-plan.md). Il primo risultato verificabile comprende catalogo privato consultabile, scelte della compagnia e mazzi definitivi recuperabili.
