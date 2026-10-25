@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { joinPlayer } from './host-helper.mjs';
 import { setup, command } from './preparation-helper.mjs';
+import { catalogFixture } from './fixtures/catalog.mjs';
 
 test('un solitario sceglie fino a quattro eroi e può cambiare ruolo e oggetti prima di preparare', async (t) => {
   const host = await setup(t);
@@ -186,4 +187,26 @@ test('aggiungere un eroe prima di uno già configurato conserva le sue copie ris
     'sword:2',
     'armor:2',
   ]);
+});
+
+test('il limite individuale di una mano impedisce di assegnare una seconda mano o un’arma a due mani', async (t) => {
+  const catalog = catalogFixture();
+  catalog.heroes[2].maxHands = 1;
+  const host = await setup(t, catalog);
+  const ada = await joinPlayer(host, 'Ada');
+  assert.equal(
+    (await command(host, ada, { type: 'SELECT_HEROES', heroIds: ['hero-3', 'hero-4'] })).status,
+    200,
+  );
+  const before = await (await host.request('/api/session')).json();
+  for (const itemCopies of [['bow:1'], ['sword:1', 'shield:1']]) {
+    const response = await command(host, ada, {
+      type: 'CONFIGURE_HERO',
+      heroId: 'hero-3',
+      roleId: 'role-3',
+      itemCopies,
+    });
+    assert.equal(response.status, 409);
+    assert.deepEqual(await (await host.request('/api/session')).json(), before);
+  }
 });

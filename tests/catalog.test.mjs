@@ -43,6 +43,10 @@ test('un catalogo assente lascia il tavolo utilizzabile con stato esplicito', as
 test('cataloghi incoerenti non vengono acquisiti o sostituiti con dati vuoti', async (t) => {
   for (const mutate of [
     (c) => {
+      c.heroes[0].maxHands = 1;
+      c.heroes[0].startingItemIds = ['bow', 'armor'];
+    },
+    (c) => {
       c.heroes[0].skills[0] = 'missing';
     },
     (c) => {

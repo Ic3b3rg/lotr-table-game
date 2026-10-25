@@ -48,7 +48,7 @@ export function cardButton(
   const type =
     'rank' in card
       ? `Oggetto · rango ${['', 'I', 'II', 'III'][card.rank]}`
-      : `Carta ${card.number} · ${card.kind === 'weakness' ? 'Debolezza' : card.kind === 'basic' ? 'Base' : card.kind === 'hero' ? 'Eroe' : 'Ruolo'}`;
+      : `${card.number === null ? '' : `Carta ${card.number} · `}${card.kind === 'weakness' ? 'Debolezza' : card.kind === 'basic' ? 'Base' : card.kind === 'hero' ? 'Eroe' : 'Ruolo'}`;
   button.append(text('span', type, 'card-type'), text('strong', card.name.text, 'card-name'));
   if ('image' in card && card.image) button.append(picture(card.image, '', 'item-illustration'));
   button.append(text('span', card.text.text, 'card-excerpt'));
@@ -123,7 +123,7 @@ export function createCardReader() {
       const summary =
         'rank' in card
           ? `Rango ${['', 'I', 'II', 'III'][card.rank]} · ${card.slot === 'armor' ? 'Armatura' : card.slot === 'trinket' ? 'Monile' : `${card.hands} ${card.hands === 1 ? 'mano' : 'mani'}`} · ${card.quantity} ${card.quantity === 1 ? 'copia' : 'copie'}`
-          : `Numero ${card.number} · ${card.success} successi · ${card.fate} destino`;
+          : `${card.number === null ? '' : `Numero ${card.number} · `}${card.success} successi · ${card.fate} destino`;
       const nodes = [text('p', summary, 'card-type')];
       if ('image' in card && card.image) nodes.push(picture(card.image, '', 'item-illustration'));
       if (card.traits.length) nodes.push(text('p', card.traits.join(' · '), 'card-traits'));

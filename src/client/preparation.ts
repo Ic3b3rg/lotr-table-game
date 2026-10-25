@@ -18,6 +18,40 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
   let dirty = false;
   let forceRender = false;
   let pending: { signature: string; body: object } | null = null;
+  function editForm(form: HTMLFormElement) {
+    dirty = true;
+    pending = null;
+    for (const other of root.querySelectorAll<HTMLFormElement>('form')) {
+      if (other === form) continue;
+      for (const control of other.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLButtonElement
+      >('input, select, button')) {
+        control.disabled = true;
+        if (control instanceof HTMLButtonElement) control.dataset.blocked = 'true';
+      }
+    }
+    const cancel = form.querySelector<HTMLElement>('.cancel-edit');
+    if (cancel) cancel.hidden = false;
+    error.textContent =
+      'Salva o annulla queste modifiche prima di continuare con gli altri eroi o preparare i mazzi.';
+    error.hidden = false;
+  }
+  function cancelButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'company-link cancel-edit';
+    button.hidden = true;
+    button.textContent = 'Annulla modifiche';
+    button.onclick = () => {
+      dirty = false;
+      pending = null;
+      error.hidden = true;
+      forceRender = true;
+      rendered = '';
+      void sync();
+    };
+    return button;
+  }
   async function submit(intent: { type: string; [key: string]: unknown }) {
     if (!current) return;
     await action(async () => {
@@ -33,6 +67,12 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
             expectedRevision: current!.revision,
           },
         };
+      const controls = [
+        ...root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
+          'input, select, button',
+        ),
+      ].map((control) => ({ control, disabled: control.disabled }));
+      for (const { control } of controls) control.disabled = true;
       try {
         await request('/api/commands', pending.body);
         pending = null;
@@ -50,6 +90,9 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
           pending = null;
           await sync();
         }
+      } finally {
+        for (const { control, disabled } of controls)
+          if (control.isConnected) control.disabled = disabled;
       }
     });
   }
@@ -110,7 +153,8 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'company-link';
-        button.textContent = `${card.name.text} · ${card.number}`;
+        button.textContent =
+          card.number === null ? card.name.text : `${card.name.text} · ${card.number}`;
         button.onclick = () => reader.card(card, button);
         row.append(button);
         list.append(row);
@@ -139,10 +183,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
           select.append(option);
         }
         select.value = selected;
-        select.onchange = () => {
-          dirty = true;
-          pending = null;
-        };
+        select.onchange = () => editForm(form);
         label.append(select);
         form.append(label);
         return select;
@@ -161,7 +202,9 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       const choices = (slot: 'hand' | 'armor') => [
         { value: '', label: 'Nessuno' },
         ...content.items
-          .filter((item) => item.rank === 1 && item.slot === slot)
+          .filter(
+            (item) => item.rank === 1 && item.slot === slot && item.hands <= definition.maxHands,
+          )
           .flatMap((item) =>
             Array.from({ length: item.quantity }, (_, i) => ({
               value: `${item.id}:${i + 1}`,
@@ -185,8 +228,8 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       const updateHands = () => {
         const twoHanded =
           content.items.find((item) => item.id === definitionId(first.value))?.hands === 2;
-        if (twoHanded) second.value = '';
-        second.disabled = twoHanded;
+        if (twoHanded || definition.maxHands === 1) second.value = '';
+        second.disabled = twoHanded || definition.maxHands === 1;
       };
       first.addEventListener('change', updateHands);
       updateHands();
@@ -195,7 +238,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       save.type = 'submit';
       save.dataset.write = '';
       save.textContent = `Salva ${definition.name.text}`;
-      form.append(save);
+      form.append(save, cancelButton());
       form.onsubmit = (event) => {
         event.preventDefault();
         void submit({
@@ -245,10 +288,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         box.value = hero.id;
         box.checked = assigned?.playerId === player.id;
         box.disabled = Boolean(assigned && assigned.playerId !== player.id);
-        box.onchange = () => {
-          dirty = true;
-          pending = null;
-        };
+        box.onchange = () => editForm(form);
         label.append(box, text('span', hero.name.text + (box.disabled ? ' · già scelto' : '')));
         fields.append(label);
       }
@@ -258,7 +298,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       save.dataset.write = '';
       save.className = 'company-action';
       save.textContent = 'Salva gli eroi';
-      form.append(save);
+      form.append(save, cancelButton());
       form.onsubmit = (event) => {
         event.preventDefault();
         const heroIds = [...new FormData(form).getAll('hero')].map(String);
@@ -294,6 +334,11 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       );
       form.onsubmit = (event) => {
         event.preventDefault();
+        if (dirty) {
+          error.textContent = 'Salva o annulla le modifiche prima di preparare i mazzi.';
+          error.hidden = false;
+          return;
+        }
         void submit({ type: 'PREPARE_COMPANY', agreed: true });
       };
       root.append(form);
@@ -303,9 +348,15 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
   return {
     update(session: Session, identity: Player | null, content: Catalog | null) {
       const next = `${session.generation}:${session.revision}:${identity?.id ?? ''}:${content?.id ?? ''}`;
-      if (current?.generation !== session.generation || player?.id !== identity?.id) {
+      if (
+        current?.generation !== session.generation ||
+        player?.id !== identity?.id ||
+        (current.preparation?.status !== session.preparation?.status &&
+          session.preparation?.status === 'prepared')
+      ) {
         dirty = false;
         pending = null;
+        forceRender = true;
       }
       current = session;
       player = identity;

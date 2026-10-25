@@ -2,7 +2,7 @@ let online = false;
 let busy = false;
 function render() {
   document.querySelectorAll<HTMLButtonElement>('button[data-write]').forEach((button) => {
-    button.disabled = !online || busy;
+    button.disabled = !online || busy || button.dataset.blocked === 'true';
   });
 }
 export function setOnline(value: boolean) {

@@ -8,7 +8,7 @@ export function catalogFixture() {
     id,
     kind,
     ownerId,
-    number,
+    number: kind === 'weakness' ? null : number,
     quantity,
     name: local(`Carta ${id}`),
     text: local('Testo inventato per le prove.'),

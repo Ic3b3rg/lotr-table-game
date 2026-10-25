@@ -69,10 +69,11 @@ export function preparationProblem(
     );
     if (
       items.some((item) => item.rank !== 1 || item.slot === 'trinket') ||
-      items.reduce((n, item) => n + item.hands, 0) > 2 ||
+      items.reduce((n, item) => n + item.hands, 0) >
+        catalog.heroes.find((entry) => entry.id === hero.heroId)!.maxHands ||
       items.filter((item) => item.slot === 'armor').length > 1
     )
-      return 'Scegli oggetti iniziali: rango I, al massimo due mani e un’armatura, senza monili.';
+      return `Scegli oggetti iniziali di rango I: questo eroe può equipaggiare al massimo ${catalog.heroes.find((entry) => entry.id === hero.heroId)!.maxHands} mani e un’armatura, senza monili.`;
     if (
       preparation.status === 'draft' &&
       (hero.prepared.length || hero.deck.length || hero.discard.length)

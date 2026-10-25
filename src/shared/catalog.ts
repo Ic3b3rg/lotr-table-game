@@ -27,7 +27,7 @@ export const SkillDefinitionSchema = z.strictObject({
   ...IdentityFields,
   kind: z.enum(['basic', 'hero', 'role', 'weakness']),
   ownerId: ContentIdSchema.nullable(),
-  number: z.int().min(1).max(20),
+  number: z.int().min(1).max(20).nullable(),
   success: z.int().min(0).max(2),
   fate: z.int().min(0).max(2),
   traits: z.array(z.string().max(80)).max(8),
@@ -60,6 +60,7 @@ export const HeroDefinitionSchema = z.strictObject({
   ability: LocalizedTextSchema,
   skills: z.array(ContentIdSchema).length(5),
   suggestedRoleId: ContentIdSchema,
+  maxHands: z.int().min(1).max(2).default(2),
   startingItemIds: z.array(ContentIdSchema).min(1).max(3),
   portrait: AssetNameSchema.optional(),
 });
@@ -111,7 +112,7 @@ export const CatalogSchema = z
           !card ||
           card.kind !== kind ||
           card.ownerId !== owner ||
-          card.number !== index + 1 ||
+          (kind !== 'weakness' && card.number !== index + 1) ||
           card.quantity !== quantity
         )
           fail('Composizione o copie iniziali incoerenti nel catalogo.');
@@ -127,7 +128,7 @@ export const CatalogSchema = z
       if (
         new Set(hero.startingItemIds).size !== hero.startingItemIds.length ||
         equipment.some((item) => !item || item.rank !== 1 || item.slot === 'trinket') ||
-        equipment.reduce((n, item) => n + (item?.hands ?? 0), 0) > 2 ||
+        equipment.reduce((n, item) => n + (item?.hands ?? 0), 0) > hero.maxHands ||
         equipment.filter((item) => item?.slot === 'armor').length > 1
       )
         fail('Oggetti suggeriti incoerenti.');
