@@ -1,11 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ReceiptSchema, type Receipt } from '../shared/protocol';
 import { ApiError } from './errors';
-import { StateSchema, type State } from './state';
+import { StateSchema, parseState, type State } from './state';
+import { loadCatalog } from './catalog';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
 export type { State } from './state';
 
@@ -34,13 +35,14 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
       updatedAt: new Date().toISOString(),
       players: [],
       demo: null,
+      content: null,
     };
     this.db
       .prepare('INSERT OR IGNORE INTO session (id, data) VALUES (1, ?)')
@@ -52,7 +54,15 @@ export class Store {
     if (typeof secret?.value !== 'string') throw new Error('Chiave locale non disponibile');
     this.cookieSecret = secret.value;
     this.upgradeUnversionedSession();
-    this.read(); // Fail on incompatible data; never replace it with a blank table.
+    const saved = this.read(); // Fail on incompatible data; never replace it with a blank table.
+    const path = process.env.LOTR_CONTENT_PACK ?? join(directory, 'catalog.json');
+    if (!saved.content && (process.env.LOTR_CONTENT_PACK || existsSync(path))) {
+      const catalog = loadCatalog(path);
+      this.update((state) => {
+        state.content = catalog;
+        advance(state);
+      });
+    }
   }
 
   private upgradeUnversionedSession() {
@@ -61,10 +71,8 @@ export class Store {
       const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
       if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
       const raw: unknown = JSON.parse(row.data);
-      if (raw && typeof raw === 'object' && !Array.isArray(raw) && !('schemaVersion' in raw)) {
-        const migrated = StateSchema.parse({ ...raw, schemaVersion: 1 });
-        this.db.prepare('UPDATE session SET data = ? WHERE id = 1').run(JSON.stringify(migrated));
-      }
+      const migrated = parseState(raw);
+      this.db.prepare('UPDATE session SET data = ? WHERE id = 1').run(JSON.stringify(migrated));
       this.db.exec('COMMIT');
     } catch (error) {
       if (this.db.isTransaction) this.db.exec('ROLLBACK');
@@ -241,5 +249,6 @@ export function publicSession(state: State) {
     updatedAt: state.updatedAt,
     players: state.players.map(({ id, name }) => ({ id, name })),
     demo: state.demo,
+    catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
 }

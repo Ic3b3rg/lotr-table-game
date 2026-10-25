@@ -5,6 +5,7 @@ import { setOnline } from './actions';
 import { personalView } from './personal';
 import { demoView } from './demo';
 import { backupView } from './backups';
+import { createCompany } from './company';
 
 const personal = location.pathname === '/join';
 element('#personal').hidden = !personal;
@@ -17,6 +18,7 @@ let invitationUpdatedAt = 0;
 const personalController = personal ? personalView(sync) : null;
 const demoController = demoView(sync);
 const backupController = backupView(sync);
+const companyController = createCompany();
 
 function renderSession(session: Session) {
   if (generation === session.generation && revision === session.revision) return;
@@ -62,6 +64,7 @@ function sync(): Promise<void> {
         invitationUpdatedAt = Date.now();
       }
       renderSession(session);
+      companyController.update(session, me.player);
       personalController?.update(session, me.player);
       demoController.update(session, personal ? me.player : null);
       backupController.update(session, me.canManageBackups);

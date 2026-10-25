@@ -103,6 +103,48 @@
           <p class="form-error" id="form-error" role="alert" hidden></p>
           <a class="text-link" href="/">Apri la vista condivisa</a>
         </section>
+        <section id="journey" class="journey" aria-labelledby="journey-title">
+          <div class="journey-heading">
+            <h2 id="journey-title">Gli eroi della compagnia</h2>
+            <p id="content-status" role="status">Caricamento delle carte…</p>
+          </div>
+          <div id="company-preparation"></div>
+          <div id="hero-catalog" class="hero-gallery"></div>
+          <aside
+            id="card-reader"
+            class="card-reader"
+            aria-labelledby="reading-title"
+            tabindex="-1"
+            hidden
+          >
+            <button id="close-card" class="reader-close" type="button">Chiudi la carta</button>
+            <div id="card-reader-content"></div>
+          </aside>
+          <details id="catalog-browser" class="catalog-browser" hidden>
+            <summary>Consulta le carte della scatola base</summary>
+            <div class="catalog-filters">
+              <label
+                >Tipo di carta<select id="card-category">
+                  <option value="basic">Abilità base</option>
+                  <option value="hero">Abilità eroe</option>
+                  <option value="role">Abilità ruolo iniziali</option>
+                  <option value="weakness">Debolezze</option>
+                  <option value="items">Equipaggiamento</option>
+                  <option value="all">Tutte le abilità iniziali</option>
+                </select></label
+              >
+              <label
+                >Cerca nelle carte<input
+                  id="card-search"
+                  type="search"
+                  placeholder="Nome o testo della carta"
+              /></label>
+            </div>
+            <p id="catalog-count" class="catalog-count"></p>
+            <p id="catalog-empty" hidden>Nessuna carta corrisponde alla ricerca.</p>
+            <div id="catalog-cards" class="card-grid"></div>
+          </details>
+        </section>
         <section class="demo panel" aria-labelledby="demo-title">
           <p class="eyebrow">PRIMA DI PARTIRE</p>
           <h2 id="demo-title">Prova il collegamento</h2>
@@ -160,8 +202,8 @@
       <footer class="page-footer">
         <span class="small-mark" aria-hidden="true">✧</span>
         <p>
-          Sessione dimostrativa · collegamento del tavolo<br /><span
-            >Carte, mappa e campagna saranno aggiunte nei prossimi traguardi.</span
+          Compagnia e carte · tavolo locale<br /><span
+            >Prove, movimento, combattimento e campagna seguono nei prossimi incrementi.</span
           >
         </p>
         <p id="saved" class="save-note">Stato locale</p>

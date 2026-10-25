@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CatalogSummarySchema } from './catalog';
 
 export const NameSchema = z
   .string()
@@ -33,13 +34,14 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
   updatedAt: z.iso.datetime(),
   players: z.array(PlayerSchema).max(5),
   demo: DemoSchema.nullable().default(null),
+  catalog: CatalogSummarySchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
