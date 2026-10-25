@@ -8,7 +8,11 @@ export function performCommand(store: Store, playerId: string, command: Command)
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
-    if (command.type === 'SELECT_HEROES' || command.type === 'CONFIGURE_HERO' || command.type === 'PREPARE_COMPANY') {
+    if (
+      command.type === 'SELECT_HEROES' ||
+      command.type === 'CONFIGURE_HERO' ||
+      command.type === 'PREPARE_COMPANY'
+    ) {
       applyPreparation(state, playerId, command);
       advance(state);
       return {

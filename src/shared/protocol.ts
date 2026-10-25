@@ -52,7 +52,12 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 export const CommandSchema = z.discriminatedUnion('type', [
-  z.strictObject({ ...CommandBase, type: z.literal('PREPARE_COMPANY'), expectedRevision: z.int().nonnegative(), agreed: z.literal(true) }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('PREPARE_COMPANY'),
+    expectedRevision: z.int().nonnegative(),
+    agreed: z.literal(true),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('SELECT_HEROES'),
@@ -114,4 +119,7 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type Command = z.infer<typeof CommandSchema>;
 export type Receipt = z.infer<typeof ReceiptSchema>;
 
-export type PreparationCommand = Extract<Command, { type: 'SELECT_HEROES' | 'CONFIGURE_HERO' | 'PREPARE_COMPANY' }>;
+export type PreparationCommand = Extract<
+  Command,
+  { type: 'SELECT_HEROES' | 'CONFIGURE_HERO' | 'PREPARE_COMPANY' }
+>;

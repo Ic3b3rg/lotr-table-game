@@ -85,20 +85,37 @@ export function preparationProblem(
     const seen = new Set<string>();
     const reserve = preparation.weaknessDeck;
     for (const copy of reserve) {
-      if (seen.has(copy) || !validCopy(copy, catalog.skills) || !catalog.weaknessCards.includes(definitionId(copy))) return 'Riserva delle debolezze incoerente.';
+      if (
+        seen.has(copy) ||
+        !validCopy(copy, catalog.skills) ||
+        !catalog.weaknessCards.includes(definitionId(copy))
+      )
+        return 'Riserva delle debolezze incoerente.';
       seen.add(copy);
     }
-    if (reserve.length !== 20 - heroes.length) return 'Numero di debolezze nella riserva non valido.';
+    if (reserve.length !== 20 - heroes.length)
+      return 'Numero di debolezze nella riserva non valido.';
     for (const hero of heroes) {
       const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
       const role = catalog.roles.find((entry) => entry.id === hero.roleId)!;
-      if (hero.prepared.length !== 1 || hero.prepared[0] !== `${role.skills[0]}:1` || hero.deck.length !== 14 || hero.discard.length !== 0) return 'Mazzo iniziale o carta preparata non validi.';
+      if (
+        hero.prepared.length !== 1 ||
+        hero.prepared[0] !== `${role.skills[0]}:1` ||
+        hero.deck.length !== 14 ||
+        hero.discard.length !== 0
+      )
+        return 'Mazzo iniziale o carta preparata non validi.';
       const expected = [...catalog.basicSkills, ...definition.skills, ...role.skills];
       const actual = [...hero.prepared, ...hero.deck];
       const definitions = actual.map(definitionId);
-      if (expected.some((id) => definitions.filter((value) => value === id).length !== 1) || definitions.filter((id) => catalog.weaknessCards.includes(id)).length !== 1) return 'Composizione del mazzo iniziale non valida.';
+      if (
+        expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
+        definitions.filter((id) => catalog.weaknessCards.includes(id)).length !== 1
+      )
+        return 'Composizione del mazzo iniziale non valida.';
       for (const copy of actual) {
-        if (seen.has(copy) || !validCopy(copy, catalog.skills)) return 'Copie del mazzo duplicate o inesistenti.';
+        if (seen.has(copy) || !validCopy(copy, catalog.skills))
+          return 'Copie del mazzo duplicate o inesistenti.';
         seen.add(copy);
       }
     }
@@ -123,8 +140,15 @@ export function preparationView(preparation: Preparation | null) {
 export function rosterProblem(playerIds: string[], preparation: Preparation): string | null {
   const heroes = preparation.heroes;
   if (playerIds.length === 1) {
-    if (heroes.length < 2 || heroes.length > 4) return 'In solitario occorrono da due a quattro eroi.';
-  } else if (playerIds.length < 2 || heroes.length !== playerIds.length || playerIds.some((id) => heroes.filter((hero) => hero.playerId === id).length !== 1)) return 'Ogni partecipante deve scegliere esattamente un eroe.';
-  if (heroes.some((hero) => !hero.roleId)) return 'Scegli un ruolo per ogni eroe prima di preparare i mazzi.';
+    if (heroes.length < 2 || heroes.length > 4)
+      return 'In solitario occorrono da due a quattro eroi.';
+  } else if (
+    playerIds.length < 2 ||
+    heroes.length !== playerIds.length ||
+    playerIds.some((id) => heroes.filter((hero) => hero.playerId === id).length !== 1)
+  )
+    return 'Ogni partecipante deve scegliere esattamente un eroe.';
+  if (heroes.some((hero) => !hero.roleId))
+    return 'Scegli un ruolo per ogni eroe prima di preparare i mazzi.';
   return null;
 }

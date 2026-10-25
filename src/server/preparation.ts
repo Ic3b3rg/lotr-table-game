@@ -29,7 +29,10 @@ export function applyPreparation(
     );
   const preparation = state.preparation ?? { status: 'draft', heroes: [], weaknessDeck: [] };
   if (command.type === 'PREPARE_COMPANY') {
-    const roster = rosterProblem(state.players.map((player) => player.id), preparation);
+    const roster = rosterProblem(
+      state.players.map((player) => player.id),
+      preparation,
+    );
     if (roster) throw new ApiError(409, 'COMPANY_INCOMPLETE', roster);
     preparation.weaknessDeck = shuffled(state.content.weaknessCards.map((id) => `${id}:1`));
     for (const [index, hero] of preparation.heroes.entries()) {
