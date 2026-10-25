@@ -49,12 +49,12 @@ Seguire l’organizzazione attuale; non importare il motore sintetico del protot
 
 **Interfaces:** `CatalogSchema` e `loadCatalog(path)`; `GET /api/catalog` restituisce il catalogo congelato o uno stato assente esplicito. La sessione pubblica ne espone solo metadati/versione; le immagini opzionali usano un endpoint limitato ai nomi autorizzati.
 
-- [ ] Scrivere `catalog.test.mjs`: pacchetto valido visibile da un client; catalogo assente non rompe la lobby; riferimento mancante, copie incoerenti e percorso immagine non sicuro rifiutati; dopo riavvio con input diverso rimane il catalogo salvato.
-- [ ] Eseguire build e test mirati; verificare fallimento per comportamento ancora assente.
-- [ ] Implementare validazione, acquisizione persistente e proiezione; aggiornare schema con migrazione della sessione precedente senza cambiare identità e ricevute.
-- [ ] Aggiungere catalogo e dettaglio carte responsive con provenienza consultabile, originale/traduzione distinti, focus e chiusura da tastiera.
-- [ ] Acquisire dai materiali locali il pacchetto reale necessario a questa specifica: controllare gli hash, preservare le associazioni candidate, tradurre con confronto degli effetti e conservare una ricevuta privata e un rapporto pubblico senza corpus. Non spostare né modificare gli originali.
-- [ ] Eseguire `npm run typecheck`, `npm run build`, `node --test tests/catalog.test.mjs` e verificare nel browser il catalogo reale. Committare solo codice, fixture sintetiche, istruzioni e metadati pubblicabili.
+- [x] Scrivere `catalog.test.mjs`: pacchetto valido visibile da un client; catalogo assente non rompe la lobby; riferimento mancante, copie incoerenti e percorso immagine non sicuro rifiutati; dopo riavvio con input diverso rimane il catalogo salvato.
+- [x] Eseguire build e test mirati; verificare fallimento per comportamento ancora assente.
+- [x] Implementare validazione, acquisizione persistente e proiezione; aggiornare schema con migrazione della sessione precedente senza cambiare identità e ricevute.
+- [x] Aggiungere catalogo e dettaglio carte responsive con provenienza consultabile, originale/traduzione distinti, focus e chiusura da tastiera.
+- [x] Acquisire dai materiali locali il pacchetto reale necessario a questa specifica: controllare gli hash, preservare le associazioni candidate, tradurre con confronto degli effetti e conservare una ricevuta privata e un rapporto pubblico senza corpus. Non spostare né modificare gli originali.
+- [x] Eseguire `npm run typecheck`, `npm run build`, `node --test tests/catalog.test.mjs` e verificare nel browser il catalogo reale. Committare solo codice, fixture sintetiche, istruzioni e metadati pubblicabili.
 
 ### Task 2: Scelta persistente di eroi, ruoli ed equipaggiamento
 
@@ -64,11 +64,11 @@ Seguire l’organizzazione attuale; non importare il motore sintetico del protot
 
 **Interfaces:** comandi `SELECT_HEROES` con lista di eroi propri e `CONFIGURE_HERO` con eroe, ruolo e lista di copie oggetto. Entrambi hanno generazione, identificativo richiesta e revisione attesa; restituiscono una ricevuta di preparazione. Le copie sono identificatori stabili della definizione più indice fisico, non nomi o quantità libere.
 
-- [ ] Scrivere test HTTP: solitario 2/3/4, cinque persone, selezione concorrente dello stesso eroe/ruolo/ultima copia oggetto, rango II illecito, tre mani, seconda armatura, modifica di eroe altrui e stato superato. Controllare nessun aggiornamento parziale.
-- [ ] Eseguire build e test per osservare il fallimento previsto.
-- [ ] Implementare assegnazioni e configurazioni atomiche, proposte iniziali dai suggerimenti disponibili, controllo quantità e disponibilità. Scegliere un ruolo non raccomandato deve funzionare.
-- [ ] Implementare UI personale con selezione, salvataggio e riepilogo; gli altri eroi sono consultabili. Se un nuovo ingresso rende incompleta la composizione, spiegare come correggerla senza cancellare eroi automaticamente.
-- [ ] Verificare ricarica, recupero da cookie diverso e riavvio dell’host con le stesse assegnazioni. Eseguire typecheck e test mirati, poi commit.
+- [x] Scrivere test HTTP: solitario 2/3/4, cinque persone, selezione concorrente dello stesso eroe/ruolo/ultima copia oggetto, rango II illecito, tre mani, seconda armatura, modifica di eroe altrui e stato superato. Controllare nessun aggiornamento parziale.
+- [x] Eseguire build e test per osservare il fallimento previsto.
+- [x] Implementare assegnazioni e configurazioni atomiche, proposte iniziali dai suggerimenti disponibili, controllo quantità e disponibilità. Scegliere un ruolo non raccomandato deve funzionare.
+- [x] Implementare UI personale con selezione, salvataggio e riepilogo; gli altri eroi sono consultabili. Se un nuovo ingresso rende incompleta la composizione, spiegare come correggerla senza cancellare eroi automaticamente.
+- [x] Verificare ricarica, recupero da cookie diverso e riavvio dell’host con le stesse assegnazioni. Eseguire typecheck e test mirati, poi commit.
 
 ### Task 3: Mazzi iniziali definitivi, ripresa e backup
 
@@ -78,12 +78,12 @@ Seguire l’organizzazione attuale; non importare il motore sintetico del protot
 
 **Interfaces:** comando `PREPARE_COMPANY` con revisione attesa e conferma del gruppo. Ricevuta persistente distinta da quella della demo. Catalogo e `PreparationSchema` completi entrano nel backup; la vista pubblica conserva solo composizione non ordinata e conteggi.
 
-- [ ] Scrivere prove: quindici carte per eroe e quattordici coperte, carta ruolo 1 preparata, copie distinte di abilità con identico nome/modello, debolezze senza reinserimento. Conferma con partecipante senza eroe o solitario con un solo eroe rifiutata.
-- [ ] Scrivere prove concorrenti e recupero: due conferme simultanee, reinvio dello stesso intento dopo SIGKILL/riavvio, vecchia generazione, nuovo ingresso dopo conferma, recupero ancora valido. Confrontare identificatori e ordine tramite backup prima e dopo.
-- [ ] Scrivere prove importazione: precedente backup di sessione migrabile, backup attuale su host vuoto senza pacchetto input, versione sconosciuta e riferimenti/copie incoerenti rifiutati senza sostituzione; nessun ordine coperto nella risposta pubblica.
-- [ ] Eseguire test e osservare i fallimenti; implementare validazione, estrazione debolezze e mescolamento, salvataggio e ricevuta atomici, proiezione e migrazioni dei backup.
-- [ ] Mostrare preparata, mazzo coperto con conteggio e composizione consultabile, oggetti e capacità dell’eroe. Rendere chiaro che la preparazione è completata e il motore dell’avventura segue nel prossimo incremento.
-- [ ] Eseguire `npm test`, `npm run typecheck`, `npm run format:check`; verificare da browser desktop e telefono preparazione reale, ricarica e recupero, tastiera, movimento ridotto e console/rete. Documentare risultati effettivi e prove fisiche ancora pendenti.
+- [x] Scrivere prove: quindici carte per eroe e quattordici coperte, carta ruolo 1 preparata, copie distinte di abilità con identico nome/modello, debolezze senza reinserimento. Conferma con partecipante senza eroe o solitario con un solo eroe rifiutata.
+- [x] Scrivere prove concorrenti e recupero: due conferme simultanee, reinvio dello stesso intento dopo SIGKILL/riavvio, vecchia generazione, nuovo ingresso dopo conferma, recupero ancora valido. Confrontare identificatori e ordine tramite backup prima e dopo.
+- [x] Scrivere prove importazione: precedente backup di sessione migrabile, backup attuale su host vuoto senza pacchetto input, versione sconosciuta e riferimenti/copie incoerenti rifiutati senza sostituzione; nessun ordine coperto nella risposta pubblica.
+- [x] Eseguire test e osservare i fallimenti; implementare validazione, estrazione debolezze e mescolamento, salvataggio e ricevuta atomici, proiezione e migrazioni dei backup.
+- [x] Mostrare preparata, mazzo coperto con conteggio e composizione consultabile, oggetti e capacità dell’eroe. Rendere chiaro che la preparazione è completata e il motore dell’avventura segue nel prossimo incremento.
+- [x] Eseguire `npm test`, `npm run typecheck`, `npm run format:check`; verificare da browser desktop e telefono preparazione reale, ricarica e recupero, tastiera, movimento ridotto e console/rete. Documentare risultati effettivi e prove fisiche ancora pendenti.
 - [ ] Committare; eseguire revisione indipendente degli assi specifica e standard sul diff completo, correggere i difetti dimostrati e ripetere solo le verifiche pertinenti. Aprire PR sulla fondazione e collegarla al thread T3; mantenere le issue aperte fino all’integrazione secondo il tracker.
 
 ## Plan self-review

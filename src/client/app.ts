@@ -18,7 +18,7 @@ let invitationUpdatedAt = 0;
 const personalController = personal ? personalView(sync) : null;
 const demoController = demoView(sync);
 const backupController = backupView(sync);
-const companyController = createCompany(sync);
+const companyController = createCompany(() => sync(true));
 
 function renderSession(session: Session) {
   if (generation === session.generation && revision === session.revision) return;
@@ -51,7 +51,8 @@ function setConnection(value: boolean) {
   status.classList.toggle('offline', !value);
 }
 
-function sync(): Promise<void> {
+function sync(fresh = false): Promise<void> {
+  if (fresh && refreshing) return refreshing.then(() => sync());
   refreshing ??= (async () => {
     try {
       const session = SessionSchema.parse(await request('/api/session'));

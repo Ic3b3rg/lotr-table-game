@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { joinPlayer } from './host-helper.mjs';
+import { startHost, joinPlayer } from './host-helper.mjs';
 import { setup, command } from './preparation-helper.mjs';
-import { catalogFixture } from './fixtures/catalog.mjs';
+import { catalogFixture, privateCatalog } from './fixtures/catalog.mjs';
 
 test('un solitario sceglie fino a quattro eroi e può cambiare ruolo e oggetti prima di preparare', async (t) => {
   const host = await setup(t);
@@ -209,4 +209,53 @@ test('il limite individuale di una mano impedisce di assegnare una seconda mano 
     assert.equal(response.status, 409);
     assert.deepEqual(await (await host.request('/api/session')).json(), before);
   }
+});
+
+test('una bozza con eroi e oggetti conserva lo stato dopo arresto e recupero su altro dispositivo', async (t) => {
+  const pack = await privateCatalog();
+  const first = await startHost({ LOTR_CONTENT_PACK: pack.path });
+  let current = first;
+  t.after(async () => {
+    await current.stop();
+    await first.dispose();
+    await pack.dispose();
+  });
+  const ada = await joinPlayer(first, 'Ada');
+  await command(first, ada, { type: 'SELECT_HEROES', heroIds: ['hero-1', 'hero-2'] });
+  await command(first, ada, {
+    type: 'CONFIGURE_HERO',
+    heroId: 'hero-1',
+    roleId: 'role-6',
+    itemCopies: ['bow:1'],
+  });
+  const before = await (await first.request('/api/session')).json();
+  await first.stop('SIGKILL');
+  current = await startHost({ LOTR_DATA_DIR: first.dataDir });
+  assert.deepEqual(await (await current.request('/api/session')).json(), before);
+  const recovered = await current.request('/api/recover', {
+    recoveryCode: ada.recoveryCode,
+    generation: before.generation,
+  });
+  assert.equal(recovered.status, 200);
+  assert.equal((await recovered.json()).player.id, ada.body.player.id);
+});
+
+test('cinque eroi ricevono settantacinque copie distinte e cinque mazzi da quattordici carte', async (t) => {
+  const host = await setup(t);
+  const players = [];
+  for (const name of ['Ada', 'Berto', 'Ciro', 'Dora', 'Elio'])
+    players.push(await joinPlayer(host, name));
+  for (const [index, player] of players.entries()) {
+    assert.equal(
+      (await command(host, player, { type: 'SELECT_HEROES', heroIds: [`hero-${index + 1}`] }))
+        .status,
+      200,
+    );
+  }
+  const response = await command(host, players[4], { type: 'PREPARE_COMPANY', agreed: true });
+  assert.equal(response.status, 200);
+  const heroes = (await response.json()).session.preparation.heroes;
+  assert.equal(heroes.length, 5);
+  assert.ok(heroes.every((hero) => hero.deckCount === 14));
+  assert.equal(new Set(heroes.flatMap((hero) => hero.composition)).size, 75);
 });

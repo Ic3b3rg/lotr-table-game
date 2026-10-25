@@ -1,0 +1,92 @@
+{
+  "catalogId": "privato-it-1_6_6-base-party-v1",
+  "catalogSHA256": "7ae5de91cca7541bb4c29c5a0462200a0e190e359f98c3e9fba6c3d67d3df297",
+  "packSHA256": "e3ca85905cb06dcf34b81662d439ae6c32de5bc055cf00ab90cbdd83381a1c54",
+  "catalogSchemaSHA256": "87cdec55253a536bd7a54cafba1d2ba7115d938b08bc2c196078d435cef1e09e",
+  "counts": {
+    "heroes": 6,
+    "roles": 6,
+    "skills": {
+      "hero": 30,
+      "basic": 6,
+      "role": 18,
+      "weakness": 20
+    },
+    "skillDefinitions": 74,
+    "skillCopies": 98,
+    "itemDefinitions": 78,
+    "itemCopies": 83,
+    "itemRanks": {
+      "1": 20,
+      "2": 25,
+      "3": 33
+    },
+    "baseUpgradeEdges": 71,
+    "heroPortraits": 6,
+    "sharedItemIcons": 20,
+    "assetReferences": 84,
+    "localizedTexts": 328,
+    "localizedKinds": {
+      "official-it": 151,
+      "translated": 177
+    },
+    "verified": {
+      "true": 324,
+      "false": 4
+    },
+    "identityStatus": {
+      "confirmed": 148,
+      "candidate": 4
+    },
+    "sourceHashes": 23,
+    "catalogSources": 18,
+    "unityModels": 226,
+    "nonNullPointers": 1222,
+    "semanticComparisons": 178
+  },
+  "candidates": [
+    {
+      "id": "base-skill-w018",
+      "source": "Skill Cards!18"
+    },
+    {
+      "id": "base-skill-w130",
+      "source": "Skill Cards!130"
+    },
+    {
+      "id": "base-skill-w208",
+      "source": "Skill Cards!208"
+    },
+    {
+      "id": "base-skill-w209",
+      "source": "Skill Cards!209"
+    }
+  ],
+  "checks": {
+    "unchangedSources": true,
+    "exactUnityConsumption": true,
+    "cppPythonAgreement": true,
+    "pointerClasses": true,
+    "manifestAssociations": true,
+    "physicalIDsUnique": true,
+    "printedHeroRoleOrder": true,
+    "quantities": true,
+    "statsColumns": true,
+    "defaultsFromPointers": true,
+    "unrestrictedBaseRoles": true,
+    "actualUpgradePointers": true,
+    "resourceManager": true,
+    "assetPayloadHashes": true,
+    "pngDecode": true,
+    "guardianSourceUnchanged": true,
+    "allRequestedEffectsTranslatedAndCompared": true,
+    "numericSequencesPreserved": true,
+    "weaknessNumbersNotInvented": true,
+    "heroHandLimits": true
+  },
+  "limits": [
+    "Guardian W130 rimane Custom: appartenenza Base candidata ed effetto ufficiale non certificato; text.verified=false.",
+    "Tre nomi con binding candidato: W18, W208, W209; name.verified=false.",
+    "Nessuna certificazione dei fronti fisici integrali o automazione/runtime degli effetti."
+  ]
+}

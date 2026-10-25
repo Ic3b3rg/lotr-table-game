@@ -51,6 +51,8 @@ export function cardButton(
       : `${card.number === null ? '' : `Carta ${card.number} · `}${card.kind === 'weakness' ? 'Debolezza' : card.kind === 'basic' ? 'Base' : card.kind === 'hero' ? 'Eroe' : 'Ruolo'}`;
   button.append(text('span', type, 'card-type'), text('strong', card.name.text, 'card-name'));
   if ('image' in card && card.image) button.append(picture(card.image, '', 'item-illustration'));
+  if (card.identityStatus === 'candidate')
+    button.append(text('span', 'Associazione candidata', 'card-verification'));
   button.append(text('span', card.text.text, 'card-excerpt'));
   button.append(text('span', 'Leggi la carta', 'card-read'));
   button.addEventListener('click', () => open(button));
@@ -63,13 +65,15 @@ export function createCardReader() {
   let caller: HTMLElement | null = null;
   close.onclick = () => {
     panel.hidden = true;
-    if (caller?.isConnected) caller.focus();
+    const target = caller?.isConnected ? caller : element('#journey-title');
+    if (target === element('#journey-title')) target.tabIndex = -1;
+    target.focus();
   };
   panel.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') close.click();
   });
   function show(title: string, nodes: HTMLElement[], target: HTMLElement) {
-    caller = target;
+    if (!panel.contains(target)) caller = target;
     const heading = text('h3', title);
     heading.id = 'reading-title';
     content.replaceChildren(heading, ...nodes);

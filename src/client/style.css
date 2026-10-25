@@ -996,3 +996,29 @@ details[open] {
     width: 100%;
   }
 }
+
+.page-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 20px;
+}
+.page-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  text-underline-offset: 5px;
+}
+.card-verification {
+  color: #795016;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.company-hero details > summary {
+  min-height: 44px;
+  font-size: 14px;
+}

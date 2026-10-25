@@ -10,14 +10,33 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
   const root = element('#company-preparation');
   const error = text('p', '', 'company-error');
   error.setAttribute('role', 'alert');
+  error.tabIndex = -1;
   error.hidden = true;
   let current: Session | null = null;
   let player: Player | null = null;
   let catalog: Catalog | null = null;
   let rendered = '';
+  let viewRevision = -1;
   let dirty = false;
+  let stale = false;
   let forceRender = false;
   let pending: { signature: string; body: object } | null = null;
+  const reload = document.createElement('button');
+  reload.type = 'button';
+  reload.className = 'company-link';
+  reload.textContent = 'Ricarica le scelte';
+  reload.hidden = true;
+  function reloadChoices() {
+    dirty = false;
+    stale = false;
+    pending = null;
+    error.hidden = true;
+    reload.hidden = true;
+    forceRender = true;
+    rendered = '';
+    void sync();
+  }
+  reload.onclick = reloadChoices;
   function editForm(form: HTMLFormElement) {
     dirty = true;
     pending = null;
@@ -42,20 +61,14 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     button.className = 'company-link cancel-edit';
     button.hidden = true;
     button.textContent = 'Annulla modifiche';
-    button.onclick = () => {
-      dirty = false;
-      pending = null;
-      error.hidden = true;
-      forceRender = true;
-      rendered = '';
-      void sync();
-    };
+    button.onclick = reloadChoices;
     return button;
   }
   async function submit(intent: { type: string; [key: string]: unknown }) {
     if (!current) return;
     await action(async () => {
       error.hidden = true;
+      reload.hidden = true;
       const signature = JSON.stringify({ ...intent, generation: current!.generation });
       if (pending?.signature !== signature)
         pending = {
@@ -64,7 +77,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
             ...intent,
             requestId: randomIntent(),
             generation: current!.generation,
-            expectedRevision: current!.revision,
+            expectedRevision: viewRevision,
           },
         };
       const controls = [
@@ -77,6 +90,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         await request('/api/commands', pending.body);
         pending = null;
         dirty = false;
+        stale = false;
         forceRender = true;
         rendered = '';
         await sync();
@@ -88,11 +102,21 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         error.hidden = false;
         if (cause instanceof RequestError) {
           pending = null;
+          if (cause.code === 'TABLE_CHANGED') {
+            stale = true;
+            error.textContent +=
+              ' Ricarica le scelte per aggiornare il modulo; le modifiche non salvate verranno annullate.';
+            reload.hidden = false;
+          }
           await sync();
         }
       } finally {
         for (const { control, disabled } of controls)
           if (control.isConnected) control.disabled = disabled;
+      }
+      if (error.isConnected && !error.hidden) {
+        error.focus({ preventScroll: true });
+        error.scrollIntoView({ block: 'center', behavior: 'instant' });
       }
     });
   }
@@ -272,7 +296,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
           : 'Consulta gli eroi o entra al tavolo per scegliere i tuoi.',
       'company-help',
     );
-    root.replaceChildren(heading, description, error);
+    root.replaceChildren(heading, description, error, reload);
     if (player && !prepared) {
       const form = document.createElement('form');
       form.className = 'hero-selection';
@@ -355,7 +379,10 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
           session.preparation?.status === 'prepared')
       ) {
         dirty = false;
+        stale = false;
         pending = null;
+        error.hidden = true;
+        reload.hidden = true;
         forceRender = true;
       }
       current = session;
@@ -363,10 +390,17 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       catalog = content;
       if (
         rendered !== next &&
-        (forceRender || (!dirty && !root.contains(document.activeElement)))
+        (forceRender ||
+          (!dirty &&
+            !stale &&
+            !(
+              root.contains(document.activeElement) &&
+              document.activeElement?.matches('input,select,button,a,summary')
+            )))
       ) {
         render();
         rendered = next;
+        viewRevision = session.revision;
         if (forceRender) {
           const heading = root.querySelector('h3');
           if (heading) {
