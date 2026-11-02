@@ -150,3 +150,27 @@ portabile, senza esecuzione Unity/JIT. #38 deve chiudere la closure selezionata
 prima dell'auto-esplorazione e dell'obiettivo 0. Freeze minimo/sessione,
 backup/ricevute e frontend non fanno parte di questo incremento; #41/#38/#33
 restano aperte. Review fresche Standards/Spec, integrazione e merge al root.
+
+## Integrazione root sopra il movimento
+
+Integrato sopra `1e2fa93`, che comprende anche #50. Review fresche:
+[Standards/Spec](../reviews/2026-11-03-map-encounters.md), zero violazioni
+Standards e un suggerimento facoltativo rinviato; un P2 Spec corretto.
+La collezione owned dei gruppi ora applica AddUniqueItem della fonte prima
+di filtri e shuffle, preservando la prima occorrenza. Due regressioni
+rosse→verdi coprono ripetizioni nello stesso prodotto e fra due prodotti.
+
+Root **275/275** test, zero skipped, tipi/formato/diff con exit0.
+Matrice rigenerata prima e dopo la correzione: **47/47**, entrambi i
+controlli riproducono gli output del child byte per byte. Conteggi invariati:
+666 assegnazioni, 7.748 decisioni, 2.683 draw, 94 rollback, 40 scelte Threat.
+Il checker Python root include la deduplica verificata sulla fonte.
+Impronta riepilogo root:
+`3ae7bc1e7b724722e0bc392a187e2f72beb06e7dfa8dfb012c0b9beed60f958a`.
+Il replay privato H3 consuma tutte le 462 osservazioni dello stage incontri,
+riproduce assegnazioni/storia/search/trace/RNG e ha byte identici tra due
+esecuzioni. File e log root: `.scratch/encounters-root-review/`.
+
+La geometria e il movementGraph rimangono consumatori separati; #53 dovrà
+costruire la proiezione minima salvata. La closure dei prefab selezionati
+resta un prerequisito di #38, senza esecuzioni o dati narrativi pubblicati.

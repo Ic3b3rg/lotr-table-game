@@ -3,9 +3,37 @@ import { test } from 'node:test';
 import { placeMapEncounters as place } from '../dist/map-encounters-library.mjs';
 import { comparisonSort, SourceRandom } from '../dist/map-primitives.mjs';
 import { encountersFixture, addEncounter, addGroup, fixed } from './fixtures/map-encounters.mjs';
+import { ref } from './fixtures/map-assembly.mjs';
 function noGroups(f) {
   f.assembly.selection.groups = [];
   f.assembly.selection.products[0].groupSources = [];
+}
+for (const scope of ['one product', 'two owned products']) {
+  test(`owned groups preserve first occurrence and RNG when repeated across ${scope}`, () => {
+    const f = encountersFixture();
+    const baseline = place(f);
+    const product = f.assembly.selection.products[0];
+    if (scope === 'one product') product.groupSources.push(product.groupSources[0]);
+    else {
+      f.assembly.selection.products.push({
+        ...structuredClone(product),
+        index: 1,
+        source: ref(2),
+        id: 1,
+        tileCodes: [],
+      });
+      f.assembly.selection.context.ownedProductIds.push(1);
+    }
+    const actual = place(f);
+    assert.equal(actual.status, 'encounters-complete');
+    assert.deepEqual(actual.search.eligibleGroups, baseline.search.eligibleGroups);
+    assert.deepEqual(actual.rng, baseline.rng);
+    assert.deepEqual(actual.trace, baseline.trace);
+    assert.equal(
+      actual.trace.filter((e) => e.operation === 'draw' && e.site === 'groups-shuffle').length,
+      1,
+    );
+  });
 }
 test('groups try the ordered candidates, retain the trie across required/optional/helpers and clean required placements', () => {
   const f = encountersFixture();

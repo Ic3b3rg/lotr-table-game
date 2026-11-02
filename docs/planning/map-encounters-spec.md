@@ -55,6 +55,9 @@ separatamente il suo diagnostico completo; non raggiunge il checkpoint.
    Required/optional mescolati separatamente; helper azzera history/sequence ma
    conserva il trie. Optional fallita pulisce ogni occorrenza di required IDs.
    Nessun rewind; nessun candidato valido dà InvalidParameters=2.
+   L'elenco owned deduplica le referenze dei gruppi preservando la prima
+   occorrenza nei prodotti (`A10f6:041f–0433`, AddUniqueItem), prima di filtri
+   e shuffle: una ripetizione non aggiunge candidati o draw.
 6. Item: primo fit del pool trattenuto, massimo uno, niente draw aggiuntivo o
    duplicate guard assente nella fonte. Normal: stesso array trattenuto per
    sezioni 0..3, soglia float32 percent×spaceCount, conteggio inclusivo, best

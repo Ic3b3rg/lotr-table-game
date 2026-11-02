@@ -40,9 +40,14 @@ export function seedGroups(s: EncounterState): void {
     candidates = [group];
   } else {
     const filter = p.encounterTraitsFilter;
-    const owned = p.products
-      .filter((product) => p.context.ownedProductIds.includes(product.id))
-      .flatMap((product) => product.groupSources);
+    // A10f6:041f–0433 builds the owned list with AddUniqueItem, in product order.
+    const owned = [
+      ...new Set(
+        p.products
+          .filter((product) => p.context.ownedProductIds.includes(product.id))
+          .flatMap((product) => product.groupSources),
+      ),
+    ];
     candidates = [];
     for (const source of owned) {
       s.tick('group-filter');
