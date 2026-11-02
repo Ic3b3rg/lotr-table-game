@@ -49,7 +49,8 @@ Pubblica un file completo con hard link esclusivo; mai sovrascrivere.
    rimozione dei riferimenti fissi solo dalla lista normal; chain con unlock e
    history; item con capacità (occorrenze esatte nel gruppo + un conteggio per
    eroe che contiene l'ID), esclusione separata gruppo e upgrade ricorsivi.
-   Un null raggiunto nel loop item è un errore dell'operazione fonte.
+   Un null raggiunto nel loop item rende indisponibile il candidato
+   (`06000cbd:0000–000a`), senza saltare quella voce.
 2. Un solo SourceRandom: shuffle standard completo, copia dei quattro builder
    mescolata una volta se H>1 e distribuzione ciclica di `(H−1)*2` extras saltando
    ignore-scaling; shuffle normal, chain, item trattenuti; merge nel random

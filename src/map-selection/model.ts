@@ -96,7 +96,14 @@ const PackSchema = z.strictObject({
     .min(1)
     .max(100),
   items: z
-    .array(z.strictObject({ index, source, id: int32, upgradeSources: z.array(source).max(1000) }))
+    .array(
+      z.strictObject({
+        index,
+        source,
+        id: int32,
+        upgradeSources: z.array(source.nullable()).max(1000),
+      }),
+    )
     .max(1000),
   encounters: z
     .array(
@@ -271,7 +278,8 @@ export function parseSelectionInput(value: unknown): SelectionInput {
     for (const r of product.groupSources) requireRef(groups.has(r), r);
     for (const q of product.itemQuantities) requireRef(items.has(q.itemSource), q.itemSource);
   }
-  for (const item of p.items) for (const r of item.upgradeSources) requireRef(items.has(r), r);
+  for (const item of p.items)
+    for (const r of item.upgradeSources) if (r !== null) requireRef(items.has(r), r);
   for (const e of p.encounters)
     for (const r of e.itemSources) if (r !== null) requireRef(items.has(r), r);
   for (const g of p.groups)

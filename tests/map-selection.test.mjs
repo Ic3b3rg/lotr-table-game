@@ -199,3 +199,162 @@ test('selection CLI bounds the input file and rejects duplicate options', async 
     }
   });
 });
+
+function encounter(f, id, type = 0, extra = {}) {
+  const e = {
+    index: f.encounters.length,
+    source: ref(6000 + id),
+    id,
+    type,
+    traits: 1,
+    isRepeatable: false,
+    unsupportedLanguages: [],
+    itemSources: [],
+    ...extra,
+  };
+  f.encounters.push(e);
+  f.products[0].encounterSources.push(e.source);
+  return e.source;
+}
+function item(f, id, quantity = 1, upgradeSources = []) {
+  const i = { index: f.items.length, source: ref(7000 + id), id, upgradeSources };
+  f.items.push(i);
+  f.products[0].itemQuantities.push({ itemSource: i.source, quantity });
+  return i.source;
+}
+
+test('pool filters keep source order, language first, fixed normal exclusions and unlocked chains', async () => {
+  const f = fixture();
+  const normal = encounter(f, 1),
+    unsupported = encounter(f, 2, 0, { unsupportedLanguages: ['Italian'] });
+  encounter(f, 3, 0, { traits: 2 });
+  encounter(f, 4);
+  const repeatable = encounter(f, 5, 0, { isRepeatable: true }),
+    fixed = encounter(f, 6);
+  encounter(f, 7, 1);
+  encounter(f, 8, 2);
+  const chain = encounter(f, 9, 2, { traits: 2 });
+  encounter(f, 10, 2, { unsupportedLanguages: ['Italian'] });
+  encounter(f, 11, 2);
+  encounter(f, 12, 3);
+  f.context.usedEncounterIds = [4, 5, 8];
+  f.context.unlockedChainIds = [8, 9, 10];
+  f.encounterTraitsFilter = { mustHaveAny: 1, mustHaveAll: 1, excludeIfAny: 2 };
+  f.sections[1].fixedEncounterSources = [fixed];
+  f.adventureEncounterSources = [unsupported];
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.normalEligible, [normal, repeatable]);
+    assert.deepEqual(v.pools.chainEligible, [chain]);
+    assert.deepEqual(v.pools.itemEligible, []);
+    assert.deepEqual(new Set(v.pools.randomEncounterPool), new Set([normal, repeatable, chain]));
+    assert.equal(v.checkpoints.find((c) => c.stage === 'normal-shuffle').rng.samples, 122);
+    assert.equal(v.checkpoints.find((c) => c.stage === 'chain-shuffle').rng.samples, 123);
+  });
+});
+
+test('item capacity counts exact group occurrences and each hero once, with separate recursive group upgrade exclusion', async () => {
+  const f = fixture();
+  const a = item(f, 1, 2),
+    b = item(f, 2),
+    c = item(f, 3),
+    d = item(f, 4);
+  const e = item(f, 5, 0),
+    upgrade = item(f, 6),
+    middle = item(f, 7, 1, [upgrade]);
+  f.items.find((i) => i.id === 2).upgradeSources = [middle];
+  f.context.heroes[0].itemIds = [1, 1, 1];
+  f.context.groupItemIds = [6, 3, 3];
+  const available = encounter(f, 1, 4, { itemSources: [a] });
+  encounter(f, 2, 4, { itemSources: [b] }); // recursive reach to group item 6
+  encounter(f, 3, 4, { itemSources: [c] }); // duplicate group occurrence
+  encounter(f, 4, 4, { itemSources: [d, null] });
+  encounter(f, 5, 4, { itemSources: [null] });
+  encounter(f, 6, 4, { itemSources: [e] });
+  const noHistoryFilter = encounter(f, 7, 4, { itemSources: [d], traits: 2 });
+  f.context.usedEncounterIds = [7];
+  f.encounterTraitsFilter.excludeIfAny = 2;
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.itemEligible, [available, noHistoryFilter]);
+    assert.deepEqual(
+      v.pools.itemCapacity.find((c) => c.id === 1),
+      { id: 1, owned: 2, held: 1 },
+    );
+    assert.deepEqual(
+      v.pools.itemCapacity.find((c) => c.id === 3),
+      { id: 3, owned: 1, held: 2 },
+    );
+    assert.equal(v.checkpoints.find((c) => c.stage === 'coroutine-entry').rng.samples, 122);
+  });
+  f.context.heroCount = 2;
+  f.context.heroes.push({ id: 2, source: ref(4001), itemIds: [1] });
+  f.sections.forEach((s) => {
+    s.maximumSpaces = 1;
+  });
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.itemEligible, [noHistoryFilter]);
+  });
+});
+
+test('retry retains ordered pools and duplicates then reshuffles all retained items', async () => {
+  const f = fixture(),
+    a = item(f, 1),
+    normal = encounter(f, 1);
+  const reward = encounter(f, 2, 4, { itemSources: [a] });
+  f.incoming.randomEncounterPool = [normal, normal];
+  f.incoming.itemEncounterPool = [reward, reward];
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.randomEncounterPool, [normal, normal, normal]);
+    assert.deepEqual(v.pools.itemEncounterPool, [reward, reward, reward]);
+    assert.equal(v.checkpoints.find((c) => c.stage === 'item-shuffle').rng.samples, 124);
+    assert.equal(v.pools.percentNormal, Math.fround(0.4));
+  });
+});
+
+for (const [percentNormal, first, after] of [
+  [1.5, 'normal', 0.75],
+  [-0.5, 'chain', -1],
+  ['Infinity', 'normal', 'Infinity'],
+]) {
+  test(`source mixture preserves ${percentNormal} without clamping`, async () => {
+    const f = fixture();
+    encounter(f, 1);
+    encounter(f, 2, 2);
+    f.context.unlockedChainIds = [2];
+    f.incoming.percentNormal = percentNormal;
+    await run(f, (r) => {
+      const v = selected(r),
+        merge = v.trace.filter((t) => t.operation === 'merge');
+      assert.equal(merge.length, 2);
+      assert.equal(merge[0].pool, first);
+      assert.equal(merge[0].percentNormal, after);
+      assert.equal(merge[0].samples, 123);
+      assert.equal(merge[1].samples, 123);
+    });
+  });
+}
+
+test('H3 scales a shuffled copy of all four builders once into a permutation of 2,1,1', async () => {
+  const f = fixture();
+  f.context.heroCount = 3;
+  f.context.heroes.push(
+    { id: 2, source: ref(4001), itemIds: [] },
+    { id: 3, source: ref(4002), itemIds: [] },
+  );
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.equal(v.sections[0].extraSpaces, 0);
+    assert.deepEqual(
+      v.sections
+        .slice(1)
+        .map((s) => s.extraSpaces)
+        .sort(),
+      [1, 1, 2],
+    );
+    assert.deepEqual([...v.scalingOrder].sort(), [0, 1, 2, 3]);
+    assert.equal(v.checkpoints.find((c) => c.stage === 'scaling').rng.samples, 124);
+  });
+});
