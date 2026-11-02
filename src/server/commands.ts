@@ -7,11 +7,17 @@ import { applySkillTest } from './skill-tests';
 import { applyScouting } from './scouting';
 import { applyRoundCommand } from './rounds';
 import { applyJourneyCommand } from './journey-map';
+import { applyGroup } from './group';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (command.type === 'SET_GROUP_SIZE') {
+      const result = applyGroup(state, command);
+      advance(state);
+      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+    }
     if (
       command.type === 'OPEN_JOURNEY_MAP' ||
       command.type === 'START_TRAVEL' ||

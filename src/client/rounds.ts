@@ -61,7 +61,9 @@ export function createRounds(sync: () => Promise<void>) {
     const nextStatus = message + (pending ? ' Concludi prima le carte rivelate.' : '');
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
     element('#round-phase-help').textContent = !round
-      ? 'Avviate i round quando siete pronti. Le prove e Scoperta già risolte restano salvate.'
+      ? current.group && !current.journey
+        ? 'Aprite prima la mappa e collocate gli eroi. Poi potete iniziare i round.'
+        : 'Avviate i round quando siete pronti. Le prove e Scoperta già risolte restano salvate.'
       : round.phase === 'action'
         ? 'Ogni eroe svolge un turno completo: da zero a due azioni, anche ripetute. Puoi interagire con una prova o aprire la mappa per viaggiare. Gli attacchi seguiranno con il combattimento.'
         : round.phase === 'shadow'
@@ -96,6 +98,7 @@ export function createRounds(sync: () => Promise<void>) {
             : `Inizia il round ${round.number + 1}`;
     confirm.dataset.blocked = String(
       pending ||
+        (!round && Boolean(current.group) && !current.journey) ||
         !agreed.checked ||
         (choosing && !select.value) ||
         (round?.phase === 'rally' && !allScouted),

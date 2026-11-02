@@ -72,12 +72,23 @@ export function personalView(sync: () => Promise<void>) {
         element('#notice').hidden = false;
       }
       generation = session.generation;
-      element('#join-form').hidden = Boolean(player);
+      const full = Boolean(
+        session.group && session.players.length >= session.group.expectedPlayers,
+      );
+      const prepared = session.preparation?.status === 'prepared';
+      element('#join-form').hidden = Boolean(player) || full || prepared;
       element('#joined').hidden = !player;
       element('#recover-details').hidden = Boolean(player);
       element('#personal-title').textContent = player
         ? 'Il tuo posto è pronto.'
-        : 'Come ti chiami?';
+        : full || prepared
+          ? 'Riprendi il tuo posto.'
+          : 'Come ti chiami?';
+      element('#personal-next').textContent = player
+        ? 'Il passo attuale qui sopra indica cosa fare adesso. Conserva il codice se è ancora visibile qui sotto.'
+        : full || prepared
+          ? 'Il gruppo è già al tavolo. Usa il codice personale ricevuto al primo ingresso; non serve un nuovo giocatore.'
+          : 'Ogni persona entra da un browser o dispositivo diverso.';
       element('#welcome').textContent = player?.name ?? '';
       if (previousPlayer && !player) element('#recovery-note').hidden = true;
       previousPlayer = player?.id ?? null;

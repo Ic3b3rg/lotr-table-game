@@ -94,6 +94,7 @@ test('salvataggi e backup schema 2 migrano senza rimescolare o perdere la compag
   const backup = await readBackup(host);
   const initialPreparation = structuredClone(backup.payload.state.preparation);
   backup.payload.state.schemaVersion = 2;
+  delete backup.payload.state.group;
   delete backup.payload.state.skillTest;
   delete backup.payload.state.scout;
   delete backup.payload.state.round;
@@ -107,7 +108,7 @@ test('salvataggi e backup schema 2 migrano senza rimescolare o perdere la compag
   const migrated = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => migrated.stop());
   const state = await readSession(migrated);
-  assert.equal(state.schemaVersion, 6);
+  assert.equal(state.schemaVersion, 7);
   assert.equal(state.skillTest, null);
   assert.deepEqual((await readBackup(migrated)).payload.state.preparation, initialPreparation);
   assert.deepEqual((await readBackup(migrated)).payload.commands, backup.payload.commands);
@@ -168,6 +169,7 @@ test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia',
   const current = await readSession(host);
   const backup = await readBackup(host);
   backup.payload.state.schemaVersion = 2;
+  delete backup.payload.state.group;
   delete backup.payload.state.preparation;
   delete backup.payload.state.skillTest;
   delete backup.payload.state.scout;
@@ -182,7 +184,7 @@ test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia',
   });
   assert.equal(response.status, 200);
   const imported = await readSession(host);
-  assert.equal(imported.schemaVersion, 6);
+  assert.equal(imported.schemaVersion, 7);
   assert.equal(imported.preparation, null);
   assert.equal(imported.skillTest, null);
   assert.deepEqual(imported.catalog, current.catalog);
@@ -195,7 +197,7 @@ test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia',
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 7);
   assert.equal(migrated.preparation, null);
   assert.deepEqual(migrated.catalog, current.catalog);
   await recover(restarted, player);

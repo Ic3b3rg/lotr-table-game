@@ -6,6 +6,7 @@ import { personalView } from './personal';
 import { demoView } from './demo';
 import { backupView } from './backups';
 import { createCompany } from './company';
+import { createGuidedStart } from './guided-start';
 
 const personal = location.pathname === '/join';
 element('#personal').hidden = !personal;
@@ -19,15 +20,19 @@ const personalController = personal ? personalView(sync) : null;
 const demoController = demoView(sync);
 const backupController = backupView(sync);
 const companyController = createCompany(() => sync(true));
+const guidedController = createGuidedStart(() => sync(true));
 
 function renderSession(session: Session) {
   if (generation === session.generation && revision === session.revision) return;
   generation = session.generation;
   revision = session.revision;
-  element('#count').textContent = `${session.players.length} / 5`;
+  const expected = session.group?.expectedPlayers;
+  element('#count').textContent = expected
+    ? `${session.players.length} / ${expected}`
+    : `${session.players.length} presenti`;
   element('#saved').textContent =
     `Salvato sul PC · ${new Date(session.updatedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-  const rows = Array.from({ length: 5 }, (_, index) => {
+  const rows = Array.from({ length: expected ?? session.players.length }, (_, index) => {
     const player = session.players[index];
     const row = text('li', '', `player${player ? '' : ' empty'}`);
     row.append(
@@ -36,7 +41,7 @@ function renderSession(session: Session) {
     const description = document.createElement('div');
     description.append(
       text('span', player?.name ?? 'Posto libero', 'player-name'),
-      text('span', player ? 'Nella compagnia' : 'In attesa di un compagno', 'player-detail'),
+      text('span', player ? 'Giocatore al tavolo' : 'In attesa di un giocatore', 'player-detail'),
     );
     row.append(description, text('span', String(index + 1).padStart(2, '0'), 'slot-number'));
     return row;
@@ -47,7 +52,8 @@ function renderSession(session: Session) {
 function setConnection(value: boolean) {
   setOnline(value);
   const status = element('#connection');
-  status.textContent = value ? 'Collegato al PC' : 'Collegamento interrotto · riprovo…';
+  const message = value ? 'Collegato al PC' : 'Collegamento interrotto · riprovo…';
+  if (status.textContent !== message) status.textContent = message;
   status.classList.toggle('offline', !value);
 }
 
@@ -67,6 +73,7 @@ function sync(fresh = false): Promise<void> {
       renderSession(session);
       companyController.update(session, me.player);
       personalController?.update(session, me.player);
+      guidedController.update(session, me.player);
       demoController.update(session, personal ? me.player : null);
       backupController.update(session, me.canManageBackups);
       const requestedSession = new URL(location.href).searchParams.get('session');

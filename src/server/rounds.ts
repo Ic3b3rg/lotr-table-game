@@ -35,6 +35,12 @@ export function applyRoundCommand(state: State, playerId: string, command: Round
       'Concludi le carte rivelate prima di cambiare turno o fase.',
     );
   if (command.type === 'START_ROUNDS') {
+    if (state.group && !state.journey)
+      throw new ApiError(
+        409,
+        'MAP_REQUIRED',
+        'Apri la mappa della compagnia prima di iniziare i round.',
+      );
     if (state.round) throw new ApiError(409, 'ROUNDS_STARTED', 'I round sono già iniziati.');
     state.round = newRound(state, 1);
   } else {

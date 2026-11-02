@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette turni e fasi persistenti, mappa e viaggio interrompibile, interazioni con prova, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Generazione della mappa completa, capacità delle carte, combattimento e campagna giocabile seguono nei prossimi incrementi. [Mappa e viaggio](https://github.com/Ic3b3rg/lotr-table-game/issues/31).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette turni e fasi persistenti, mappa e viaggio interrompibile, interazioni con prova, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Generazione della mappa completa, capacità delle carte, combattimento e campagna giocabile seguono nei prossimi incrementi. [Accettazione della partita completa a tre](https://github.com/Ic3b3rg/lotr-table-game/issues/33).
 
 ## Preparazione iniziale
 
@@ -35,6 +35,30 @@ La sezione **Prova il collegamento** serve solo a verificare una scelta condivis
 
 Se ci sono più indirizzi, scegliere quello della Wi-Fi/Ethernet condivisa con i telefoni. Le reti ospiti possono impedire la comunicazione tra dispositivi. Per cambiare porta impostare `LOTR_PORT`; `LOTR_BIND` seleziona l'indirizzo di ascolto (predefinito `0.0.0.0`, tutte le interfacce IPv4).
 
+## Cominciare insieme
+
+Il percorso guidato mostra il passo attuale e chi deve agire:
+
+1. Ognuno entra con il proprio nome dalla vista personale e conserva il codice.
+2. Un partecipante conferma quanti giocatori aspettare. Attendete tutti i posti previsti.
+3. Ognuno salva il proprio eroe; controllate ruolo e oggetti con **Configura**. In solitario scegliete da due a quattro eroi.
+4. Concordate le scelte e preparate insieme i mazzi. Gli eroi diventano fissi.
+5. Un partecipante conferma la collocazione nel tratto di mappa disponibile.
+6. Iniziate il round, concordate l’ordine e gestite ciascun turno dalla vista del proprietario.
+
+**Guida al tavolo** resta nell’intestazione su PC e telefono: istruzioni, ricerca per argomento, regole dei comandi e limiti della versione. **Mostra tutti gli strumenti** apre catalogo, backup e strumenti secondari; **Torna al percorso guidato** riprende il passo reale senza cambiare il gioco. Le scelte locali non salvate restano nel modulo quando un compagno aggiorna il tavolo.
+
+Per rendere consultabili i documenti originali offline, copiare nella sottocartella `rules` dei dati i quattro PDF forniti, con questi nomi:
+
+- `manuale-gioco-it.pdf`
+- `rules-reference-en.pdf`
+- `faq-errata-it-2.0.pdf`
+- `carte-corrette-it.pdf`
+
+In alternativa indicare la cartella con `LOTR_RULES_DIR`, per esempio `LOTR_RULES_DIR="$PWD/.scratch/materials" npm start` su macOS. In PowerShell impostare `$env:LOTR_RULES_DIR` al percorso assoluto prima di `npm start`. Sono ammessi solo questi nomi, file PDF nella cartella e fino a 64 MB ciascuno. La guida riassuntiva funziona anche senza PDF; quelli mancanti sono indicati. I materiali originali restano privati.
+
+Le prove mostrano la pesca già salvata dal PC, con successi e fato. Non si lanciano dadi. Convertire fato, ricaricare o recuperare il posto conserva la stessa pesca; movimento ridotto evita l’animazione.
+
 ## Carte e preparazione della compagnia
 
 I contenuti reali si installano tramite un pacchetto privato: `catalog.json` e, facoltativamente, una cartella `assets/` accanto al file. Non sono distribuiti in questa repository. Copiare questi elementi nella cartella dati indicata sopra, oppure impostare `LOTR_CONTENT_PACK` al percorso del catalogo. Senza pacchetto la lobby funziona e segnala che le carte sono assenti.
@@ -56,17 +80,17 @@ npm start
 
 Aprire [il tavolo della compagnia](http://127.0.0.1:4321). Il percorso dati distinto conserva questa sessione separatamente dalle prove tecniche.
 
-Da **Mappa, eroi e carte**, entrare al tavolo e scegliere i propri eroi: da due a quattro in solitario, uno per persona con due–cinque partecipanti. Ruoli e oggetti suggeriti sono modificabili; le copie già assegnate restano riservate. I limiti individuali dell'eroe, le mani, l'armatura e il rango iniziale vengono controllati dall'host. Il PC condiviso può consultare tutte le schede senza entrare.
+Dal percorso guidato, entrare al tavolo e scegliere i propri eroi: da due a quattro in solitario, uno per persona con due–cinque partecipanti. Ruoli e oggetti suggeriti sono modificabili; le copie già assegnate restano riservate. I limiti individuali dell'eroe, le mani, l'armatura e il rango iniziale vengono controllati dall'host. Il PC condiviso può consultare tutte le schede senza entrare.
 
 Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Le prove standard sono disponibili subito sotto; cambi al campo e avventure seguiranno.
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3, 4 e 5 vengono migrati allo schema 6, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 6.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 6 vengono migrati allo schema 7, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 7. Il numero di giocatori dei tavoli precedenti resta non configurato: compagnie e round già attivi rimangono disponibili.
 
 ## Turni e fasi del round
 
-Dalla vista personale, dopo la preparazione, concordate **Inizia i round**.
+Dalla vista personale, dopo preparazione e collocazione sulla mappa, concordate **Inizia i round**.
 Il gruppo sceglie l'ordine; il proprietario avvia il turno di un proprio eroe.
 Ogni eroe ha fino a due azioni, anche ripetute, e può concludere senza usarle
 tutte. **Interazione · 1 azione** rivela una prova e consuma l'azione nella

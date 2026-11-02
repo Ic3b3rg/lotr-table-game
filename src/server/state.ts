@@ -6,6 +6,7 @@ import { SkillTestSchema, skillTestProblem } from '../shared/skill-tests';
 import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
 import { RoundSchema, roundProblem } from '../shared/rounds';
 import { journeyProblem } from '../shared/journey-map';
+import { groupProblem } from '../shared/group';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -26,6 +27,13 @@ const BaseStateSchema = SessionSchema.omit({
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
+  const groupError = groupProblem(state.group, state.players.length, state.preparation);
+  if (groupError) ctx.addIssue({ code: 'custom', message: groupError });
+  if (state.group && state.round && !state.journey)
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Un gruppo configurato richiede la mappa prima dei round.',
+    });
   if (state.preparation) {
     const problem = state.content
       ? preparationProblem(
@@ -78,6 +86,7 @@ const LegacyStateSchema = BaseStateSchema.omit({
   scout: true,
   round: true,
   journey: true,
+  group: true,
 }).extend({
   schemaVersion: z.literal(1),
 });
@@ -86,6 +95,7 @@ const VersionTwoStateSchema = BaseStateSchema.omit({
   scout: true,
   round: true,
   journey: true,
+  group: true,
 }).extend({
   schemaVersion: z.literal(2),
   preparation: PreparationSchema.extend({
@@ -98,29 +108,45 @@ const VersionThreeStateSchema = BaseStateSchema.omit({
   scout: true,
   round: true,
   journey: true,
+  group: true,
 }).extend({
   schemaVersion: z.literal(3),
   skillTest: SkillTestSchema.omit({ availableCount: true }).nullable(),
 });
-const VersionFourStateSchema = BaseStateSchema.omit({ round: true, journey: true }).extend({
+const VersionFourStateSchema = BaseStateSchema.omit({
+  round: true,
+  journey: true,
+  group: true,
+}).extend({
   schemaVersion: z.literal(4),
   scout: ScoutingSchema.omit({ roundId: true }).nullable(),
 });
-const VersionFiveStateSchema = BaseStateSchema.omit({ journey: true }).extend({
+const VersionFiveStateSchema = BaseStateSchema.omit({ journey: true, group: true }).extend({
   schemaVersion: z.literal(5),
+});
+const VersionSixStateSchema = BaseStateSchema.omit({ group: true }).extend({
+  schemaVersion: z.literal(6),
 });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 6) {
+      return StateSchema.parse({
+        ...VersionSixStateSchema.parse(raw),
+        schemaVersion: 7,
+        group: null,
+      });
+    }
     if (version === 5) {
       const previous = VersionFiveStateSchema.parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 6, journey: null });
+      return StateSchema.parse({ ...previous, schemaVersion: 7, group: null, journey: null });
     }
     if (version === 1) {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 6,
+        schemaVersion: 7,
+        group: null,
         journey: null,
         content: null,
         skillTest: null,
@@ -132,7 +158,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 6,
+        schemaVersion: 7,
+        group: null,
         journey: null,
         skillTest: null,
         scout: null,
@@ -149,7 +176,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 6,
+        schemaVersion: 7,
+        group: null,
         journey: null,
         scout: null,
         round: null,
@@ -160,7 +188,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 6,
+        schemaVersion: 7,
+        group: null,
         journey: null,
         round: null,
         scout: previous.scout ? { ...previous.scout, roundId: null } : null,

@@ -89,8 +89,12 @@ export function createMapBoard(select: (id: string) => void) {
   element('#map-center').onclick = center;
   const motion = element<HTMLInputElement>('#map-reduced-motion');
   motion.checked = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  motion.onchange = () => viewport.classList.toggle('map-no-motion', motion.checked);
+  motion.onchange = () => {
+    viewport.classList.toggle('map-no-motion', motion.checked);
+    document.body.classList.toggle('reduce-motion', motion.checked);
+  };
   viewport.classList.toggle('map-no-motion', motion.checked);
+  document.body.classList.toggle('reduce-motion', motion.checked);
 
   return {
     draw(definition: JourneyDefinition, heroes: Journey['heroes'], catalog: Catalog) {

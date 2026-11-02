@@ -4,6 +4,14 @@ Vocabolario del gioco e della sua versione digitale. Giocatori, eroi e dispositi
 
 ## Language
 
+**Gruppo**:
+Le persone che intendono partecipare alla stessa sessione di gioco.
+_Avoid_: Compagnia, eroi
+
+**Compagnia**:
+L'insieme degli eroi che affrontano la campagna, controllati dai giocatori del gruppo.
+_Avoid_: Gruppo, dispositivi
+
 **Giocatore**:
 La persona che partecipa al gioco e controlla uno o più eroi secondo le regole.
 _Avoid_: Eroe, dispositivo

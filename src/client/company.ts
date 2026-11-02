@@ -84,7 +84,7 @@ export function createCompany(sync: () => Promise<void>) {
     update(session: Session, player: Player | null) {
       const nextKey = `${session.generation}:${session.catalog?.id ?? ''}`;
       if (key !== nextKey && !loading) void load(session);
-      preparation.update(session, player, catalog);
+      preparation.update(session, location.pathname === '/join' ? player : null, catalog);
       rounds.update(session, location.pathname === '/join' ? player : null, catalog);
       journeyMap.update(session, location.pathname === '/join' ? player : null, catalog);
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);
