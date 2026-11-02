@@ -2,9 +2,11 @@
 
 2 novembre 2026, issue #31, base `main` a `1687ecc` dopo il merge della PR #30.
 
+[Revisione indipendente e correzione](../reviews/2026-11-02-travel.md).
+
 ## Automatiche
 
-`npm test`: **69/69 passati**, nessun test saltato: 60 precedenti e nove
+`npm test`: **70/70 passati**, nessun test saltato: 60 precedenti e dieci
 nuovi casi sul confine HTTP reale. `npm run typecheck` e
 `npm run format:check` passano. Nessuna nuova dipendenza.
 
@@ -29,6 +31,14 @@ comandi viaggio 422. Le prove ora verificano:
   sono respinti atomicamente anche con checksum valido.
 - Immagini PNG dichiarate, limite e confinamento nella cartella assets;
   file non dichiarati, contenuti non PNG, percorsi e symlink esterni respinti.
+
+La revisione ha trovato un residuo alterato che poteva sfruttare il conteggio
+totale delle azioni, compresa un'interazione. La regressione HTTP rispondeva
+200 invece di 422. Ora il residuo viene riconciliato con le ricevute viaggio
+e movimento della stessa mappa/round/turno/eroe: un'interazione non concede
+movimenti. Il backup alterato è rifiutato senza sostituire il tavolo; anche
+l'avvio da un salvataggio locale alterato viene rifiutato. Suite completa
+rieseguita dopo la correzione, con 70 passati e nessun test saltato.
 
 Test pubblici con contenuti e geometria inventati. Dati e immagini originali
 del frammento rimangono nel pacchetto privato.
@@ -76,3 +86,12 @@ le pose del personaggio della direzione diorama completa seguiranno.
 Non sono automatizzati esplorazione, nemici/provocazioni, terreni battaglia,
 tratti delle caselle, capacità e Scatto. Schema 6: downgrade con copia
 precedente. Prova fisica ancora in #5. [Provenienza della mappa](../research/journey-map-topology.md).
+
+Il tavolo privato sulla porta 4339 è aggiornato, con pacchetto 302A disponibile.
+Conservata prima la copia schema 5
+`.scratch/travel-browser-31/pre-upgrade-private-session.json`. Il confronto
+prima/dopo conserva identità, revisione, carte, round e ricevute; aggiunge
+soltanto schema 6 e mappa assente. Dopo la correzione del controllo movimenti,
+entrambi gli host sono ripartiti con payload identico; le 13 asserzioni browser
+passano ancora sulle due viste. Nessuna configurazione di una partita reale
+è stata automatizzata al posto del gruppo.

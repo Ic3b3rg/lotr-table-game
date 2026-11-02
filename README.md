@@ -184,7 +184,8 @@ npm test
 [revisione e correzioni](docs/reviews/2026-11-02-rounds.md).
 
 [Contratto del viaggio](docs/planning/travel-spec.md) e
-[verifiche di mappa e movimento](docs/testing/travel-verification.md).
+[verifiche di mappa e movimento](docs/testing/travel-verification.md),
+[revisione e correzione](docs/reviews/2026-11-02-travel.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 
