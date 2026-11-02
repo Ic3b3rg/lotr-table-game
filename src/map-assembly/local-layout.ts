@@ -13,7 +13,7 @@ import {
   resetTile,
   rotateTile,
 } from './state';
-import { f, transform, times } from './physical';
+import { f, plus, transform, times } from './physical';
 
 export type TrieNode = { value: number; children: TrieNode[] };
 /** Ordered SequenceTree, including final-node pruning and nonterminal prefixes. */
@@ -102,10 +102,14 @@ function attachNext(
     const tile = take(s, hash);
     if (!tile) return -1;
     search.tileToAttach = tile.shape.source;
-    tile.position = times(
+    const localPosition = times(
       transform([0, 0, 0], tile.shape.hexes.find((h) => cubeKey(h.coords) === '0,0,0')!.transform),
       -1,
     );
+    // A1356:002e sets LOCAL position while the tile is still parented to
+    // its bucket. SetParent at0057 preserves the resulting world position.
+    tile.position =
+      tile.parentSectionId === null ? plus(tile.shape.resetPosition, localPosition) : localPosition;
     const rotation = rng.nextInt(0, 6);
     rotateTile(
       tile,

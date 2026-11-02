@@ -11,7 +11,7 @@ try {
   const names = tokens.filter((t) => t.kind === 'option').map((t) => t.name);
   if (new Set(names).size !== names.length) throw new Error('Opzioni duplicate.');
   if (!values.input || !values.output) throw new Error('Usare --input file --output nuovo-file.');
-  const bytes = await readBounded(values.input, 16 * 1024 * 1024);
+  const bytes = await readBounded(values.input, 64 * 1024 * 1024);
   let result;
   try {
     result = assembleMap(JSON.parse(bytes.toString('utf8')));

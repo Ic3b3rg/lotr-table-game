@@ -263,7 +263,8 @@ class Assembly {
         worldCenter: center(this.world, t, i),
       })),
     });
-    return freeze({
+    const { invalid, ...localState } = this.local;
+    const result = {
       formatVersion: 1 as const,
       algorithm: this.input.algorithm,
       scope: 'geometry-only' as const,
@@ -326,10 +327,9 @@ class Assembly {
       graph: this.graph?.graph ?? null,
       search: {
         local: {
-          ...this.local,
-          invalidSequences: this.local.invalid.children,
-          invalidCount: this.local.invalid.count,
-          invalid: undefined,
+          ...localState,
+          invalidSequences: invalid.children,
+          invalidCount: invalid.count,
         },
         sections: this.sections,
         stage: this.stage,
@@ -343,7 +343,16 @@ class Assembly {
         observations: this.clock.observations,
       },
       rng: this.random?.snapshot() ?? null,
-    });
+    };
+    return status === 'geometry-complete'
+      ? freeze({
+          ...result,
+          status: 'geometry-complete' as const,
+          checkpoint: 'after-graph-before-all-spaces-shuffle' as const,
+          failure: null,
+          graph: this.graph!.graph,
+        })
+      : freeze({ ...result, status, checkpoint: null, failure: failure! });
   }
 }
 /** Versioned, validated raw input; immutable result. No checkpoint input is accepted. */

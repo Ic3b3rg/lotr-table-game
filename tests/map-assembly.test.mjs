@@ -631,3 +631,127 @@ for (const [name, edit] of [
       assert.match(process.stderr, /Input/);
     });
   });
+
+test('forbidden incidental pairs are rejected even at compatible nontraversable contacts', async () => {
+  const f = assemblyFixture();
+  f.geometry.invalidConnections = [[0, 2]];
+  for (const e of f.geometry.tiles[5].edges) if (e.direction === 2) e.traits = 700;
+  await run(f, (r) => {
+    const v = complete(r),
+      e = v.trace.find((e) => e.operation === 'section-candidates' && e.sectionId === 0);
+    assert.equal(e.targetSectionId, 1);
+    assert.ok(e.rejected.forbidden > 0);
+    assert.ok(e.nonTraversableForbiddenContacts > 0);
+    assert.ok(!v.contacts.some((c) => [c.a.sectionId, c.b.sectionId].sort().join(',') === '0,2'));
+  });
+});
+
+test('bounded CLI rejects oversized files, duplicate arguments and input/output aliases without changing files', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'lotr-assembly-io-'));
+  try {
+    const source = join(dir, 'huge.json'),
+      output = join(dir, 'output.json');
+    await writeFile(source, ' '.repeat(64 * 1024 * 1024 + 1));
+    const p = spawnSync(globalThis.process.execPath, [cli, '--input', source, '--output', output], {
+      encoding: 'utf8',
+    });
+    assert.equal(p.status, 1);
+    assert.match(p.stderr, /massimo/);
+    await assert.rejects(readFile(output));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  await run(assemblyFixture(), async (r) => {
+    complete(r);
+    const p = spawnSync(
+      globalThis.process.execPath,
+      [cli, '--input', r.source, '--output', r.source],
+      { encoding: 'utf8' },
+    );
+    assert.equal(p.status, 1);
+    assert.equal(await readFile(r.source, 'utf8'), r.bytes);
+  });
+  await run(
+    assemblyFixture(),
+    ({ process, result }) => {
+      assert.equal(process.status, 1);
+      assert.equal(result, undefined);
+      assert.match(process.stderr, /duplicate/);
+    },
+    ['--input', 'duplicate'],
+  );
+});
+
+test('five-second comparison is strict and its unchecked root-only jump remains a source operation exception', async () => {
+  const f = assemblyFixture();
+  f.geometry.invalidConnections = [[1, 3]];
+  await run(f, async ({ process, result: recording }) => {
+    assert.equal(process.status, 2);
+    assert.equal(recording.failure.reason, 'section-root-exhausted');
+    const observations = recording.clock.observations,
+      at = observations.findIndex((o) => o.site === 'five-second-test');
+    assert.ok(at > 0);
+    for (const [time, reason] of [
+      [5000, 'section-root-exhausted'],
+      [5000.5, 'five-second-map-index'],
+    ]) {
+      const p = structuredClone(f),
+        rows = structuredClone(time === 5000 ? observations : observations.slice(0, at + 1));
+      for (let i = at; i < rows.length; i++) rows[i].elapsedMilliseconds = time;
+      p.execution.clock = {
+        policy: 'replay-clock-v1',
+        timeoutMilliseconds: 30000,
+        observations: rows,
+      };
+      await run(p, ({ process, result: v }) => {
+        assert.equal(process.status, 2);
+        assert.equal(v.failure.reason, reason);
+        assert.equal(v.trace.find((e) => e.operation === 'five-second-decision').jump, time > 5000);
+        if (time > 5000) {
+          assert.equal(v.status, 'source-operation-exception');
+          assert.equal(v.failure.sourceErrorCode, null);
+        }
+      });
+    }
+  });
+});
+
+test('overflowing native-frame inputs are invalid before search, rather than producing nonfinite geometry diagnostics', async () => {
+  const f = assemblyFixture(),
+    template = f.geometry.tiles[0].hexes[0].transform[0];
+  f.geometry.tiles[0].hexes[0].transform = Array.from({ length: 32 }, () => ({
+    ...structuredClone(template),
+    scale: [100, 100, 100],
+  }));
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 1);
+    assert.equal(result, undefined);
+    assert.match(process.stderr, /Input/);
+  });
+});
+
+test('first-tile placement retains the audited bucket world frame until weighted recenter', async () => {
+  const origin = assemblyFixture(),
+    shifted = structuredClone(origin),
+    offset = [15, -80, 3];
+  shifted.geometry.tiles.forEach((t) => {
+    t.resetPosition = [...offset];
+  });
+  await run(origin, async (a) => {
+    const before = complete(a);
+    await run(shifted, (b) => {
+      const after = complete(b);
+      for (let i = 0; i < 4; i++) {
+        const first = before.trace.find((e) => e.operation === 'recenter' && e.sectionId === i),
+          second = after.trace.find((e) => e.operation === 'recenter' && e.sectionId === i);
+        for (let j = 0; j < 3; j++)
+          assert.ok(
+            Math.abs(second.mean[j] - first.mean[j] - offset[j]) < 0.0001,
+            `section ${i}, axis ${j}: source bucket translation lost`,
+          );
+        assert.deepEqual(second.cubesBefore, first.cubesBefore);
+      }
+      assert.deepEqual(before.rng, after.rng);
+    });
+  });
+});

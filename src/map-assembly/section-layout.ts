@@ -76,6 +76,7 @@ function calculate(
       required: 0,
     };
   let enumerationIndex = 0;
+  let nonTraversableForbiddenContacts = 0;
   for (let ti = 0; ti < targets.length; ti++) {
     search.targetCursor = ti;
     const target = targets[ti]!,
@@ -137,6 +138,7 @@ function calculate(
           break;
         }
         if (!allowed(w, s.id, neighbor.section.id)) {
+          if (!isConnection(other, ours)) nonTraversableForbiddenContacts++;
           rejected.forbidden!++;
           compatible = false;
           break;
@@ -170,6 +172,7 @@ function calculate(
     fullMapBoundaryCount: full.length,
     incomingBoundaryCount: incoming.length,
     fullCombinedCount,
+    nonTraversableForbiddenContacts,
     targetBoundaryCount: targets.length,
     targetSectionId,
     requiredAttached,

@@ -27,12 +27,14 @@ export type Observe = {
 /** Poll sites are an explicit port policy; no claim to Unity frame scheduling. */
 export class SearchClock {
   readonly observations: ClockObservation[] = [];
-  private readonly start = performance.now();
+  private readonly start: number;
   private elapsed = 0;
   constructor(
     private policy: AssemblyInput['execution']['clock'],
     private limit: number,
-  ) {}
+  ) {
+    this.start = policy.policy === 'monotonic-clock-v1' ? performance.now() : 0;
+  }
   observe(context: ClockContext): number {
     if (this.observations.length >= this.limit)
       throw new AssemblyStop(

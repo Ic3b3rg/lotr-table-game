@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { transform } from './physical';
 import { parseSelectionInput } from '../map-selection/model';
 import { add, cubeKey, DIRECTIONS, edgeKey } from '../map-geometry/model';
 
@@ -215,7 +216,20 @@ export function parseAssemblyInput(value: unknown) {
   const checkRef = (r: string) => {
     if (!files.has(r.slice(0, r.lastIndexOf(':')))) fail(`File non dichiarato: ${r}.`);
   };
-  const checkFrames = (fs: Frame[]) => fs.forEach((f) => checkRef(f.source));
+  const boundedPoint = (point: Vector) => {
+    if (point.some((n) => !Number.isFinite(n) || Math.abs(n) > 1e6))
+      fail('Composizione Transform fuori dai limiti numerici del port.');
+  };
+  const checkFrames = (fs: Frame[]) => {
+    fs.forEach((f) => checkRef(f.source));
+    for (const p of [
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ] satisfies Vector[])
+      boundedPoint(transform(p, fs));
+  };
   const models = new Map([...selection.standard, ...selection.custom].map((t) => [t.source, t]));
   const owned = new Set(
     selection.products
@@ -299,6 +313,17 @@ export function parseAssemblyInput(value: unknown) {
       checkRef(h.source);
       checkRef(h.meshSource);
       checkFrames(h.transform);
+      for (let d = 0; d < 6; d++)
+        boundedPoint(
+          transform(
+            [
+              Math.fround(h.bounds.extents[1] * g.cornerCos[d]!),
+              Math.fround(h.bounds.extents[1] * g.cornerSin[d]!),
+              0,
+            ],
+            h.transform,
+          ),
+        );
       if (h.render.polygon.length !== h.render.uv.length)
         fail('Poligono/UV di rendering incompatibili.');
       for (let d = 0; d < 6; d++)
