@@ -4,9 +4,9 @@
 
 ## Automatiche
 
-`npm test`: **39/39 passati**, nessun test saltato. Comprende i 29 test
-precedenti e dieci nuovi casi sull'HTTP dell'host reale. `npm run typecheck`
-passa. La formattazione viene controllata con `npm run format:check`.
+`npm test`: **40/40 passati**, nessun test saltato. Comprende i 29 test
+precedenti e undici nuovi casi sull'HTTP dell'host reale. `npm run typecheck`
+e `npm run format:check` passano.
 
 Il primo test è stato eseguito prima del codice: `START_SKILL_TEST` era
 rifiutato con 422; dopo l'implementazione restituisce 200, tre carte corrette
@@ -25,6 +25,10 @@ ciascuna un ciclo rosso/verde registrato durante l'implementazione.
   ispirazione eccedente, rivelate mancanti/duplicate, eroe inesistente,
   conversioni eccedenti o caratteristica incoerente rifiutati atomicamente,
   anche quando il checksum viene ricalcolato.
+- La revisione ha rilevato il formato intermedio dello schema 2 senza il campo
+  `preparation`. La nuova regressione falliva con 422 prima della correzione;
+  ripristino e riavvio ora migrano quel formato e conservano catalogo e identità.
+  [Rapporto della revisione](../reviews/2026-11-02-skill-tests.md).
 
 ## Browser
 

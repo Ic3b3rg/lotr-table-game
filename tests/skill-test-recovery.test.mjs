@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
-import { startHost } from './host-helper.mjs';
-import { command } from './preparation-helper.mjs';
+import { startHost, joinPlayer } from './host-helper.mjs';
+import { command, setup } from './preparation-helper.mjs';
+import { catalogFixture } from './fixtures/catalog.mjs';
 import {
   readyCompany,
   readSession,
@@ -156,4 +157,40 @@ test('copie rivelate o ispirazione incoerenti non sostituiscono il tavolo anche 
     assert.equal(response.status, 422);
     assert.deepEqual(await readSession(host), state);
   }
+});
+
+test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia', async (t) => {
+  const host = await setup(t, catalogFixture());
+  const player = await joinPlayer(host, 'Frodo');
+  const current = await readSession(host);
+  const backup = await readBackup(host);
+  backup.payload.state.schemaVersion = 2;
+  delete backup.payload.state.preparation;
+  delete backup.payload.state.skillTest;
+  signBackup(backup);
+  const response = await host.request('/api/restores', {
+    backup,
+    generation: current.generation,
+    expectedRevision: current.revision,
+    confirmed: true,
+  });
+  assert.equal(response.status, 200);
+  const imported = await readSession(host);
+  assert.equal(imported.schemaVersion, 3);
+  assert.equal(imported.preparation, null);
+  assert.equal(imported.skillTest, null);
+  assert.deepEqual(imported.catalog, current.catalog);
+  assert.deepEqual(imported.players, current.players);
+
+  await host.stop();
+  const db = new DatabaseSync(join(host.dataDir, 'session.sqlite'));
+  db.prepare('UPDATE session SET data=? WHERE id=1').run(JSON.stringify(backup.payload.state));
+  db.close();
+  const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
+  t.after(() => restarted.stop());
+  const migrated = await readSession(restarted);
+  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.preparation, null);
+  assert.deepEqual(migrated.catalog, current.catalog);
+  await recover(restarted, player);
 });

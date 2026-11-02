@@ -58,7 +58,9 @@ const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true }).extend({
   schemaVersion: z.literal(2),
   preparation: PreparationSchema.extend({
     heroes: z.array(PreparedHeroSchema.omit({ inspiration: true })).max(5),
-  }).nullable(),
+  })
+    .nullable()
+    .default(null),
 });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {

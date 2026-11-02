@@ -54,5 +54,5 @@ File: `src/client/skill-tests.ts`, `src/client/company.ts`,
   limite esplicito sulle capacità non automatizzate e moduli stabili al polling.
 - [x] Provare realmente desktop e telefono nel browser; correggere i difetti
   osservati in un passaggio e verificare il risultato.
-- [ ] Eseguire typecheck, formattazione e suite completa; revisione standard e
+- [x] Eseguire typecheck, formattazione e suite completa; revisione standard e
   specifica in parallelo. Correggere i rilievi, documentare le evidenze e commit.
