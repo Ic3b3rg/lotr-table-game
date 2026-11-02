@@ -31,7 +31,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   let preparedKey = '';
   let limitKey = '';
   let choices: Choice[] = [];
-  const commands = createGameActions(() => current, sync, root, status, error);
+  const commands = createGameActions(() => current, sync, root, status, error, controls);
   const label = (copy: string) =>
     catalog!.skills.find((card) => card.id === definitionId(copy))!.name.text;
   function options(select: HTMLSelectElement, copies: string[], empty: string) {
@@ -50,19 +50,33 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
     if (!current) return;
     const pending = current.scout;
     const activeTest = current.skillTest?.status === 'converting';
+    const round = current.round;
+    const inRally = round?.phase === 'rally';
+    for (const option of heroSelect.options) {
+      option.disabled = Boolean(
+        inRally && round.heroes.find((hero) => hero.heroId === option.value)?.rallyDone,
+      );
+    }
+    if (heroSelect.selectedOptions[0]?.disabled)
+      heroSelect.value = [...heroSelect.options].find((option) => !option.disabled)?.value ?? '';
     const mine = current.preparation?.heroes.find(
       (hero) => hero.heroId === heroSelect.value && hero.playerId === player?.id,
     );
     form.hidden = Boolean(pending) || !mine;
     start.dataset.blocked = rally.dataset.blocked = String(Boolean(pending) || activeTest || !mine);
-    element('#scout-discard-controls').hidden = !mine || Boolean(pending);
+    start.hidden = Boolean(inRally);
+    rally.hidden = Boolean(round && !inRally);
+    rally.textContent = inRally ? 'Scopri 2 per la Riorganizzazione' : 'Ricomponi e scopri 2';
+    element('#scout-count-field').hidden = Boolean(inRally);
+    count.disabled = Boolean(inRally);
+    element('#scout-discard-controls').hidden = !mine || Boolean(pending) || Boolean(inRally);
     const nextPrepared = `${current.generation}:${mine?.heroId}:${mine?.prepared.join(',')}`;
     if (preparedKey !== nextPrepared) {
       options(discardSelect, mine?.prepared ?? [], 'Scegli una carta preparata');
       preparedKey = nextPrepared;
     }
     discard.dataset.blocked = String(
-      !mine || activeTest || Boolean(pending) || !discardSelect.value,
+      !mine || activeTest || Boolean(pending) || !discardSelect.value || Boolean(inRally),
     );
     const owner =
       pending && current.preparation?.heroes.find((hero) => hero.heroId === pending.heroId);
@@ -151,14 +165,26 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   }
   form.onsubmit = (event) => {
     event.preventDefault();
+    if (current?.round?.phase === 'rally') {
+      startRally();
+      return;
+    }
     void commands.submit(
       { type: 'START_SCOUT', heroId: heroSelect.value, count: count.valueAsNumber },
       true,
     );
   };
-  rally.onclick = () => {
-    void commands.submit({ type: 'START_RALLY_SCOUT', heroId: heroSelect.value }, true);
-  };
+  function startRally() {
+    void commands.submit(
+      {
+        type: 'START_RALLY_SCOUT',
+        heroId: heroSelect.value,
+        ...(current?.round ? { roundId: current.round.id } : {}),
+      },
+      true,
+    );
+  }
+  rally.onclick = startRally;
   choiceForm.onsubmit = (event) => {
     event.preventDefault();
     if (!current?.scout) return;
@@ -191,6 +217,11 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
       catalog = content;
       root.hidden = !catalog || session.preparation?.status !== 'prepared';
       if (root.hidden || !catalog) return;
+      element('#scout-phase-help').textContent = !session.round
+        ? 'Scopri carte quando una regola o una capacità lo richiede. Puoi prepararne una e scegliere l’ordine delle altre sopra o sotto il mazzo. Per riorganizzare l’eroe, ricomponi prima il mazzo e scopri due carte.'
+        : session.round.phase === 'rally'
+          ? 'Tutti i mazzi sono già ricomposti. Ogni eroe scopre due carte una sola volta: può prepararne una e ordinare le altre sopra o sotto il mazzo.'
+          : 'Scoperta da un effetto già determinato dal gruppo non consuma azioni. La ricomposizione dei mazzi avviene nella Riorganizzazione comune.';
       const mine = session.preparation!.heroes.filter((hero) => hero.playerId === player?.id);
       const nextRoster = `${session.generation}:${player?.id}:${mine.map((hero) => hero.heroId)}`;
       if (rosterKey !== nextRoster) {
@@ -223,7 +254,15 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
         ? `${hero!.name.text} · Scoperta: ${session.scout.revealed.length} carte. Le carte rivelate sono salvate sul PC. Conferma preparazione e ordine.`
         : session.skillTest?.status === 'converting'
           ? 'Concludi la prova abilità prima di scoprire carte.'
-          : 'Nessuna Scoperta in corso. Le carte preparate restano nell’area di ogni eroe.';
+          : session.round?.phase === 'rally' &&
+              mine.length > 0 &&
+              mine.every(
+                (hero) =>
+                  session.round!.heroes.find((progress) => progress.heroId === hero.heroId)!
+                    .rallyDone,
+              )
+            ? 'I tuoi eroi hanno concluso Scoperta 2 per questo round. Attendete la compagnia e aprite il prossimo round.'
+            : 'Nessuna Scoperta in corso. Le carte preparate restano nell’area di ogni eroe.';
       if (status.textContent !== message) status.textContent = message;
       element('#scout-observer').hidden = mine.length > 0;
       controls();

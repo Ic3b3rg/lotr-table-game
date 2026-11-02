@@ -1,8 +1,9 @@
-import type { ScoutingCommand, Session, SkillTestCommand } from '../shared/protocol';
+import type { RoundCommand, ScoutingCommand, Session, SkillTestCommand } from '../shared/protocol';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
-type Intent<C = ScoutingCommand | SkillTestCommand> = C extends ScoutingCommand | SkillTestCommand
+type GameCommand = RoundCommand | ScoutingCommand | SkillTestCommand;
+type Intent<C = GameCommand> = C extends GameCommand
   ? Omit<C, 'requestId' | 'generation' | 'expectedRevision'>
   : never;
 
@@ -12,6 +13,7 @@ export function createGameActions(
   root: HTMLElement,
   status: HTMLElement,
   error: HTMLElement,
+  refreshControls?: () => void,
 ) {
   let pending: { signature: string; body: object } | null = null;
   return {
@@ -61,6 +63,7 @@ export function createGameActions(
         } finally {
           for (const { control, disabled } of controls)
             if (control.isConnected) control.disabled = disabled;
+          refreshControls?.();
         }
       });
       if (completed) {

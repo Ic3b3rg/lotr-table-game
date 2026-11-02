@@ -1122,3 +1122,49 @@ details[open] {
   gap: 16px;
   justify-content: space-between;
 }
+.round-heroes {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0;
+  font-variant-numeric: tabular-nums;
+}
+.round-heroes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #778276;
+  overflow-wrap: anywhere;
+}
+.round-heroes span {
+  color: var(--journey-muted);
+}
+.round-heroes .round-active strong {
+  color: #edc77a;
+}
+#rounds .hero-choice {
+  margin: 24px 0;
+  font-size: 16px;
+}
+#round-turn-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+#round-turn-controls p {
+  flex-basis: 100%;
+}
+#round-interact {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (max-width: 600px) {
+  .round-heroes li {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .round-heroes li > span:last-child {
+    grid-column: 1 / -1;
+  }
+}
