@@ -22,7 +22,7 @@
         <h1>La compagnia si riunisce.</h1>
         <p class="lede">Un PC al centro. Un posto per ognuno.</p>
         <nav class="page-links" aria-label="Vai al tavolo">
-          <a href="#journey">Eroi e carte</a><a href="#backups">Salvataggio</a>
+          <a href="#journey">Mappa, eroi e carte</a><a href="#backups">Salvataggio</a>
         </nav>
       </div>
       <p id="notice" class="notice" role="status" hidden></p>
@@ -108,9 +108,83 @@
         </section>
         <section id="journey" class="journey" aria-labelledby="journey-title">
           <div class="journey-heading">
-            <h2 id="journey-title">Gli eroi della compagnia</h2>
+            <h2 id="journey-title">Il viaggio della compagnia</h2>
             <p id="content-status" role="status">Caricamento delle carte…</p>
           </div>
+          <section id="journey-map" class="journey-map" aria-labelledby="map-title" hidden>
+            <h3 id="map-title">La mappa del viaggio</h3>
+            <p id="map-scope" class="company-help">
+              Tratto verificato in orientamento canonico. Generazione della mappa completa,
+              esplorazione, nemici ed eventi dell’avventura seguiranno.
+            </p>
+            <form id="map-open-form" hidden>
+              <label class="hero-choice"
+                ><input id="map-agreed" type="checkbox" required />Il gruppo è pronto a collocare
+                gli eroi nel tratto iniziale.</label
+              >
+              <button id="map-open" class="company-action" type="submit" data-write>
+                Apri il tratto e colloca gli eroi
+              </button>
+            </form>
+            <div id="map-view" hidden>
+              <div
+                id="map-viewport"
+                class="map-viewport"
+                tabindex="0"
+                role="region"
+                aria-label="Mappa esplorabile"
+                aria-describedby="map-camera-help"
+              ></div>
+              <details class="map-settings">
+                <summary>Visuale e movimento ridotto</summary>
+                <p id="map-camera-help" class="company-help">
+                  Trascina per spostare la visuale, oppure usa i comandi. Con la tastiera: frecce
+                  per spostare, + e − per lo zoom, Home per centrare.
+                </p>
+                <div class="map-camera-controls" aria-label="Visuale della mappa">
+                  <button id="map-zoom-in" class="company-link" type="button">Avvicina</button>
+                  <button id="map-zoom-out" class="company-link" type="button">Allontana</button>
+                  <button id="map-pan-left" class="company-link" type="button">
+                    Visuale a sinistra
+                  </button>
+                  <button id="map-pan-right" class="company-link" type="button">
+                    Visuale a destra
+                  </button>
+                  <button id="map-center" class="company-link" type="button">
+                    Centra sull’eroe
+                  </button>
+                  <label><input id="map-reduced-motion" type="checkbox" />Movimento ridotto</label>
+                </div>
+                <p id="map-image-note" class="company-help" hidden>
+                  Immagine non disponibile: la sagoma e le caselle restano utilizzabili.
+                </p>
+              </details>
+              <ul id="map-positions" class="map-positions"></ul>
+              <div id="map-personal-controls" hidden>
+                <p id="map-budget" class="map-budget"></p>
+                <button id="start-travel" class="company-action" type="button" data-write>
+                  Inizia viaggio · 1 azione
+                </button>
+                <form id="map-move-form">
+                  <div class="test-fields">
+                    <label
+                      >Destinazione<select id="map-destination">
+                        <option value="">Scegli una casella sulla mappa</option>
+                      </select></label
+                    >
+                  </div>
+                  <p id="map-preview" class="company-help">
+                    Seleziona una casella prima di confermare il movimento.
+                  </p>
+                  <button id="move-hero" class="company-action" type="submit" data-write>
+                    Conferma movimento
+                  </button>
+                </form>
+              </div>
+            </div>
+            <p id="map-status" class="test-status" role="status" tabindex="-1"></p>
+            <p id="map-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+          </section>
           <section id="rounds" class="skill-tests" aria-labelledby="round-title" hidden>
             <h3 id="round-title">Il round della compagnia</h3>
             <p id="round-status" class="test-status" role="status" tabindex="-1"></p>
@@ -378,7 +452,7 @@
         <span class="small-mark" aria-hidden="true">✧</span>
         <p>
           Compagnia e carte · tavolo locale<br /><span
-            >Turni, prove e Scoperta disponibili. Capacità, movimento, combattimento e campagna
+            >Turni, viaggio, prove e Scoperta disponibili. Capacità, combattimento e campagna
             seguono.</span
           >
         </p>

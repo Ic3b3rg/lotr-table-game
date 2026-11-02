@@ -4,8 +4,13 @@ import { catalogFixture } from './fixtures/catalog.mjs';
 import { joinPlayer } from './host-helper.mjs';
 import { command, setup } from './preparation-helper.mjs';
 
-export async function readyCompany(t, catalog = catalogFixture(), multiplayer = false) {
-  const host = await setup(t, catalog);
+export async function readyCompany(
+  t,
+  catalog = catalogFixture(),
+  multiplayer = false,
+  extraEnv = {},
+) {
+  const host = await setup(t, catalog, extraEnv);
   const player = await joinPlayer(host, 'Frodo');
   const other = multiplayer ? await joinPlayer(host, 'Sam') : null;
   assert.equal(

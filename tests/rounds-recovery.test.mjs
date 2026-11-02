@@ -149,6 +149,7 @@ test('schema 4 con Scoperta aperta migra senza riordinare e resta indipendente d
   const backup = await readBackup(host);
   backup.payload.state.schemaVersion = 4;
   delete backup.payload.state.round;
+  delete backup.payload.state.journey;
   delete backup.payload.state.scout.roundId;
   signBackup(backup);
   await host.stop();
@@ -158,7 +159,7 @@ test('schema 4 con Scoperta aperta migra senza riordinare e resta indipendente d
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 5);
+  assert.equal(migrated.schemaVersion, 6);
   assert.equal(migrated.round, null);
   assert.deepEqual(migrated.scout, before.scout);
   assert.deepEqual(migrated.preparation, before.preparation);

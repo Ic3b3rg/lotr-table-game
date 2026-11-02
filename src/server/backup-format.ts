@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { IntentIdSchema, ReceiptSchema } from '../shared/protocol';
 import { StateSchema, parseState } from './state';
+import { journeyBudgetProblem } from './journey-map';
 
 const HashSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const BackupCommandSchema = z.strictObject({
@@ -13,6 +14,11 @@ export const BackupCommandSchema = z.strictObject({
 export const BackupPayloadSchema = z
   .strictObject({ state: StateSchema, commands: z.array(BackupCommandSchema).max(5000) })
   .superRefine((payload, ctx) => {
+    const budgetProblem = journeyBudgetProblem(
+      payload.state,
+      payload.commands.map((command) => command.receipt),
+    );
+    if (budgetProblem) ctx.addIssue({ code: 'custom', message: budgetProblem });
     const ids = new Set(payload.state.players.map((player) => player.id));
     const keys = new Set<string>();
     for (const command of payload.commands) {

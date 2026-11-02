@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { startHost } from './host-helper.mjs';
 import { privateCatalog } from './fixtures/catalog.mjs';
 
-export async function setup(t, catalog) {
+export async function setup(t, catalog, extraEnv = {}) {
   const pack = await privateCatalog(catalog);
-  const host = await startHost({ LOTR_CONTENT_PACK: pack.path });
+  const host = await startHost({ LOTR_CONTENT_PACK: pack.path, ...extraEnv });
   t.after(async () => {
     await host.dispose();
     await pack.dispose();
