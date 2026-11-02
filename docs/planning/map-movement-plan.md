@@ -57,3 +57,12 @@ locali ordinati e checkout pulito. Root esegue review Standards/Spec e merge.
   clock-stop dopo grafo che deve comunque avere movimento nullo.
 - Conservare e verificare le prove di ogni arco; il checker privato ricostruisce
   i contatti dalle pose, invece di riusare `traversable` come autorità.
+
+## Esito
+
+Task 1–3 completati: specifica/piano `2b02b2c`, validazione `f2b3262`,
+API/CLI `639f662`; 29 test dedicati e 222/222 completi. Matrice privata 47/47,
+confronti fonte integrali identici, H3 22 caselle/43 archi/una componente,
+replay esatto e stop finale con movimento nullo. Report e limiti in
+[map-movement-verification.md](../testing/map-movement-verification.md).
+Review Standards/Spec fresche e operazioni GitHub restano al root.

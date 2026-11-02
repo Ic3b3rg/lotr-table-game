@@ -1,0 +1,2468 @@
+{
+  "formatVersion": 1,
+  "issue": 50,
+  "baseCommit": "d735d170073a800757816561bd2c17263c11264e",
+  "scope": "geometry-only",
+  "sourceParity": "not-certified",
+  "matrixEvidenceSha256": "1faa032eac49f30e337d3044b36829c17da750e3c134f2a5841c4dbebf6e5712",
+  "replayEvidenceSha256": "00f32ec4d8a424ff13cbdd920779d45e633a091cd20ca449a90bc40ae5de8ea3",
+  "matrix": {
+    "formatVersion": 1,
+    "scope": "geometry-only",
+    "baseCommit": "d735d170073a800757816561bd2c17263c11264e",
+    "checkerSha256": "fe7f33830d470163d6641a2f7b0fd9bf519e1cd80454486bf0bdb71a43d85f04",
+    "geometryCheckerSha256": "e74b2722a2dd2770ac59bdc44b09be08c6fa9c9c5775203c014aa8d831cab245",
+    "baselineCliSha256": "01acdcf1820bbe10e6adae8b180ed921f64500cc5e95f645484799d68a3564a6",
+    "implementationCliSha256": "aac9235c9d3eb8227a9164260e9801e978aa7aedc43ed6e613d4d8df4e67638f",
+    "cases": 47,
+    "allSourceFieldsIdentical": true,
+    "connectedCases": 47,
+    "disconnectedCases": [],
+    "rows": [
+      {
+        "case": "H1-retained-retry-seed2",
+        "inputSha256": "c1e01426827b3f7d6483d05c01a458eb4f08f1c5a29fa3f121a68becce3dfeaa",
+        "outputSha256": "1777d922d5744da912dcb0afe1f3b7f0b326f0e52060952c2e71ce4dc4275997",
+        "sourceCanonicalSha256": "3037c6cf7bc76959327b017f58dd33ce13eda4872cf7592964b8124c3d12abc5",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 60982,
+        "samples": 302,
+        "sourceGraphComponentSizes": [
+          14,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 68,
+            "spaces": 17
+          },
+          "components": [
+            14,
+            1,
+            1,
+            1
+          ],
+          "connections": 18,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 302,
+          "candidates": 1768,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 17,
+          "edges": 29,
+          "componentSizes": [
+            17
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 11,
+          "traversableContacts": 41,
+          "contactEdges": 18,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "f59233efbd6be4ecb201e84e9fe7fb7cd6a07c8acad7a01c053c615e6f86daa5"
+        }
+      },
+      {
+        "case": "H1-seed-1",
+        "inputSha256": "8606b3547169f0fd2be8446fcaaa3f656900f3df8a11fb95ae62115d3acde2b8",
+        "outputSha256": "031e43ec4c3add1ae31ebb9d0e3fc47f0bae15cb36a9d36b6350b15e6f850608",
+        "sourceCanonicalSha256": "b5ad2700c8d61142ac5b745159da68b386cf96691be64772df110c3432b90ee3",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58964,
+        "samples": 286,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          2
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 73,
+            "spaces": 18
+          },
+          "components": [
+            15,
+            1,
+            2
+          ],
+          "connections": 17,
+          "contacts": 33,
+          "requiredJoins": 4,
+          "samples": 286,
+          "candidates": 1880,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 30,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 33,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "c20b904694a55d1002a656fa9c6678f4439506dfe0a24c40c2b61c34748cfa1a"
+        }
+      },
+      {
+        "case": "H1-seed-2147483648",
+        "inputSha256": "83b5d7faecc7a066d13aef63f60ecb61760528f8fccbf019b7b63348448ba307",
+        "outputSha256": "6c83fa1ec6f2d2325111a765318a2a4f9b9ed27054beb3a51318bda1f99d6f76",
+        "sourceCanonicalSha256": "eb3f5959959d301e9d88aa895ff97e3f065ee4526b3895727da95e5741f37e3a",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 45185,
+        "samples": 287,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 7,
+            "hexes": 68,
+            "spaces": 17
+          },
+          "components": [
+            15,
+            1,
+            1
+          ],
+          "connections": 15,
+          "contacts": 35,
+          "requiredJoins": 4,
+          "samples": 287,
+          "candidates": 1286,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 17,
+          "edges": 29,
+          "componentSizes": [
+            17
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 14,
+          "traversableContacts": 35,
+          "contactEdges": 15,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "2317a29eb338e23e13d333243311654d2adb539afa7ba7657249ec80ccf3b67a"
+        }
+      },
+      {
+        "case": "H1-seed-80977",
+        "inputSha256": "853cee79ef9ea8f9aecea87fa87f91df1ec7e8d7bb45518b4a64218c988fd4ad",
+        "outputSha256": "1ee49f03a17d33d201d133cb37bdcdb7721bd7efbe07a9a358df3764c4b72eb7",
+        "sourceCanonicalSha256": "63b97fd8468e02512af95f7b96e5aa29492eed198e02fb1c3b5267d0b5e771b1",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 64000,
+        "samples": 288,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          10,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 72,
+            "spaces": 18
+          },
+          "components": [
+            4,
+            1,
+            10,
+            1,
+            1,
+            1
+          ],
+          "connections": 15,
+          "contacts": 36,
+          "requiredJoins": 4,
+          "samples": 288,
+          "candidates": 1836,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 28,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 36,
+          "contactEdges": 15,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "9a627fb05c87cc02b344ef4f3a2a760c95e580451b5a288176fe015664058c19"
+        }
+      },
+      {
+        "case": "H1-seed0",
+        "inputSha256": "520d05f6f4bdc55590500860e661b175eb595f8f0ece617b118c144b2ef86057",
+        "outputSha256": "5ebb10f4176452da7e9175a944d258adf37c2242ee955dff3bd01c63c865d081",
+        "sourceCanonicalSha256": "d08e6dcc1d7eb44ebf26d421f20d7b2b3551fd9f927f366871be0f8d11c0aff2",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 45185,
+        "samples": 287,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 7,
+            "hexes": 68,
+            "spaces": 17
+          },
+          "components": [
+            15,
+            1,
+            1
+          ],
+          "connections": 15,
+          "contacts": 35,
+          "requiredJoins": 4,
+          "samples": 287,
+          "candidates": 1286,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 17,
+          "edges": 29,
+          "componentSizes": [
+            17
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 14,
+          "traversableContacts": 35,
+          "contactEdges": 15,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "2317a29eb338e23e13d333243311654d2adb539afa7ba7657249ec80ccf3b67a"
+        }
+      },
+      {
+        "case": "H1-seed1",
+        "inputSha256": "9aca3466450928f02223c6be8172d97f945d502fd982aaac255cd27f570d2db6",
+        "outputSha256": "bb876256f8b414251b789d2ddf7157237c4c2310d4ee9dd09ccbfbe10748fbe3",
+        "sourceCanonicalSha256": "04a4f89b92daf7e0fea1815c77e35b46ed80b067b4b369eec3d3e24ecc8bd9b5",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58964,
+        "samples": 286,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          2
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 73,
+            "spaces": 18
+          },
+          "components": [
+            15,
+            1,
+            2
+          ],
+          "connections": 17,
+          "contacts": 33,
+          "requiredJoins": 4,
+          "samples": 286,
+          "candidates": 1880,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 30,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 33,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "c20b904694a55d1002a656fa9c6678f4439506dfe0a24c40c2b61c34748cfa1a"
+        }
+      },
+      {
+        "case": "H1-seed2147483647",
+        "inputSha256": "e6bb75f9041756b39918da071e9319a624cc7fdbdd447f67390574d05d30aa8a",
+        "outputSha256": "862d955912861a6b8dafa324064a95f7ea39e9174f0c4f79e6b5c19a3aceea42",
+        "sourceCanonicalSha256": "968d2b1e9a10498c00cd112ea054b658a1531f8fd88f99e8830f0f7ecae4927d",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 45185,
+        "samples": 287,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 7,
+            "hexes": 68,
+            "spaces": 17
+          },
+          "components": [
+            15,
+            1,
+            1
+          ],
+          "connections": 15,
+          "contacts": 35,
+          "requiredJoins": 4,
+          "samples": 287,
+          "candidates": 1286,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 17,
+          "edges": 29,
+          "componentSizes": [
+            17
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 14,
+          "traversableContacts": 35,
+          "contactEdges": 15,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "2317a29eb338e23e13d333243311654d2adb539afa7ba7657249ec80ccf3b67a"
+        }
+      },
+      {
+        "case": "H1-seed411398192",
+        "inputSha256": "146a5f588630bf4129d4a30a0d1a834f8ead50030fa4ae66c7f680c304ca3cad",
+        "outputSha256": "fcddb552f608bd8da6ac263e012df8f353026bebe641c4d469468f7bcbbd1d3f",
+        "sourceCanonicalSha256": "91b93d39c05fea38ecf97b21604d59c74bf392fec693973169d032ad524a1711",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58718,
+        "samples": 286,
+        "sourceGraphComponentSizes": [
+          15,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 65,
+            "spaces": 16
+          },
+          "components": [
+            15,
+            1
+          ],
+          "connections": 20,
+          "contacts": 40,
+          "requiredJoins": 4,
+          "samples": 286,
+          "candidates": 1796,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 16,
+          "edges": 29,
+          "componentSizes": [
+            16
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 9,
+          "traversableContacts": 40,
+          "contactEdges": 20,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "6c0baaa4d8806aed457bbcd51597eee900965d752136b99e2f391dc951fab4f3"
+        }
+      },
+      {
+        "case": "H2-retained-retry-seed2",
+        "inputSha256": "9af1b5c6e3c197297aac06488435673262a65f9ec9a88ba8cc27785bb27b57ba",
+        "outputSha256": "abed699ad3ce0fc44611c760336a70125e347271d04633b39b5232e26d3de36a",
+        "sourceCanonicalSha256": "088e8247b1e3109812a53af3b98bdde9232edccf156ebb0d9110a6d0cf256561",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 74389,
+        "samples": 310,
+        "sourceGraphComponentSizes": [
+          14,
+          4,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 76,
+            "spaces": 19
+          },
+          "components": [
+            14,
+            4,
+            1
+          ],
+          "connections": 22,
+          "contacts": 42,
+          "requiredJoins": 4,
+          "samples": 310,
+          "candidates": 2302,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 19,
+          "edges": 34,
+          "componentSizes": [
+            19
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 12,
+          "traversableContacts": 42,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "69ce45604aff4ec8cd6cbf045d05ef57c1ef9ed249675bb8ab797961cf5fa928"
+        }
+      },
+      {
+        "case": "H2-seed-1",
+        "inputSha256": "df56406943b6b22b7b75d18c66572f984e65e75566040279a8b350ec7d49bb88",
+        "outputSha256": "74748885739c264cdd4d2f1861e113ff64b7736085ab95e8415ab2b644e8a4e8",
+        "sourceCanonicalSha256": "98a0c540657c0518244539755fe2fdbd800b95a3accc384a393c2b2584b48ad9",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 56943,
+        "samples": 291,
+        "sourceGraphComponentSizes": [
+          17,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 73,
+            "spaces": 18
+          },
+          "components": [
+            17,
+            1
+          ],
+          "connections": 21,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 291,
+          "candidates": 1898,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 34,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 41,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "142df4c7a5b4a4bab941b804a4f3710155e793c241aade22a1c14ad4a603f143"
+        }
+      },
+      {
+        "case": "H2-seed-2147483648",
+        "inputSha256": "56dc4a1f02aba9f325e4ea888755403a5d4a438f7c7158433f8c7b94893c583f",
+        "outputSha256": "4d7afab2012bef3a107b513f20b1ddbed59eebf2c24d5dd9009a0b1baf11e830",
+        "sourceCanonicalSha256": "0f34974d862f0c9a6a727ff10557713f09fe35e3b1f8fd2d0cb4c902bc91249e",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58328,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          17,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 76,
+            "spaces": 19
+          },
+          "components": [
+            17,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1554,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 19,
+          "edges": 32,
+          "componentSizes": [
+            19
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "881ae19ef51af035e8a8f2592b81782be6275d42f8f6c7ad7fbbdd328bf132b3"
+        }
+      },
+      {
+        "case": "H2-seed-80977",
+        "inputSha256": "e19dbfa08ca0a6b89059848c671882d25f23c6558be0651a9df93e9f8823f456",
+        "outputSha256": "68a6ff419a9ce6b0775efaa3155933127f8cd4d70bcf08287182675e75ec2878",
+        "sourceCanonicalSha256": "5bab7dfd71e4d1143146e4a5608492c9f672f2e4723ea790468fc4fce2a457f6",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 60959,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 72,
+            "spaces": 18
+          },
+          "components": [
+            15,
+            1,
+            1,
+            1
+          ],
+          "connections": 18,
+          "contacts": 42,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 1947,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 31,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 42,
+          "contactEdges": 18,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "5e19adfc8c456d6cc4dc99e46cb45d438be00496204d349db2dc688e1acedeea"
+        }
+      },
+      {
+        "case": "H2-seed0",
+        "inputSha256": "06200772db497459d0b2c01b97470e0aeaa581a0686397b046a049886f0b21f6",
+        "outputSha256": "df2ac60c63a429d81d410a7dc116706b8f89d2bcf10f9fb20f6b6a3040ba5884",
+        "sourceCanonicalSha256": "7bfef028919f56d91634165e7b11ce4c746dd1f756427cc7fa566658eab65cc6",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58328,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          17,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 76,
+            "spaces": 19
+          },
+          "components": [
+            17,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1554,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 19,
+          "edges": 32,
+          "componentSizes": [
+            19
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "881ae19ef51af035e8a8f2592b81782be6275d42f8f6c7ad7fbbdd328bf132b3"
+        }
+      },
+      {
+        "case": "H2-seed1",
+        "inputSha256": "d54c73fd20a697829b31431f9a6b98d70185ab32743672dc676a23ebb1bc784d",
+        "outputSha256": "53d35033db3123b23ed2dcb56500b36fe437262ca265b123c9eea35dabfa8314",
+        "sourceCanonicalSha256": "40375e377937e7024929352955911b5ebde3b3b52090f98b7408de5525dfdba6",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 56943,
+        "samples": 291,
+        "sourceGraphComponentSizes": [
+          17,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 73,
+            "spaces": 18
+          },
+          "components": [
+            17,
+            1
+          ],
+          "connections": 21,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 291,
+          "candidates": 1898,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 34,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 13,
+          "traversableContacts": 41,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "142df4c7a5b4a4bab941b804a4f3710155e793c241aade22a1c14ad4a603f143"
+        }
+      },
+      {
+        "case": "H2-seed2147483647",
+        "inputSha256": "e8f43354b332accee75a9b82f48738f9d8e1ee6bdd8594acbcaa21e3b4757ade",
+        "outputSha256": "9bc461282339dcb2f4ab8c240178b48f0aa5a9668a510dcd4c1bb6889e3043da",
+        "sourceCanonicalSha256": "077a736a445939348eb5c2ad90307e93df3e818ab057e0959d5556b19f0bc3ec",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 58328,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          17,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 8,
+            "hexes": 76,
+            "spaces": 19
+          },
+          "components": [
+            17,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1554,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 19,
+          "edges": 32,
+          "componentSizes": [
+            19
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "881ae19ef51af035e8a8f2592b81782be6275d42f8f6c7ad7fbbdd328bf132b3"
+        }
+      },
+      {
+        "case": "H2-seed411398192",
+        "inputSha256": "08979c7ec475f65801ced88fd764153cc7f9e0b3225bf89f5682df0006010357",
+        "outputSha256": "c4167cf6a037b33bccb5337fbfef87ff7449cfbc6fcae20f02eb21aa652e32ea",
+        "sourceCanonicalSha256": "ea13dfc719ae89df954d1ed1c0ff345dfc9017eb90427966bbfb3ac1252bec5a",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 76678,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 73,
+            "spaces": 18
+          },
+          "components": [
+            15,
+            1,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 49,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 2173,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 18,
+          "edges": 31,
+          "componentSizes": [
+            18
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 10,
+          "traversableContacts": 49,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "48657b75cd3d601036be3453bd46030536f3d472a2c034d65c3c640a9382d8f2"
+        }
+      },
+      {
+        "case": "H3-alternate-seed-1",
+        "inputSha256": "67378ed3fa4965fb6f20fcbd77f35a5e4d4ab148aca8030d7d0a5cd7005aaa3a",
+        "outputSha256": "2edb1eb0bfd00953c111f99c91182e7434e90017c8f6d1079ef43a0fe8cf4a3d",
+        "sourceCanonicalSha256": "efa51c517a82bb63c408701cc6f12ae7f5dcbb91ef782c7bf8b913fa9c0b28b3",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 91998,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          18,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            3,
+            18,
+            1
+          ],
+          "connections": 28,
+          "contacts": 57,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 2752,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 43,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 57,
+          "contactEdges": 28,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4aa9ab1152a95d1300f3fb232772f3f461757f35cfee7aaf325400e4ba9c068b"
+        }
+      },
+      {
+        "case": "H3-alternate-seed-2147483648",
+        "inputSha256": "5cd76afe5aca4e698d8ac4ad92b755c347ca3f25c2b97565a96ffe5f9d0d2e56",
+        "outputSha256": "e1233a39ea0ba53b3941e72f4c380687f7abcf67344f57d1a6f3efd45b65703d",
+        "sourceCanonicalSha256": "4b79c06fbedfbefa3468887fba80e7965258b26ade666ad598f9abcb65be49e7",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-alternate-seed-80977",
+        "inputSha256": "58d2503df53a501a48fab83bb3465b6615e863a7618b44876af50038f6f7d11f",
+        "outputSha256": "54973cf9dd1d74ea7524c2772da786f166a07bd629d0dfc3b321f5a7e163eec4",
+        "sourceCanonicalSha256": "4ebbedaa9c012d664a557f5d7d78bec469681c7d64113a060f3557964d363dba",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 87323,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          17,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            17,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 51,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 2563,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 39,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 51,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4a6d268e8456e6711db2e43ec4e2d5a96d93ff793af226fad9facc62507da84f"
+        }
+      },
+      {
+        "case": "H3-alternate-seed0",
+        "inputSha256": "07c68118330f26945ee090cb93b203973c8eaf06f97f5dd3b45c3a90c6f657cb",
+        "outputSha256": "19c0946282de0b16b65994ce51e31bfed1dee53c7d0216d0437e03392e5e027d",
+        "sourceCanonicalSha256": "f93258d00ac30bfbde2ef8f0d5be66834acd351a538502573d5a194b934a7b19",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-alternate-seed1",
+        "inputSha256": "673ce7c454948df2ba5a315098617986d6fc6f2cb39a7d618ae73f1581ef959c",
+        "outputSha256": "b892019e2ade7878aaa4e0b913a096d1904e51ed802cb2aed287af08e6a0725f",
+        "sourceCanonicalSha256": "126cd4f6157136e5542b3e28255238bd1cd551adfb6a91828738b7f329d6410a",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 91998,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          18,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            3,
+            18,
+            1
+          ],
+          "connections": 28,
+          "contacts": 57,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 2752,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 43,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 57,
+          "contactEdges": 28,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4aa9ab1152a95d1300f3fb232772f3f461757f35cfee7aaf325400e4ba9c068b"
+        }
+      },
+      {
+        "case": "H3-alternate-seed2147483647",
+        "inputSha256": "ca5e7c005ca1f7864debdfb912935e46decd67178f9b455572c76e5e00ec05f3",
+        "outputSha256": "d577b32f25fd5695ce3d519e29b89a8921b71d1434e003c70610f40acd92d894",
+        "sourceCanonicalSha256": "1f2f5b2b66a152812c9f4c1f65d95d84f95c7d9b1c6318b162afdb9967526961",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-alternate-seed411398192",
+        "inputSha256": "3932fb0f87930119539953b4c6182f0d690b6e5e2ec231b9529f78d1dbdb2fa7",
+        "outputSha256": "59d7e4b50b9517ae87866010f80adcaf89bc4fd6fa53448f83de44e1aab6ba77",
+        "sourceCanonicalSha256": "e1a3374d5536b1bd4cb82a145ff5fb18642593bde3b8016c9582422c0c16e139",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 85565,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          14,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 81,
+            "spaces": 20
+          },
+          "components": [
+            4,
+            1,
+            14,
+            1
+          ],
+          "connections": 21,
+          "contacts": 50,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 2766,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 20,
+          "edges": 32,
+          "componentSizes": [
+            20
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 11,
+          "traversableContacts": 50,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "20fe3c80e42dd0fa6d25cc01e23810e35bd1c9854544f1d0bc61f725f85f026c"
+        }
+      },
+      {
+        "case": "H3-retained-retry-seed2",
+        "inputSha256": "6712352636b8de2a5e3fe5b695fe8332162c2b11d426e2321316c51001d828ae",
+        "outputSha256": "87c2e9a1c6284172426b903aaee6635f57fc22fcdf43f6015c54f1a60f8c2532",
+        "sourceCanonicalSha256": "38a5cebf225c9d5edf8e10d397d1619692e46df1a49a9f4d56831a8378bddf3a",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 85136,
+        "samples": 309,
+        "sourceGraphComponentSizes": [
+          3,
+          15,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 84,
+            "spaces": 21
+          },
+          "components": [
+            3,
+            15,
+            1,
+            1,
+            1
+          ],
+          "connections": 20,
+          "contacts": 47,
+          "requiredJoins": 4,
+          "samples": 309,
+          "candidates": 2256,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 21,
+          "edges": 35,
+          "componentSizes": [
+            21
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 47,
+          "contactEdges": 20,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "c30d23a13aa4877b4a880d1ad7640447f67142163dd73c090b0e593704ef3bb7"
+        }
+      },
+      {
+        "case": "H3-seed-1",
+        "inputSha256": "cf3fdad868ab83011bbd9fc4b48203b20bc2beb50041f8dbbe8824d6709e5594",
+        "outputSha256": "d2f0956c57d5c76606bc4a403f3e4942a30939de5f53096ec37d3c77a4e55b60",
+        "sourceCanonicalSha256": "8c87f34372cd990077085885f180dcdfe17ef30f5852cbb94a9dc506e01fbcd4",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 91998,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          18,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            3,
+            18,
+            1
+          ],
+          "connections": 28,
+          "contacts": 57,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 2752,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 43,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 57,
+          "contactEdges": 28,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4aa9ab1152a95d1300f3fb232772f3f461757f35cfee7aaf325400e4ba9c068b"
+        }
+      },
+      {
+        "case": "H3-seed-2147483648",
+        "inputSha256": "f196213daa8d6ac7abb09a45333a6c486dd26c00668b53eb1038de6608836eea",
+        "outputSha256": "277ec005fdd42097f979c6ce37064fc5ea7ce8134df29b627fe5e2aad87c315e",
+        "sourceCanonicalSha256": "4e2399292184fb9c0afb4d19585a7458f8cf0b1c9ca01446260e63042c0f8d43",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-seed-80977",
+        "inputSha256": "0051a7111dac88792f2ba8a148f5f316e4efaf372b99a87f13aea48d6d7fd317",
+        "outputSha256": "4d2ee74eac0c707c79f7d576d2af1cc29b63b19197079411f2fe99220e7248b1",
+        "sourceCanonicalSha256": "42ed7d4655897b88b91ff570e533d368ce0e60e0a85ab215ecf0d06e0450ad9b",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 87323,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          17,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            17,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 51,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 2563,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 39,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 51,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4a6d268e8456e6711db2e43ec4e2d5a96d93ff793af226fad9facc62507da84f"
+        }
+      },
+      {
+        "case": "H3-seed0",
+        "inputSha256": "e8be7ae271be025c88f11fe4a459a86aace39ebafbbbc18176801f20d6afd30c",
+        "outputSha256": "7e97a73a293a706041f1d6a5115e134244d700c665a67eea0f499d60493bfc18",
+        "sourceCanonicalSha256": "3e890bd2bdcdfae8d832737a59fb1e951e605f56dae23fc34cf8fd6ab51feeaa",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-seed1",
+        "inputSha256": "64592aefbec32d2ab60cdade5f16c98c3f4c22eeab5c938197dacf79b657456e",
+        "outputSha256": "a17c4f395c710c03d7ab525db35c629d8e8412396a017c321bf01943b46d1b0a",
+        "sourceCanonicalSha256": "2edd2f8a4c996a708865cb097bc8a6395f30faeca6071125b246f272b0ab8502",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 91998,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          18,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 89,
+            "spaces": 22
+          },
+          "components": [
+            3,
+            18,
+            1
+          ],
+          "connections": 28,
+          "contacts": 57,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 2752,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 43,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 57,
+          "contactEdges": 28,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "4aa9ab1152a95d1300f3fb232772f3f461757f35cfee7aaf325400e4ba9c068b"
+        }
+      },
+      {
+        "case": "H3-seed2147483647",
+        "inputSha256": "22c691f166b1780833b8b7e376c7f1749eea33e5f1b997a5b0bcbc1f2c29099d",
+        "outputSha256": "bb33a62f569329006ca6db74aa681a4ad1c80dafc254ea1903ac6325e71c7d50",
+        "sourceCanonicalSha256": "4027bf3e76d86feffb8f6d37c6f7b591f6de0ca742d863b5e6b3edb588771de9",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 82494,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          13,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 88,
+            "spaces": 22
+          },
+          "components": [
+            4,
+            1,
+            13,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 17,
+          "contacts": 41,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 1894,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 22,
+          "edges": 35,
+          "componentSizes": [
+            22
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 41,
+          "contactEdges": 17,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "582e77cca83b30e1203f8309ad9283c73fc43b81c6c77a417236167552b23373"
+        }
+      },
+      {
+        "case": "H3-seed411398192",
+        "inputSha256": "a9dbb38aaf5a1878f484d12f0bc8d4742e0f6eeeef371f5876e713c7c09d7441",
+        "outputSha256": "1ee36c80b02e727f2bfd5d9111327bbdeddf8ccdb2bd8eb91cf02b5b72d301e9",
+        "sourceCanonicalSha256": "55fa3acba02412ea161f47f12e84d96a78f09b1559558b1d44181f2f6987166f",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 85565,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          4,
+          1,
+          14,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 81,
+            "spaces": 20
+          },
+          "components": [
+            4,
+            1,
+            14,
+            1
+          ],
+          "connections": 21,
+          "contacts": 50,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 2766,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 20,
+          "edges": 32,
+          "componentSizes": [
+            20
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 11,
+          "traversableContacts": 50,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "20fe3c80e42dd0fa6d25cc01e23810e35bd1c9854544f1d0bc61f725f85f026c"
+        }
+      },
+      {
+        "case": "H4-retained-retry-seed2",
+        "inputSha256": "a209b54718bb3fe092690c04a7c5abbcef23d2119eb83f3f8b0e53f6d42855f5",
+        "outputSha256": "18bc0533b2a5499575fd816c2952ded9fafd76f2de9d62f0ebf8731533017f14",
+        "sourceCanonicalSha256": "854161563fa91f524d86ecce763873da870967dc82026423c4fc5b7f3fbc4af0",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 114445,
+        "samples": 308,
+        "sourceGraphComponentSizes": [
+          21,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 96,
+            "spaces": 24
+          },
+          "components": [
+            21,
+            1,
+            1,
+            1
+          ],
+          "connections": 24,
+          "contacts": 53,
+          "requiredJoins": 4,
+          "samples": 308,
+          "candidates": 3009,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 42,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 53,
+          "contactEdges": 24,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "41cb01c2c1dd3aa9b0a8b154dae5e362f35bb9261d395b7568938ba92711f743"
+        }
+      },
+      {
+        "case": "H4-seed-1",
+        "inputSha256": "a583f3d6f128acf3b95e4240bc038640db753dd5f2c947455babb476fc0d0b5c",
+        "outputSha256": "9419c1a8d67f8643c75fdcc02639bd7efc2806e0e737ddb7a191d01b1efe0ac6",
+        "sourceCanonicalSha256": "1c27176082f9935dd6c2c0cab8c5762939447a2ca8eaf663a6ede996b15d686e",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 117624,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          14,
+          5,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            3,
+            14,
+            5,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 48,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 3199,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 48,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "45e972aeed9796462c73f767ca6211c157874c6a2383f15bc663b4fc364ff1c6"
+        }
+      },
+      {
+        "case": "H4-seed-2147483648",
+        "inputSha256": "29e8e102124ba56ea9d77a9aec61fa941cf8862d0b1eee4e353fe881a7a28708",
+        "outputSha256": "a4f82a7ed0c3cc78855684a4a31e99343d49216209ff4ca61c2c5b2aa79f6835",
+        "sourceCanonicalSha256": "ffe722d6480558256d5f7ad1a2487537160fcc9d5607bc78af06c3f81cd5e104",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 102088,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          10,
+          7,
+          5,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            10,
+            7,
+            5,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 46,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 2351,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 46,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "48da49bda7ecf7eedd63939730a9bd25641ade63f9f2a4998e50582fb795af40"
+        }
+      },
+      {
+        "case": "H4-seed-80977",
+        "inputSha256": "5ee62d1f2a8913ccebe70fcf27989398ac0422d92c68990bdd7fcfe87912d526",
+        "outputSha256": "8fb8bca8d6ff0f63c83c4d74b476bb3f5eff8507c1689e5b00e81ce14115f474",
+        "sourceCanonicalSha256": "14b9abe380834a8f1d43fea510a7e9db50788bed35e5a378ec8e1b5b46b1459a",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 96821,
+        "samples": 291,
+        "sourceGraphComponentSizes": [
+          20,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 9,
+            "hexes": 93,
+            "spaces": 23
+          },
+          "components": [
+            20,
+            1,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 49,
+          "requiredJoins": 4,
+          "samples": 291,
+          "candidates": 2781,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 23,
+          "edges": 41,
+          "componentSizes": [
+            23
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 49,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "8c5562c90959eff41e24f89cbe46087f93b63771b395369e2c4ab13be89e66bf"
+        }
+      },
+      {
+        "case": "H4-seed0",
+        "inputSha256": "7320f00a4a8879df886761027282c047bfd44d46c03562b1eeb31236e443f9ab",
+        "outputSha256": "f14af066ee274c419ea2bf6beeef08d1da69c147f819ae348f2ff73a4dcdfa77",
+        "sourceCanonicalSha256": "fdf5e3c0c871a3e5c53d7374134950537bd05ff7667ff88518abe9397b25fe00",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 102088,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          10,
+          7,
+          5,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            10,
+            7,
+            5,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 46,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 2351,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 46,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "48da49bda7ecf7eedd63939730a9bd25641ade63f9f2a4998e50582fb795af40"
+        }
+      },
+      {
+        "case": "H4-seed1",
+        "inputSha256": "b4cff27d625c6cb7270d84ad73bdb547c7e0cb4c90e0bf8bf51b7767c54c4788",
+        "outputSha256": "3f4cbed949b20f86b7ff4b8c75b9d68dc2f95734ea3e32894a9ccc9b0237f289",
+        "sourceCanonicalSha256": "543aeff550e10a3d1d66c7ef7705ad88828fe2ba89fb308342036f7db7c141fc",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 117624,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          3,
+          14,
+          5,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            3,
+            14,
+            5,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 48,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 3199,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 48,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "45e972aeed9796462c73f767ca6211c157874c6a2383f15bc663b4fc364ff1c6"
+        }
+      },
+      {
+        "case": "H4-seed2147483647",
+        "inputSha256": "6b315f674a424eb63954942c1b012305b59a05ffaf220df8af4c19b07c8d9545",
+        "outputSha256": "4e8cfd7cdf5242264e8d765940e9b06d1aedacab49d3e1a9e62ac400c941f014",
+        "sourceCanonicalSha256": "be6e7c234529ef525eee4273c9f9e8087830ee6de7e840fd672edbcbc7ed9752",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 102088,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          10,
+          7,
+          5,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            10,
+            7,
+            5,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 46,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 2351,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 46,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "48da49bda7ecf7eedd63939730a9bd25641ade63f9f2a4998e50582fb795af40"
+        }
+      },
+      {
+        "case": "H4-seed411398192",
+        "inputSha256": "47e71677e4188417f0a7fc912aa3fe5ec9b88216ad261ded25fac733117543ba",
+        "outputSha256": "0a2a5056120bc32ab4c900f2f33449f1fb27178a943b21c5415f89897a09edcd",
+        "sourceCanonicalSha256": "47f83da9c6bfe9fad097a6ad79cfed6238a0511f888806b6b680a9803e5faac0",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 118911,
+        "samples": 293,
+        "sourceGraphComponentSizes": [
+          21,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 11,
+            "hexes": 93,
+            "spaces": 23
+          },
+          "components": [
+            21,
+            1,
+            1
+          ],
+          "connections": 27,
+          "contacts": 56,
+          "requiredJoins": 4,
+          "samples": 293,
+          "candidates": 3399,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 23,
+          "edges": 41,
+          "componentSizes": [
+            23
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 14,
+          "traversableContacts": 56,
+          "contactEdges": 27,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "fb00e56dd8fe26465c420e863d9b147b6cf915d8c36e0091e9e715a270a718a6"
+        }
+      },
+      {
+        "case": "H5-retained-retry-seed2",
+        "inputSha256": "c16872ce925055e608fe1f8fffb0c6178fc66c55895d905422b397ea185828c1",
+        "outputSha256": "b97aa1abc678df503eeb0cb9e9b15af79c95958352bf5d0a05a1a82961a4db2d",
+        "sourceCanonicalSha256": "3e42ee3f4cbce40970a1351250b184d1fead8b0b2016ecafc293bad9e298dbfe",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 119204,
+        "samples": 312,
+        "sourceGraphComponentSizes": [
+          20,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 11,
+            "hexes": 100,
+            "spaces": 25
+          },
+          "components": [
+            20,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "connections": 26,
+          "contacts": 55,
+          "requiredJoins": 4,
+          "samples": 312,
+          "candidates": 3313,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 25,
+          "edges": 44,
+          "componentSizes": [
+            25
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 18,
+          "traversableContacts": 55,
+          "contactEdges": 26,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "407751685bc717ecd67bb4a3e53a1b52b8ba30441fc8b2aaaf91c5559f40b468"
+        }
+      },
+      {
+        "case": "H5-seed-1",
+        "inputSha256": "c6123240c11831af1f21d861927e03ad1f6fc27d7152723f2f0294f2e8fd11f7",
+        "outputSha256": "c3f0ff6e8fda0dcdd009226d45954cbe1bde6f2b3487ee0fc974abca96c12aab",
+        "sourceCanonicalSha256": "cfcc3a76c5f24a0584a12f7a10e64bff631836225ab64fd627dca0657abc8d7b",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 114119,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          5,
+          14,
+          1,
+          3,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 105,
+            "spaces": 26
+          },
+          "components": [
+            5,
+            14,
+            1,
+            3,
+            1,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 48,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 3119,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 26,
+          "edges": 43,
+          "componentSizes": [
+            26
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 22,
+          "traversableContacts": 48,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "d7ca35a4e8727775108285695582b35d42d59c020d61554c9d96111d4356905e"
+        }
+      },
+      {
+        "case": "H5-seed-2147483648",
+        "inputSha256": "9b7fccf7b85890a7d6f36f64c12087ead36261829842edebf25d22c8743fd5c1",
+        "outputSha256": "04b3d041b44a07d22e6b881f4bb3915ec92ad0c300b0c23c8fc292e7c08e764a",
+        "sourceCanonicalSha256": "be34fe01b6a3b8fab40ba1e7bbe0ecc323a75546db7898a0bc18647c76f2c5c0",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 101001,
+        "samples": 295,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          5,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            15,
+            1,
+            5,
+            1,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 47,
+          "requiredJoins": 4,
+          "samples": 295,
+          "candidates": 2423,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 41,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 47,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "1763717d25b915cd090d819ccdadea007028c12a3a2c48862460e55eb628bcec"
+        }
+      },
+      {
+        "case": "H5-seed-80977",
+        "inputSha256": "569992df8844c97ecd6a68d067744860565383091407deae36a570042e645f87",
+        "outputSha256": "b53051e6e33304ac9393bf316b2bcc71e959c29b97dd2212303773fa15b90695",
+        "sourceCanonicalSha256": "c64b17d3602549eaf28ff6c114b72ead84b485bd33dfe16f5494b1c5d388bb09",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 113182,
+        "samples": 294,
+        "sourceGraphComponentSizes": [
+          12,
+          1,
+          6,
+          3,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            12,
+            1,
+            6,
+            3,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 51,
+          "requiredJoins": 4,
+          "samples": 294,
+          "candidates": 3141,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 40,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 51,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "3211e8cd599db33be87d831c454749a06adc5d5ff93c490eea7e2bba88442713"
+        }
+      },
+      {
+        "case": "H5-seed0",
+        "inputSha256": "a96a236ed48d0d0bcc6f14efa738c99490ebe97c6c3006e80e74a9157000cba6",
+        "outputSha256": "b5f10c44808b3d932c73b2136600d6d1da035d9542ecbbf05518552cd6686750",
+        "sourceCanonicalSha256": "2bc5cd66ee0a58d1d2881edb0666eeceae334faffb3a86dea5cd540651815774",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 101001,
+        "samples": 295,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          5,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            15,
+            1,
+            5,
+            1,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 47,
+          "requiredJoins": 4,
+          "samples": 295,
+          "candidates": 2423,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 41,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 47,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "1763717d25b915cd090d819ccdadea007028c12a3a2c48862460e55eb628bcec"
+        }
+      },
+      {
+        "case": "H5-seed1",
+        "inputSha256": "5823da1842339b283b4d65797e6258029f81779568ecda2620b24c36ee3fc3e4",
+        "outputSha256": "bcaab19d61e6bb45c89b97edd6735ff3a2ca4888bd98def55c1c4336c1698dc9",
+        "sourceCanonicalSha256": "83212dd777312852b1cd23fdcae5cab29c9526d52450eb94b56a63968eab019d",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 114119,
+        "samples": 292,
+        "sourceGraphComponentSizes": [
+          5,
+          14,
+          1,
+          3,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 105,
+            "spaces": 26
+          },
+          "components": [
+            5,
+            14,
+            1,
+            3,
+            1,
+            1,
+            1
+          ],
+          "connections": 21,
+          "contacts": 48,
+          "requiredJoins": 4,
+          "samples": 292,
+          "candidates": 3119,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 26,
+          "edges": 43,
+          "componentSizes": [
+            26
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 22,
+          "traversableContacts": 48,
+          "contactEdges": 21,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "d7ca35a4e8727775108285695582b35d42d59c020d61554c9d96111d4356905e"
+        }
+      },
+      {
+        "case": "H5-seed2147483647",
+        "inputSha256": "8079bb9559b0e4d856b411ff91e3a49f91f021ba9794f56c923425b72a56d0ab",
+        "outputSha256": "a6390e9e96a07656085636bf5b03de7bc1ee245116d6b81bfdfca7e6a3f31fce",
+        "sourceCanonicalSha256": "e7fc73949cd37015493d2f159bca5f896039ae03d087f5bfe174e5fd4331ad23",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 101001,
+        "samples": 295,
+        "sourceGraphComponentSizes": [
+          15,
+          1,
+          5,
+          1,
+          1,
+          1
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 10,
+            "hexes": 97,
+            "spaces": 24
+          },
+          "components": [
+            15,
+            1,
+            5,
+            1,
+            1,
+            1
+          ],
+          "connections": 22,
+          "contacts": 47,
+          "requiredJoins": 4,
+          "samples": 295,
+          "candidates": 2423,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 24,
+          "edges": 41,
+          "componentSizes": [
+            24
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 19,
+          "traversableContacts": 47,
+          "contactEdges": 22,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "1763717d25b915cd090d819ccdadea007028c12a3a2c48862460e55eb628bcec"
+        }
+      },
+      {
+        "case": "H5-seed411398192",
+        "inputSha256": "0e4ce0ed11f76ba69453daca0f29617be573b6b4747c8f9c654640a084aef730",
+        "outputSha256": "2195cc949bab8930733402d1612aac9e12a0620ba5ba2916fc21f2a32dc0fbdb",
+        "sourceCanonicalSha256": "b37fda08382cdfc833369a78a94fdc417a172bc16a6b8a8420ddb991793bccaa",
+        "allSourceFieldsIdentical": true,
+        "clockObservations": 122328,
+        "samples": 295,
+        "sourceGraphComponentSizes": [
+          22,
+          1,
+          2
+        ],
+        "geometryChecker": {
+          "status": "geometry-complete",
+          "counts": {
+            "sections": 4,
+            "tiles": 12,
+            "hexes": 101,
+            "spaces": 25
+          },
+          "components": [
+            22,
+            1,
+            2
+          ],
+          "connections": 27,
+          "contacts": 60,
+          "requiredJoins": 4,
+          "samples": 295,
+          "candidates": 3649,
+          "rollbacks": 0
+        },
+        "movement": {
+          "spaces": 25,
+          "edges": 42,
+          "componentSizes": [
+            25
+          ],
+          "wholeMapReachable": true,
+          "authoringEdges": 15,
+          "traversableContacts": 60,
+          "contactEdges": 27,
+          "catalogTiles": 45,
+          "catalogAuthoringEdges": 83,
+          "movementCanonicalSha256": "58aaed5ecf0a3d3a925f9c00db3a4d9a0217992a5799bc3a0044a7dca41431ff"
+        }
+      }
+    ]
+  },
+  "replay": {
+    "formatVersion": 1,
+    "inputSha256": "3353d306ed9110d258388d804b66758f2f372910f7a09aad15e69861de730027",
+    "outputSha256": "5421fd0855f22c2190c3daf9f0356e7d26395d8e6c90ed183ef7cb8e388981ec",
+    "allSourceFieldsIdentical": true,
+    "logicalFieldsIdentical": [
+      "sections",
+      "tileStates",
+      "spaces",
+      "contacts",
+      "graph",
+      "search",
+      "trace",
+      "rng",
+      "movementGraph"
+    ],
+    "exactRepeatBytes": true,
+    "clockObservations": 91998,
+    "samples": 292,
+    "movement": {
+      "spaces": 22,
+      "edges": 43,
+      "componentSizes": [
+        22
+      ],
+      "wholeMapReachable": true,
+      "authoringEdges": 15,
+      "traversableContacts": 57,
+      "contactEdges": 28,
+      "catalogTiles": 45,
+      "catalogAuthoringEdges": 83,
+      "movementCanonicalSha256": "4aa9ab1152a95d1300f3fb232772f3f461757f35cfee7aaf325400e4ba9c068b"
+    },
+    "boundaryStop": {
+      "inputSha256": "29e4de48b27056670fe4ea713d82dacc9a287b3ea56ee65afe47fc887c7ecbac",
+      "outputSha256": "9e2d74fd6ea3ef7afde39dd58ab5ca85ff655fcbba6dae94ffd5d6aed1da34ba",
+      "status": "administrative-stop",
+      "reason": "clock-budget",
+      "movementGraph": null,
+      "sourceGraphPreserved": true,
+      "allSourceFieldsIdentical": true,
+      "clockObservations": 91998
+    }
+  }
+}
