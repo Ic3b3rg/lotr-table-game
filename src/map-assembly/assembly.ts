@@ -20,6 +20,7 @@ import {
 import { layoutTiles, PrefixTree, type LocalSearch } from './local-layout';
 import { layoutSections, sectionOrders, type SectionSearch } from './section-layout';
 import { calculateGraph } from './graph';
+import { calculateMovementGraph } from './movement';
 
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -351,8 +352,13 @@ class Assembly {
           checkpoint: 'after-graph-before-all-spaces-shuffle' as const,
           failure: null,
           graph: this.graph!.graph,
+          movementGraph: calculateMovementGraph(
+            this.world,
+            this.graph!,
+            result.geometryFingerprint,
+          ),
         })
-      : freeze({ ...result, status, checkpoint: null, failure: failure! });
+      : freeze({ ...result, status, checkpoint: null, failure: failure!, movementGraph: null });
   }
 }
 /** Versioned, validated raw input; immutable result. No checkpoint input is accepted. */
