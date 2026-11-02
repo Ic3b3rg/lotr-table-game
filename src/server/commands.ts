@@ -4,11 +4,22 @@ import { ApiError } from './errors';
 import { Store, advance } from './store';
 import { applyPreparation } from './preparation';
 import { applySkillTest } from './skill-tests';
+import { applyScouting } from './scouting';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (
+      command.type === 'START_SCOUT' ||
+      command.type === 'START_RALLY_SCOUT' ||
+      command.type === 'RESOLVE_SCOUT' ||
+      command.type === 'DISCARD_PREPARED_SKILL'
+    ) {
+      const result = applyScouting(state, playerId, command);
+      advance(state);
+      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+    }
     if (
       command.type === 'START_SKILL_TEST' ||
       command.type === 'RESOLVE_SKILL_TEST' ||

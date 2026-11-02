@@ -3,6 +3,7 @@ import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol'
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema, PreparedHeroSchema, preparationProblem } from '../shared/preparation';
 import { SkillTestSchema, skillTestProblem } from '../shared/skill-tests';
+import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -12,10 +13,12 @@ const BaseStateSchema = SessionSchema.omit({
   catalog: true,
   preparation: true,
   skillTest: true,
+  scout: true,
 }).extend({
   content: CatalogSchema.nullable(),
   preparation: PreparationSchema.nullable().default(null),
   skillTest: SkillTestSchema.nullable(),
+  scout: ScoutingSchema.nullable(),
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
@@ -26,12 +29,25 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
           state.players.map((player) => player.id),
           state.preparation,
           state.skillTest,
+          state.scout,
         )
       : 'Catalogo della compagnia assente.';
     if (problem) ctx.addIssue({ code: 'custom', message: problem });
   }
-  const testProblem = skillTestProblem(state.content, state.preparation, state.skillTest);
+  const testProblem = skillTestProblem(
+    state.content,
+    state.preparation,
+    state.skillTest,
+    state.scout,
+  );
   if (testProblem) ctx.addIssue({ code: 'custom', message: testProblem });
+  const scoutProblem = scoutingProblem(state.content, state.preparation, state.scout);
+  if (scoutProblem) ctx.addIssue({ code: 'custom', message: scoutProblem });
+  if (state.scout && state.skillTest?.status === 'converting')
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Prova e Scoperta non possono essere aperte insieme.',
+    });
   for (const key of ['id', 'recoveryHash', 'requestId'] as const) {
     if (new Set(state.players.map((player) => player[key])).size !== state.players.length)
       ctx.addIssue({ code: 'custom', message: 'Identità duplicate nel salvataggio.' });
@@ -51,10 +67,11 @@ const LegacyStateSchema = BaseStateSchema.omit({
   content: true,
   preparation: true,
   skillTest: true,
+  scout: true,
 }).extend({
   schemaVersion: z.literal(1),
 });
-const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true }).extend({
+const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true, scout: true }).extend({
   schemaVersion: z.literal(2),
   preparation: PreparationSchema.extend({
     heroes: z.array(PreparedHeroSchema.omit({ inspiration: true })).max(5),
@@ -62,25 +79,45 @@ const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true }).extend({
     .nullable()
     .default(null),
 });
+const VersionThreeStateSchema = BaseStateSchema.omit({ scout: true }).extend({
+  schemaVersion: z.literal(3),
+  skillTest: SkillTestSchema.omit({ availableCount: true }).nullable(),
+});
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
     if (version === 1) {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
-      return StateSchema.parse({ ...previous, schemaVersion: 3, content: null, skillTest: null });
+      return StateSchema.parse({
+        ...previous,
+        schemaVersion: 4,
+        content: null,
+        skillTest: null,
+        scout: null,
+      });
     }
     if (version === 2) {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 3,
+        schemaVersion: 4,
         skillTest: null,
+        scout: null,
         preparation: previous.preparation
           ? {
               ...previous.preparation,
               heroes: previous.preparation.heroes.map((hero) => ({ ...hero, inspiration: 0 })),
             }
           : null,
+      });
+    }
+    if (version === 3) {
+      const previous = VersionThreeStateSchema.parse(raw);
+      return StateSchema.parse({
+        ...previous,
+        schemaVersion: 4,
+        scout: null,
+        skillTest: previous.skillTest ? { ...previous.skillTest, availableCount: 14 } : null,
       });
     }
   }
