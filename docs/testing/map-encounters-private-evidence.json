@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "issue": 51,
+  "base": "d735d170073a800757816561bd2c17263c11264e",
+  "implementationCommit": "f41778c",
+  "tests": {
+    "baseline": 193,
+    "added": 51,
+    "total": 244,
+    "passed": 244
+  },
+  "matrix": {
+    "cases": 47,
+    "successes": 47,
+    "assignments": 666,
+    "decisions": 7748,
+    "draws": 2683,
+    "rollbacks": 94,
+    "threatSelections": 40,
+    "outputsBytes": 10886238,
+    "minOutputBytes": 171782,
+    "maxOutputBytes": 367260
+  },
+  "selectedPrefabMetadata": {
+    "selectedModels": 72,
+    "distinctRootGameObjects": 72,
+    "uniqueObjects": 144,
+    "bytes": 19880,
+    "managerBytes": 1750076,
+    "pointerOccurrences": 441,
+    "allReaderAgreement": true,
+    "allConsumedExactly": true,
+    "wholeManagerPointerWalk": false,
+    "FSMTraversals": 0,
+    "prefabInstantiations": 0
+  },
+  "sourceIL": {
+    "bodyCount": 18,
+    "codeBytes": 8708,
+    "assemblySha256": "8869ef87b7d49f4993911904e35d78b72f8339e91158bbe8784c9691a9d743c6",
+    "instructionSizesAndBranchTargetsValidated": true,
+    "allOwningFilesMatch": true
+  },
+  "H3Seed1": {
+    "spaces": 22,
+    "assignments": 15,
+    "initialSamples": 292,
+    "finalSamples": 348,
+    "decisions": 157,
+    "operations": 462,
+    "selected302ACount": 2,
+    "outputBytes": 229606,
+    "inputSha256": "e19655042ca3b7297e68d7f489ae8eef448ddb2b3aed9425043c115118244ccf",
+    "outputSha256": "d943e5c9f508e8d6b9996983b243a9340fb211ca3ff4a63e36347bd414673e4f",
+    "repeatedBytesIdentical": true
+  },
+  "hashes": {
+    "placement-pack.json": "c1e1e026daf6a8eea178b5705a856d4b937a6d9a09d2f133843a728db25c21d2",
+    "manifest.json": "c1ea6f919c7849a2a2d5e4a2e50ae6d5382eaae0dd04e8df11038b96acc49844",
+    "matrix-results.json": "1c06d68b8a92e09a3109dd4d748079a3b61eff4890a07af9f639c9edc0206ed8",
+    "checker-results.json": "626a1996f2467fe718aee98374aa933fa1f3d2ba689fd3401041bc0e5cf9b73a",
+    "prefab-evidence.json": "5b2589153da22474cf66f174c10f1b80770abc186c320959e62d206d03aabe42",
+    "il-evidence.json": "348232ac36b45edd9e980d3e2949934c719b03815dbaa075f688ad1cb6e3cd8d",
+    "normalize.py": "17e2b649a6d01915571a0bd01da861849465eaf9c4fe59f638cc49167e0b3a10",
+    "matrix.py": "6b4fa0375bab96864cbedc4606d777aba696e338718819158fe71c54fbe1bb07",
+    "check.py": "8aeb5db94aa91c1d9de790ee82e0c0f5ca0208812aa87dc2ebcba2490694cf47",
+    "verify-prefabs.py": "9a9ee12ad94b4a1416e0abfe610fc096b4359d7997e495fd0960a381e96811a9",
+    "verify-il.py": "7c723345002b7ac3283e3e93499f66d24ed30283a54b2c78d68ca38493d44908",
+    "selected-prefabs.json": "42a1c95127ed92271a1cb87e97a3b95ce6c3ec843846bffd9f1aeb522edf17d5",
+    "H3-seed1.selected302A.json": "34493e65621266e8ec5c8667c8fe2fcd71029aadab61bef14edfb78a04df0858"
+  },
+  "sourceHashes": {
+    "Assembly-CSharp.dll": "8869ef87b7d49f4993911904e35d78b72f8339e91158bbe8784c9691a9d743c6",
+    "resources.assets": "0250e91823b98c0f9fceb6b1ee517d880c6f9934359f849749779b7a5b0c835e",
+    "sharedassets0.assets": "dd2a2285cc1b94ab567c6a6b895872bd97bb2bf8fe9e08d152c5f1103d1687be",
+    "globalgamemanagers": "81d1011e0db0a395f078b3f8a55a96e1e1722171837643cf52427b28f92875d0"
+  },
+  "limitations": [
+    "sourceParity:not-certified",
+    "portable-float-clock-budget-not-Unity-JIT",
+    "prefab-and-startup-closure-pending",
+    "no-session-freeze-backup-receipts",
+    "issues-41-38-33-remain-open"
+  ]
+}
