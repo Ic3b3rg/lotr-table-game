@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decisioni per il gioco base digitale</title>
+<style>
+body{margin:0;color:var(--foreground);font-family:var(--font-sans);background:transparent}
+figure{margin:0}figcaption{font-weight:500;margin-bottom:12px}
+#lotr-decisions{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:30px;row-gap:12px}
+.node{position:relative;padding:16px 0;min-width:0;align-self:center}
+.node a{color:var(--foreground);font-weight:500;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px;overflow-wrap:anywhere}
+.node a:hover{text-decoration-color:currentColor}
+.state{display:block;color:var(--muted-foreground);margin-top:8px}
+.active{color:var(--info-foreground)}
+[data-key="materials"]{grid-area:1/1}[data-key="baseline"]{grid-area:1/2}
+[data-key="host"]{grid-area:2/1}[data-key="prototype"]{grid-area:2/2}
+[data-key="session"]{grid-area:3/2}[data-key="fidelity"]{grid-area:2/3}
+#edges{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.dependency{display:none;color:var(--muted-foreground);margin-top:8px}
+footer{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+footer a{color:var(--foreground)}
+@media(max-width:560px){#lotr-decisions{grid-template-columns:1fr;gap:0}.node{grid-area:auto!important;padding:16px 0;border-bottom:1px solid var(--border)}#edges{display:none}.dependency{display:block}}
+</style>
+</head>
+<body>
+<figure aria-labelledby="map-caption">
+<figcaption id="map-caption">Decisioni per il gioco base digitale</figcaption>
+<div id="lotr-decisions">
+<svg id="edges" aria-hidden="true"><defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="var(--muted-foreground)"/></marker></defs><g id="paths"></g></svg>
+<article class="node" data-key="materials"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/2" target="_blank" rel="noopener">Raccogliere i materiali del gioco e dell’app</a><span class="state">Materiali richiesti al proprietario</span></article>
+<article class="node" data-key="baseline"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/3" target="_blank" rel="noopener">Fissare versione e completezza dei contenuti</a><span class="state">In attesa dei materiali</span><span class="dependency">Dipende dalla raccolta dei materiali.</span></article>
+<article class="node" data-key="host"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/4" target="_blank" rel="noopener">Verificare host locale e browser su Mac e Windows</a><span class="state active">Ricerca avviata</span></article>
+<article class="node" data-key="prototype"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/5" target="_blank" rel="noopener">Provare QR, riconnessione e ripresa offline</a><span class="state">In attesa della ricerca sull’host</span><span class="dependency">Dipende dalla ricerca sull’host locale.</span></article>
+<article class="node" data-key="session"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/6" target="_blank" rel="noopener">Definire azioni condivise e salvataggio completo</a><span class="state">Pronta per il prossimo confronto</span></article>
+<article class="node" data-key="fidelity"><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/7" target="_blank" rel="noopener">Definire le prove di fedeltà delle regole e della campagna</a><span class="state">In attesa di contenuti e contratto di sessione</span><span class="dependency">Dipende dalla versione di riferimento e dalle regole della sessione.</span></article>
+</div>
+<footer><a href="https://github.com/Ic3b3rg/lotr-table-game/issues/1" target="_blank" rel="noopener">Apri la mappa completa su GitHub</a></footer>
+</figure>
+<script>
+const graph=document.getElementById('lotr-decisions');
+const svg=document.getElementById('edges');
+const paths=document.getElementById('paths');
+const links=[['materials','baseline'],['host','prototype'],['baseline','fidelity'],['session','fidelity']];
+function draw(){
+  const bounds=graph.getBoundingClientRect();
+  svg.setAttribute('width',bounds.width);svg.setAttribute('height',bounds.height);
+  svg.setAttribute('viewBox',`0 0 ${bounds.width} ${bounds.height}`);
+  paths.replaceChildren();
+  if(bounds.width<=560)return;
+  for(const [source,target] of links){
+    const a=graph.querySelector(`[data-key="${source}"]`).getBoundingClientRect();
+    const b=graph.querySelector(`[data-key="${target}"]`).getBoundingClientRect();
+    const x1=a.right-bounds.left+4,y1=a.top+a.height/2-bounds.top;
+    const x2=b.left-bounds.left-8,y2=b.top+b.height/2-bounds.top;
+    const middle=(x1+x2)/2;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${x1},${y1} C${middle},${y1} ${middle},${y2} ${x2},${y2}`);
+    path.setAttribute('stroke','var(--muted-foreground)');path.setAttribute('stroke-width','1.5');path.setAttribute('fill','none');path.setAttribute('marker-end','url(#arrow)');
+    paths.append(path);
+  }
+}
+new ResizeObserver(draw).observe(graph);
+document.fonts.ready.then(()=>{draw();console.assert(graph.querySelectorAll('.node a').length===6,'Six issue links are required');console.assert(document.documentElement.scrollWidth<=innerWidth,'Horizontal overflow');console.log('Verified six linked decisions; four dependencies; width '+innerWidth);});
+</script>
+</body>
+</html>

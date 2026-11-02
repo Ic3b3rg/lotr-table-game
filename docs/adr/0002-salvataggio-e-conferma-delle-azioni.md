@@ -1,0 +1,7 @@
+# Sessione salvata sul PC e decisioni secondo le regole
+
+Il proprietario ha scelto il 23 ottobre 2026 il salvataggio automatico dopo ogni azione accettata, con backup esportabile/importabile, e l'accesso senza account tramite nome e codice personale di recupero. Il PC conserva lo stato autorevole e conferma una modifica soltanto dopo averla registrata: ricarica, cambio dispositivo e riavvio devono ritrovare la stessa sessione senza aggiungere un giocatore.
+
+Per le azioni comuni il proprietario ha richiesto le dinamiche del regolamento, anziché una nuova regola basata su chi tocca prima. Il gruppo stabilisce ordine ed esito nei conflitti; gli eroi completano i propri turni in sequenza ([Rules Reference, p. 2 e §2.5–2.6, p. 6](https://images-cdn.fantasyflightgames.com/filer_public/01/a0/01a0c9f7-4427-4113-9406-f53d6bde2ff5/journeys_in_middle-earth_rules_reference.pdf)). L'host deve registrare una sola conferma valida della richiesta corrente, scartando duplicati e conferme superate: questa protezione tecnica non attribuisce precedenza di gioco a un telefono e non introduce un voto obbligatorio.
+
+Il primo traguardo verifica il contratto con uno stato dimostrativo, mantenendo separata la successiva applicazione delle regole a eroi e avventure. Nel gioco completo il salvataggio comprenderà anche posizioni, mazzi ordinati, aree personali, effetti, progressione, richiesta in corso e stato della casualità necessario a riprendere esattamente la partita.
