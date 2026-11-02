@@ -220,3 +220,94 @@ test('normal fill uses inclusive fractional float32 targets and one retained arr
       .every((e) => e.threshold === Math.fround(Math.fround(0.26) * 4)),
   );
 });
+
+test('group and item occupancy already satisfies the normal target without another placement draw', () => {
+  const f = encountersFixture(),
+    tile = f.assembly.selection.standard[0],
+    other = f.assembly.selection.standard[1];
+  const a = addEncounter(
+    f,
+    {},
+    { specificTileModelSource: tile.modelSource, specificSpaceIndex: 0 },
+  );
+  const b = addEncounter(
+    f,
+    {},
+    { specificTileModelSource: tile.modelSource, specificSpaceIndex: 1 },
+  );
+  f.assembly.selection.groups[0].requiredSources = [a, b];
+  const item = addEncounter(
+    f,
+    { type: 4 },
+    { specificTileModelSource: other.modelSource, specificSpaceIndex: 0 },
+  );
+  const normal = addEncounter(f);
+  f.assembly.selection.incoming.itemEncounterPool = [item];
+  f.assembly.selection.incoming.randomEncounterPool = [normal];
+  f.placement.sections[0].randomFillPercent = Math.fround(0.7);
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.assignments.length, 3);
+  assert.ok(!v.assignments.some((a) => a.modelSource === normal));
+  assert.equal(
+    v.trace.filter((e) => e.operation === 'draw' && e.site === 'section-space').length,
+    0,
+  );
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16 + 1 + 2);
+});
+
+test('normal collection skips missing all-model lookup and still scans the next retained candidate', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    b = addEncounter(f);
+  f.assembly.selection.products[0].encounterSources = [b];
+  f.assembly.selection.incoming.randomEncounterPool = [a, b];
+  f.placement.sections[0].randomFillPercent = Math.fround(0.1);
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.deepEqual(
+    v.assignments.map((a) => a.modelSource),
+    [b],
+  );
+});
+
+test('empty optional list with positive requested count retains the required helper list then cleans up on failure', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    g = f.assembly.selection.groups[0];
+  g.requiredSources = [a];
+  g.requiredOptionalCount = 1;
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.equal(v.assignments.length, 0);
+  assert.ok(v.trace.some((e) => e.operation === 'group-cleanup'));
+  assert.equal(
+    v.trace.filter((e) => e.operation === 'shuffle' && e.site === 'group-optional-shuffle').length,
+    0,
+  );
+});
+
+test('group required helper counts new placements even if the ID is already present on the map', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f);
+  fixed(f, 0, 0, a);
+  f.assembly.selection.groups[0].requiredSources = [a];
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.equal(v.assignments.length, 1);
+  assert.equal(v.assignments[0].origin.stage, 'fixed-tile');
+});
+
+test('automatic group capacity gate precedes any placement and provides no arbitrary group fallback', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    g = f.assembly.selection.groups[0];
+  g.requiredSources = Array(17).fill(a);
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.deepEqual(v.search.eligibleGroups, []);
+  assert.equal(v.assignments.length, 0);
+});

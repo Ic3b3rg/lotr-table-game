@@ -29,6 +29,22 @@ test('trace budget retains consumed draw even if the shuffle swap has not comple
   assert.equal(v.checkpoint, null);
   assert.ok(v.rng.samples > v.assembly.rng.samples);
 });
+
+test('event trace can exhaust between clock polls, and monotonic time has an explicit bounded policy', () => {
+  const f = encountersFixture();
+  f.execution.maxTraceEvents = 18;
+  const v = place(f);
+  assert.equal(v.status, 'administrative-stop');
+  assert.equal(v.failure.reason, 'trace-budget');
+  assert.equal(v.trace.length, 19);
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16);
+  const real = encountersFixture();
+  real.execution.clock = { policy: 'monotonic-clock-v1', timeoutMilliseconds: 30000 };
+  const timed = place(real);
+  assert.equal(timed.status, 'encounters-complete');
+  assert.equal(timed.clock.policy, 'monotonic-clock-v1');
+  assert.ok(timed.clock.observations.every((o) => o.elapsedMilliseconds >= 0 && !o.timeout));
+});
 test('logical clock budget is administrative, and clock replay consumes the exact contexts and RNG ordinals', () => {
   const f = encountersFixture();
   f.execution.clock.stepMilliseconds = 10;

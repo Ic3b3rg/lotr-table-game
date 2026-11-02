@@ -4,7 +4,13 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { encountersFixture, addEncounter, fixed } from './fixtures/map-encounters.mjs';
+import {
+  encountersFixture,
+  addEncounter,
+  addGroup,
+  fixed,
+  synchronize,
+} from './fixtures/map-encounters.mjs';
 import { digest } from './fixtures/map-assembly.mjs';
 const cli = resolve('dist/map-encounters.mjs');
 const place = async (f) =>
@@ -91,6 +97,56 @@ test('encounter library clones input, freezes result and keeps assembly debug ou
   assert.equal(v.assembly.trace, undefined);
   assert.equal(v.assembly.input, undefined);
   assert.equal(v.sourceParity, 'not-certified');
+});
+
+test('CLI executes required stages, group rollback/fallback, one item and best-effort normal fill before history', async () => {
+  const f = encountersFixture();
+  fixed(f, 0, 0, addEncounter(f));
+  f.placement.sections[3].sectionEncounterSources = [addEncounter(f)];
+  f.placement.adventureEncounterSources = [addEncounter(f)];
+  synchronize(f);
+  const failed = addEncounter(f);
+  f.assembly.selection.groups[0].requiredSources = [failed, failed];
+  const a = addEncounter(f),
+    b = addEncounter(f),
+    group = addGroup(f, {
+      isRepeatable: true,
+      requiredSources: [a],
+      optionalSources: [b],
+      requiredOptionalCount: 1,
+    });
+  const item = addEncounter(f, { type: 4 });
+  f.assembly.selection.incoming.itemEncounterPool = [item];
+  f.assembly.selection.incoming.randomEncounterPool = [
+    addEncounter(f),
+    addEncounter(f),
+    addEncounter(f),
+  ];
+  f.placement.sections.forEach((s) => (s.randomFillPercent = Math.fround(0.8)));
+  await run(f, ({ process, result: v }) => {
+    assert.equal(process.status, 0, process.stderr);
+    assert.equal(v.chosenGroup.source, group);
+    assert.ok(v.trace.some((e) => e.operation === 'rollback' && e.stage === 'group-required'));
+    assert.deepEqual(
+      new Set(v.assignments.map((a) => a.origin.stage)),
+      new Set([
+        'fixed-tile',
+        'required-section',
+        'required-adventure',
+        'group-required',
+        'group-optional',
+        'item',
+        'normal-fill',
+      ]),
+    );
+    assert.equal(v.assignments.filter((a) => a.origin.stage === 'item').length, 1);
+    assert.deepEqual(v.history.result.usedEncounterIds, [
+      ...new Set(v.spawnOrder.map((a) => a.encounterId)),
+    ]);
+    assert.equal(v.assignments.length, 9);
+    assert.equal(v.spawnOrder.length, 9);
+    assert.ok(v.spaces.some((s) => s.encounterId === -1));
+  });
 });
 for (const [name, edit, reason] of [
   [
