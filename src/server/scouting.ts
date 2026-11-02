@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ScoutingCommand } from '../shared/protocol';
+import { rallyScoutCount } from '../shared/rally-scout';
 import { ApiError } from './errors';
 import type { State } from './state';
 import { refillEmptyDeck, revealCards } from './skill-deck';
@@ -36,13 +37,13 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
         throw new ApiError(
           409,
           'RALLY_SCOUT_UNAVAILABLE',
-          'Questo eroe ha già effettuato Scoperta 2 o il round è cambiato.',
+          'Questo eroe ha già effettuato Scoperta o il round è cambiato.',
         );
     } else if (command.type !== 'RESOLVE_SCOUT' || scout?.roundId !== round.id) {
       throw new ApiError(
         409,
         'ROUND_PHASE',
-        'Durante Riorganizzazione effettua soltanto Scoperta 2 per ogni eroe.',
+        'Durante Riorganizzazione effettua soltanto la Scoperta dedicata a ogni eroe.',
       );
     }
   } else if (command.type === 'START_RALLY_SCOUT' && (round || command.roundId)) {
@@ -64,7 +65,26 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
     refillEmptyDeck(hero);
   } else if (command.type !== 'RESOLVE_SCOUT') {
     const resetBefore = command.type === 'START_RALLY_SCOUT' && !round;
-    const count = command.type === 'START_RALLY_SCOUT' ? 2 : command.count;
+    let count: number;
+    if (command.type === 'START_RALLY_SCOUT') {
+      const knownCount =
+        round?.phase === 'rally'
+          ? rallyScoutCount(state.preparation.heroes, state.journey, heroId)
+          : 2;
+      if (command.proximity && knownCount !== null)
+        throw new ApiError(
+          409,
+          'PROXIMITY_ALREADY_KNOWN',
+          'La vicinanza è già determinata dal tavolo: non puoi sostituire il conteggio con una dichiarazione.',
+        );
+      if (knownCount === null && !command.proximity)
+        throw new ApiError(
+          409,
+          'PROXIMITY_REQUIRED',
+          'Questo round precedente non ha posizioni registrate. Il gruppo deve indicare se l’eroe è vicino ad Aragorn.',
+        );
+      count = knownCount ?? (command.proximity === 'near' ? 3 : 2);
+    } else count = command.count;
     if (resetBefore) {
       hero.deck = shuffled([...hero.deck, ...hero.discard]);
       hero.discard = [];

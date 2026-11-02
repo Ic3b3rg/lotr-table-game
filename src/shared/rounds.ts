@@ -3,6 +3,8 @@ import { ContentIdSchema } from './catalog';
 import type { Preparation } from './preparation';
 import type { Scouting } from './scouting';
 import type { SkillTest } from './skill-tests';
+import type { Journey } from './journey-map';
+import { rallyScoutCount } from './rally-scout';
 
 export const ShadowStepSchema = z.enum(['enemies', 'darkness', 'threat']);
 export const PHASE_LABELS = {
@@ -41,6 +43,7 @@ export function roundProblem(
   preparation: Preparation | null,
   test: SkillTest | null,
   scout: Scouting | null,
+  journey: Journey | null,
 ): string | null {
   if (!round) return scout?.roundId ? 'La Scoperta appartiene a un round assente.' : null;
   const ids = preparation?.heroes.map((hero) => hero.heroId) ?? [];
@@ -72,7 +75,9 @@ export function roundProblem(
     if (
       scout &&
       (scout.roundId !== round.id ||
-        scout.count !== 2 ||
+        (scout.count !== 2 &&
+          (scout.count !== 3 ||
+            rallyScoutCount(preparation!.heroes, journey, scout.heroId) === 2)) ||
         scout.resetBefore ||
         round.heroes.find((hero) => hero.heroId === scout.heroId)?.rallyDone !== false)
     )
