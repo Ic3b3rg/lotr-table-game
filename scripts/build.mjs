@@ -32,6 +32,8 @@ await build({
 });
 for (const [entry, outfile] of [
   ['src/map-selection/main.ts', 'dist/map-selection.mjs'],
+  ['src/map-assembly/main.ts', 'dist/map-assembly.mjs'],
+  ['src/map-assembly/assembly.ts', 'dist/map-assembly-library.mjs'],
   ['src/map-selection/selection.ts', 'dist/map-selection-library.mjs'],
 ]) {
   await build({
