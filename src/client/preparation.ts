@@ -295,7 +295,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     const description = text(
       'p',
       prepared
-        ? 'Eroi e mazzi sono salvati. Il gruppo può iniziare i round; movimento e combattimento seguiranno.'
+        ? 'Eroi e mazzi sono salvati. Il gruppo può aprire la mappa e iniziare i round; il combattimento seguirà.'
         : player
           ? session.players.length === 1
             ? 'Se giochi da solo, scegli da due a quattro eroi. Ogni eroe avrà il suo mazzo.'

@@ -52,21 +52,20 @@ test('proprietà, identificativi e concorrenza proteggono la posizione e il movi
   };
   assert.equal((await command(host, other, move)).status, 403);
   assert.equal((await command(host, player, { ...move, fromSpaceId: 'c' })).status, 409);
-  const responses = await Promise.all([
-    command(host, player, move, state),
-    command(host, player, { ...move, requestId: randomUUID() }, state),
-  ]);
+  const intents = [move, { ...move, requestId: randomUUID() }];
+  const responses = await Promise.all(
+    intents.map((intent) => command(host, player, intent, state)),
+  );
   assert.deepEqual(responses.map((response) => response.status).sort(), [200, 409]);
   const after = await readSession(host);
   assert.equal(after.journey.travel.remaining, 1);
   assert.equal(after.journey.heroes[0].spaceId, 'b');
-  if (responses[0].status === 200) {
-    const receipt = (await responses[0].json()).receipt;
-    const replay = await command(host, player, move, state);
-    assert.equal(replay.status, 200);
-    assert.deepEqual((await replay.json()).receipt, receipt);
-    assert.deepEqual(await readSession(host), after);
-  }
+  const accepted = responses.findIndex((response) => response.status === 200);
+  const receipt = (await responses[accepted].json()).receipt;
+  const replay = await command(host, player, intents[accepted], state);
+  assert.equal(replay.status, 200);
+  assert.deepEqual((await replay.json()).receipt, receipt);
+  assert.deepEqual(await readSession(host), after);
 });
 
 test('la mappa si apre prima dei turni e i viaggi richiedono mappa e rivelazioni concluse', async (t) => {

@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette turni e fasi persistenti, interazioni con prova, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Capacità delle carte, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Turni e round](https://github.com/Ic3b3rg/lotr-table-game/issues/29).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette turni e fasi persistenti, mappa e viaggio interrompibile, interazioni con prova, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Generazione della mappa completa, capacità delle carte, combattimento e campagna giocabile seguono nei prossimi incrementi. [Mappa e viaggio](https://github.com/Ic3b3rg/lotr-table-game/issues/31).
 
 ## Preparazione iniziale
 
@@ -62,7 +62,7 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3 e 4 vengono migrati allo schema 5, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I round restano disattivati finché il gruppo non li avvia. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 5.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3, 4 e 5 vengono migrati allo schema 6, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I round restano disattivati finché il gruppo non li avvia. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 6.
 
 ## Turni e fasi del round
 
@@ -70,7 +70,7 @@ Dalla vista personale, dopo la preparazione, concordate **Inizia i round**.
 Il gruppo sceglie l'ordine; il proprietario avvia il turno di un proprio eroe.
 Ogni eroe ha fino a due azioni, anche ripetute, e può concludere senza usarle
 tutte. **Interazione · 1 azione** rivela una prova e consuma l'azione nella
-stessa conferma. Viaggio e attacco arriveranno con mappa e combattimento.
+stessa conferma. Il viaggio è disponibile nella mappa; gli attacchi arriveranno con il combattimento.
 Una prova richiesta da un effetto già determinato non consuma azioni.
 
 Dopo tutti i turni, il gruppo passa all'Ombra e conferma, nell'ordine,
@@ -84,6 +84,38 @@ concordato; il mazzo non viene mescolato una seconda volta. Concluse tutte
 le Scoperte, una conferma comune apre il nuovo round. Nessun cambio di turno
 o fase è possibile con una rivelazione aperta. Turno, azioni e progressi
 sopravvivono a ricarica, recupero, arresto e backup.
+
+## Mappa e viaggio
+
+Il pacchetto mappa è distinto dalle carte: `journey-map.json` con eventuali
+PNG in `assets/` accanto al file. Si installa nella cartella dati o si indica
+con `LOTR_MAP_PACK`. Per il frammento privato preparato in questo worktree:
+
+```sh
+LOTR_CONTENT_PACK="$PWD/.scratch/private-content/catalog.json" LOTR_MAP_PACK="$PWD/.scratch/private-map/journey-map.json" LOTR_DATA_DIR="$PWD/.scratch/user-table" LOTR_PORT=4321 npm start
+```
+
+In PowerShell si aggiunge `$env:LOTR_MAP_PACK` con il percorso assoluto di
+`journey-map.json` agli altri parametri già indicati sopra.
+
+Dopo la preparazione, prima dei turni di un round, il gruppo conferma
+**Apri il tratto e colloca gli eroi**. Il primo tratto usa la vera tessera
+302A: tre caselle, partenza nella seconda. È in orientamento canonico e non
+riproduce ancora la mappa completa, l'esplorazione, i nemici o gli eventi
+dell'avventura. [Dati primari e limiti](docs/research/journey-map-topology.md).
+
+Nel turno del tuo eroe, **Inizia viaggio · 1 azione** concede due movimenti.
+Seleziona una casella sulla mappa o dal campo **Destinazione**, leggi
+l'anteprima e premi **Conferma movimento**. Ogni movimento richiede una
+casella adiacente; gli esagoni del disegno non sono caselle aggiuntive.
+Puoi effettuare un'interazione fra i due movimenti, poi usare il residuo.
+Un secondo viaggio concede altri due movimenti. Concludere il turno rinuncia
+ai residui, mantenendo la posizione. Più eroi possono stare nella stessa casella.
+
+Trascina il tabellone o apri **Visuale e movimento ridotto**. Frecce, +/−
+e Home controllano la camera dalla mappa. Ricarica, recupero e backup
+conservano posizioni e viaggio interrotto; il ripristino funziona senza il
+pacchetto, mentre le immagini opzionali vanno reinstallate separatamente.
 
 ## Scoperta e carte preparate
 
@@ -150,6 +182,9 @@ npm test
 [Contratto dei round](docs/planning/rounds-spec.md) e
 [verifiche di turni, azioni e riorganizzazione](docs/testing/rounds-verification.md),
 [revisione e correzioni](docs/reviews/2026-11-02-rounds.md).
+
+[Contratto del viaggio](docs/planning/travel-spec.md) e
+[verifiche di mappa e movimento](docs/testing/travel-verification.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 

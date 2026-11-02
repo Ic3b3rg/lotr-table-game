@@ -7,6 +7,7 @@ import { createPreparation } from './preparation';
 import { createSkillTests } from './skill-tests';
 import { createScouting } from './scouting';
 import { createRounds } from './rounds';
+import { createJourneyMap } from './journey-map';
 
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
@@ -14,6 +15,7 @@ export function createCompany(sync: () => Promise<void>) {
   const skillTests = createSkillTests(sync, reader);
   const scouting = createScouting(sync, reader);
   const rounds = createRounds(sync);
+  const journeyMap = createJourneyMap(sync);
   const status = element('#content-status');
   const heroes = element('#hero-catalog');
   const cards = element('#catalog-cards');
@@ -84,6 +86,7 @@ export function createCompany(sync: () => Promise<void>) {
       if (key !== nextKey && !loading) void load(session);
       preparation.update(session, player, catalog);
       rounds.update(session, location.pathname === '/join' ? player : null, catalog);
+      journeyMap.update(session, location.pathname === '/join' ? player : null, catalog);
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);
       scouting.update(session, location.pathname === '/join' ? player : null, catalog);
     },

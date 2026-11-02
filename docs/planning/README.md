@@ -26,8 +26,14 @@ Integrata in `main` (`b3088ba`) con PR #28: [Scoperta e carte preparate #27](htt
 
 Per completare il gioco restano: capacità e finestre degli effetti, risoluzione automatica dell’Ombra, movimento con mappa 2.5D, combattimento e nemici, prima avventura fino al campo e passaggio alla seconda, poi tutti i percorsi della campagna base. Restano anche riconciliazione completa delle 343 copie, contenuti italiani e confronto runtime degli scenari. La prova fisica LAN #5 procede separatamente con i dispositivi del proprietario. Non è ancora possibile attribuire una percentuale affidabile di completamento alla campagna.
 
-Incremento #29: [turni, azioni e fasi persistenti](rounds-spec.md), con
+Integrato in `main` (`1687ecc`) con PR #30, incremento #29: [turni, azioni e fasi persistenti](rounds-spec.md), con
 [verifiche](../testing/rounds-verification.md). Ordine concordato, turni da zero
 a due azioni, interazione con prova, tre conferme manuali dell’Ombra e
-Riorganizzazione collettiva. La prossima priorità è mappa e movimento
-persistenti, poi combattimento e motore dei nemici.
+Riorganizzazione collettiva. Mappa e viaggio seguono nell’incremento #31.
+
+Incremento #31: [mappa e viaggio persistenti](travel-spec.md), con
+[provenienza della topologia](../research/journey-map-topology.md) e
+[verifiche](../testing/travel-verification.md). Il tratto reale 302A non
+certifica una mappa completa o una campagna giocabile. Le prossime capacità
+sono composizione/rivelazione delle mappe, combattimento e nemici, poi
+collegamento agli eventi della prima avventura.

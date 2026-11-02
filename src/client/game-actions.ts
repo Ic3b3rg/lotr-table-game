@@ -1,8 +1,14 @@
-import type { RoundCommand, ScoutingCommand, Session, SkillTestCommand } from '../shared/protocol';
+import type {
+  JourneyCommand,
+  RoundCommand,
+  ScoutingCommand,
+  Session,
+  SkillTestCommand,
+} from '../shared/protocol';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
-type GameCommand = RoundCommand | ScoutingCommand | SkillTestCommand;
+type GameCommand = JourneyCommand | RoundCommand | ScoutingCommand | SkillTestCommand;
 type Intent<C = GameCommand> = C extends GameCommand
   ? Omit<C, 'requestId' | 'generation' | 'expectedRevision'>
   : never;
