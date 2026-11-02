@@ -388,7 +388,10 @@ class Selection {
       sourceShuffle(this.standard, this.random);
       this.checkpoint(this.stage);
       this.stage = 'scaling';
-      if (this.input.context.heroCount > 1) {
+      if (
+        this.input.context.heroCount > 1 &&
+        this.input.sections.some((section) => !section.ignorePlayerScaling)
+      ) {
         sourceShuffle(this.scalingOrder, this.random);
         let remaining = (this.input.context.heroCount - 1) * 2;
         while (remaining > 0)

@@ -53,8 +53,9 @@ Pubblica un file completo con hard link esclusivo; mai sovrascrivere.
    Un null raggiunto nel loop item rende indisponibile il candidato
    (`06000cbd:0000–000a`), senza saltare quella voce.
 2. Un solo SourceRandom: shuffle standard completo, copia dei quattro builder
-   mescolata una volta se H>1 e distribuzione ciclica di `(H−1)*2` extras saltando
-   ignore-scaling; shuffle normal, chain, item trattenuti; merge nel random
+   mescolata una volta se H>1 e almeno una sezione ammette scaling. Distribuzione
+   ciclica di `(H−1)*2` extras saltando ignore-scaling; se tutte lo ignorano,
+   saltare sia shuffle sia distribuzione. Shuffle normal, chain, item trattenuti; merge nel random
    trattenuto con percentNormal persistente. Shuffle singleton consuma un sample.
 3. IDs e tutte le sezioni inizializzate, tutti gli start, poi tutti i required.
    ReservedTile ignora IsStandard; auto lookup custom oscura standard anche se
@@ -118,6 +119,10 @@ durante un'operazione è distinta da quel codice mediante `operationFailure`.
 La CLI non verifica gli asset installati: conserva la provenienza dichiarata e
 le impronte complete dell'input. La verifica privata controlla anche i file
 originali effettivamente letti.
+
+La validazione rifiuta `minimumSpaces > maximumSpaces` prima di avviare la
+selezione. È una politica di input esplicita: la fonte `06001345:0000–0018`
+interrompe l'inizializzazione in questo caso e non raggiunge il checkpoint.
 
 ## Evidenza richiesta
 

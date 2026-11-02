@@ -25,7 +25,7 @@ mazzi e i precedenti comportamenti geometrici restano separati.
 
 ## Verifica pubblica
 
-`tests/map-selection.test.mjs`: **47/47**, fixture inventate, processi CLI
+`tests/map-selection.test.mjs`: **49/49**, fixture inventate, processi CLI
 effettivi e un controllo sulla libreria con input profondamente congelato.
 Copertura comportamentale:
 
@@ -54,11 +54,17 @@ Due mutazioni del trie sono state eseguite separatamente nella build CLI:
 entrambe producono un test rosso. Ripristinato il codice corretto, tutti i test
 sono verdi. I log restano nella scratch ignorata.
 
-Gate finali eseguiti:
+Il root ha aggiunto due regressioni dopo la review: saltare scaling e shuffle
+quando tutte le sezioni lo ignorano, e rifiutare capacità minime superiori
+alle massime prima di selezionare. Entrambe osservate rosse, poi verdi.
+Il [rapporto di revisione](../reviews/2026-11-02-map-selection.md) separa i
+rilievi dei revisori dall'evidenza eseguita dal root.
+
+Gate finali eseguiti nel root dopo le correzioni:
 
 | Comando                | Esito                                                                            |
 | ---------------------- | -------------------------------------------------------------------------------- |
-| `npm test`             | **149/149**, zero failure/skip; comprende la build e i test geometrici esistenti |
+| `npm test`             | **151/151**, zero failure/skip; comprende la build e i test geometrici esistenti |
 | `npm run typecheck`    | exit 0                                                                           |
 | `npm run format:check` | exit 0                                                                           |
 | `git diff --check`     | exit 0                                                                           |
@@ -139,7 +145,10 @@ Impronte SHA-256:
 Il file di verifica registra il confronto riuscito delle cinque impronte dei
 file installati (Assembly-CSharp, mscorlib, resources, sharedassets0, level4)
 con il contratto. Il manifest normalizzato conserva anche le tre impronte del
-pack originale già pubblicate nel contratto. I dati root non sono stati scritti.
+pack originale già pubblicate nel contratto. L'implementatore non ha scritto
+i dati root. All'integrazione il root ha copiato l'evidenza nella propria
+scratch e rieseguito i 47 casi, prima e dopo le correzioni: stessa impronta
+`e753d279a8f1cec775d1cbe95010dfc0face6667aabd86a296a773c9e6374a9a`.
 
 ## Fonte, adattamenti e limiti
 
@@ -160,5 +169,6 @@ per lo stato mixture. Non viene misurato il clock Unity e non si simula il JIT.
 
 Questa evidenza non è un oracolo completo del coroutine né una certificazione
 di parità runtime Unity. Non implementa bordi, layout, incontri, startup,
-freeze della mappa o A1 giocabile. **Review indipendenti Standards/Spec pendenti
-al root**, insieme a PR/merge/chiusura #46. #41, #38 e #33 rimangono aperte.
+freeze della mappa o A1 giocabile. **Review indipendenti complete**:
+Standards 0 violazioni / 1 suggerimento facoltativo rinviato; Spec 2 difetti
+importanti corretti dall'autore con regressioni. #41, #38 e #33 rimangono aperte.

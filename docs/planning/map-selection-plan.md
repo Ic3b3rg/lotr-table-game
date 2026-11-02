@@ -52,3 +52,11 @@ della issue prima di iniziare codice.
   [report di verifica](../testing/map-selection-verification.md).
 - Review indipendenti Standards/Spec, PR, push, merge e chiusura #46 rimangono al
   root. Nessuna di queste operazioni è stata eseguita dall'implementatore.
+
+## Integrazione root
+
+- Quattro commit importati sul branch feat/map-selection, base e66317d.
+- Verifica prima della review: 149/149, tipi/formato/diff verdi; matrice privata 47/47 rieseguita con la stessa impronta.
+- Standards 0 violazioni / 1 suggerimento facoltativo (helper per la cache rinviato); Spec 2 difetti importanti: scaling con tutte le sezioni escluse e capacità contraddittorie.
+- Entrambe le regressioni CLI osservate rosse poi verdi; correzioni root in un passaggio. Suite 151/151, 49 test di selezione, tipi/formato/diff verdi.
+- Matrice privata 47/47 ripetuta dopo le correzioni, impronta e753d279a8f1cec775d1cbe95010dfc0face6667aabd86a296a773c9e6374a9a invariata.

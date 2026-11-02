@@ -410,6 +410,51 @@ test('H3 scales a shuffled copy of all four builders once into a permutation of 
 function reserve(tile, isStandard = true) {
   return { isStandard, modelSource: tile.modelSource };
 }
+
+test('all sections ignoring scaling skip both shuffle and distribution without consuming samples', async () => {
+  const single = fixture();
+  for (const section of single.sections) section.ignorePlayerScaling = true;
+  let baseline;
+  await run(single, (r) => {
+    baseline = selected(r);
+  });
+  for (const heroCount of [2, 5]) {
+    const f = structuredClone(single);
+    f.context.heroCount = heroCount;
+    f.context.heroes = Array.from({ length: heroCount }, (_, i) => ({
+      id: i + 1,
+      source: ref(4000 + i),
+      itemIds: [],
+    }));
+    await run(f, (r) => {
+      const v = selected(r);
+      assert.deepEqual(
+        v.sections.map((s) => s.extraSpaces),
+        [0, 0, 0, 0],
+      );
+      assert.deepEqual(v.scalingOrder, [0, 1, 2, 3]);
+      assert.deepEqual(v.standardOrder, baseline.standardOrder);
+      assert.deepEqual(
+        v.checkpoints.find((c) => c.stage === 'coroutine-entry').rng,
+        baseline.checkpoints.find((c) => c.stage === 'coroutine-entry').rng,
+      );
+      assert.deepEqual(v.rng, baseline.rng);
+    });
+  }
+});
+
+test('contradictory section capacities are rejected before an explicit start can produce selected output', async () => {
+  const f = fixture();
+  f.sections[0].minimumSpaces = 1;
+  f.sections[0].maximumSpaces = 0;
+  f.sections[0].start = reserve(f.standard[0]);
+  await run(f, async (r) => {
+    assert.equal(r.process.status, 1, r.process.stderr);
+    assert.equal(r.result, undefined);
+    assert.match(r.process.stderr, /minim.*massim/i);
+    assert.deepEqual(await readdir(r.dir), ['input.json']);
+  });
+});
 function active(f, id, min = 1, max = min) {
   Object.assign(f.sections[id], { minimumSpaces: min, maximumSpaces: max });
 }

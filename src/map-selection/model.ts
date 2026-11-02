@@ -288,6 +288,7 @@ export function parseSelectionInput(value: unknown): SelectionInput {
   for (const g of p.groups)
     for (const r of [...g.requiredSources, ...g.optionalSources]) requireRef(encounters.has(r), r);
   for (const s of p.sections) {
+    if (s.minimumSpaces > s.maximumSpaces) fail(`Sezione ${s.index}: minimo superiore al massimo.`);
     for (const r of [...(s.start ? [s.start] : []), ...s.required])
       requireRef(models.has(r.modelSource), r.modelSource);
     for (const r of s.fixedEncounterSources) requireRef(encounters.has(r), r);
