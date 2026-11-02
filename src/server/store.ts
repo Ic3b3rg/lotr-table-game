@@ -2,11 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { ReceiptSchema, type Receipt } from '../shared/protocol';
 import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
+import { loadJourneyPlan } from './journey-map';
+import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
 import { skillTestView } from '../shared/skill-tests';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
@@ -24,6 +26,7 @@ export function dataDirectory() {
 export class Store {
   private readonly db: DatabaseSync;
   readonly cookieSecret: string;
+  readonly journeyPlan: JourneyPlan | null;
 
   constructor(readonly directory = dataDirectory()) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -37,7 +40,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
@@ -49,6 +52,7 @@ export class Store {
       skillTest: null,
       scout: null,
       round: null,
+      journey: null,
     };
     this.db
       .prepare('INSERT OR IGNORE INTO session (id, data) VALUES (1, ?)')
@@ -61,6 +65,15 @@ export class Store {
     this.cookieSecret = secret.value;
     this.upgradeUnversionedSession();
     const saved = this.read(); // Fail on incompatible data; never replace it with a blank table.
+    const mapPath = process.env.LOTR_MAP_PACK ?? join(directory, 'journey-map.json');
+    this.journeyPlan = saved.journey
+      ? {
+          definition: saved.journey.definition,
+          hash: createHash('sha256').update(JSON.stringify(saved.journey.definition)).digest('hex'),
+        }
+      : process.env.LOTR_MAP_PACK || existsSync(mapPath)
+        ? loadJourneyPlan(mapPath)
+        : null;
     const path = process.env.LOTR_CONTENT_PACK ?? join(directory, 'catalog.json');
     if (!saved.content && (process.env.LOTR_CONTENT_PACK || existsSync(path))) {
       const catalog = loadCatalog(path);
@@ -258,6 +271,7 @@ export function publicSession(state: State) {
     preparation: preparationView(state.preparation, state.skillTest, state.scout),
     scout: state.scout,
     round: state.round,
+    journey: state.journey,
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

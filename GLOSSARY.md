@@ -33,3 +33,20 @@ _Avoid_: Round, turno del giocatore
 Una delle attività che consumano il limite del turno dell'eroe: viaggio,
 attacco, interazione o una capacità che richieda esplicitamente un'azione.
 Un effetto che concede un'attività non è di per sé un'azione.
+
+**Viaggio**:
+L'azione con cui un eroe può effettuare fino a due movimenti nel proprio turno,
+anche risolvendo un'altra azione o effetti fra i movimenti.
+
+**Movimento**:
+Il passaggio di una figura dalla sua casella a una casella adiacente.
+_Avoid_: Viaggio
+
+**Casella**:
+Uno spazio della mappa occupabile dalle figure. Può comprendere più esagoni
+del disegno di una tessera, senza che siano movimenti distinti.
+_Avoid_: Esagono, tessera
+
+**Tessera**:
+Il componente che rappresenta una parte della mappa e contiene una o più caselle.
+_Avoid_: Casella

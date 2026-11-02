@@ -1,6 +1,6 @@
-import { readFileSync, realpathSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { AssetNameSchema, CatalogSchema, type Catalog } from '../shared/catalog';
+import { contentAsset } from './content-assets';
+import { readFileSync, statSync } from 'node:fs';
+import { CatalogSchema, type Catalog } from '../shared/catalog';
 
 export function loadCatalog(path: string): Catalog {
   try {
@@ -18,19 +18,10 @@ export function catalogAsset(
   name: string,
   packPath: string,
 ): Buffer | null {
-  if (!catalog || !AssetNameSchema.safeParse(name).success) return null;
+  if (!catalog) return null;
   const allowed = [
     ...catalog.heroes.map((hero) => hero.portrait),
     ...catalog.items.map((item) => item.image),
   ];
-  if (!allowed.includes(name)) return null;
-  try {
-    const directory = realpathSync(join(dirname(resolve(packPath)), 'assets'));
-    const path = realpathSync(join(directory, name));
-    if (dirname(path) !== directory || statSync(path).size > 2_000_000) return null;
-    const data = readFileSync(path);
-    return data.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ? data : null;
-  } catch {
-    return null;
-  }
+  return contentAsset(name, allowed, packPath);
 }

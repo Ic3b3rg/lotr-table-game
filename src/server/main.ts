@@ -11,6 +11,7 @@ import { identity, joinPlayer, recoverPlayer, setIdentity } from './identity';
 import { performCommand } from './commands';
 import { RestoreSchema } from './backup-format';
 import { catalogAsset } from './catalog';
+import { contentAsset } from './content-assets';
 import { dataDirectory } from './store';
 import { join } from 'node:path';
 
@@ -71,6 +72,18 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
     if (req.method === 'GET' && url.pathname === '/api/catalog')
       return json(res, store.read().content);
+    if (req.method === 'GET' && url.pathname === '/api/journey-map-plan')
+      return json(res, store.journeyPlan);
+    if (req.method === 'GET' && url.pathname.startsWith('/api/map-content/')) {
+      const asset = contentAsset(
+        url.pathname.slice('/api/map-content/'.length),
+        [store.read().journey?.definition.image, store.journeyPlan?.definition.image],
+        process.env.LOTR_MAP_PACK ?? join(dataDirectory(), 'journey-map.json'),
+      );
+      if (!asset) throw new ApiError(404, 'ASSET_MISSING', 'Immagine della mappa non disponibile.');
+      res.writeHead(200, { 'content-type': 'image/png' });
+      return res.end(asset);
+    }
     if (req.method === 'GET' && url.pathname.startsWith('/api/content/')) {
       const asset = catalogAsset(
         store.read().content,

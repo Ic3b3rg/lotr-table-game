@@ -5,6 +5,7 @@ import { PreparationSchema, PreparedHeroSchema, preparationProblem } from '../sh
 import { SkillTestSchema, skillTestProblem } from '../shared/skill-tests';
 import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
 import { RoundSchema, roundProblem } from '../shared/rounds';
+import { journeyProblem } from '../shared/journey-map';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -48,6 +49,8 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
   if (scoutProblem) ctx.addIssue({ code: 'custom', message: scoutProblem });
   const roundError = roundProblem(state.round, state.preparation, state.skillTest, state.scout);
   if (roundError) ctx.addIssue({ code: 'custom', message: roundError });
+  const journeyError = journeyProblem(state.journey, state.preparation, state.round);
+  if (journeyError) ctx.addIssue({ code: 'custom', message: journeyError });
   if (state.scout && state.skillTest?.status === 'converting')
     ctx.addIssue({
       code: 'custom',
@@ -74,6 +77,7 @@ const LegacyStateSchema = BaseStateSchema.omit({
   skillTest: true,
   scout: true,
   round: true,
+  journey: true,
 }).extend({
   schemaVersion: z.literal(1),
 });
@@ -81,6 +85,7 @@ const VersionTwoStateSchema = BaseStateSchema.omit({
   skillTest: true,
   scout: true,
   round: true,
+  journey: true,
 }).extend({
   schemaVersion: z.literal(2),
   preparation: PreparationSchema.extend({
@@ -89,22 +94,34 @@ const VersionTwoStateSchema = BaseStateSchema.omit({
     .nullable()
     .default(null),
 });
-const VersionThreeStateSchema = BaseStateSchema.omit({ scout: true, round: true }).extend({
+const VersionThreeStateSchema = BaseStateSchema.omit({
+  scout: true,
+  round: true,
+  journey: true,
+}).extend({
   schemaVersion: z.literal(3),
   skillTest: SkillTestSchema.omit({ availableCount: true }).nullable(),
 });
-const VersionFourStateSchema = BaseStateSchema.omit({ round: true }).extend({
+const VersionFourStateSchema = BaseStateSchema.omit({ round: true, journey: true }).extend({
   schemaVersion: z.literal(4),
   scout: ScoutingSchema.omit({ roundId: true }).nullable(),
+});
+const VersionFiveStateSchema = BaseStateSchema.omit({ journey: true }).extend({
+  schemaVersion: z.literal(5),
 });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 5) {
+      const previous = VersionFiveStateSchema.parse(raw);
+      return StateSchema.parse({ ...previous, schemaVersion: 6, journey: null });
+    }
     if (version === 1) {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 5,
+        schemaVersion: 6,
+        journey: null,
         content: null,
         skillTest: null,
         scout: null,
@@ -115,7 +132,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 5,
+        schemaVersion: 6,
+        journey: null,
         skillTest: null,
         scout: null,
         round: null,
@@ -131,7 +149,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 5,
+        schemaVersion: 6,
+        journey: null,
         scout: null,
         round: null,
         skillTest: previous.skillTest ? { ...previous.skillTest, availableCount: 14 } : null,
@@ -141,7 +160,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 5,
+        schemaVersion: 6,
+        journey: null,
         round: null,
         scout: previous.scout ? { ...previous.scout, roundId: null } : null,
       });

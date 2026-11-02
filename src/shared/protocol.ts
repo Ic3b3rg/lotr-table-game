@@ -4,6 +4,7 @@ import { CopyIdSchema, PreparationViewSchema } from './preparation';
 import { SkillTestViewSchema, StatSchema } from './skill-tests';
 import { ScoutingSchema } from './scouting';
 import { RoundSchema, ShadowStepSchema } from './rounds';
+import { JourneySchema, SpaceIdSchema } from './journey-map';
 
 export const NameSchema = z
   .string()
@@ -38,7 +39,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(5),
+  schemaVersion: z.literal(6),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -50,6 +51,7 @@ export const SessionSchema = z.strictObject({
   skillTest: SkillTestViewSchema.nullable(),
   scout: ScoutingSchema.nullable(),
   round: RoundSchema.nullable(),
+  journey: JourneySchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -58,7 +60,23 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
+const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({ ...MapTurnBase, type: z.literal('START_TRAVEL') }),
+  z.strictObject({
+    ...MapTurnBase,
+    type: z.literal('MOVE_HERO'),
+    fromSpaceId: SpaceIdSchema,
+    destinationSpaceId: SpaceIdSchema,
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('OPEN_JOURNEY_MAP'),
+    expectedRevision: z.int().nonnegative(),
+    planId: ContentIdSchema,
+    planHash: z.string().regex(/^[a-f0-9]{64}$/),
+    agreed: z.literal(true),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('START_ROUNDS'),
@@ -193,6 +211,17 @@ const DemoReceiptSchema = z.strictObject({
   choice: z.enum(['A', 'B']).nullable(),
 });
 export const ReceiptSchema = z.union([
+  z.strictObject({
+    requestId: IntentIdSchema,
+    type: z.enum(['OPEN_JOURNEY_MAP', 'START_TRAVEL', 'MOVE_HERO']),
+    appliedRevision: z.int().nonnegative(),
+    mapId: z.uuid(),
+    heroId: ContentIdSchema.nullable(),
+    spaceId: SpaceIdSchema.nullable(),
+    movesRemaining: z.int().min(0).max(4),
+    roundId: z.uuid().nullable(),
+    turnId: z.uuid().nullable(),
+  }),
   DemoReceiptSchema,
   z.strictObject({
     requestId: IntentIdSchema,
@@ -248,6 +277,10 @@ export const HostSchema = z.object({
   addresses: z.array(z.object({ address: z.ipv4(), label: z.string(), joinUrl: z.url() })),
 });
 export type Session = z.infer<typeof SessionSchema>;
+export type JourneyCommand = Extract<
+  Command,
+  { type: 'OPEN_JOURNEY_MAP' | 'START_TRAVEL' | 'MOVE_HERO' }
+>;
 export type HostInfo = z.infer<typeof HostSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
 export type Command = z.infer<typeof CommandSchema>;

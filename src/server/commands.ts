@@ -6,11 +6,21 @@ import { applyPreparation } from './preparation';
 import { applySkillTest } from './skill-tests';
 import { applyScouting } from './scouting';
 import { applyRoundCommand } from './rounds';
+import { applyJourneyCommand } from './journey-map';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (
+      command.type === 'OPEN_JOURNEY_MAP' ||
+      command.type === 'START_TRAVEL' ||
+      command.type === 'MOVE_HERO'
+    ) {
+      const result = applyJourneyCommand(state, playerId, command, store.journeyPlan);
+      advance(state);
+      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+    }
     if (
       command.type === 'START_ROUNDS' ||
       command.type === 'START_TURN' ||

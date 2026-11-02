@@ -105,6 +105,7 @@ export function applyRoundCommand(state: State, playerId: string, command: Round
             progress.actionsUsed++;
           } else {
             progress.turnEnded = true;
+            if (state.journey) state.journey.travel = null;
             round.activeHeroId = null;
             round.turnId = null;
           }
