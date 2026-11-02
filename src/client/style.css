@@ -1095,3 +1095,30 @@ details[open] {
   background: #edc77a;
   color: #19282b;
 }
+.scout-card {
+  min-width: 0;
+}
+.scout-card label,
+#scout-discard-controls > label,
+#scout-limit-field {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 16px 0;
+}
+#scouting select {
+  min-height: 48px;
+  font-size: 16px;
+  color: #f3ead6;
+  background: #19282b;
+  border-color: #778276;
+  margin-top: 8px;
+}
+.scout-card .physical-card {
+  height: auto;
+}
+.scout-moves {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}

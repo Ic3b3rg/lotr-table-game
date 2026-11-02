@@ -158,7 +158,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     section.append(gear);
     if (current!.preparation?.status === 'prepared') {
       const prepared = text('div', '', 'prepared-card-area');
-      prepared.append(text('h4', 'Carta preparata'));
+      prepared.append(text('h4', `Carte preparate · ${hero.prepared.length} / 4`));
       prepared.append(
         text(
           'p',

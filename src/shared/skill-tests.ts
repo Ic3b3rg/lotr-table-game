@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ContentIdSchema, type Catalog } from './catalog';
 import { CopyIdSchema, definitionId, type Preparation } from './preparation';
+import type { Scouting } from './scouting';
 
 export const StatSchema = z.enum(['might', 'wisdom', 'agility', 'spirit', 'wit']);
 export const STAT_LABELS = {
@@ -15,6 +16,7 @@ export const SkillTestSchema = z.strictObject({
   heroId: ContentIdSchema,
   stat: StatSchema,
   modifier: z.int().min(-20).max(20),
+  availableCount: z.int().min(1).max(15),
   target: z.int().min(1).max(99).nullable(),
   revealed: z.array(CopyIdSchema).min(1).max(30),
   converted: z.int().min(0).max(60),
@@ -49,18 +51,23 @@ export function skillTestProblem(
   catalog: Catalog | null,
   preparation: Preparation | null,
   test: SkillTest | null,
+  scout: Scouting | null = null,
 ): string | null {
   if (!test) return null;
   const hero = preparation?.heroes.find((entry) => entry.heroId === test.heroId);
   if (!catalog || !hero || preparation?.status !== 'prepared')
     return 'La prova richiede un eroe della compagnia preparata.';
   const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
+  if (!definition) return 'L’eroe della prova non appartiene al catalogo.';
   const available = [...hero.deck, ...hero.discard];
   if (test.status === 'converting') available.push(...test.revealed);
+  else available.push(...hero.prepared, ...(scout?.heroId === hero.heroId ? scout.revealed : []));
   if (
     new Set(test.revealed).size !== test.revealed.length ||
     test.revealed.some((copy) => !available.includes(copy)) ||
-    test.revealed.length !== Math.min(14, Math.max(1, definition.stats[test.stat] + test.modifier))
+    test.revealed.length !==
+      Math.min(test.availableCount, Math.max(1, definition.stats[test.stat] + test.modifier)) ||
+    (test.status === 'converting' && test.availableCount !== available.length)
   )
     return 'Carte rivelate non coerenti con la prova.';
   const view = skillTestView(catalog, test)!;

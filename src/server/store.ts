@@ -37,7 +37,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
@@ -47,6 +47,7 @@ export class Store {
       content: null,
       preparation: null,
       skillTest: null,
+      scout: null,
     };
     this.db
       .prepare('INSERT OR IGNORE INTO session (id, data) VALUES (1, ?)')
@@ -253,7 +254,8 @@ export function publicSession(state: State) {
     updatedAt: state.updatedAt,
     players: state.players.map(({ id, name }) => ({ id, name })),
     demo: state.demo,
-    preparation: preparationView(state.preparation, state.skillTest),
+    preparation: preparationView(state.preparation, state.skillTest, state.scout),
+    scout: state.scout,
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

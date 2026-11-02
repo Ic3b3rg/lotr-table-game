@@ -1,23 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { SkillTestCommand } from '../shared/protocol';
-import type { PreparedHero } from '../shared/preparation';
 import { skillTestView } from '../shared/skill-tests';
 import { ApiError } from './errors';
 import type { State } from './state';
-import { shuffled } from './shuffle';
-
-function refillEmptyDeck(hero: PreparedHero) {
-  if (hero.deck.length === 0 && hero.discard.length > 0) {
-    hero.deck = shuffled(hero.discard);
-    hero.discard = [];
-  }
-}
+import { refillEmptyDeck, revealCards } from './skill-deck';
 
 export function applySkillTest(state: State, playerId: string, command: SkillTestCommand) {
   if (state.revision !== command.expectedRevision)
     throw new ApiError(409, 'TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la prova e riprova.');
   if (!state.content || state.preparation?.status !== 'prepared')
     throw new ApiError(409, 'COMPANY_NOT_READY', 'Prepara i mazzi prima di effettuare una prova.');
+  if (command.type === 'START_SKILL_TEST' && state.scout)
+    throw new ApiError(
+      409,
+      'SCOUT_IN_PROGRESS',
+      'Concludi la Scoperta prima di iniziare una prova.',
+    );
   const test = state.skillTest;
   if (command.type === 'RESOLVE_SKILL_TEST' || command.type === 'CONVERT_FATE') {
     if (!test || test.id !== command.testId || test.status !== 'converting')
@@ -57,19 +55,14 @@ export function applySkillTest(state: State, playerId: string, command: SkillTes
   } else if (command.type === 'START_SKILL_TEST') {
     const definition = state.content.heroes.find((entry) => entry.id === hero.heroId)!;
     const count = Math.max(1, definition.stats[command.stat] + command.modifier);
-    const revealed: string[] = [];
-    for (let i = 0; i < count; i++) {
-      refillEmptyDeck(hero);
-      const copy = hero.deck.shift();
-      if (!copy) break;
-      revealed.push(copy);
-      refillEmptyDeck(hero);
-    }
+    const availableCount = hero.deck.length + hero.discard.length;
+    const revealed = revealCards(hero, count);
     state.skillTest = {
       id: randomUUID(),
       heroId: hero.heroId,
       stat: command.stat,
       modifier: command.modifier,
+      availableCount,
       target: command.target,
       revealed,
       converted: 0,

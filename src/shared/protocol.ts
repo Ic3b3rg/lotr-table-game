@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
 import { SkillTestViewSchema, StatSchema } from './skill-tests';
+import { ScoutingSchema } from './scouting';
 
 export const NameSchema = z
   .string()
@@ -36,7 +37,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(3),
+  schemaVersion: z.literal(4),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -46,6 +47,7 @@ export const SessionSchema = z.strictObject({
   catalog: CatalogSummarySchema.nullable(),
   preparation: PreparationViewSchema.nullable(),
   skillTest: SkillTestViewSchema.nullable(),
+  scout: ScoutingSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -54,6 +56,36 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('DISCARD_PREPARED_SKILL'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    copy: CopyIdSchema,
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('START_RALLY_SCOUT'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('START_SCOUT'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    count: z.int().min(1).max(15),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('RESOLVE_SCOUT'),
+    expectedRevision: z.int().nonnegative(),
+    scoutId: z.uuid(),
+    prepareCopy: CopyIdSchema.nullable(),
+    top: z.array(CopyIdSchema).max(15),
+    bottom: z.array(CopyIdSchema).max(15),
+    discardPreparedCopy: CopyIdSchema.nullable(),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('CONVERT_FATE'),
@@ -125,6 +157,14 @@ export const ReceiptSchema = z.union([
   DemoReceiptSchema,
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum(['START_SCOUT', 'START_RALLY_SCOUT', 'RESOLVE_SCOUT', 'DISCARD_PREPARED_SKILL']),
+    appliedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    scoutId: z.uuid().nullable(),
+    preparedCount: z.int().min(0).max(4),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['START_SKILL_TEST', 'RESOLVE_SKILL_TEST', 'GAIN_INSPIRATION', 'CONVERT_FATE']),
     appliedRevision: z.int().nonnegative(),
     heroId: ContentIdSchema,
@@ -163,4 +203,8 @@ export type PreparationCommand = Extract<
 export type SkillTestCommand = Extract<
   Command,
   { type: 'START_SKILL_TEST' | 'RESOLVE_SKILL_TEST' | 'GAIN_INSPIRATION' | 'CONVERT_FATE' }
+>;
+export type ScoutingCommand = Extract<
+  Command,
+  { type: 'START_SCOUT' | 'START_RALLY_SCOUT' | 'RESOLVE_SCOUT' | 'DISCARD_PREPARED_SKILL' }
 >;

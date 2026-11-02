@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ContentIdSchema, type Catalog } from './catalog';
 import type { SkillTest } from './skill-tests';
+import type { Scouting } from './scouting';
 
 export const CopyIdSchema = z
   .string()
@@ -47,6 +48,7 @@ export function preparationProblem(
   playerIds: string[],
   preparation: Preparation,
   test: SkillTest | null = null,
+  scout: Scouting | null = null,
 ): string | null {
   const heroes = preparation.heroes;
   if (
@@ -106,16 +108,13 @@ export function preparationProblem(
     for (const hero of heroes) {
       const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
       const role = catalog.roles.find((entry) => entry.id === hero.roleId)!;
-      const revealed =
-        test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : [];
-      if (
-        hero.prepared.length !== 1 ||
-        hero.prepared[0] !== `${role.skills[0]}:1` ||
-        hero.deck.length + hero.discard.length + revealed.length !== 14
-      )
-        return 'Mazzo o carta preparata non validi.';
+      const revealed = [
+        ...(test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : []),
+        ...(scout?.heroId === hero.heroId ? scout.revealed : []),
+      ];
       const expected = [...catalog.basicSkills, ...definition.skills, ...role.skills];
       const actual = [...hero.prepared, ...hero.deck, ...hero.discard, ...revealed];
+      if (actual.length !== 15) return 'L’eroe deve conservare le sue quindici carte abilità.';
       const definitions = actual.map(definitionId);
       if (
         expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
@@ -133,7 +132,11 @@ export function preparationProblem(
     return 'La riserva non è ancora preparata.';
   return null;
 }
-export function preparationView(preparation: Preparation | null, test: SkillTest | null = null) {
+export function preparationView(
+  preparation: Preparation | null,
+  test: SkillTest | null = null,
+  scout: Scouting | null = null,
+) {
   if (!preparation) return null;
   return {
     status: preparation.status,
@@ -146,6 +149,7 @@ export function preparationView(preparation: Preparation | null, test: SkillTest
         ...deck,
         ...discard,
         ...(test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : []),
+        ...(scout?.heroId === hero.heroId ? scout.revealed : []),
       ].sort(),
     })),
   };
