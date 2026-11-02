@@ -31,7 +31,7 @@ intero originale), `nextDouble()`, `nextInt(min,max)` e
   Non perdere precisione superando Number.MAX_SAFE_INTEGER: una nuova
   operazione che richiederebbe più campioni deve fallire prima di mutare lo stato.
 - Snapshot versione 1 con algoritmo identificato, seme signed originale,
-  copia dei 56 slot, indici e contatore. Validare dimensioni, range, slot0
+  copia dei 56 slot (0…Int32.MaxValue), indici e contatore. Validare dimensioni, range, slot0
   inutilizzato e coerenza degli indici col contatore. Ripristino e snapshot
   non devono condividere array modificabili con il chiamante.
 - `nextFloat32` rende esplicita la politica numerica

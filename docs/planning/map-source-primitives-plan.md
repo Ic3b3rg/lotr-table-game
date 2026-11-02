@@ -33,18 +33,18 @@ un'interfaccia piccola; il futuro generatore conserva clock e ricerca separati.
 `tests/map-primitives.test.mjs`, `tests/fixtures/map-source-vectors.json`;
 oracolo soltanto `.scratch/map-primitives/`.
 
-- [ ] Eseguire i corpi IL selezionati e derivare vettori sintetici indipendenti.
-- [ ] Scrivere prove sulla build pubblica e osservarne il rosso.
-- [ ] Implementare Random, stato validato, contatore e float32 nominato.
-- [ ] Verificare vettori, ripresa, alias e input; commit del primo nucleo.
+- [x] Eseguire i corpi IL selezionati e derivare vettori sintetici indipendenti.
+- [x] Scrivere prove sulla build pubblica e osservarne il rosso.
+- [x] Implementare Random, stato validato, contatore e float32 nominato.
+- [x] Verificare vettori, ripresa, alias e input; commit del primo nucleo.
 
 ### Task 2: shuffle e Comparison sort
 
 **Files:** stesso modulo e prove, `src/map-generation/comparison-sort.ts`.
 
-- [ ] Osservare il rosso su shuffle e sort con identità/confronti originali.
-- [ ] Implementare percorso introsort/insertion/heap e shuffle a range intero.
-- [ ] Verificare taglie limite, pari, comparatore originale delle sezioni,
+- [x] Osservare il rosso su shuffle e sort con identità/confronti originali.
+- [x] Implementare percorso introsort/insertion/heap e shuffle a range intero.
+- [x] Verificare taglie limite, pari, comparatore originale delle sezioni,
   heapsort e input invalido; commit.
 
 ### Task 3: verifica e consegna

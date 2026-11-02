@@ -107,7 +107,7 @@ test('semi, stati e argomenti invalidi sono rifiutati senza consumare casualità
       s.seedArray[1] = -1;
     },
     (s) => {
-      s.seedArray[1] = 2147483647;
+      s.seedArray[1] = 2147483648;
     },
     (s) => {
       s.inext = 56;
@@ -147,6 +147,16 @@ test('il limite del contatore è controllato prima anche di un’operazione a du
   assert.equal(end.samples, Number.MAX_SAFE_INTEGER);
   assert.throws(() => random.nextDouble());
   assert.deepEqual(random.snapshot(), end);
+});
+
+test('un campione interno uguale a Int32.MaxValue viene decrementato come nella fonte', () => {
+  const state = new SourceRandom(0).snapshot();
+  state.seedArray.fill(0);
+  state.seedArray[1] = 2147483647;
+  const random = SourceRandom.restore(state);
+  assert.equal(random.next(), 2147483646);
+  assert.equal(random.snapshot().samples, 1);
+  assert.doesNotThrow(() => SourceRandom.restore(random.snapshot()));
 });
 
 test('la politica float32 dichiarata può arrotondare a uno e conserva gli estremi inversi', () => {

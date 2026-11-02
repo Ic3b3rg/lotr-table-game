@@ -11,14 +11,7 @@ const StateSchema = z
     formatVersion: z.literal(1),
     algorithm: z.literal(ALGORITHM),
     seed: z.int().min(MIN).max(MAX),
-    seedArray: z
-      .array(
-        z
-          .int()
-          .min(0)
-          .max(MAX - 1),
-      )
-      .length(56),
+    seedArray: z.array(z.int().min(0).max(MAX)).length(56),
     inext: z.int().min(0).max(55),
     inextp: z.int().min(1).max(55),
     samples: z.int().min(0).max(Number.MAX_SAFE_INTEGER),
