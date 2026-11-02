@@ -18,7 +18,6 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
   let rendered = '';
   let viewRevision = -1;
   let dirty = false;
-  let stale = false;
   let forceRender = false;
   let pending: { signature: string; body: object } | null = null;
   const reload = document.createElement('button');
@@ -28,7 +27,6 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
   reload.hidden = true;
   function reloadChoices() {
     dirty = false;
-    stale = false;
     pending = null;
     error.hidden = true;
     reload.hidden = true;
@@ -90,7 +88,6 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         await request('/api/commands', pending.body);
         pending = null;
         dirty = false;
-        stale = false;
         forceRender = true;
         rendered = '';
         await sync();
@@ -103,12 +100,12 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         if (cause instanceof RequestError) {
           pending = null;
           if (cause.code === 'TABLE_CHANGED') {
-            stale = true;
             error.textContent +=
-              ' Ricarica le scelte per aggiornare il modulo; le modifiche non salvate verranno annullate.';
+              ' Le tue modifiche sono ancora qui. Premi di nuovo Salva per verificarle con il tavolo aggiornato, oppure ricarica per annullarle.';
             reload.hidden = false;
           }
           await sync();
+          viewRevision = current!.revision;
         }
       } finally {
         for (const { control, disabled } of controls)
@@ -125,6 +122,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     const definition = content.heroes.find((entry) => entry.id === hero.heroId)!;
     const section = document.createElement('article');
     section.className = 'company-hero';
+    section.dataset.owned = String(player?.id === hero.playerId);
     const intro = text('div', '', 'company-hero-intro');
     intro.append(picture(definition.portrait, '', 'company-miniature'));
     const title = document.createElement('div');
@@ -195,6 +193,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       section.append(prepared);
     } else if (player?.id === hero.playerId) {
       const edit = document.createElement('details');
+      edit.open = !hero.roleId;
       edit.append(text('summary', `Configura ${definition.name.text}`));
       const form = document.createElement('form');
       const field = (
@@ -297,9 +296,9 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       prepared
         ? 'Eroi e mazzi sono salvati. Il gruppo può aprire la mappa e iniziare i round; il combattimento seguirà.'
         : player
-          ? session.players.length === 1
+          ? (session.group?.expectedPlayers ?? session.players.length) === 1
             ? 'Se giochi da solo, scegli da due a quattro eroi. Ogni eroe avrà il suo mazzo.'
-            : 'Scegli un eroe per persona, poi concordate ruoli ed equipaggiamento.'
+            : 'Scegli un eroe per persona. Proponiamo il suo ruolo e gli oggetti iniziali: apri Configura per controllarli o cambiarli, poi concordateli con il gruppo.'
           : 'Consulta gli eroi o entra al tavolo per scegliere i tuoi.',
       'company-help',
     );
@@ -354,12 +353,26 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       button.dataset.write = '';
       button.className = 'company-action';
       button.textContent = 'Prepara i mazzi della compagnia';
+      const waiting = Boolean(
+        session.group && session.players.length < session.group.expectedPlayers,
+      );
+      const incomplete =
+        session.players.some(
+          (person) => !session.preparation!.heroes.some((hero) => hero.playerId === person.id),
+        ) ||
+        session.preparation.heroes.some((hero) => !hero.roleId) ||
+        (session.players.length === 1 && session.preparation.heroes.length < 2);
+      button.dataset.blocked = String(waiting || incomplete);
       form.append(
         label,
         button,
         text(
           'p',
-          'La prima carta ruolo resterà preparata. Le altre quattordici carte saranno mescolate e salvate.',
+          waiting
+            ? `Aspettate i compagni: presenti ${session.players.length} su ${session.group!.expectedPlayers}.`
+            : incomplete
+              ? 'Ogni giocatore deve avere il proprio eroe e ogni eroe deve avere un ruolo. In solitario servono da due a quattro eroi.'
+              : 'Tutti pronti? La prima carta ruolo resterà preparata. Le altre quattordici carte saranno mescolate e salvate. Dopo la conferma gli eroi sono fissati.',
           'company-help',
         ),
       );
@@ -386,7 +399,6 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
           session.preparation?.status === 'prepared')
       ) {
         dirty = false;
-        stale = false;
         pending = null;
         error.hidden = true;
         reload.hidden = true;
@@ -399,7 +411,6 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         rendered !== next &&
         (forceRender ||
           (!dirty &&
-            !stale &&
             !(
               root.contains(document.activeElement) &&
               document.activeElement?.matches('input,select,button,a,summary')

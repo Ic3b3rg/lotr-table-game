@@ -1,4 +1,5 @@
 import type {
+  GroupCommand,
   JourneyCommand,
   RoundCommand,
   ScoutingCommand,
@@ -8,7 +9,12 @@ import type {
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
-type GameCommand = JourneyCommand | RoundCommand | ScoutingCommand | SkillTestCommand;
+type GameCommand =
+  | GroupCommand
+  | JourneyCommand
+  | RoundCommand
+  | ScoutingCommand
+  | SkillTestCommand;
 type Intent<C = GameCommand> = C extends GameCommand
   ? Omit<C, 'requestId' | 'generation' | 'expectedRevision'>
   : never;

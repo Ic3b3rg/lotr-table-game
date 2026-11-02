@@ -11,26 +11,81 @@
   <body>
     <header class="masthead">
       <a class="brand" href="/" aria-label="Viaggi, tavolo condiviso"
-        ><span class="brand-mark" aria-hidden="true">✧</span
         ><span>VIAGGI<small>NELLA TERRA DI MEZZO</small></span></a
       >
-      <p class="connection" id="connection" role="status">Collegamento al PC…</p>
+      <div class="masthead-tools">
+        <p class="connection" id="connection" role="status">Collegamento al PC…</p>
+        <button id="open-guide" class="help-button" type="button">Guida al tavolo</button>
+      </div>
     </header>
     <main>
       <div class="page-heading">
-        <p class="eyebrow">IL TUO TAVOLO, NELLA STESSA STANZA</p>
-        <h1>La compagnia si riunisce.</h1>
-        <p class="lede">Un PC al centro. Un posto per ognuno.</p>
+        <h1>Cominciamo il viaggio.</h1>
+        <p id="screen-help" class="lede">
+          Il PC mostra il tavolo. Ogni giocatore partecipa dalla propria vista personale.
+        </p>
         <nav class="page-links" aria-label="Vai al tavolo">
-          <a href="#journey">Mappa, eroi e carte</a><a href="#backups">Salvataggio</a>
+          <a href="#start">Passo attuale</a
+          ><a href="#company-preparation" data-tools-link>Eroi e carte</a
+          ><a href="#backups" data-tools-link>Salvataggio</a>
         </nav>
       </div>
       <p id="notice" class="notice" role="status" hidden></p>
+      <section id="start" class="guided-start" aria-labelledby="start-title">
+        <div class="start-heading">
+          <h2 id="start-title" tabindex="-1">Entra al tavolo</h2>
+          <button id="toggle-tools" class="text-button" type="button" aria-pressed="false">
+            Mostra tutti gli strumenti
+          </button>
+        </div>
+        <ol id="start-progress" class="start-progress" aria-label="Avvio della partita">
+          <li>Entra</li>
+          <li>Gruppo</li>
+          <li>Eroi</li>
+          <li>Mazzi</li>
+          <li>Mappa</li>
+          <li>Gioca</li>
+        </ol>
+        <p id="start-instruction" class="start-instruction" role="status">
+          Collegamento al tavolo…
+        </p>
+        <div class="start-actions">
+          <a id="start-action" class="button" href="#invitation">Vai all’ingresso</a>
+          <button id="step-help" class="text-button" type="button">
+            Come funziona questo passo?
+          </button>
+        </div>
+        <details id="group-settings" class="group-settings" hidden>
+          <summary id="group-summary">Quanti giocatori siete?</summary>
+          <form id="group-form">
+            <label for="group-size">Numero di giocatori (persone, non eroi)</label>
+            <select id="group-size" required>
+              <option value="1">1 · solitario, da 2 a 4 eroi</option>
+              <option value="2">2 giocatori</option>
+              <option value="3" selected>3 giocatori</option>
+              <option value="4">4 giocatori</option>
+              <option value="5">5 giocatori</option>
+            </select>
+            <label class="check-label"
+              ><input id="group-agreed" type="checkbox" required />Abbiamo concordato quanti
+              giocatori aspettare.</label
+            >
+            <button id="set-group" class="button" type="submit" data-write>
+              Conferma il numero di giocatori
+            </button>
+          </form>
+          <p id="group-status" role="status" tabindex="-1"></p>
+          <p id="group-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+        </details>
+        <p class="version-scope">
+          Questa versione permette di provare preparazione, viaggio e round nel tratto iniziale.
+          L’avventura completa, i nemici e gli eventi sono ancora in sviluppo.
+        </p>
+      </section>
       <div class="table-layout">
         <section class="company panel" aria-labelledby="company-title">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">I COMPAGNI DI VIAGGIO</p>
               <h2 id="company-title">Il tavolo</h2>
             </div>
             <span id="count" class="count">0 / 5</span>
@@ -41,7 +96,6 @@
           </p>
         </section>
         <section id="invitation" class="invitation panel" aria-labelledby="invitation-title">
-          <p class="eyebrow">PRENDI POSTO</p>
           <h2 id="invitation-title">Entra con il telefono</h2>
           <p>Collegati alla stessa rete Wi-Fi del PC e inquadra il codice.</p>
           <div class="qr-frame">
@@ -59,8 +113,10 @@
           >
         </section>
         <section id="personal" class="personal panel" aria-labelledby="personal-title" hidden>
-          <p class="eyebrow">IL TUO POSTO NELLA COMPAGNIA</p>
           <h2 id="personal-title" tabindex="-1">Come ti chiami?</h2>
+          <p id="personal-next" class="footnote">
+            Ogni persona entra da un browser o dispositivo diverso.
+          </p>
           <form id="join-form">
             <label for="player-name">Nome del giocatore</label
             ><input
@@ -111,6 +167,35 @@
             <h2 id="journey-title">Il viaggio della compagnia</h2>
             <p id="content-status" role="status">Caricamento delle carte…</p>
           </div>
+          <section id="rounds" class="skill-tests" aria-labelledby="round-title" hidden>
+            <h3 id="round-title">Il round della compagnia</h3>
+            <p id="round-status" class="test-status" role="status" tabindex="-1"></p>
+            <ol id="round-heroes" class="round-heroes"></ol>
+            <p id="round-phase-help" class="company-help"></p>
+            <p id="round-observer" class="company-help">
+              Il gruppo concorda l’ordine. I proprietari gestiscono i turni dalla vista personale.
+            </p>
+            <form id="round-form">
+              <div id="round-hero-field" class="test-fields">
+                <label>Eroe che inizia il turno<select id="round-hero" required></select></label>
+              </div>
+              <label class="hero-choice">
+                <input id="round-agreed" type="checkbox" required />
+                <span id="round-agreement">Il gruppo è d’accordo.</span>
+              </label>
+              <button id="round-confirm" class="company-action" type="submit" data-write></button>
+            </form>
+            <div id="round-turn-controls" hidden>
+              <p id="round-unused" class="company-help"></p>
+              <a id="round-interact" class="company-link" href="#skill-tests"
+                >Interagisci con una prova · 1 azione</a
+              >
+              <button id="round-end-turn" class="company-action" type="button" data-write>
+                Concludi il turno dell’eroe
+              </button>
+            </div>
+            <p id="round-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+          </section>
           <section id="journey-map" class="journey-map" aria-labelledby="map-title" hidden>
             <h3 id="map-title">La mappa del viaggio</h3>
             <p id="map-scope" class="company-help">
@@ -184,35 +269,6 @@
             </div>
             <p id="map-status" class="test-status" role="status" tabindex="-1"></p>
             <p id="map-error" class="company-error" role="alert" tabindex="-1" hidden></p>
-          </section>
-          <section id="rounds" class="skill-tests" aria-labelledby="round-title" hidden>
-            <h3 id="round-title">Il round della compagnia</h3>
-            <p id="round-status" class="test-status" role="status" tabindex="-1"></p>
-            <ol id="round-heroes" class="round-heroes"></ol>
-            <p id="round-phase-help" class="company-help"></p>
-            <p id="round-observer" class="company-help">
-              Il gruppo concorda l’ordine. I proprietari gestiscono i turni dalla vista personale.
-            </p>
-            <form id="round-form">
-              <div id="round-hero-field" class="test-fields">
-                <label>Eroe che inizia il turno<select id="round-hero" required></select></label>
-              </div>
-              <label class="hero-choice">
-                <input id="round-agreed" type="checkbox" required />
-                <span id="round-agreement">Il gruppo è d’accordo.</span>
-              </label>
-              <button id="round-confirm" class="company-action" type="submit" data-write></button>
-            </form>
-            <div id="round-turn-controls" hidden>
-              <p id="round-unused" class="company-help"></p>
-              <a id="round-interact" class="company-link" href="#skill-tests"
-                >Interagisci con una prova · 1 azione</a
-              >
-              <button id="round-end-turn" class="company-action" type="button" data-write>
-                Concludi il turno dell’eroe
-              </button>
-            </div>
-            <p id="round-error" class="company-error" role="alert" tabindex="-1" hidden></p>
           </section>
           <div id="company-preparation"></div>
           <section id="scouting" class="skill-tests" aria-labelledby="scouting-title" hidden>
@@ -395,7 +451,6 @@
           </details>
         </section>
         <section class="demo panel" aria-labelledby="demo-title">
-          <p class="eyebrow">PRIMA DI PARTIRE</p>
           <h2 id="demo-title">Prova il collegamento</h2>
           <p id="demo-status" class="demo-status" role="status" tabindex="-1">
             Collegamento al tavolo…
@@ -422,7 +477,6 @@
           <p class="footnote">È solo una prova di collegamento, senza effetti sulla campagna.</p>
         </section>
         <section id="backups" class="backups panel" aria-labelledby="backup-title" hidden>
-          <p class="eyebrow">CONSERVA IL VIAGGIO</p>
           <h2 id="backup-title">Una copia del tavolo</h2>
           <p class="footnote">
             Il PC salva già ogni azione. Esporta una copia per conservarla anche altrove.
@@ -449,7 +503,6 @@
         </section>
       </div>
       <footer class="page-footer">
-        <span class="small-mark" aria-hidden="true">✧</span>
         <p>
           Compagnia e carte · tavolo locale<br /><span
             >Turni, viaggio, prove e Scoperta disponibili. Capacità, combattimento e campagna
@@ -459,5 +512,30 @@
         <p id="saved" class="save-note">Stato locale</p>
       </footer>
     </main>
+    <dialog id="table-guide" class="table-guide" aria-labelledby="guide-title">
+      <div class="guide-heading">
+        <h2 id="guide-title">Guida al tavolo</h2>
+        <button id="close-guide" class="text-button" type="button" autofocus>
+          Chiudi la guida
+        </button>
+      </div>
+      <label for="guide-search">Cerca un’istruzione</label>
+      <input id="guide-search" type="search" placeholder="Per esempio: eroi, fato, recupero" />
+      <nav id="guide-topics" class="guide-topics" aria-label="Argomenti della guida"></nav>
+      <p id="guide-empty" role="status" hidden>
+        Nessun argomento trovato. Prova un’altra parola o cancella la ricerca.
+      </p>
+      <div id="guide-articles"></div>
+      <section class="guide-documents" aria-labelledby="rules-title">
+        <h3 id="rules-title">Regole originali su questo PC</h3>
+        <p>
+          I documenti installati si aprono anche senza Internet. Questa guida resta disponibile
+          anche se manca un PDF.
+        </p>
+        <ul id="rule-documents">
+          <li>Verifica dei documenti locali…</li>
+        </ul>
+      </section>
+    </dialog>
   </body>
 </html>

@@ -27,6 +27,8 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   let catalog: Catalog | null = null;
   let rosterKey = '';
   let testKey = '';
+  let revealKey = '';
+  let revealGeneration = '';
   let contextKey = '';
   const commands = createGameActions(() => current, sync, root, status, error, updateControls);
   const { submit } = commands;
@@ -175,22 +177,47 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
       const nextTest = `${session.generation}:${JSON.stringify(test)}`;
       if (testKey !== nextTest) {
         const result = element('#skill-test-result');
-        result.replaceChildren();
+        const nextReveal = `${session.generation}:${test?.id ?? ''}:${test?.revealed.join(',') ?? ''}`;
+        const changedReveal = nextReveal !== revealKey;
+        const animate = revealGeneration === session.generation && changedReveal;
+        if (changedReveal) result.replaceChildren();
         if (test) {
           const hero = catalog.heroes.find((entry) => entry.id === test.heroId)!;
-          result.append(text('h4', `${hero.name.text} · ${STAT_LABELS[test.stat]}`));
-          const list = text('ul', '', 'test-revealed');
-          for (const copy of test.revealed) {
-            const card = catalog.skills.find((entry) => entry.id === definitionId(copy))!;
-            const row = document.createElement('li');
-            const button = cardButton(card, (caller) => reader.card(card, caller));
-            button.prepend(
-              text('strong', `Successi: ${card.success} · Fato: ${card.fate}`, 'test-symbols'),
+          if (changedReveal) {
+            result.append(
+              text(
+                'h4',
+                `${hero.name.text} · ${STAT_LABELS[test.stat]} · ${test.revealed.length} carte pescate`,
+              ),
             );
-            row.append(button);
-            list.append(row);
+            result.append(
+              text(
+                'p',
+                'Pesca salvata sul PC · le stesse carte per tutti gli schermi.',
+                'company-help',
+              ),
+            );
+            const list = text('ul', '', 'test-revealed');
+            test.revealed.forEach((copy, index) => {
+              const card = catalog!.skills.find((entry) => entry.id === definitionId(copy))!;
+              const row = document.createElement('li');
+              if (animate) {
+                row.className = 'draw-arrival';
+                row.style.setProperty('--draw-delay', `${index * 80}ms`);
+              }
+              const button = cardButton(card, (caller) => reader.card(card, caller));
+              button.prepend(
+                text(
+                  'strong',
+                  `Carta ${index + 1} · Successi: ${card.success} · Fato: ${card.fate}`,
+                  'test-symbols',
+                ),
+              );
+              row.append(button);
+              list.append(row);
+            });
+            result.append(list);
           }
-          result.append(list);
           const outcome =
             test.status === 'converting'
               ? 'Scegli se convertire il fato, poi concludi la prova.'
@@ -204,6 +231,8 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
           status.textContent = 'Nessuna prova in corso.';
         }
         testKey = nextTest;
+        revealKey = nextReveal;
+        revealGeneration = session.generation;
       }
       element('#skill-test-observer').hidden = mine.length > 0;
       updateControls();
