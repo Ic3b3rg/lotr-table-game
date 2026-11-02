@@ -43,7 +43,7 @@ const TOPICS = [
     action: 'Vai alla mappa',
     paragraphs: [
       'Dopo i mazzi, un partecipante conferma la collocazione iniziale sulla mappa. Questa versione contiene un tratto iniziale verificato, non la generazione dell’intera avventura. Le caselle e i collegamenti indicano dove si può andare.',
-      'Durante il tuo turno, “Inizia viaggio” spende un’azione e assegna fino a due movimenti. Scegli una casella adiacente e conferma il movimento. Puoi interrompere il viaggio per interagire e usare poi il movimento rimasto nello stesso turno. Un nuovo viaggio sostituisce i movimenti rimasti; non li somma.',
+      'Durante il tuo turno, “Inizia viaggio” spende un’azione e assegna fino a due movimenti. Scegli una casella adiacente e conferma il movimento. Puoi interrompere il viaggio per interagire e usare poi il movimento rimasto nello stesso turno. Un secondo viaggio aggiunge altri due movimenti: con due azioni viaggio puoi muoverti fino a quattro volte. Concludere il turno rinuncia ai movimenti rimasti.',
       'Trascina la visuale o usa i comandi sotto la mappa. Con la tastiera: frecce, +, − e Home. La lista delle posizioni e il menu Destinazione permettono di giocare anche senza usare l’immagine. “Movimento ridotto” evita gli spostamenti animati.',
     ],
   },
