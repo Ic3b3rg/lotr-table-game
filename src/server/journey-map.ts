@@ -1,9 +1,32 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 import { adjacent, JourneyDefinitionSchema, type JourneyPlan } from '../shared/journey-map';
-import type { JourneyCommand } from '../shared/protocol';
+import type { JourneyCommand, Receipt } from '../shared/protocol';
 import type { State } from './state';
 import { ApiError } from './errors';
+
+export function journeyBudgetProblem(state: State, receipts: Receipt[]): string | null {
+  const journey = state.journey;
+  const travel = journey?.travel;
+  if (!journey || !travel) return null;
+  let granted = 0;
+  let moved = 0;
+  for (const receipt of receipts) {
+    if (
+      (receipt.type === 'START_TRAVEL' || receipt.type === 'MOVE_HERO') &&
+      receipt.mapId === journey.id &&
+      receipt.roundId === travel.roundId &&
+      receipt.turnId === travel.turnId &&
+      receipt.heroId === travel.heroId
+    ) {
+      if (receipt.type === 'START_TRAVEL') granted += 2;
+      else moved++;
+    }
+  }
+  return travel.remaining === granted - moved
+    ? null
+    : 'Movimenti residui non coerenti con le ricevute del viaggio.';
+}
 
 export function loadJourneyPlan(path: string): JourneyPlan {
   try {

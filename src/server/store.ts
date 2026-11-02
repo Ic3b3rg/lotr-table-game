@@ -7,7 +7,7 @@ import { ReceiptSchema, type Receipt } from '../shared/protocol';
 import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
-import { loadJourneyPlan } from './journey-map';
+import { journeyBudgetProblem, loadJourneyPlan } from './journey-map';
 import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
 import { skillTestView } from '../shared/skill-tests';
@@ -102,7 +102,19 @@ export class Store {
   read(): State {
     const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
     if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
-    return StateSchema.parse(JSON.parse(row.data));
+    const state = StateSchema.parse(JSON.parse(row.data));
+    if (state.journey?.travel) {
+      const receipts = this.db
+        .prepare('SELECT result FROM commands WHERE result IS NOT NULL')
+        .all()
+        .map((command) => {
+          if (typeof command.result !== 'string') throw new Error('Conferma non disponibile');
+          return ReceiptSchema.parse(JSON.parse(command.result));
+        });
+      const problem = journeyBudgetProblem(state, receipts);
+      if (problem) throw new Error(problem);
+    }
+    return state;
   }
 
   update<T>(change: (state: State) => T): T {

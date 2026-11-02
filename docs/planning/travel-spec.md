@@ -12,7 +12,7 @@ e SVG per geometria; nessuna nuova dipendenza.
   turno del round corrente; nessuna prova o Scoperta aperta. Una mappa già
   avviata non si sostituisce con un altro caricamento.
 - Il primo pacchetto privato è il frammento **302A** verificato dall'app
-  1.6.6#1128: tre vere caselle, collegamenti 0–1 e 1–2, partenza in casella 1.
+  1.6.6#1128: tre vere caselle, collegamenti 0–1 e 1–2, partenza all’indice sorgente 1 (Casella 2 nell’interfaccia).
   Gli esagoni del disegno non diventano caselle aggiuntive. Immagine,
   coordinate e poligoni provengono dai prefab/mesh/UV reali.
 - Il frammento usa l'orientamento canonico; non ricrea la rotazione casuale,

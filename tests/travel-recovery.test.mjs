@@ -242,6 +242,61 @@ test('geometria, grafo, roster e residui incoerenti non sostituiscono il tavolo'
   }
 });
 
+test('un’interazione non permette di gonfiare il residuo in un backup o nel salvataggio locale', async (t) => {
+  const { host, player } = await readyMap(t);
+  let state = await startMapTurn(host, player);
+  assert.equal(
+    (await command(host, player, { type: 'START_TRAVEL', ...travelIntent(state) })).status,
+    200,
+  );
+  assert.equal(
+    (
+      await command(host, player, {
+        type: 'START_INTERACTION_TEST',
+        roundId: state.round.id,
+        turnId: state.round.turnId,
+        heroId: 'hero-1',
+        stat: 'might',
+        modifier: 0,
+        target: 1,
+      })
+    ).status,
+    200,
+  );
+  state = await readSession(host);
+  assert.equal(
+    (await command(host, player, { type: 'RESOLVE_SKILL_TEST', testId: state.skillTest.id }))
+      .status,
+    200,
+  );
+  state = await readSession(host);
+  assert.equal(state.round.heroes[0].actionsUsed, 2);
+  assert.equal(state.journey.travel.remaining, 2);
+  const backup = await readBackup(host);
+  backup.payload.state.journey.travel.remaining = 4;
+  signBackup(backup);
+  assert.equal(
+    (
+      await host.request('/api/restores', {
+        backup,
+        generation: state.generation,
+        expectedRevision: state.revision,
+        confirmed: true,
+      })
+    ).status,
+    422,
+  );
+  assert.deepEqual(await readSession(host), state);
+  await host.stop();
+  const db = new DatabaseSync(join(host.dataDir, 'session.sqlite'));
+  db.prepare('UPDATE session SET data=? WHERE id=1').run(JSON.stringify(backup.payload.state));
+  db.close();
+  await assert.rejects(
+    startHost({ LOTR_DATA_DIR: host.dataDir }),
+    /Movimenti residui non coerenti/,
+  );
+});
+
 test('le immagini mappa ammettono soltanto PNG dichiarate nel pacchetto e dentro assets', async (t) => {
   const definition = { ...journeyMapFixture(), image: 'tile.png' };
   const { host, mapPath } = await readyMap(t, false, definition);

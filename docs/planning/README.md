@@ -24,12 +24,12 @@ Le [prove abilità e ispirazione #25](https://github.com/Ic3b3rg/lotr-table-game
 
 Integrata in `main` (`b3088ba`) con PR #28: [Scoperta e carte preparate #27](https://github.com/Ic3b3rg/lotr-table-game/issues/27), [contratto e piano](scouting-spec.md), [verifiche](../testing/scouting-verification.md). Si preparano e riordinano le carte, con limite, ricomposizione e ripresa; le capacità delle carte rimangono nel motore successivo.
 
-Per completare il gioco restano: capacità e finestre degli effetti, risoluzione automatica dell’Ombra, movimento con mappa 2.5D, combattimento e nemici, prima avventura fino al campo e passaggio alla seconda, poi tutti i percorsi della campagna base. Restano anche riconciliazione completa delle 343 copie, contenuti italiani e confronto runtime degli scenari. La prova fisica LAN #5 procede separatamente con i dispositivi del proprietario. Non è ancora possibile attribuire una percentuale affidabile di completamento alla campagna.
+Per completare il gioco restano: capacità e finestre degli effetti, risoluzione automatica dell’Ombra, composizione e rivelazione delle mappe, combattimento e nemici, prima avventura fino al campo e passaggio alla seconda, poi tutti i percorsi della campagna base. Restano anche riconciliazione completa delle 343 copie, contenuti italiani e confronto runtime degli scenari. La prova fisica LAN #5 procede separatamente con i dispositivi del proprietario. Non è ancora possibile attribuire una percentuale affidabile di completamento alla campagna.
 
 Integrato in `main` (`1687ecc`) con PR #30, incremento #29: [turni, azioni e fasi persistenti](rounds-spec.md), con
 [verifiche](../testing/rounds-verification.md). Ordine concordato, turni da zero
 a due azioni, interazione con prova, tre conferme manuali dell’Ombra e
-Riorganizzazione collettiva. Mappa e viaggio seguono nell’incremento #31.
+Riorganizzazione collettiva. Mappa congelata e viaggio interrompibile sono descritti nell’incremento #31.
 
 Incremento #31: [mappa e viaggio persistenti](travel-spec.md), con
 [provenienza della topologia](../research/journey-map-topology.md) e
