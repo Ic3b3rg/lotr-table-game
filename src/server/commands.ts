@@ -5,11 +5,25 @@ import { Store, advance } from './store';
 import { applyPreparation } from './preparation';
 import { applySkillTest } from './skill-tests';
 import { applyScouting } from './scouting';
+import { applyRoundCommand } from './rounds';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (
+      command.type === 'START_ROUNDS' ||
+      command.type === 'START_TURN' ||
+      command.type === 'END_TURN' ||
+      command.type === 'BEGIN_SHADOW' ||
+      command.type === 'START_INTERACTION_TEST' ||
+      command.type === 'CONFIRM_SHADOW_STEP' ||
+      command.type === 'END_RALLY'
+    ) {
+      const result = applyRoundCommand(state, playerId, command);
+      advance(state);
+      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+    }
     if (
       command.type === 'START_SCOUT' ||
       command.type === 'START_RALLY_SCOUT' ||

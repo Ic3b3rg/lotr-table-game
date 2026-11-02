@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette prove standard, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Capacità delle carte, turni, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Scoperta](https://github.com/Ic3b3rg/lotr-table-game/issues/27).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette turni e fasi persistenti, interazioni con prova, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Capacità delle carte, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Turni e round](https://github.com/Ic3b3rg/lotr-table-game/issues/29).
 
 ## Preparazione iniziale
 
@@ -62,14 +62,36 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2 e 3 vengono migrati allo schema 4, conservando compagnia, ordine dei mazzi e prove in corso. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 4.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3 e 4 vengono migrati allo schema 5, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I round restano disattivati finché il gruppo non li avvia. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 5.
+
+## Turni e fasi del round
+
+Dalla vista personale, dopo la preparazione, concordate **Inizia i round**.
+Il gruppo sceglie l'ordine; il proprietario avvia il turno di un proprio eroe.
+Ogni eroe ha fino a due azioni, anche ripetute, e può concludere senza usarle
+tutte. **Interazione · 1 azione** rivela una prova e consuma l'azione nella
+stessa conferma. Viaggio e attacco arriveranno con mappa e combattimento.
+Una prova richiesta da un effetto già determinato non consuma azioni.
+
+Dopo tutti i turni, il gruppo passa all'Ombra e conferma, nell'ordine,
+attivazione nemica, oscurità e minaccia. Questi tre passaggi sono **manuali**:
+risolvete o verificate che non si applichino; il tavolo non calcola ancora
+nemici, paura, minaccia o soglie. Dopo minaccia rendete pronti i nemici esauriti.
+
+La conferma finale ricompone tutti i mazzi senza le preparate. Solo dopo ogni
+eroe effettua **Scopri 2 per la Riorganizzazione**, una volta, in ordine
+concordato; il mazzo non viene mescolato una seconda volta. Concluse tutte
+le Scoperte, una conferma comune apre il nuovo round. Nessun cambio di turno
+o fase è possibile con una rivelazione aperta. Turno, azioni e progressi
+sopravvivono a ricarica, recupero, arresto e backup.
 
 ## Scoperta e carte preparate
 
 Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato
 dalla regola o dalla capacità. **Ricomponi e scopri 2** riunisce invece prima
-mazzo e scarti, lasciando escluse le preparate: è l'operazione dell'eroe nella
-riorganizzazione, ancora separata dall'automazione delle fasi del round.
+mazzo e scarti, lasciando escluse le preparate: questa modalità indipendente
+è disponibile prima di avviare i round. Nei round i mazzi vengono ricomposti
+insieme all'inizio della Riorganizzazione, prima delle Scoperte dedicate.
 
 Per ogni carta scegli **Sopra il mazzo**, **Sotto il mazzo** o **Prepara questa
 carta**. Puoi prepararne al massimo una. Con **Sposta prima/dopo** scegli
@@ -90,7 +112,7 @@ mantengono durante il polling, finché la pagina rimane aperta.
 
 Dalla vista personale, nella sezione **Prove abilità**, scegli un tuo eroe,
 la caratteristica e la soglia indicate dalla regola. Puoi anche scegliere il
-semplice conteggio dei successi. Lascia il modificatore a zero, salvo un effetto
+semplice conteggio dei successi. Nei round scegli prima l’origine: interazione del tuo eroe di turno (1 azione) oppure effetto già determinato dal gruppo (nessuna azione). Durante Riorganizzazione si effettuano soltanto le Scoperte dedicate. Lascia il modificatore a zero, salvo un effetto
 già determinato dal gruppo, poi premi **Rivela le carte della prova**.
 
 Nelle carte rivelate contano soltanto i simboli. Ogni ispirazione spesa converte
@@ -103,7 +125,7 @@ Una sola prova resta aperta sul tavolo; il suo proprietario la gestisce e gli
 altri schermi ne seguono l'esito. Ricarica, recupero, riavvio e backup conservano
 anche una prova interrotta fra pesca e conversioni. Le capacità di eroi, carte
 preparate e oggetti non sono automatizzate: questa è la base delle prove, ancora
-separata da turni, attacchi e campagna giocabile.
+separata da attacchi e campagna giocabile.
 
 ## Sviluppo e verifiche
 
@@ -124,6 +146,10 @@ npm test
 
 [Contratto di Scoperta](docs/planning/scouting-spec.md) e
 [verifiche di Scoperta e carte preparate](docs/testing/scouting-verification.md).
+
+[Contratto dei round](docs/planning/rounds-spec.md) e
+[verifiche di turni, azioni e riorganizzazione](docs/testing/rounds-verification.md),
+[revisione e correzioni](docs/reviews/2026-11-02-rounds.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 

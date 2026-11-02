@@ -10,6 +10,12 @@ export function applySkillTest(state: State, playerId: string, command: SkillTes
     throw new ApiError(409, 'TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la prova e riprova.');
   if (!state.content || state.preparation?.status !== 'prepared')
     throw new ApiError(409, 'COMPANY_NOT_READY', 'Prepara i mazzi prima di effettuare una prova.');
+  if (state.round?.phase === 'rally')
+    throw new ApiError(
+      409,
+      'ROUND_PHASE',
+      'Concludi la Riorganizzazione prima di effettuare prove o registrare ispirazione.',
+    );
   if (command.type === 'START_SKILL_TEST' && state.scout)
     throw new ApiError(
       409,

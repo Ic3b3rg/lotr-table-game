@@ -13,6 +13,7 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   const heroSelect = element<HTMLSelectElement>('#test-hero');
   const stat = element<HTMLSelectElement>('#test-stat');
   const mode = element<HTMLSelectElement>('#test-mode');
+  const context = element<HTMLSelectElement>('#test-context');
   const target = element<HTMLInputElement>('#test-target');
   const modifier = element<HTMLInputElement>('#test-modifier');
   const gain = element<HTMLButtonElement>('#gain-inspiration');
@@ -26,7 +27,8 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   let catalog: Catalog | null = null;
   let rosterKey = '';
   let testKey = '';
-  const commands = createGameActions(() => current, sync, root, status, error);
+  let contextKey = '';
+  const commands = createGameActions(() => current, sync, root, status, error, updateControls);
   const { submit } = commands;
 
   function block(button: HTMLButtonElement, value: boolean) {
@@ -40,8 +42,19 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
     const hero = current.preparation?.heroes.find((entry) => entry.heroId === heroId);
     const own = Boolean(hero && hero.playerId === player?.id);
     const definition = catalog.heroes.find((entry) => entry.id === heroId);
-    form.hidden = active || heroSelect.options.length === 0;
-    element('#test-inspiration-controls').hidden = !own;
+    const round = current.round;
+    const rally = round?.phase === 'rally';
+    const progress = round?.heroes.find((entry) => entry.heroId === heroId);
+    const canInteract =
+      round?.phase === 'action' &&
+      round.activeHeroId === heroId &&
+      Boolean(round.turnId) &&
+      (progress?.actionsUsed ?? 2) < 2;
+    const interaction = Boolean(round) && context.value === 'interaction';
+    form.hidden = active || rally || heroSelect.options.length === 0;
+    element('#test-context-field').hidden = !round;
+    context.options[0]!.disabled = !canInteract;
+    element('#test-inspiration-controls').hidden = !own || rally;
     element('#skill-test-buttons').hidden = !active || !own;
     element('#test-target-field').hidden = mode.value === 'count';
     target.disabled = mode.value === 'count';
@@ -49,10 +62,27 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
       hero && definition
         ? `${definition.name.text} · Ispirazione ${hero.inspiration} / ${definition.stats.inspiration}`
         : '';
-    block(start, Boolean(active) || Boolean(current.scout) || !own);
-    block(gain, !own || !definition || hero!.inspiration >= definition.stats.inspiration);
+    block(
+      start,
+      Boolean(active) || Boolean(current.scout) || !own || rally || (interaction && !canInteract),
+    );
+    block(gain, rally || !own || !definition || hero!.inspiration >= definition.stats.inspiration);
     block(convert, !active || !own || hero!.inspiration < 1 || test!.fateRemaining < 1);
     block(resolve, !active || !own);
+    start.textContent = interaction
+      ? 'Interagisci e rivela · 1 azione'
+      : round
+        ? 'Rivela per l’effetto · nessuna azione'
+        : 'Rivela le carte della prova';
+    element('#test-round-help').textContent = rally
+      ? 'Durante Riorganizzazione completa Scoperta 2 per ogni eroe.'
+      : interaction
+        ? canInteract
+          ? 'L’interazione consuma un’azione quando riveli le carte, qualunque sia l’esito.'
+          : 'Per interagire serve il tuo eroe di turno con almeno un’azione disponibile.'
+        : round
+          ? 'Usa questa prova soltanto per un effetto già determinato dal gruppo. Non consuma azioni; per un’interazione scegli l’origine corrispondente.'
+          : '';
     const selected = catalog.heroes.find((entry) => entry.id === heroSelect.value);
     for (const option of stat.options) {
       const key = option.value as SkillTest['stat'];
@@ -63,16 +93,20 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
 
   form.onsubmit = (event) => {
     event.preventDefault();
-    void submit(
-      {
-        type: 'START_SKILL_TEST',
-        heroId: heroSelect.value,
-        stat: stat.value as SkillTest['stat'],
-        modifier: modifier.valueAsNumber,
-        target: mode.value === 'count' ? null : target.valueAsNumber,
-      },
-      true,
-    );
+    const intent = {
+      heroId: heroSelect.value,
+      stat: stat.value as SkillTest['stat'],
+      modifier: modifier.valueAsNumber,
+      target: mode.value === 'count' ? null : target.valueAsNumber,
+    };
+    const round = current?.round;
+    if (round && context.value === 'interaction') {
+      if (round.turnId)
+        void submit(
+          { ...intent, type: 'START_INTERACTION_TEST', roundId: round.id, turnId: round.turnId },
+          true,
+        );
+    } else void submit({ ...intent, type: 'START_SKILL_TEST' }, true);
   };
   form.oninput = () => {
     commands.clear();
@@ -80,6 +114,16 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   };
   heroSelect.onchange = updateControls;
   mode.onchange = updateControls;
+  element('#round-interact').onclick = () => {
+    const active = current?.preparation?.heroes.find(
+      (hero) => hero.heroId === current?.round?.activeHeroId && hero.playerId === player?.id,
+    );
+    if (!active) return;
+    heroSelect.value = active.heroId;
+    context.value = 'interaction';
+    commands.clear();
+    updateControls();
+  };
   gain.onclick = () => {
     const test = current?.skillTest;
     void submit({
@@ -118,6 +162,14 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
         rosterKey = nextRoster;
         commands.clear();
         error.hidden = true;
+      }
+      const nextContext = `${nextRoster}:${session.round?.id}:${session.round?.phase}:${session.round?.turnId}`;
+      if (contextKey !== nextContext) {
+        const active = mine.find((hero) => hero.heroId === session.round?.activeHeroId);
+        context.value = active ? 'interaction' : 'effect';
+        if (active) heroSelect.value = active.heroId;
+        contextKey = nextContext;
+        commands.clear();
       }
       const test = session.skillTest;
       const nextTest = `${session.generation}:${JSON.stringify(test)}`;

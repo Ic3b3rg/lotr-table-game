@@ -28,6 +28,30 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
   if (!hero) throw new ApiError(409, 'HERO_UNAVAILABLE', 'Questo eroe non è nella compagnia.');
   if (hero.playerId !== playerId)
     throw new ApiError(403, 'HERO_NOT_YOURS', 'Puoi gestire soltanto le carte dei tuoi eroi.');
+  const round = state.round;
+  const progress = round?.heroes.find((entry) => entry.heroId === heroId);
+  if (round?.phase === 'rally') {
+    if (command.type === 'START_RALLY_SCOUT') {
+      if (command.roundId !== round.id || progress?.rallyDone !== false)
+        throw new ApiError(
+          409,
+          'RALLY_SCOUT_UNAVAILABLE',
+          'Questo eroe ha già effettuato Scoperta 2 o il round è cambiato.',
+        );
+    } else if (command.type !== 'RESOLVE_SCOUT' || scout?.roundId !== round.id) {
+      throw new ApiError(
+        409,
+        'ROUND_PHASE',
+        'Durante Riorganizzazione effettua soltanto Scoperta 2 per ogni eroe.',
+      );
+    }
+  } else if (command.type === 'START_RALLY_SCOUT' && (round || command.roundId)) {
+    throw new ApiError(
+      409,
+      'ROUND_PHASE',
+      'La ricomposizione dei mazzi avviene all’inizio della Riorganizzazione comune.',
+    );
+  }
   if (command.type === 'DISCARD_PREPARED_SKILL') {
     if (!hero.prepared.includes(command.copy))
       throw new ApiError(
@@ -39,8 +63,8 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
     hero.discard.push(command.copy);
     refillEmptyDeck(hero);
   } else if (command.type !== 'RESOLVE_SCOUT') {
-    const resetBefore = command.type === 'START_RALLY_SCOUT';
-    const count = resetBefore ? 2 : command.count;
+    const resetBefore = command.type === 'START_RALLY_SCOUT' && !round;
+    const count = command.type === 'START_RALLY_SCOUT' ? 2 : command.count;
     if (resetBefore) {
       hero.deck = shuffled([...hero.deck, ...hero.discard]);
       hero.discard = [];
@@ -48,6 +72,7 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
     state.scout = {
       id: randomUUID(),
       heroId,
+      roundId: round?.phase === 'rally' ? round.id : null,
       count,
       resetBefore,
       revealed: revealCards(hero, count),
@@ -79,6 +104,7 @@ export function applyScouting(state: State, playerId: string, command: ScoutingC
     hero.prepared = prepared.filter((copy) => copy !== discard);
     if (discard) hero.discard.push(discard);
     hero.deck = [...command.top, ...hero.deck, ...command.bottom];
+    if (scout!.roundId) progress!.rallyDone = true;
     state.scout = null;
     refillEmptyDeck(hero);
   }

@@ -94,6 +94,7 @@ test('schema 3 con prova aperta migra su avvio e importazione senza ripescare', 
   const backup = await readBackup(host);
   backup.payload.state.schemaVersion = 3;
   delete backup.payload.state.scout;
+  delete backup.payload.state.round;
   delete backup.payload.state.skillTest.availableCount;
   signBackup(backup);
   await host.stop();
@@ -103,7 +104,7 @@ test('schema 3 con prova aperta migra su avvio e importazione senza ripescare', 
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 5);
   assert.equal(migrated.scout, null);
   assert.deepEqual(migrated.skillTest, before.skillTest);
   assert.deepEqual(migrated.preparation, before.preparation);
