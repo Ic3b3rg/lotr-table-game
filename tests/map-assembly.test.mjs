@@ -312,6 +312,18 @@ test('source GetConnectionRequirementCount counts serialized duplicate pairs ind
   });
 });
 
+test('target section bounds are cached before incoming anchors even without required joins', async () => {
+  const f = assemblyFixture();
+  f.selection.requiredConnections = [];
+  await run(f, (r) => {
+    const v = complete(r);
+    assert.deepEqual(v.mapOrder, [0, 1, 2, 3]);
+    const root = v.sections[v.mapOrder[0]];
+    assert.equal(root.boundsDirty, false);
+    assert.ok(root.cachedRadius > 0);
+  });
+});
+
 test('empty tile candidate indexing is a source operation exception and never a valid partial map', async () => {
   const f = assemblyFixture();
   f.geometry.tiles[1].edges.forEach((e) => {
@@ -325,6 +337,7 @@ test('empty tile candidate indexing is a source operation exception and never a 
     assert.equal(v.checkpoint, null);
     assert.equal(v.graph, null);
     assert.equal(v.counts.tiles, 1);
+    assert.equal(v.sections[0].lastAttachedTileId, f.geometry.tiles[0].hashId);
     assert.equal(v.search.local.tileToAttach, f.geometry.tiles[1].source);
     assert.equal(v.trace.find((e) => e.operation === 'tile-candidates').count, 0);
     assert.equal(v.rng.samples, v.selection.rng.samples + 2);
@@ -549,6 +562,32 @@ test('versioned library freezes result and clock decisions without mutating the 
   assert.throws(() => {
     r.clock.observations[0].timeout = true;
   }, TypeError);
+});
+
+test('selection failure replays its exact empty clock recording', async () => {
+  const f = assemblyFixture();
+  f.selection.budget.maxOperations = 1;
+  await run(f, async ({ process, result: recorded }) => {
+    assert.equal(process.status, 2);
+    assert.equal(recorded.status, 'administrative-stop');
+    assert.equal(recorded.failure.reason, 'selection-failed');
+    assert.equal(recorded.clock.cursor, 0);
+    assert.deepEqual(recorded.clock.observations, []);
+    f.execution.clock = {
+      policy: 'replay-clock-v1',
+      timeoutMilliseconds: 30000,
+      observations: recorded.clock.observations,
+    };
+    await run(f, ({ process, result: replay }) => {
+      assert.equal(process.status, 2, process.stderr);
+      assert.equal(replay.status, recorded.status);
+      assert.deepEqual(replay.failure, recorded.failure);
+      assert.deepEqual(replay.selection, recorded.selection);
+      assert.deepEqual(replay.clock.observations, []);
+      assert.equal(replay.clock.cursor, 0);
+      assert.equal(replay.checkpoint, null);
+    });
+  });
 });
 
 test('selection failure cannot ignore replay decisions or produce a geometric checkpoint', async () => {

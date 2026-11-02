@@ -78,8 +78,7 @@ function attachNext(
   search: LocalSearch,
   o: Observe,
 ): number {
-  s.lastAttachedTileId = -1;
-  if (s.available.length === 0) return -1;
+  if (s.available.length === 0) return (s.lastAttachedTileId = -1);
   const definition = w.input.selection.sections[s.id]!;
   if (s.tiles.length === 0) {
     let hash: number;
@@ -100,7 +99,7 @@ function attachNext(
       });
     }
     const tile = take(s, hash);
-    if (!tile) return -1;
+    if (!tile) return (s.lastAttachedTileId = -1);
     search.tileToAttach = tile.shape.source;
     const localPosition = times(
       transform([0, 0, 0], tile.shape.hexes.find((h) => cubeKey(h.coords) === '0,0,0')!.transform),
@@ -144,7 +143,7 @@ function attachNext(
       lastValid: last,
       sequence: [...search.sequence],
     });
-    if (last < 0) return -1;
+    if (last < 0) return (s.lastAttachedTileId = -1);
   }
   const at = rng.nextInt(0, last + 1),
     tile = take(s, s.available[at]!.shape.hashId)!;

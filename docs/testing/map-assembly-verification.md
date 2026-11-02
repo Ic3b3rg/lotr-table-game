@@ -175,3 +175,27 @@ Nessuna assegnazione incontri, esecuzione nodi/FSM, freeze di sessione o UI.
 Host/session/schema e RNG delle carte non sono consumatori della libreria.
 #41/#38/#33 restano aperte. Le review Standards/Spec fresche e ogni
 PR/push/merge/chiusura issue restano al root: non sono state svolte qui.
+
+## Integrazione e verifica root
+
+Le [review Standards e Spec](../reviews/2026-11-02-map-assembly.md) sono
+concluse: zero violazioni Standards, un suggerimento facoltativo rinviato;
+tre difetti P2 Spec corretti con regressioni rosso→verde. Riguardavano
+il getter con effetto sulla cache target, il replay vuoto e il mantenimento
+di LastAttachedTileId nei diagnostici.
+
+Dopo le correzioni: **193/193** test completi, zero skipped, typecheck,
+format e diff check con exit0. Il root ha rigenerato e verificato **47/47**
+mappe con il checker Python separato, includendo il controllo della cache.
+L'evidenza privata riassuntiva ha SHA-256
+`6cf897da997ad09a7079a5bcc1af2b11eb026838762cf75863eda5ed7d5160ce`.
+Il caso H3/seed1 e il suo replay mantengono tutti i campi realizzati/search,
+trace, grafo e RNG; consumate esattamente 91.998 osservazioni.
+File root: `.scratch/assembly-root-review/`; log completo
+`.scratch/selection/assembly-root-fixed-tests.log`.
+
+Il [contratto del movimento](../research/map-movement-contract.md) distingue
+il grafo fonte da quello richiesto dalle adiacenze fisiche. Il calcolo in
+sola lettura H3 collega 22 caselle con 43 archi; l'adattatore effettivo è
+il prossimo incremento. Nessuna sessione browser o salvataggio attivo è
+stato usato o modificato da queste verifiche.

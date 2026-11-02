@@ -170,7 +170,7 @@ const clock = z.discriminatedUnion('policy', [
   z.strictObject({
     policy: z.literal('replay-clock-v1'),
     timeoutMilliseconds: timeout,
-    observations: z.array(ClockObservationSchema).min(1).max(200000),
+    observations: z.array(ClockObservationSchema).max(200000),
   }),
 ]);
 const inputSchema = z.strictObject({

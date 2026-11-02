@@ -1,6 +1,6 @@
 import { comparisonSort } from '../map-generation/primitives';
 import { add, cubeKey, directionCube, normalizeDirection } from '../map-geometry/model';
-import { canMatch, isConnection } from '../map-geometry/geometry';
+import { canMatch, connectable, isConnection } from '../map-geometry/geometry';
 import type { Observe } from './execution';
 import { AssemblyStop } from './execution';
 import type { World, SectionState, Placement } from './state';
@@ -80,19 +80,22 @@ function calculate(
   for (let ti = 0; ti < targets.length; ti++) {
     search.targetCursor = ti;
     const target = targets[ti]!,
-      targetTile = w.tiles.get(target.tileSource)!;
+      targetTile = w.tiles.get(target.tileSource)!,
+      b = getEdge(targetTile, target.hex, target.direction),
+      targetPermitted = allowed(w, s.id, targetTile.sectionId!);
+    // A132a:0162–0173 discards the getter value but still populates its cache.
+    if (b && connectable(b) && targetPermitted) sphere(w, w.sections[targetTile.sectionId!]!);
     for (let ai = 0; ai < incoming.length; ai++) {
       search.anchorCursor = ai;
       o.tick('section-anchor');
       const anchor = incoming[ai]!,
         tile = w.tiles.get(anchor.tileSource)!;
-      const a = getEdge(tile, anchor.hex, anchor.direction),
-        b = getEdge(targetTile, target.hex, target.direction);
+      const a = getEdge(tile, anchor.hex, anchor.direction);
       if (!a || !b || !isConnection(b, a)) {
         rejected.anchor!++;
         continue;
       }
-      if (!allowed(w, s.id, targetTile.sectionId!)) {
+      if (!targetPermitted) {
         rejected.forbidden!++;
         continue;
       }
