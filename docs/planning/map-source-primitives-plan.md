@@ -51,7 +51,7 @@ oracolo soltanto `.scratch/map-primitives/`.
 
 **Files:** rapporti `docs/testing/`, `docs/reviews/`, istruzioni README.
 
-- [ ] Matrice privata più ampia, vettori e impronte dell'oracolo.
-- [ ] Suite completa, tipi, formato e review fresca Standards/Spec.
-- [ ] Documentare risultati e limiti, correggere rilievi importanti con regressione.
-- [ ] PR/merge/chiusura dell'incremento; #41/#38/#33 restano aperte.
+- [x] Matrice privata più ampia, vettori e impronte dell'oracolo.
+- [x] Suite completa, tipi, formato e review fresca Standards/Spec.
+- [x] Documentare risultati e limiti, correggere rilievi importanti con regressione.
+Consegna: PR/merge/chiusura dell'incremento; #41/#38/#33 restano aperte.
