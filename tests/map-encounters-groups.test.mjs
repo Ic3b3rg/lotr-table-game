@@ -1,0 +1,341 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { placeMapEncounters as place } from '../dist/map-encounters-library.mjs';
+import { comparisonSort, SourceRandom } from '../dist/map-primitives.mjs';
+import { encountersFixture, addEncounter, addGroup, fixed } from './fixtures/map-encounters.mjs';
+import { ref } from './fixtures/map-assembly.mjs';
+function noGroups(f) {
+  f.assembly.selection.groups = [];
+  f.assembly.selection.products[0].groupSources = [];
+}
+for (const scope of ['one product', 'two owned products']) {
+  test(`owned groups preserve first occurrence and RNG when repeated across ${scope}`, () => {
+    const f = encountersFixture();
+    const baseline = place(f);
+    const product = f.assembly.selection.products[0];
+    if (scope === 'one product') product.groupSources.push(product.groupSources[0]);
+    else {
+      f.assembly.selection.products.push({
+        ...structuredClone(product),
+        index: 1,
+        source: ref(2),
+        id: 1,
+        tileCodes: [],
+      });
+      f.assembly.selection.context.ownedProductIds.push(1);
+    }
+    const actual = place(f);
+    assert.equal(actual.status, 'encounters-complete');
+    assert.deepEqual(actual.search.eligibleGroups, baseline.search.eligibleGroups);
+    assert.deepEqual(actual.rng, baseline.rng);
+    assert.deepEqual(actual.trace, baseline.trace);
+    assert.equal(
+      actual.trace.filter((e) => e.operation === 'draw' && e.site === 'groups-shuffle').length,
+      1,
+    );
+  });
+}
+test('groups try the ordered candidates, retain the trie across required/optional/helpers and clean required placements', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  const r = addEncounter(f),
+    a = addEncounter(f),
+    c = addEncounter(f);
+  const g1 = addGroup(f, {
+    requiredSources: [r],
+    optionalSources: [a, a],
+    requiredOptionalCount: 2,
+  });
+  const g2 = addGroup(f, { requiredSources: [a], isRepeatable: true });
+  const g3 = addGroup(f, { requiredSources: [c] });
+  f.assembly.selection.context.usedGroupIds = [90002];
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete', JSON.stringify(v.failure));
+  assert.deepEqual(v.search.eligibleGroups, [g1, g2, g3]);
+  assert.equal(v.chosenGroup.source, g3);
+  assert.deepEqual(
+    v.assignments.map((a) => a.modelSource),
+    [c],
+  );
+  const tries = v.trace.filter((e) => e.operation === 'group-attempt');
+  assert.equal(tries.length, 3);
+  assert.deepEqual(
+    tries[1].invalidSequences.map((n) => n.value),
+    [100001],
+  );
+  assert.ok(v.trace.some((e) => e.operation === 'group-cleanup' && e.modelSource === r));
+  assert.equal(v.trace.filter((e) => e.operation === 'assign' && e.modelSource === a).length, 1);
+  assert.equal(
+    v.trace.filter(
+      (e) => e.operation === 'clear-search' && e.stage.startsWith('group-') && e.clearInvalid,
+    ).length,
+    0,
+  );
+  assert.deepEqual(v.history.result.usedEncounterIds, [100002]);
+});
+test('group filter checks every optional member even if zero optional placements are requested', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  const good = addEncounter(f),
+    bad = addEncounter(f, { traits: 2 });
+  addGroup(f, { requiredSources: [good], optionalSources: [bad], requiredOptionalCount: 0 });
+  f.assembly.selection.encounterTraitsFilter.mustHaveAll = 1;
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.deepEqual(v.search.eligibleGroups, []);
+});
+test('groups do not apply encounter language/history/repeatability filters or exclude campaign-used groups', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  const e = addEncounter(f, { unsupportedLanguages: ['Italian'], isRepeatable: false });
+  const g = addGroup(f, { requiredSources: [e], isRepeatable: false });
+  f.assembly.selection.context.usedEncounterIds = [100000];
+  f.assembly.selection.context.usedGroupIds = [90000];
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.chosenGroup.source, g);
+  assert.deepEqual(v.history.result.usedEncounterIds, [100000]);
+  assert.deepEqual(v.history.result.usedGroupIds, [90000]);
+});
+test('group shuffle uses the continued RNG and Comparison sort at sizes above the stable insertion path', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  for (let i = 0; i < 24; i++) addGroup(f, { isRepeatable: i % 3 === 0 });
+  f.assembly.selection.context.usedGroupIds = [90001, 90007, 90010];
+  const v = place(f),
+    event = v.trace.find((e) => e.operation === 'group-sort');
+  assert.ok(event);
+  const rng = SourceRandom.restore(v.assembly.rng);
+  for (let i = 0; i < 16; i++) rng.nextInt(0, 16);
+  const expected = [...f.assembly.selection.groups];
+  for (let i = 0; i < 24; i++) {
+    const j = rng.nextInt(0, 24);
+    [expected[i], expected[j]] = [expected[j], expected[i]];
+  }
+  assert.deepEqual(
+    event.before,
+    expected.map((g) => g.source),
+  );
+  comparisonSort(
+    expected,
+    (a, b) =>
+      Number(v.history.incoming.usedGroupIds.includes(a.id)) -
+        Number(v.history.incoming.usedGroupIds.includes(b.id)) ||
+      Number(a.isRepeatable) - Number(b.isRepeatable),
+  );
+  assert.deepEqual(
+    event.after,
+    expected.map((g) => g.source),
+  );
+  assert.deepEqual(v.rng, rng.snapshot());
+  assert.notDeepEqual(event.after, event.before);
+});
+test('specified group skips ownership/traits/candidate shuffle/sort but shuffles its required and optional copies', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  const a = addEncounter(f, { traits: 1 }),
+    b = addEncounter(f, { traits: 1 });
+  const g = addGroup(f, { requiredSources: [a], optionalSources: [b], requiredOptionalCount: 1 });
+  f.assembly.selection.products[0].groupSources = [];
+  f.assembly.selection.encounterTraitsFilter.mustHaveAll = 128;
+  f.placement.specifiedGroupSource = g;
+  const before = structuredClone(f),
+    v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.chosenGroup.source, g);
+  assert.ok(!v.trace.some((e) => e.operation === 'group-sort'));
+  assert.deepEqual(
+    v.trace.filter((e) => e.operation === 'shuffle').map((e) => e.site),
+    ['all-spaces-shuffle', 'group-required-shuffle', 'group-optional-shuffle'],
+  );
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16 + 2);
+  assert.deepEqual(f, before);
+});
+test('specified group capacity is a source failure before group placement, with no shuffle fallback', () => {
+  const f = encountersFixture();
+  for (let i = 0; i < 16; i++)
+    fixed(f, Math.floor(i / 4), Math.floor(i / 2), addEncounter(f), i % 2);
+  const e = addEncounter(f);
+  const g = addGroup(f, { requiredSources: [e] });
+  f.placement.specifiedGroupSource = g;
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'specified-group-capacity');
+  assert.equal(v.assignments.length, 16);
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16);
+});
+test('required group failure rolls back its own placements and advances to the next group', () => {
+  const f = encountersFixture();
+  noGroups(f);
+  const a = addEncounter(f),
+    c = addEncounter(f);
+  addGroup(f, { requiredSources: [a, a] });
+  const g = addGroup(f, { requiredSources: [c], isRepeatable: true });
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.chosenGroup.source, g);
+  assert.deepEqual(
+    v.assignments.map((a) => a.modelSource),
+    [c],
+  );
+  assert.ok(v.trace.some((e) => e.operation === 'rollback' && e.encounterId === 100000));
+});
+test('item scans retained pool first-fit, max one, and adds no placement draw', () => {
+  const f = encountersFixture();
+  const a = addEncounter(f, { type: 4 }, { requiredTraits: 128 }),
+    b = addEncounter(f, { type: 4 }),
+    c = addEncounter(f, { type: 4 });
+  f.assembly.selection.incoming.itemEncounterPool = [a, b, c];
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.assignments.length, 1);
+  const pool = v.retainedPools.itemEncounterPool;
+  assert.equal(
+    v.assignments[0].modelSource,
+    pool.find((r) => r !== a),
+  );
+  assert.equal(v.assignments[0].spaceId, v.allSpaces[0]);
+  assert.equal(v.assignments[0].origin.stage, 'item');
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16 + 1);
+});
+test('item source has no global duplicate guard, while used encounter history adds uniquely', () => {
+  const f = encountersFixture();
+  const e = addEncounter(f, { type: 4, isRepeatable: true });
+  fixed(f, 0, 0, e);
+  f.assembly.selection.incoming.itemEncounterPool = [e];
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.assignments.length, 2);
+  assert.ok(v.assignments.every((a) => a.encounterId === 100000));
+  assert.deepEqual(v.history.result.usedEncounterIds, [100000]);
+});
+test('item exhaustion is best effort and does not emit a source failure', () => {
+  const f = encountersFixture();
+  const e = addEncounter(f, { type: 4 }, { requiredTraits: 128 });
+  f.assembly.selection.incoming.itemEncounterPool = [e];
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.assignments.length, 0);
+});
+test('normal fill uses inclusive fractional float32 targets and one retained array without appending history', () => {
+  const f = encountersFixture();
+  fixed(f, 0, 0, addEncounter(f));
+  const a = addEncounter(f),
+    b = addEncounter(f);
+  f.assembly.selection.incoming.randomEncounterPool = [a, b];
+  f.placement.sections.forEach((s) => (s.randomFillPercent = Math.fround(0.26)));
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.deepEqual(
+    [0, 1, 2, 3].map(
+      (id) =>
+        v.assignments.filter((a) => v.spaces.find((s) => s.id === a.spaceId).sectionId === id)
+          .length,
+    ),
+    [2, 1, 0, 0],
+  );
+  assert.deepEqual(v.search.history, []);
+  assert.deepEqual(v.search.sequence, []);
+  assert.equal(
+    v.trace.filter((e) => e.operation === 'search-append' && e.stage === 'normal-fill').length,
+    0,
+  );
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16 + 1 + 2);
+  assert.ok(
+    v.trace
+      .filter((e) => e.operation === 'fill-section')
+      .every((e) => e.threshold === Math.fround(Math.fround(0.26) * 4)),
+  );
+});
+
+test('group and item occupancy already satisfies the normal target without another placement draw', () => {
+  const f = encountersFixture(),
+    tile = f.assembly.selection.standard[0],
+    other = f.assembly.selection.standard[1];
+  const a = addEncounter(
+    f,
+    {},
+    { specificTileModelSource: tile.modelSource, specificSpaceIndex: 0 },
+  );
+  const b = addEncounter(
+    f,
+    {},
+    { specificTileModelSource: tile.modelSource, specificSpaceIndex: 1 },
+  );
+  f.assembly.selection.groups[0].requiredSources = [a, b];
+  const item = addEncounter(
+    f,
+    { type: 4 },
+    { specificTileModelSource: other.modelSource, specificSpaceIndex: 0 },
+  );
+  const normal = addEncounter(f);
+  f.assembly.selection.incoming.itemEncounterPool = [item];
+  f.assembly.selection.incoming.randomEncounterPool = [normal];
+  f.placement.sections[0].randomFillPercent = Math.fround(0.7);
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.equal(v.assignments.length, 3);
+  assert.ok(!v.assignments.some((a) => a.modelSource === normal));
+  assert.equal(
+    v.trace.filter((e) => e.operation === 'draw' && e.site === 'section-space').length,
+    0,
+  );
+  assert.equal(v.rng.samples, v.assembly.rng.samples + 16 + 1 + 2);
+});
+
+test('normal collection skips missing all-model lookup and still scans the next retained candidate', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    b = addEncounter(f);
+  f.assembly.selection.products[0].encounterSources = [b];
+  f.assembly.selection.incoming.randomEncounterPool = [a, b];
+  f.placement.sections[0].randomFillPercent = Math.fround(0.1);
+  const v = place(f);
+  assert.equal(v.status, 'encounters-complete');
+  assert.deepEqual(
+    v.assignments.map((a) => a.modelSource),
+    [b],
+  );
+});
+
+test('empty optional list with positive requested count retains the required helper list then cleans up on failure', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    g = f.assembly.selection.groups[0];
+  g.requiredSources = [a];
+  g.requiredOptionalCount = 1;
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.equal(v.assignments.length, 0);
+  assert.ok(v.trace.some((e) => e.operation === 'group-cleanup'));
+  assert.equal(
+    v.trace.filter((e) => e.operation === 'shuffle' && e.site === 'group-optional-shuffle').length,
+    0,
+  );
+});
+
+test('group required helper counts new placements even if the ID is already present on the map', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f);
+  fixed(f, 0, 0, a);
+  f.assembly.selection.groups[0].requiredSources = [a];
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.equal(v.assignments.length, 1);
+  assert.equal(v.assignments[0].origin.stage, 'fixed-tile');
+});
+
+test('automatic group capacity gate precedes any placement and provides no arbitrary group fallback', () => {
+  const f = encountersFixture(),
+    a = addEncounter(f),
+    g = f.assembly.selection.groups[0];
+  g.requiredSources = Array(17).fill(a);
+  const v = place(f);
+  assert.equal(v.status, 'source-failure');
+  assert.equal(v.failure.reason, 'group-requirement');
+  assert.deepEqual(v.search.eligibleGroups, []);
+  assert.equal(v.assignments.length, 0);
+});
