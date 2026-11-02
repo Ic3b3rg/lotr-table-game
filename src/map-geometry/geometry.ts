@@ -4,7 +4,7 @@ import type { Cube, Edge, GeometryPack, TileGeometry } from './model';
 
 // Source: HexCube.RotateCoords, Edge.CanMatch/IsConnection and Tile.SnapTo;
 // method tokens and assembly fingerprint are recorded in the geometry spec.
-function rotate(cube: Cube, rotation: number): Cube {
+export function rotate(cube: Cube, rotation: number): Cube {
   let result: Cube = [...cube];
   for (let i = 0; i < rotation; i++) result = [-result[2], -result[0], -result[1]];
   return result;
@@ -13,7 +13,7 @@ function assertRotation(rotation: number): void {
   if (!Number.isInteger(rotation) || rotation < 0 || rotation > 5)
     throw new Error('La rotazione deve essere un intero da 0 a 5.');
 }
-const connectable = (edge: Edge): boolean => ![100, 200, 700].includes(edge.traits);
+export const connectable = (edge: Edge): boolean => ![100, 200, 700].includes(edge.traits);
 function passageMatches(a: Edge, b: Edge): boolean {
   if (a.traits === 300) return b.traits === 400;
   if (a.traits === 400) return b.traits === 300;
@@ -21,11 +21,11 @@ function passageMatches(a: Edge, b: Edge): boolean {
   if (a.traits === 0 && b.traits === 600) return b.isPassageOpen;
   return a.traits === b.traits;
 }
-function canMatch(a: Edge, b: Edge): boolean {
+export function canMatch(a: Edge, b: Edge): boolean {
   if (a.traits === 700 || b.traits === 700) return true;
   return connectable(a) && connectable(b) && passageMatches(a, b);
 }
-function isConnection(a: Edge, b: Edge): boolean {
+export function isConnection(a: Edge, b: Edge): boolean {
   return connectable(a) && connectable(b) && passageMatches(a, b);
 }
 function edgeIndex(tile: TileGeometry): Map<string, Edge> {
