@@ -20,3 +20,9 @@
 Nessun subagente, checkout aggiuntivo, installazione, app Unity, save personale
 oppure accesso alla sessione root congelata. Tutti gli artefatti privati stanno
 nella `.scratch/assembly/` ignorata di questo checkout.
+
+Completato: nucleo/CLI, 40 nuovi test processuali e di libreria, 47 attempt
+originali complete con checker separato, replay H3 e arresti espliciti.
+Verifiche finali: 108/108 focalizzati, 191/191 completi, typecheck, formato e
+diff. Evidenza e limiti in `docs/testing/map-assembly-verification.md`.
+Review indipendenti Standards/Spec e integrazione restano al root.

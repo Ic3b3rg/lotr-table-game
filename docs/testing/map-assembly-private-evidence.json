@@ -1,0 +1,1423 @@
+{
+  "formatVersion": 1,
+  "algorithm": "source-map-assembly-v1",
+  "scope": "geometry-only",
+  "checkpoint": "after-graph-before-all-spaces-shuffle",
+  "numericalPolicy": "portable-transform-f32-v1",
+  "clockPolicy": "logical-clock-v1",
+  "clockStepMilliseconds": 0,
+  "sourceParity": "not-certified",
+  "source": {
+    "policy": "portable-transform-f32-v1",
+    "nativeUnityExecuted": false,
+    "sourceObjects": 3715,
+    "sourceBytes": 508984,
+    "nonnullPointerChecks": 13959,
+    "faces": 45,
+    "baseFaces": 44,
+    "customShapes": 1,
+    "spaces": 107,
+    "hexes": 430,
+    "edges": 1090,
+    "auditedFrameCenters": 426,
+    "auditedBucketFrames": 45,
+    "auditedEdgeMidpoints": 1076,
+    "maxCenterErrorVsPriorAudit": 0,
+    "maxMidpointErrorVsAuthoring": 4.172325134277344e-07,
+    "files": [
+      {
+        "file": "Assembly-CSharp.dll",
+        "sha256": "8869ef87b7d49f4993911904e35d78b72f8339e91158bbe8784c9691a9d743c6",
+        "bytes": 3039744
+      },
+      {
+        "file": "mscorlib.dll",
+        "sha256": "9434e43dd58f9e3aba5b76c94f5da7fcec20c1bce2186c830039aa77c439b47a",
+        "bytes": 4624896
+      },
+      {
+        "file": "resources.assets",
+        "sha256": "0250e91823b98c0f9fceb6b1ee517d880c6f9934359f849749779b7a5b0c835e",
+        "bytes": 127884176
+      },
+      {
+        "file": "sharedassets0.assets",
+        "sha256": "dd2a2285cc1b94ab567c6a6b895872bd97bb2bf8fe9e08d152c5f1103d1687be",
+        "bytes": 1592040
+      },
+      {
+        "file": "level4",
+        "sha256": "994ed59f277f0bf6c2aee63f2ca982ec76792ff72de87a15d6537c987cc7e6ed",
+        "bytes": 5005212
+      },
+      {
+        "file": "ordered-input-pack.json",
+        "sha256": "7286c7c70e8e71f9a27c136086dc149c8a565d8537091be3ed4e4a202fa09525",
+        "bytes": 732688
+      },
+      {
+        "file": "bucket-order.json",
+        "sha256": "929cef64ab25d411a5d0c7e9fcd0ba7e16b88eb252e70ffde393d93007c887a7",
+        "bytes": 76568
+      },
+      {
+        "file": "objects.json",
+        "sha256": "f921adafb9327deb3d45268890a17d22024649cc3a646616df47630c381c4af4",
+        "bytes": 19746599
+      },
+      {
+        "file": "supplement.json",
+        "sha256": "fb3eefac99b126b161fd98e1d4872cf4a40313212604f258c5b529b9339b25b4",
+        "bytes": 22733
+      }
+    ],
+    "packSha256": "f90e4730fe11a850c66aab9497e814ac886ec4b3ccfe6419b857f0f48a96134e"
+  },
+  "il": {
+    "methods": 38,
+    "codeBytes": 15717
+  },
+  "matrix": [
+    {
+      "seed": 2,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 68,
+        "spaces": 17
+      },
+      "components": [
+        14,
+        1,
+        1,
+        1
+      ],
+      "connections": 18,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 302,
+      "candidates": 1768,
+      "rollbacks": 0,
+      "inputSha256": "c1e01426827b3f7d6483d05c01a458eb4f08f1c5a29fa3f121a68becce3dfeaa",
+      "outputSha256": "364a81a1369b4f15308d8ed056a8f5b0811333d7d8a0699c2ae84c06decdf5f1",
+      "case": "H1-retained-retry-seed2",
+      "companyContextSha256": "d90e3b533e2f15f809cb7a9f1830a52839a7031e575b81f0667580faa4a740c2"
+    },
+    {
+      "seed": -1,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 73,
+        "spaces": 18
+      },
+      "components": [
+        15,
+        1,
+        2
+      ],
+      "connections": 17,
+      "contacts": 33,
+      "requiredJoins": 4,
+      "samples": 286,
+      "candidates": 1880,
+      "rollbacks": 0,
+      "inputSha256": "8606b3547169f0fd2be8446fcaaa3f656900f3df8a11fb95ae62115d3acde2b8",
+      "outputSha256": "42c5becc286089333f8d8fd7db27e1ffbe09e8d448bcbc70d080347c05ebafed",
+      "case": "H1-seed-1",
+      "companyContextSha256": "601962754ea208d12d0ae46c630d850402a409cbbe2d0c38e0fbda76126381ff"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 7,
+        "hexes": 68,
+        "spaces": 17
+      },
+      "components": [
+        15,
+        1,
+        1
+      ],
+      "connections": 15,
+      "contacts": 35,
+      "requiredJoins": 4,
+      "samples": 287,
+      "candidates": 1286,
+      "rollbacks": 0,
+      "inputSha256": "83b5d7faecc7a066d13aef63f60ecb61760528f8fccbf019b7b63348448ba307",
+      "outputSha256": "e486924f1c97a8449229d0050321700f6039a83faf6f26da34a9ad7516548c48",
+      "case": "H1-seed-2147483648",
+      "companyContextSha256": "4c4f21c78470d94d373e3ca2da7795e4f08d57dfe9b808e26d31c4b62b682b42"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 72,
+        "spaces": 18
+      },
+      "components": [
+        4,
+        1,
+        10,
+        1,
+        1,
+        1
+      ],
+      "connections": 15,
+      "contacts": 36,
+      "requiredJoins": 4,
+      "samples": 288,
+      "candidates": 1836,
+      "rollbacks": 0,
+      "inputSha256": "853cee79ef9ea8f9aecea87fa87f91df1ec7e8d7bb45518b4a64218c988fd4ad",
+      "outputSha256": "74481aa5f5683c33e3ace16ccdffbfc72b04435d998603b31de31e86a587a553",
+      "case": "H1-seed-80977",
+      "companyContextSha256": "df92b018df0d4462b6d2bab1b3593d606cbae1d550f873a0ee0e511d8def9a34"
+    },
+    {
+      "seed": 0,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 7,
+        "hexes": 68,
+        "spaces": 17
+      },
+      "components": [
+        15,
+        1,
+        1
+      ],
+      "connections": 15,
+      "contacts": 35,
+      "requiredJoins": 4,
+      "samples": 287,
+      "candidates": 1286,
+      "rollbacks": 0,
+      "inputSha256": "520d05f6f4bdc55590500860e661b175eb595f8f0ece617b118c144b2ef86057",
+      "outputSha256": "7ea57ff6ea908f800eafcb26a6da93e9176479a397b1a734cd02c3d79cee2917",
+      "case": "H1-seed0",
+      "companyContextSha256": "1b70985d36369b57620db8e893586cc8add34e32cec7dbe8d21736551cc07c42"
+    },
+    {
+      "seed": 1,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 73,
+        "spaces": 18
+      },
+      "components": [
+        15,
+        1,
+        2
+      ],
+      "connections": 17,
+      "contacts": 33,
+      "requiredJoins": 4,
+      "samples": 286,
+      "candidates": 1880,
+      "rollbacks": 0,
+      "inputSha256": "9aca3466450928f02223c6be8172d97f945d502fd982aaac255cd27f570d2db6",
+      "outputSha256": "a4a4321fbeb3771ff4841d33d37e784f600dbc667a0cb1333e8d98bbbd36a5d7",
+      "case": "H1-seed1",
+      "companyContextSha256": "55a7604c5389306e9f5c818e7c129412612e020b62b10bfd6097e32c71cc4fb9"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 7,
+        "hexes": 68,
+        "spaces": 17
+      },
+      "components": [
+        15,
+        1,
+        1
+      ],
+      "connections": 15,
+      "contacts": 35,
+      "requiredJoins": 4,
+      "samples": 287,
+      "candidates": 1286,
+      "rollbacks": 0,
+      "inputSha256": "e6bb75f9041756b39918da071e9319a624cc7fdbdd447f67390574d05d30aa8a",
+      "outputSha256": "adb4f8d86463cb34215155f2c61804dc455770bf298053c11e94b1934fdfd9fc",
+      "case": "H1-seed2147483647",
+      "companyContextSha256": "995ddd7b61274319e0d218f1bf6ec97db4e9c9aea483963454b1ec192393f873"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 1,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 65,
+        "spaces": 16
+      },
+      "components": [
+        15,
+        1
+      ],
+      "connections": 20,
+      "contacts": 40,
+      "requiredJoins": 4,
+      "samples": 286,
+      "candidates": 1796,
+      "rollbacks": 0,
+      "inputSha256": "146a5f588630bf4129d4a30a0d1a834f8ead50030fa4ae66c7f680c304ca3cad",
+      "outputSha256": "cabdb87cfda3501de6852c3e8e020c1ba698d50c39ad8be2c402ccd0c01102b4",
+      "case": "H1-seed411398192",
+      "companyContextSha256": "1755d7f157af13d5ac92a26ce20ce372d85767846ff5596676c5575c1e6c7a64"
+    },
+    {
+      "seed": 2,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 76,
+        "spaces": 19
+      },
+      "components": [
+        14,
+        4,
+        1
+      ],
+      "connections": 22,
+      "contacts": 42,
+      "requiredJoins": 4,
+      "samples": 310,
+      "candidates": 2302,
+      "rollbacks": 0,
+      "inputSha256": "9af1b5c6e3c197297aac06488435673262a65f9ec9a88ba8cc27785bb27b57ba",
+      "outputSha256": "5c3d3214c454d5c25b3f762b129a8523378342fd93186e120d7b6adc09cc3f97",
+      "case": "H2-retained-retry-seed2",
+      "companyContextSha256": "35f5578821f6b504e1ca6e3749d7c39c2744f0b5186d8eb7647f709e9ea3381f"
+    },
+    {
+      "seed": -1,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 73,
+        "spaces": 18
+      },
+      "components": [
+        17,
+        1
+      ],
+      "connections": 21,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 291,
+      "candidates": 1898,
+      "rollbacks": 0,
+      "inputSha256": "df56406943b6b22b7b75d18c66572f984e65e75566040279a8b350ec7d49bb88",
+      "outputSha256": "b13968ed699205bb6d3b9d57b25326f14ea714b6ffebd3b5d26271aedf3f94ee",
+      "case": "H2-seed-1",
+      "companyContextSha256": "5c62a22f4b6c25109ef7459a5966b83c2949847ce6d96cb93185fcf5bb515c4d"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 76,
+        "spaces": 19
+      },
+      "components": [
+        17,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1554,
+      "rollbacks": 0,
+      "inputSha256": "56dc4a1f02aba9f325e4ea888755403a5d4a438f7c7158433f8c7b94893c583f",
+      "outputSha256": "b0f51a3b4c3b3a317bb429d9eb2254a72eb6f248884841c6530c32ac9ecf9cf1",
+      "case": "H2-seed-2147483648",
+      "companyContextSha256": "5e88450b2250d91cfb2fbec4c54944e2f81ab24fadb7fbfd9c0fbea149c7f6de"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 72,
+        "spaces": 18
+      },
+      "components": [
+        15,
+        1,
+        1,
+        1
+      ],
+      "connections": 18,
+      "contacts": 42,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 1947,
+      "rollbacks": 0,
+      "inputSha256": "e19dbfa08ca0a6b89059848c671882d25f23c6558be0651a9df93e9f8823f456",
+      "outputSha256": "3791d9f82f2ffc8ef6b660865657766b27dd66f24af3c460a73031d3513ab15a",
+      "case": "H2-seed-80977",
+      "companyContextSha256": "642263e6f6502300936b8ae2493a07b32c60b534e7a38afeca3b9dc7d3ea0a7c"
+    },
+    {
+      "seed": 0,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 76,
+        "spaces": 19
+      },
+      "components": [
+        17,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1554,
+      "rollbacks": 0,
+      "inputSha256": "06200772db497459d0b2c01b97470e0aeaa581a0686397b046a049886f0b21f6",
+      "outputSha256": "7ccedd8e65b133b6d79d329be42e83de448f87a1fdb50e8a7504a1bd2ff9bf85",
+      "case": "H2-seed0",
+      "companyContextSha256": "4bc7a62cf75c17a1a93ea1b4d758a6ec27f158afa77dce60bc395ab5e770fc0b"
+    },
+    {
+      "seed": 1,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 73,
+        "spaces": 18
+      },
+      "components": [
+        17,
+        1
+      ],
+      "connections": 21,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 291,
+      "candidates": 1898,
+      "rollbacks": 0,
+      "inputSha256": "d54c73fd20a697829b31431f9a6b98d70185ab32743672dc676a23ebb1bc784d",
+      "outputSha256": "9d905cfdb9f32dab94ddec1e8e269e1ff79be34975b02544f7dd731a157fed6a",
+      "case": "H2-seed1",
+      "companyContextSha256": "8b04a83db62b8bb595be979268160f0fcc1d2d260d5185028bdfbe457b4be474"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 8,
+        "hexes": 76,
+        "spaces": 19
+      },
+      "components": [
+        17,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1554,
+      "rollbacks": 0,
+      "inputSha256": "e8f43354b332accee75a9b82f48738f9d8e1ee6bdd8594acbcaa21e3b4757ade",
+      "outputSha256": "9b4ce0324e9c7d82f7ec316979a3a6eb56388a2fb5ce924b237e15ef3e5280ef",
+      "case": "H2-seed2147483647",
+      "companyContextSha256": "4cbac795677580b4315a1a5549a695f606f51a65d92182c0fb055eb58d35d26f"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 2,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 73,
+        "spaces": 18
+      },
+      "components": [
+        15,
+        1,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 49,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 2173,
+      "rollbacks": 0,
+      "inputSha256": "08979c7ec475f65801ced88fd764153cc7f9e0b3225bf89f5682df0006010357",
+      "outputSha256": "59fc11c252f54d76f806b9f0ddef1de3498cfcc38009153214993f8a36979d21",
+      "case": "H2-seed411398192",
+      "companyContextSha256": "57b81ed283ddbd3dcb1fad4ce1dd020db8027c69fea6b80aad172ce5e218fed4"
+    },
+    {
+      "seed": -1,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        3,
+        18,
+        1
+      ],
+      "connections": 28,
+      "contacts": 57,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 2752,
+      "rollbacks": 0,
+      "inputSha256": "67378ed3fa4965fb6f20fcbd77f35a5e4d4ab148aca8030d7d0a5cd7005aaa3a",
+      "outputSha256": "9219a23bc17436b3d6e3f18549135ff3c47a7b0209caf0858732f8f8571eb17c",
+      "case": "H3-alternate-seed-1",
+      "companyContextSha256": "cbb2186fe7596afe829b3410e3e65f52344945d996669c34a336fb4364afa45f"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "5cd76afe5aca4e698d8ac4ad92b755c347ca3f25c2b97565a96ffe5f9d0d2e56",
+      "outputSha256": "ead337c32dbc75b69d35f7e3bb41024497ca74adf8d075440a11204e5c474502",
+      "case": "H3-alternate-seed-2147483648",
+      "companyContextSha256": "8726dbc6a6886dd7d5c41c997f2ad7927b78c9055634b3424f1b68c3a864a7e1"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        17,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 51,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 2563,
+      "rollbacks": 0,
+      "inputSha256": "58d2503df53a501a48fab83bb3465b6615e863a7618b44876af50038f6f7d11f",
+      "outputSha256": "3ed8d2813779e09055c0386c75bfa8d933e024def006623b056f06a5ca775cd3",
+      "case": "H3-alternate-seed-80977",
+      "companyContextSha256": "0fa505a2d02c3fa161cd4ab24df136bcccc82a4b00dad4d00f2452ced335ee74"
+    },
+    {
+      "seed": 0,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "07c68118330f26945ee090cb93b203973c8eaf06f97f5dd3b45c3a90c6f657cb",
+      "outputSha256": "22a133ee7e7e39d6c63465e539748cadc3aa87d7cd44d16b0654206e4da2f5d0",
+      "case": "H3-alternate-seed0",
+      "companyContextSha256": "ff14bcf63556490ba14bf7f862842bae9cbbd51bce229226e3eae84011b53b5d"
+    },
+    {
+      "seed": 1,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        3,
+        18,
+        1
+      ],
+      "connections": 28,
+      "contacts": 57,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 2752,
+      "rollbacks": 0,
+      "inputSha256": "673ce7c454948df2ba5a315098617986d6fc6f2cb39a7d618ae73f1581ef959c",
+      "outputSha256": "aa6311df16c5997da6b44e4dfcd52b110726f9f560078fa43c495c36813b47e6",
+      "case": "H3-alternate-seed1",
+      "companyContextSha256": "3512205cd957f3f054be422055fb5cb0cbd039d1f75af4a149a57a09a5037db3"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "ca5e7c005ca1f7864debdfb912935e46decd67178f9b455572c76e5e00ec05f3",
+      "outputSha256": "d41fa0c4f76c738c75688ac9aaa7f5216f92cb700f99fd8500d9371b427debe9",
+      "case": "H3-alternate-seed2147483647",
+      "companyContextSha256": "35f6d9953ae189d33a04e8c2b5407ce257384393f0bd80fd445fdbe5156f0c70"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 81,
+        "spaces": 20
+      },
+      "components": [
+        4,
+        1,
+        14,
+        1
+      ],
+      "connections": 21,
+      "contacts": 50,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 2766,
+      "rollbacks": 0,
+      "inputSha256": "3932fb0f87930119539953b4c6182f0d690b6e5e2ec231b9529f78d1dbdb2fa7",
+      "outputSha256": "1d7de60430cf535cc2440f2368ee5a8ebbbd09e6eb172e5ff0d30b87cfd1f33c",
+      "case": "H3-alternate-seed411398192",
+      "companyContextSha256": "09305201a88da11d6946377ee90d2ba3679cf3276cc9afb396236ef5cb14e767"
+    },
+    {
+      "seed": 2,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 84,
+        "spaces": 21
+      },
+      "components": [
+        3,
+        15,
+        1,
+        1,
+        1
+      ],
+      "connections": 20,
+      "contacts": 47,
+      "requiredJoins": 4,
+      "samples": 309,
+      "candidates": 2256,
+      "rollbacks": 0,
+      "inputSha256": "6712352636b8de2a5e3fe5b695fe8332162c2b11d426e2321316c51001d828ae",
+      "outputSha256": "e10cf27b1ca322134c779a64e1ea14985111a9f6af53154c28e54f995cb5e1bf",
+      "case": "H3-retained-retry-seed2",
+      "companyContextSha256": "9432bd4f9e88c03195e88d25690a6b791aa46021c21048a881afd68142eea12c"
+    },
+    {
+      "seed": -1,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        3,
+        18,
+        1
+      ],
+      "connections": 28,
+      "contacts": 57,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 2752,
+      "rollbacks": 0,
+      "inputSha256": "cf3fdad868ab83011bbd9fc4b48203b20bc2beb50041f8dbbe8824d6709e5594",
+      "outputSha256": "32b01d8e87c26ae09b713191c65e5e52d1c29eefe7665ed8f82c2b66949164be",
+      "case": "H3-seed-1",
+      "companyContextSha256": "7c4267cf3d44590d81fdd87f9ec32ad2ce8eeff84b3412a44a01ff54179322ee"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "f196213daa8d6ac7abb09a45333a6c486dd26c00668b53eb1038de6608836eea",
+      "outputSha256": "1c12d33bb58968d5a8937b698a4f109d7536d47f1145b76380afc5d2154c11a2",
+      "case": "H3-seed-2147483648",
+      "companyContextSha256": "8a865fc8238178d8450e0a8e2069e91dcc90de662cc51c443364323b99c408e2"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        17,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 51,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 2563,
+      "rollbacks": 0,
+      "inputSha256": "0051a7111dac88792f2ba8a148f5f316e4efaf372b99a87f13aea48d6d7fd317",
+      "outputSha256": "0d4e7a3fa27365cc88c875121b60a68f074e90033d8784e06afcc9d12abbdc0c",
+      "case": "H3-seed-80977",
+      "companyContextSha256": "7fdb4941b95f14a7d86c8c21742fb1cc0b47b897e5c76db5683860cf0ca51b4c"
+    },
+    {
+      "seed": 0,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "e8be7ae271be025c88f11fe4a459a86aace39ebafbbbc18176801f20d6afd30c",
+      "outputSha256": "59e64a2bd5657f4554da4075ef1ce3624e93311b4f66a2fbeeae90113303f784",
+      "case": "H3-seed0",
+      "companyContextSha256": "173604b90e6d7bf09d9d13ab094847221a1e961aa08781a9881dd06b50363fec"
+    },
+    {
+      "seed": 1,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 89,
+        "spaces": 22
+      },
+      "components": [
+        3,
+        18,
+        1
+      ],
+      "connections": 28,
+      "contacts": 57,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 2752,
+      "rollbacks": 0,
+      "inputSha256": "64592aefbec32d2ab60cdade5f16c98c3f4c22eeab5c938197dacf79b657456e",
+      "outputSha256": "73cccc3e3f59fc9af193b84cb7772003014ba9b62fc5946dbbede0d1ab75fe65",
+      "case": "H3-seed1",
+      "companyContextSha256": "1bcb00d3451fd3c5d8a91cf68bf4ac0da14a6a5f4463c18e6fa9b4bf04484f99"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 88,
+        "spaces": 22
+      },
+      "components": [
+        4,
+        1,
+        13,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 17,
+      "contacts": 41,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 1894,
+      "rollbacks": 0,
+      "inputSha256": "22c691f166b1780833b8b7e376c7f1749eea33e5f1b997a5b0bcbc1f2c29099d",
+      "outputSha256": "54aaf9f8723e3ef5519b8fc8f3d05675ac098374e7e1e5c5c980a9bd9a2b00bf",
+      "case": "H3-seed2147483647",
+      "companyContextSha256": "5276e3d3b8ea56f199e870705c7b455ab7bca8a7821bf7522d50e6accac956fa"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 3,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 81,
+        "spaces": 20
+      },
+      "components": [
+        4,
+        1,
+        14,
+        1
+      ],
+      "connections": 21,
+      "contacts": 50,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 2766,
+      "rollbacks": 0,
+      "inputSha256": "a9dbb38aaf5a1878f484d12f0bc8d4742e0f6eeeef371f5876e713c7c09d7441",
+      "outputSha256": "61282deedf58ba641d12936589c484c0c46605457b78dcc9e41eed82bdc1c283",
+      "case": "H3-seed411398192",
+      "companyContextSha256": "60c4a9984622e668ccbe6441cf239913601c719f5bc0a40defa960b3b81c0145"
+    },
+    {
+      "seed": 2,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 96,
+        "spaces": 24
+      },
+      "components": [
+        21,
+        1,
+        1,
+        1
+      ],
+      "connections": 24,
+      "contacts": 53,
+      "requiredJoins": 4,
+      "samples": 308,
+      "candidates": 3009,
+      "rollbacks": 0,
+      "inputSha256": "a209b54718bb3fe092690c04a7c5abbcef23d2119eb83f3f8b0e53f6d42855f5",
+      "outputSha256": "f8e62beeb7e3bc59ce1dc906a6a1f9e051d6d338afadaa24eda53f4551a76896",
+      "case": "H4-retained-retry-seed2",
+      "companyContextSha256": "18a4cc076346e616e9891e60534c540318496f6dbd73dcb05885225e4f76e9e2"
+    },
+    {
+      "seed": -1,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        3,
+        14,
+        5,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 48,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 3199,
+      "rollbacks": 0,
+      "inputSha256": "a583f3d6f128acf3b95e4240bc038640db753dd5f2c947455babb476fc0d0b5c",
+      "outputSha256": "2f4858ee44456320f0ef90897c04e2f8ac3b13875db722b568ccb7e306b46de1",
+      "case": "H4-seed-1",
+      "companyContextSha256": "6bb47148c2f05bbc2b819c4d56304e15f8b7f50b7a486785f82652dbdf9fa04e"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        10,
+        7,
+        5,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 46,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 2351,
+      "rollbacks": 0,
+      "inputSha256": "29e8e102124ba56ea9d77a9aec61fa941cf8862d0b1eee4e353fe881a7a28708",
+      "outputSha256": "c46a9a14245db8e58efa862cef2ccd13922c6ffaf7bc43203b4c5981cb97c80b",
+      "case": "H4-seed-2147483648",
+      "companyContextSha256": "b8356c31e84d20981c23ac108ca72f51a87a5c791b102358c5fe1cd026e97e90"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 9,
+        "hexes": 93,
+        "spaces": 23
+      },
+      "components": [
+        20,
+        1,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 49,
+      "requiredJoins": 4,
+      "samples": 291,
+      "candidates": 2781,
+      "rollbacks": 0,
+      "inputSha256": "5ee62d1f2a8913ccebe70fcf27989398ac0422d92c68990bdd7fcfe87912d526",
+      "outputSha256": "f2739257fcae8640887486326f367827cf383ead8ab33797d1fd2e1f4c82dc25",
+      "case": "H4-seed-80977",
+      "companyContextSha256": "c0b17f08aabbfd0ade60d1a0727dfe841b70e2d26897326202b27bf0f56bc6ab"
+    },
+    {
+      "seed": 0,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        10,
+        7,
+        5,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 46,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 2351,
+      "rollbacks": 0,
+      "inputSha256": "7320f00a4a8879df886761027282c047bfd44d46c03562b1eeb31236e443f9ab",
+      "outputSha256": "1e4b8753289dabf831dd99230d4905f329b749c7c1b8200de532ff20e32ef308",
+      "case": "H4-seed0",
+      "companyContextSha256": "79e0b024aadba06748e441c10744d1b26c5d31cf2c9fe99ae5c0f8ce2b1733b7"
+    },
+    {
+      "seed": 1,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        3,
+        14,
+        5,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 48,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 3199,
+      "rollbacks": 0,
+      "inputSha256": "b4cff27d625c6cb7270d84ad73bdb547c7e0cb4c90e0bf8bf51b7767c54c4788",
+      "outputSha256": "7ac4bda82549c06249583a22e1affd6531dac486926719dddb19eb5dbe780c7e",
+      "case": "H4-seed1",
+      "companyContextSha256": "a9f2cbad62aa5f9d0dd7e31f4551400c85ba5d3b81b1a94605c81f29b6b3551d"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        10,
+        7,
+        5,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 46,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 2351,
+      "rollbacks": 0,
+      "inputSha256": "6b315f674a424eb63954942c1b012305b59a05ffaf220df8af4c19b07c8d9545",
+      "outputSha256": "50f13f8fc7e585988cc5a21aee484c7b67addb971ab3f31932adafcca9bda887",
+      "case": "H4-seed2147483647",
+      "companyContextSha256": "e855ef44dd0735e39d8e7ca79bbe9dc88d7b3ec695887f6a24005970a1aa5589"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 4,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 11,
+        "hexes": 93,
+        "spaces": 23
+      },
+      "components": [
+        21,
+        1,
+        1
+      ],
+      "connections": 27,
+      "contacts": 56,
+      "requiredJoins": 4,
+      "samples": 293,
+      "candidates": 3399,
+      "rollbacks": 0,
+      "inputSha256": "47e71677e4188417f0a7fc912aa3fe5ec9b88216ad261ded25fac733117543ba",
+      "outputSha256": "d773dccd93abe35d44e0df6e690d0d58b91fbb9125532a78e5c9738f523f85a9",
+      "case": "H4-seed411398192",
+      "companyContextSha256": "496fc2209e78c2219e2ec8f6d7760af32a7f07243fecb932251dc0723185d8d7"
+    },
+    {
+      "seed": 2,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 11,
+        "hexes": 100,
+        "spaces": 25
+      },
+      "components": [
+        20,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "connections": 26,
+      "contacts": 55,
+      "requiredJoins": 4,
+      "samples": 312,
+      "candidates": 3313,
+      "rollbacks": 0,
+      "inputSha256": "c16872ce925055e608fe1f8fffb0c6178fc66c55895d905422b397ea185828c1",
+      "outputSha256": "5e844907fce72b2ae3c36c7547c1fe38ffaa1a3e1b18fd92f334d17fea6e6aac",
+      "case": "H5-retained-retry-seed2",
+      "companyContextSha256": "e21ab34f0196b4812f9132c4e57328d774caf900c2766d06fab9c4d413e1f810"
+    },
+    {
+      "seed": -1,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 105,
+        "spaces": 26
+      },
+      "components": [
+        5,
+        14,
+        1,
+        3,
+        1,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 48,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 3119,
+      "rollbacks": 0,
+      "inputSha256": "c6123240c11831af1f21d861927e03ad1f6fc27d7152723f2f0294f2e8fd11f7",
+      "outputSha256": "6fab95244e48ca532c7ed6edd97645e2b338ff022b7fea0be213c62c451e92e1",
+      "case": "H5-seed-1",
+      "companyContextSha256": "e129e4c5fa09c49027af142336426947c24370a5b1ab07092014e9ebbde4d349"
+    },
+    {
+      "seed": -2147483648,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        15,
+        1,
+        5,
+        1,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 47,
+      "requiredJoins": 4,
+      "samples": 295,
+      "candidates": 2423,
+      "rollbacks": 0,
+      "inputSha256": "9b7fccf7b85890a7d6f36f64c12087ead36261829842edebf25d22c8743fd5c1",
+      "outputSha256": "1abe3924d213a578289187dc00818ab9de1603ac4f037cf94c099c9376dd1cb4",
+      "case": "H5-seed-2147483648",
+      "companyContextSha256": "d83678b89f0e3950733ec074d4bfda6bddcdbb15f0e716ce921969b34511f2b6"
+    },
+    {
+      "seed": -80977,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        12,
+        1,
+        6,
+        3,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 51,
+      "requiredJoins": 4,
+      "samples": 294,
+      "candidates": 3141,
+      "rollbacks": 0,
+      "inputSha256": "569992df8844c97ecd6a68d067744860565383091407deae36a570042e645f87",
+      "outputSha256": "bf4e4831baaf0f3c802f27146794715ceaf6c62815cc9d3ece2e0409277c5fe2",
+      "case": "H5-seed-80977",
+      "companyContextSha256": "1eacd683d0f77bc5ea5d288c812329fa8bfb675b76de18471670fcc687138dea"
+    },
+    {
+      "seed": 0,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        15,
+        1,
+        5,
+        1,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 47,
+      "requiredJoins": 4,
+      "samples": 295,
+      "candidates": 2423,
+      "rollbacks": 0,
+      "inputSha256": "a96a236ed48d0d0bcc6f14efa738c99490ebe97c6c3006e80e74a9157000cba6",
+      "outputSha256": "a3af21f7734ccf90d3026a9d9468183b63aa08dfb73ce7be1b0edd0a2c8972b1",
+      "case": "H5-seed0",
+      "companyContextSha256": "3fe0732ae5a5e6da87a81d60ee04d66fb296e99fa2f52287984551080fea7e7b"
+    },
+    {
+      "seed": 1,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 105,
+        "spaces": 26
+      },
+      "components": [
+        5,
+        14,
+        1,
+        3,
+        1,
+        1,
+        1
+      ],
+      "connections": 21,
+      "contacts": 48,
+      "requiredJoins": 4,
+      "samples": 292,
+      "candidates": 3119,
+      "rollbacks": 0,
+      "inputSha256": "5823da1842339b283b4d65797e6258029f81779568ecda2620b24c36ee3fc3e4",
+      "outputSha256": "34340be7579543d61fe1a71d321ead441e6e8389949030fb0a780ca76fd98c85",
+      "case": "H5-seed1",
+      "companyContextSha256": "6b6292c1da9bd58f4c41a347d42bba458b38a31a1c2def95bea24c94252085ff"
+    },
+    {
+      "seed": 2147483647,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 10,
+        "hexes": 97,
+        "spaces": 24
+      },
+      "components": [
+        15,
+        1,
+        5,
+        1,
+        1,
+        1
+      ],
+      "connections": 22,
+      "contacts": 47,
+      "requiredJoins": 4,
+      "samples": 295,
+      "candidates": 2423,
+      "rollbacks": 0,
+      "inputSha256": "8079bb9559b0e4d856b411ff91e3a49f91f021ba9794f56c923425b72a56d0ab",
+      "outputSha256": "63d0f646bab5ad2723f7774139702704146d9ad22f5add0611b4f92b202dc24c",
+      "case": "H5-seed2147483647",
+      "companyContextSha256": "0a012beec95ecf70ba636f325ed31a1effed844a17c92b643309ff24a18c4759"
+    },
+    {
+      "seed": 411398192,
+      "heroCount": 5,
+      "status": "geometry-complete",
+      "counts": {
+        "sections": 4,
+        "tiles": 12,
+        "hexes": 101,
+        "spaces": 25
+      },
+      "components": [
+        22,
+        1,
+        2
+      ],
+      "connections": 27,
+      "contacts": 60,
+      "requiredJoins": 4,
+      "samples": 295,
+      "candidates": 3649,
+      "rollbacks": 0,
+      "inputSha256": "0e4ce0ed11f76ba69453daca0f29617be573b6b4747c8f9c654640a084aef730",
+      "outputSha256": "8dab6193c6a7932bd647e000ad1e2c6eb7906c2e7b0dc9dc07b960a56b9381d5",
+      "case": "H5-seed411398192",
+      "companyContextSha256": "29bf9f48e7fb4ef0a0864fc77d491e87fd4e578f52c136bff87832ee75f6d178"
+    }
+  ],
+  "failedAttempts": [
+    {
+      "heroCount": 3,
+      "seed": 1,
+      "status": "administrative-stop",
+      "reason": "clock-budget",
+      "samples": 279,
+      "inputSha256": "9652adf450bcec906c479ed1afaed3ac17d51240be10d8159cd8c0ce6b1d820e",
+      "outputSha256": "ac31ac30e9b2cba55884e7c5774624c14757c88f155857016213c0faae8e57c1"
+    },
+    {
+      "heroCount": 3,
+      "seed": 1,
+      "status": "administrative-stop",
+      "reason": "operation-budget",
+      "samples": 279,
+      "inputSha256": "4ddc842d7fe69d741af926ecc01aef0cbeb292ad7497961d6820b663aa986d92",
+      "outputSha256": "79b1a2e080691a8ece8f9fdf9bc14fd55aab957601527dfad78c8826224a717d"
+    }
+  ],
+  "replay": {
+    "equalFields": [
+      "sections",
+      "tileStates",
+      "spaces",
+      "contacts",
+      "graph",
+      "mapOrder",
+      "firstSortOrder",
+      "sortedBuilderOrder",
+      "rng",
+      "trace",
+      "search"
+    ],
+    "geometryAndTraceSha256": "3ef203340891ec7430b405e8b29bd107d2484cef69b057719598dc2ed05da793",
+    "recordingOutputSha256": "73cccc3e3f59fc9af193b84cb7772003014ba9b62fc5946dbbede0d1ab75fe65",
+    "replayOutputSha256": "382c5abc7110bcf31c1a87f21b0f5712665cc85d875481ac5c0d53ec9572f819",
+    "observations": 91998,
+    "validatedDecisions": true
+  },
+  "verification": {
+    "focusedTests": 108,
+    "newAssemblyTests": 40,
+    "fullTests": 191,
+    "baselineTests": 151
+  },
+  "independentRootReviews": "pending"
+}
