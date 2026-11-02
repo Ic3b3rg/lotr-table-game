@@ -13,6 +13,15 @@ await build({
   outfile: 'dist/host.mjs',
 });
 await build({
+  entryPoints: ['src/map-geometry/main.ts'],
+  bundle: true,
+  packages: 'external',
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  outfile: 'dist/map-geometry.mjs',
+});
+await build({
   entryPoints: ['src/client/app.ts'],
   bundle: true,
   platform: 'browser',
