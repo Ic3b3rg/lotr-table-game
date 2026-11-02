@@ -89,8 +89,9 @@ sopravvivono a ricarica, recupero, arresto e backup.
 
 Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato
 dalla regola o dalla capacità. **Ricomponi e scopri 2** riunisce invece prima
-mazzo e scarti, lasciando escluse le preparate: è l'operazione dell'eroe nella
-riorganizzazione, ancora separata dall'automazione delle fasi del round.
+mazzo e scarti, lasciando escluse le preparate: questa modalità indipendente
+è disponibile prima di avviare i round. Nei round i mazzi vengono ricomposti
+insieme all'inizio della Riorganizzazione, prima delle Scoperte dedicate.
 
 Per ogni carta scegli **Sopra il mazzo**, **Sotto il mazzo** o **Prepara questa
 carta**. Puoi prepararne al massimo una. Con **Sposta prima/dopo** scegli

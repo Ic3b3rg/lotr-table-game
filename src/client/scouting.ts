@@ -57,7 +57,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
         inRally && round.heroes.find((hero) => hero.heroId === option.value)?.rallyDone,
       );
     }
-    if (heroSelect.selectedOptions[0]?.disabled)
+    if (!heroSelect.selectedOptions.length || heroSelect.selectedOptions[0]?.disabled)
       heroSelect.value = [...heroSelect.options].find((option) => !option.disabled)?.value ?? '';
     const mine = current.preparation?.heroes.find(
       (hero) => hero.heroId === heroSelect.value && hero.playerId === player?.id,

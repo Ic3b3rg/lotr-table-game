@@ -44,12 +44,25 @@ Il secondo eroe viene proposto dopo la prima Scoperta. La nuova fase abilita
 subito i controlli coerenti: corretto il ripristino del precedente stato
 disabilitato dopo una richiesta. Focus riportato sul risultato.
 
-Le undici asserzioni in `tests/browser/rounds-regressions.js` passano in
+Le prime undici asserzioni in `tests/browser/rounds-regressions.js` passano in
 Azione, Ombra e Riorganizzazione mobile e nella Riorganizzazione condivisa:
 scelte e focus stabili al polling, nessun overflow, bersagli di almeno 44 px,
 ordine coperto nascosto, progressi corretti, rivelazioni che bloccano il
 turno, prove/scarti liberi nascosti nella Riorganizzazione e tavolo condiviso
 senza comandi personali. Console delle due viste senza errori o avvisi.
+
+La revisione ha poi individuato due difetti, riprodotti nel browser prima
+della correzione: selettori vuoti dopo il primo round e collegamento
+Interagisci che conservava l'origine effetto. La selezione vuota interessava
+anche l'avvio dei turni, oltre a Scoperta. Ora i selettori riprendono un eroe
+disponibile; il collegamento sceglie eroe attivo e origine interazione.
+Eseguito un altro ciclo intero fino al **round 3 senza ricaricare**: moduli
+turno e Scoperta restano disponibili. Il controllo esteso a dodici asserzioni
+passa su telefono e condiviso al round 3. Le quattro asserzioni dedicate in
+`tests/browser/interaction-origin-regression.js` passano dopo aver scelto
+effetto e un altro eroe: il collegamento ripristina l'interazione dell'eroe
+attivo e la successiva richiesta consuma esattamente un'azione. Typecheck,
+build e formattazione passano dopo le correzioni; il motore HTTP è invariato.
 
 Schermate locali escluse da Git: `.scratch/rounds-browser-29/mobile-shadow.png`
 e `desktop-rally.png`; rapporto `design-audit.json`. Il rilevatore, eseguito
@@ -66,3 +79,8 @@ Le selezioni non confermate restano nel modulo finché la pagina rimane aperta.
 
 Schema 5: il downgrade richiede una copia precedente all'aggiornamento.
 La prova fisica Mac/Windows e telefoni senza WAN resta nell'issue #5.
+
+Il tavolo privato locale sulla porta 4339 è stato aggiornato conservando
+prima `.scratch/rounds-browser-29/pre-upgrade-private-session.json` (schema 4).
+Confronto dei backup HTTP prima/dopo: identità, revisione, carte, ordine e
+ricevute invariati; aggiunti soltanto schema 5 e i nuovi campi nulli.

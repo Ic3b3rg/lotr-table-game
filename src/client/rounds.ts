@@ -76,7 +76,7 @@ export function createRounds(sync: () => Promise<void>) {
         round?.heroes.find((hero) => hero.heroId === option.value)?.turnEnded,
       );
     }
-    if (select.selectedOptions[0]?.disabled)
+    if (!select.selectedOptions.length || select.selectedOptions[0]?.disabled)
       select.value = [...select.options].find((option) => !option.disabled)?.value ?? '';
     element('#round-agreement').textContent = !round
       ? 'Il gruppo è pronto a iniziare i round.'

@@ -114,6 +114,16 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   };
   heroSelect.onchange = updateControls;
   mode.onchange = updateControls;
+  element('#round-interact').onclick = () => {
+    const active = current?.preparation?.heroes.find(
+      (hero) => hero.heroId === current?.round?.activeHeroId && hero.playerId === player?.id,
+    );
+    if (!active) return;
+    heroSelect.value = active.heroId;
+    context.value = 'interaction';
+    commands.clear();
+    updateControls();
+  };
   gain.onclick = () => {
     const test = current?.skillTest;
     void submit({

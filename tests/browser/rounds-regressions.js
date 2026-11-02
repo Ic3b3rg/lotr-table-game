@@ -56,7 +56,14 @@ async () => {
       round.phase !== 'action' ||
       Boolean(round.activeHeroId) ||
       !round.heroes.some((hero) => !hero.turnEnded) ||
-      !document.querySelector('#round-hero').disabled,
+      (!document.querySelector('#round-hero').disabled &&
+        Boolean(document.querySelector('#round-hero').value)),
+    scoutAvailableNextRound:
+      shared ||
+      inRally ||
+      Boolean(state.scout) ||
+      (!document.querySelector('#scout-start-form').hidden &&
+        Boolean(document.querySelector('#scout-hero').value)),
   };
   const failed = Object.entries(checks)
     .filter(([, passed]) => !passed)
