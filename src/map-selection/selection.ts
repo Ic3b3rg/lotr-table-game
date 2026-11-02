@@ -19,6 +19,7 @@ type SectionState = {
   isSeeded: boolean;
   requiredConnectedSectionIds: number[];
   traitMatching: Match[] | null;
+  traitsEvaluated: boolean;
 };
 type TrieNode = { value: number; children: TrieNode[] };
 
@@ -106,15 +107,13 @@ class Selection {
       spacesFromAvailableTiles: 0,
       isSeeded: false,
       requiredConnectedSectionIds: [],
-      traitMatching: null,
+      traitMatching: s.traitRequirements.length ? null : [],
+      traitsEvaluated: s.traitRequirements.length === 0,
     }));
-    for (const [a, b] of input.requiredConnections) {
-      if (!this.sections[a]!.requiredConnectedSectionIds.includes(b))
-        this.sections[a]!.requiredConnectedSectionIds.push(b);
-      if (!this.sections[b]!.requiredConnectedSectionIds.includes(a))
-        this.sections[b]!.requiredConnectedSectionIds.push(a);
-    }
   }
+  private begin = (stage: string): void => {
+    this.stage = stage;
+  };
   private tick = (): void => {
     if (this.operations >= this.input.budget.maxOperations)
       throw new SelectionStop('administrative-stop', 'Budget amministrativo esaurito.');
@@ -154,6 +153,10 @@ class Selection {
   private add(section: SectionState, tile: Tile): void {
     const owned = this.pools!.ownedCodes.has(tile.code);
     if (owned) {
+      if (this.input.sections[section.id]!.traitRequirements.length) {
+        section.traitsEvaluated = false;
+        section.traitMatching = null;
+      }
       section.available.push(tile);
       section.spacesFromAvailableTiles += tile.spaces.length;
     }
@@ -236,14 +239,19 @@ class Selection {
     return null;
   }
   private matching(section: SectionState): boolean {
+    section.traitsEvaluated = false;
+    section.traitMatching = null;
+    const finish = (matches: Match[] | null): boolean => {
+      section.traitMatching = matches;
+      section.traitsEvaluated = true;
+      return matches !== null;
+    };
     const requirements = this.input.sections[section.id]!.traitRequirements;
     if (!requirements.length) {
-      section.traitMatching = [];
-      return true;
+      return finish([]);
     }
     if (!section.available.length) {
-      section.traitMatching = null;
-      return false;
+      return finish(null);
     }
     const slots = requirements.flatMap((r) => Array<number>(r.count).fill(r.trait));
     const spaces = section.available.flatMap((t) =>
@@ -273,19 +281,19 @@ class Selection {
         start = 0;
       } else {
         if (!reserved.length) {
-          section.traitMatching = null;
-          return false;
+          return finish(null);
         }
         start = reserved.pop()! + 1;
         requirement--;
       }
     }
-    section.traitMatching = reserved.map((index, i) => ({
-      trait: slots[i]!,
-      tileSource: spaces[index]!.tileSource,
-      spaceIndex: spaces[index]!.spaceIndex,
-    }));
-    return true;
+    return finish(
+      reserved.map((index, i) => ({
+        trait: slots[i]!,
+        tileSource: spaces[index]!.tileSource,
+        spaceIndex: spaces[index]!.spaceIndex,
+      })),
+    );
   }
   private sizeMet(section: SectionState): boolean {
     return (
@@ -334,6 +342,10 @@ class Selection {
         let returned: string | null = null;
         if (at >= 0) {
           const tile = target.available[at]!;
+          if (this.input.sections[target.id]!.traitRequirements.length) {
+            target.traitsEvaluated = false;
+            target.traitMatching = null;
+          }
           target.spacesFromAvailableTiles -= tile.spaces.length;
           this.returnTile(tile);
           target.available.splice(at, 1);
@@ -364,7 +376,12 @@ class Selection {
       operationFailure?: boolean;
     } | null = null;
     try {
-      const observe = { tick: this.tick, emit: this.emit, checkpoint: this.checkpoint };
+      const observe = {
+        tick: this.tick,
+        begin: this.begin,
+        emit: this.emit,
+        checkpoint: this.checkpoint,
+      };
       collectPools(this.input, this.pools, observe);
       this.random = new SourceRandom(this.input.context.seed);
       this.stage = 'standard-shuffle';
@@ -387,6 +404,19 @@ class Selection {
       this.checkpoint('scaling');
       shuffleAndMerge(this.pools, this.random, observe);
       this.checkpoint('coroutine-entry');
+      this.stage = 'initialize';
+      for (const section of this.sections) this.emit('section-id', { sectionId: section.id });
+      for (const section of this.sections) {
+        for (const [a, b] of this.input.requiredConnections) {
+          const neighbor = section.id === a ? b : section.id === b ? a : null;
+          if (neighbor !== null && !section.requiredConnectedSectionIds.includes(neighbor))
+            section.requiredConnectedSectionIds.push(neighbor);
+        }
+        this.emit('section-initialized', {
+          sectionId: section.id,
+          requiredConnectedSectionIds: [...section.requiredConnectedSectionIds],
+        });
+      }
       for (const phase of ['starts', 'required'] as const) {
         this.stage = phase;
         for (const section of this.sections) {
@@ -436,18 +466,15 @@ class Selection {
         source: tile.source,
         hashId: tile.hashId,
         used,
-        owned: this.pools?.ownedCodes.has(tile.code) ?? false,
+        owned: this.pools.ownedCodes.has(tile.code),
       }));
-    const pools = this.pools === null ? null : (({ ownedCodes, ...rest }) => rest)(this.pools);
-    return {
-      formatVersion: 1,
+    const { ownedCodes, ...pools } = this.pools;
+    const common = {
+      formatVersion: 1 as const,
       algorithm: this.input.algorithm,
-      scope: 'selection-only',
+      scope: 'selection-only' as const,
       floatPolicy: FLOAT32_POLICY,
       executionPolicy: this.input.budget.policy,
-      status,
-      failure,
-      checkpoint: status === 'selected' ? 'after-optional-before-local-edges' : null,
       inputFingerprint: createHash('sha256').update(JSON.stringify(this.input)).digest('hex'),
       input: this.input,
       pools,
@@ -456,7 +483,7 @@ class Selection {
       sections: this.sections.map(({ available, ...s }) => ({
         ...s,
         availableTiles: available.map((t) => t.source),
-        traitsMet: s.traitMatching !== null,
+        traitsMet: s.traitsEvaluated ? s.traitMatching !== null : null,
         minimumMet: this.sizeMet(this.sections[s.id]!),
       })),
       buckets: {
@@ -474,6 +501,14 @@ class Selection {
       rng: this.random?.snapshot() ?? null,
       operations: this.operations,
     };
+    return status === 'selected'
+      ? {
+          ...common,
+          status,
+          checkpoint: 'after-optional-before-local-edges' as const,
+          failure: null,
+        }
+      : { ...common, status, checkpoint: null, failure: failure! };
   }
 }
 

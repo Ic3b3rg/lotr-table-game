@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const int32 = z.int().min(-2147483648).max(2147483647);
-const mask = z.int().min(0).max(2147483647);
+const mask = int32;
 const index = z.int().min(0).max(10000);
 const source = z
   .string()
@@ -190,13 +190,16 @@ export function parseSelectionInput(value: unknown): SelectionInput {
     p.provenance.files.map((f) => f.file),
     'file fonte',
   );
-  const refs: string[] = [];
-  const visit = (v: unknown): void => {
-    if (typeof v === 'string' && /^[\w.-]+:-?[1-9][0-9]*$/.test(v)) refs.push(v);
-    else if (Array.isArray(v)) v.forEach(visit);
-    else if (v !== null && typeof v === 'object') Object.values(v).forEach(visit);
-  };
-  visit(p);
+  const refs = [
+    ...p.products,
+    ...p.items,
+    ...p.encounters,
+    ...p.groups,
+    ...p.sections,
+    ...p.context.heroes,
+  ].map((entity) => entity.source);
+  for (const tile of [...p.standard, ...p.custom])
+    refs.push(tile.source, tile.modelSource, ...tile.spaces.map((space) => space.source));
   for (const r of refs)
     if (!files.has(r.slice(0, r.lastIndexOf(':')))) fail(`File fonte non dichiarato: ${r}.`);
   for (const [name, values] of Object.entries({

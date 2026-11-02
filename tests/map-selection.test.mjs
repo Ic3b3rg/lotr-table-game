@@ -156,6 +156,54 @@ for (const [name, edit] of [
   ],
   ['unresolved encounter', (f) => f.products[0].encounterSources.push(ref(999))],
   [
+    'unsupported format version',
+    (f) => {
+      f.formatVersion = 2;
+    },
+  ],
+  [
+    'seed outside signed int32',
+    (f) => {
+      f.context.seed = 2147483648;
+    },
+  ],
+  [
+    'H inconsistent with explicit heroes',
+    (f) => {
+      f.context.heroCount = 2;
+    },
+  ],
+  [
+    'unresolved opposite face',
+    (f) => {
+      f.standard[0].oppositeHashId = 999;
+    },
+  ],
+  [
+    'unresolved retained retry pool',
+    (f) => {
+      f.incoming.itemEncounterPool = [ref(999)];
+    },
+  ],
+  [
+    'unknown port execution policy',
+    (f) => {
+      f.budget.policy = 'unknown';
+    },
+  ],
+  [
+    'non-float32 retained percentage',
+    (f) => {
+      f.incoming.percentNormal = 0.4;
+    },
+  ],
+  [
+    'unresolved recursive upgrade',
+    (f) => {
+      item(f, 1, 1, [ref(999)]);
+    },
+  ],
+  [
     'unproven source file',
     (f) => {
       f.standard[0].source = 'missing.assets:1';
@@ -678,5 +726,145 @@ test('heuristic trait counts use HasAny while satisfaction requires every bit of
     );
     assert.ok(result.trace.some((t) => t.operation === 'rollback' && t.hashId === 10087));
     assert.equal(result.search.invalidCount, 1);
+  });
+});
+
+test('signed source flag masks retain their high bit through filtering and trait matching', async () => {
+  const f = fixture();
+  const n = encounter(f, 1, 0, { traits: -2147483648 });
+  f.encounterTraitsFilter.mustHaveAll = -2147483648;
+  f.standard[0].set = -2147483648;
+  f.sections[0].allowedTileSets = -2147483648;
+  f.standard[0].spaces[0].traits = -2147483648;
+  f.sections[0].required = [reserve(f.standard[0])];
+  f.sections[0].traitRequirements = [{ trait: -2147483648, count: 1 }];
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.normalEligible, [n]);
+    assert.equal(v.sections[0].traitsMet, true);
+  });
+});
+
+test('prefix trie counts descendants and truncates a failed parent, rather than remembering terminal permutations', async () => {
+  const f = fixture();
+  onlyTiles(f, [87, 16, 56, 93]);
+  for (const i of [87, 16]) f.standard[i].set = 2;
+  for (const i of [56, 93])
+    f.standard[i].spaces.push({ index: 1, source: ref(9900 + i), traits: 1 });
+  for (const i of [0, 1, 2]) active(f, i, 2, 2);
+  f.sections[0].allowedTileSets = 3;
+  f.sections[1].allowedTileSets = 3;
+  f.sections[2].allowedTileSets = 2;
+  await run(f, (r) => {
+    const v = selected(r),
+      rollbacks = v.trace.filter((t) => t.operation === 'rollback');
+    assert.deepEqual(
+      v.sections.slice(0, 3).map((s) => s.availableTiles),
+      [[ref(1056)], [ref(1093)], [ref(1087), ref(1016)]],
+    );
+    assert.deepEqual(rollbacks[0].failedSequence, [10087, 10016]);
+    assert.equal(rollbacks[0].invalidCount, 2);
+    assert.ok(rollbacks.some((t) => t.failedSequence.length === 2 && t.invalidCount === 3));
+    assert.equal(
+      rollbacks.find((t) => t.failedSequence.length === 1 && t.failedSequence[0] === 10087)
+        .invalidCount,
+      1,
+    );
+    assert.deepEqual(v.search.invalidSequences, []);
+    assert.equal(v.rng.samples, 124);
+  });
+});
+
+test('rollback of a phantom success leaves its bucket flag used when no available tile can be returned', async () => {
+  const f = fixture();
+  onlyTiles(f, [87]);
+  active(f, 0);
+  f.products[0].tileCodes = [];
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.failure.sourceErrorCode, 2);
+    const rollbacks = result.trace.filter((t) => t.operation === 'rollback');
+    assert.equal(rollbacks.length, 1);
+    assert.equal(rollbacks[0].returned, null);
+    assert.equal(result.buckets.standard[87].used, true);
+    assert.equal(result.sections[0].spacesFromAvailableTiles, 0);
+    assert.deepEqual(result.search.sequence, []);
+    assert.equal(result.search.invalidCount, 1);
+    assert.equal(result.rng.samples, 120);
+  });
+});
+
+test('trace initializes every ID before any section and labels pool merge before coroutine entry', async () => {
+  const f = fixture();
+  encounter(f, 1);
+  encounter(f, 2, 2);
+  f.context.unlockedChainIds = [2];
+  await run(f, (r) => {
+    const v = selected(r),
+      initial = v.trace.filter((t) => t.stage === 'initialize');
+    assert.deepEqual(
+      initial.map((t) => [t.operation, t.sectionId]),
+      [
+        ['section-id', 0],
+        ['section-id', 1],
+        ['section-id', 2],
+        ['section-id', 3],
+        ['section-initialized', 0],
+        ['section-initialized', 1],
+        ['section-initialized', 2],
+        ['section-initialized', 3],
+      ],
+    );
+    assert.ok(
+      v.trace.filter((t) => t.operation === 'merge').every((t) => t.stage === 'pool-merge'),
+    );
+    assert.equal(
+      initial[0].samples,
+      v.checkpoints.find((c) => c.stage === 'coroutine-entry').rng.samples,
+    );
+  });
+});
+
+test('optional factor equality attempts a tile rather than finishing the section', async () => {
+  const f = fixture();
+  onlyTiles(f, [87]);
+  active(f, 0, 0, 1);
+  f.sections[0].relativeSizeFactor = 0.9417566061019897;
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.sections[0].availableTiles, [ref(1087)]);
+    assert.equal(v.trace.find((t) => t.operation === 'size-draw').isSeeded, false);
+  });
+});
+
+test('early failure diagnostics distinguish unmet traits from requirements not evaluated yet', async () => {
+  const f = fixture();
+  f.sections[0].traitRequirements = [{ trait: 1, count: 1 }];
+  f.budget.maxOperations = 1;
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.sections[0].traitsMet, null);
+    assert.deepEqual(
+      result.sections.slice(1).map((s) => s.traitsMet),
+      [true, true, true],
+    );
+  });
+});
+
+test('retry does not refilter retained models when history, language or item availability now reject new appends', async () => {
+  const f = fixture(),
+    a = item(f, 1, 0),
+    n = encounter(f, 1, 0, { unsupportedLanguages: ['Italian'] });
+  const reward = encounter(f, 2, 4, { itemSources: [a] });
+  f.context.usedEncounterIds = [1];
+  f.incoming.randomEncounterPool = [n];
+  f.incoming.itemEncounterPool = [reward];
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.normalEligible, []);
+    assert.deepEqual(v.pools.itemEligible, []);
+    assert.deepEqual(v.pools.randomEncounterPool, [n]);
+    assert.deepEqual(v.pools.itemEncounterPool, [reward]);
+    assert.equal(v.checkpoints.find((c) => c.stage === 'coroutine-entry').rng.samples, 121);
   });
 });

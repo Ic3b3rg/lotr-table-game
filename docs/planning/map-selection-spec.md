@@ -23,6 +23,7 @@ dal validatore. Esattamente 120 prefab standard e quattro sezioni, bucket custom
 separato. Identità prefab e modello, codice, HashId int32, opposite HashId,
 set e caselle/tratti mantengono i valori originali. Ownership deriva dai codici
 dei prodotti esplicitamente posseduti; vale anche per il prefab custom.
+Le maschere sono signed int32: anche i bit alti originali restano validi.
 
 Prodotti, incontri, gruppi, oggetti/upgrade e riferimenti fissi sono normalizzati
 in metadati, senza contenuti narrativi. Nessun riferimento/indice mancante viene
@@ -72,14 +73,51 @@ Pubblica un file completo con hard link esclusivo; mai sovrascrivere.
 
 ## Fallimenti e limiti
 
-Risultati discriminati `selected`, `source-failure`, `administrative-stop` o
-`port-policy-failure`; soltanto selected raggiunge il checkpoint. Errori input
-non pubblicano output. I risultati falliti sono diagnostici espliciti, mai mappe
-valide. Budget di operazioni esplicito nel pacchetto, policy
+Risultati discriminati `selected`, `source-failure` e `administrative-stop`;
+soltanto selected raggiunge il checkpoint. Le politiche di input del port
+(versioni, limiti, riferimenti e float rappresentabili) falliscono nella
+validazione, senza pubblicare output. I risultati falliti sono diagnostici
+espliciti, mai mappe valide. Budget di operazioni esplicito nel pacchetto, policy
 `selection-operations-v1`: conta scansioni, iterazioni e matching; esaurirlo
 non equivale a Timeout=1 Unity. Nessun timeout wall-clock o retry automatico.
 Le decisioni temporali geometriche sono oltre il confine. Politica numerica
 `float32-per-operation-v1`; nessuna certificazione di parità Unity/JIT.
+Nei diagnostici `traitsMet: null` indica un matching non ancora valutato;
+`false` indica una ricerca di matching conclusa senza soluzione.
+
+## Uso e verifica
+
+La build produce CLI e libreria ESM separate:
+
+```sh
+npm run build
+node dist/map-selection.mjs --input .scratch/selection/normalized-a1.json --output .scratch/selection/nuova-selezione.json
+```
+
+Il pacchetto A1 citato è privato, presente soltanto nel checkout di verifica;
+il percorso di output deve essere nuovo. Per costruire un pacchetto sintetico
+completo vedere il costruttore in `tests/map-selection.test.mjs`; per il formato
+esatto vedere `src/map-selection/model.ts`. Ogni indice è verificato negli array
+di entità; negli array di riferimenti l'indice è la posizione JSON originale.
+`fixedEncounterSources` concatena, per ciascuna sezione, TileEncounters e
+SectionEncounters soltanto per l'esclusione dal pool normal. I parametri di
+layout/assegnazione non sono input di questo incremento.
+
+```js
+import { selectMapTiles } from './dist/map-selection-library.mjs';
+const result = selectMapTiles(privateInput);
+if (result.status === 'selected') {
+  // AvailableTiles e RNG al confine, da passare a un futuro assemblatore.
+}
+```
+
+La CLI richiede entrambe le opzioni e rifiuta duplicati: exit 0 per selected,
+exit 2 per diagnostico fonte/amministrativo pubblicato, exit 1 per input/I/O
+senza nuovo risultato. Gli errori fonte espliciti hanno codice 2; un'eccezione
+durante un'operazione è distinta da quel codice mediante `operationFailure`.
+La CLI non verifica gli asset installati: conserva la provenienza dichiarata e
+le impronte complete dell'input. La verifica privata controlla anche i file
+originali effettivamente letti.
 
 ## Evidenza richiesta
 

@@ -30,3 +30,25 @@ esclusa solo da normal; criterio matching più forte dell'euristica; Count trie
 dei nodi, cancellazione figli finali e reset tra le fasi; nessun partial success
 quando il budget interrompe il lavoro. Piano verificato contro ogni criterio
 della issue prima di iniziare codice.
+
+## Registro di esecuzione
+
+- Specifica/piano presenti prima del codice: primo commit `979e14e`.
+- CLI assente osservata rossa; validazione/pubblicazione e regressioni geometria
+  verdi: 17 test, typecheck verde; commit `979e14e`.
+- Pool/preludio osservati rossi, quindi 16 test selezione verdi; commit `8a50856`.
+- Cicli trait/minimum/optional osservati rossi, quindi 28 test verdi; estesi a
+  32 per HasAny, retry interrotto e confini float; commit `c00b5d9`.
+- Correzione sulla fonte: `06000cbd:0000–000a` rifiuta un item null, non lancia
+  un'eccezione. Specifica corretta prima dell'implementazione di quel filtro.
+- Il primo A1 reale ha trovato maschere signed negative: riprodotto con fixture
+  inventata rossa, corretto il validatore senza alterare i valori originali.
+- Trace inizializzazione e diagnostici anticipati hanno ciascuno una regressione
+  rossa→verde. Il test del trie è stato rafforzato con conteggi puntuali: entrambe
+  le mutazioni intenzionali (Count solo radici, mancata cancellazione figli)
+  falliscono ora sulla CLI; codice corretto ripristinato prima dei gate finali.
+- Evidenza finale: 47 test sintetici selezione, 47 casi privati, suite completa
+  149/149, typecheck/format/diff verdi. Dettagli e impronte nel
+  [report di verifica](../testing/map-selection-verification.md).
+- Review indipendenti Standards/Spec, PR, push, merge e chiusura #46 rimangono al
+  root. Nessuna di queste operazioni è stata eseguita dall'implementatore.

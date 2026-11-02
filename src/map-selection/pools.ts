@@ -3,6 +3,7 @@ import { loadFloat, storeFloat, type SelectionInput } from './model';
 
 type Observe = {
   tick: () => void;
+  begin: (stage: string) => void;
   emit: (operation: string, details: Record<string, unknown>) => void;
   checkpoint: (stage: string) => void;
 };
@@ -136,12 +137,16 @@ export function shuffleAndMerge(
   rng: SourceRandom,
   observe: Observe,
 ): void {
+  observe.begin('normal-shuffle');
   sourceShuffle(pools.normalShuffled, rng);
   observe.checkpoint('normal-shuffle');
+  observe.begin('chain-shuffle');
   sourceShuffle(pools.chainShuffled, rng);
   observe.checkpoint('chain-shuffle');
+  observe.begin('item-shuffle');
   sourceShuffle(pools.itemEncounterPool, rng);
   observe.checkpoint('item-shuffle');
+  observe.begin('pool-merge');
   const normal = [...pools.normalShuffled],
     chain = [...pools.chainShuffled];
   while (normal.length || chain.length) {
