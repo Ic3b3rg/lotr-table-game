@@ -268,6 +268,12 @@ export function parseAssemblyInput(value: unknown) {
       if (s.serializedConnectedSpaces.some((n) => n >= t.spaces.length || n === i))
         fail('Link serializzato non risolto.');
     });
+    t.spaces.forEach((s, i) => {
+      if (
+        s.serializedConnectedSpaces.some((n) => !t.spaces[n]!.serializedConnectedSpaces.includes(i))
+      )
+        fail('Link serializzato non reciproco.');
+    });
     unique(
       t.hexes.map((h) => h.source),
       'esagono',
