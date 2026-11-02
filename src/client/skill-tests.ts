@@ -1,15 +1,11 @@
 import type { Catalog } from '../shared/catalog';
-import type { Player, Session, SkillTestCommand } from '../shared/protocol';
+import type { Player, Session } from '../shared/protocol';
 import { definitionId } from '../shared/preparation';
 import { STAT_LABELS, type SkillTest } from '../shared/skill-tests';
-import { action, refreshActions } from './actions';
-import { randomIntent, request, RequestError } from './api';
+import { refreshActions } from './actions';
+import { createGameActions } from './game-actions';
 import { cardButton, type CardReader } from './cards';
 import { element, text } from './dom';
-
-type Intent<C = SkillTestCommand> = C extends SkillTestCommand
-  ? Omit<C, 'requestId' | 'generation' | 'expectedRevision'>
-  : never;
 
 export function createSkillTests(sync: () => Promise<void>, reader: CardReader) {
   const root = element('#skill-tests');
@@ -30,7 +26,8 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
   let catalog: Catalog | null = null;
   let rosterKey = '';
   let testKey = '';
-  let pending: { signature: string; body: object } | null = null;
+  const commands = createGameActions(() => current, sync, root, status, error);
+  const { submit } = commands;
 
   function block(button: HTMLButtonElement, value: boolean) {
     button.dataset.blocked = String(value);
@@ -52,7 +49,7 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
       hero && definition
         ? `${definition.name.text} · Ispirazione ${hero.inspiration} / ${definition.stats.inspiration}`
         : '';
-    block(start, Boolean(active) || !own);
+    block(start, Boolean(active) || Boolean(current.scout) || !own);
     block(gain, !own || !definition || hero!.inspiration >= definition.stats.inspiration);
     block(convert, !active || !own || hero!.inspiration < 1 || test!.fateRemaining < 1);
     block(resolve, !active || !own);
@@ -64,51 +61,6 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
     refreshActions();
   }
 
-  async function submit(intent: Intent, focusResult = false) {
-    if (!current) return;
-    const caller = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    let completed = false;
-    await action(async () => {
-      error.hidden = true;
-      const signature = JSON.stringify({ ...intent, generation: current!.generation });
-      if (pending?.signature !== signature)
-        pending = {
-          signature,
-          body: {
-            ...intent,
-            requestId: randomIntent(),
-            generation: current!.generation,
-            expectedRevision: current!.revision,
-          },
-        };
-      try {
-        await request('/api/commands', pending.body);
-        pending = null;
-        await sync();
-        completed = true;
-      } catch (cause) {
-        error.textContent =
-          cause instanceof RequestError
-            ? cause.message
-            : 'Il PC non ha risposto. Riprova: la stessa richiesta verrà applicata una sola volta.';
-        error.hidden = false;
-        if (cause instanceof RequestError) {
-          pending = null;
-          await sync();
-        }
-        error.focus();
-      }
-    });
-    if (completed) {
-      if (
-        focusResult ||
-        !caller?.isConnected ||
-        (caller instanceof HTMLButtonElement && caller.disabled)
-      )
-        status.focus();
-      else caller.focus({ preventScroll: true });
-    }
-  }
   form.onsubmit = (event) => {
     event.preventDefault();
     void submit(
@@ -123,7 +75,7 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
     );
   };
   form.oninput = () => {
-    pending = null;
+    commands.clear();
     updateControls();
   };
   heroSelect.onchange = updateControls;
@@ -164,7 +116,7 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
           }),
         );
         rosterKey = nextRoster;
-        pending = null;
+        commands.clear();
         error.hidden = true;
       }
       const test = session.skillTest;

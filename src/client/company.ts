@@ -5,11 +5,13 @@ import { element, text } from './dom';
 import { cardButton, createCardReader, picture } from './cards';
 import { createPreparation } from './preparation';
 import { createSkillTests } from './skill-tests';
+import { createScouting } from './scouting';
 
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
   const preparation = createPreparation(sync, reader);
   const skillTests = createSkillTests(sync, reader);
+  const scouting = createScouting(sync, reader);
   const status = element('#content-status');
   const heroes = element('#hero-catalog');
   const cards = element('#catalog-cards');
@@ -80,6 +82,7 @@ export function createCompany(sync: () => Promise<void>) {
       if (key !== nextKey && !loading) void load(session);
       preparation.update(session, player, catalog);
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);
+      scouting.update(session, location.pathname === '/join' ? player : null, catalog);
     },
   };
 }

@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette prove standard con i mazzi degli eroi, fato e ispirazione. Capacità delle carte, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Prove abilità](https://github.com/Ic3b3rg/lotr-table-game/issues/25).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette prove standard, fato, ispirazione e Scoperta con carte preparate e mazzi ordinati. Capacità delle carte, turni, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Scoperta](https://github.com/Ic3b3rg/lotr-table-game/issues/27).
 
 ## Preparazione iniziale
 
@@ -62,7 +62,29 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1 e 2 vengono migrati allo schema 3, conservando la compagnia e l'ordine dei mazzi. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 3.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2 e 3 vengono migrati allo schema 4, conservando compagnia, ordine dei mazzi e prove in corso. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 4.
+
+## Scoperta e carte preparate
+
+Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato
+dalla regola o dalla capacità. **Ricomponi e scopri 2** riunisce invece prima
+mazzo e scarti, lasciando escluse le preparate: è l'operazione dell'eroe nella
+riorganizzazione, ancora separata dall'automazione delle fasi del round.
+
+Per ogni carta scegli **Sopra il mazzo**, **Sotto il mazzo** o **Prepara questa
+carta**. Puoi prepararne al massimo una. Con **Sposta prima/dopo** scegli
+l'ordine: la prima dell'elenco sarà la più vicina alla prossima pesca nel
+gruppo sopra o sotto. Poi conferma preparazione e ordine.
+
+Se la nuova carta sarebbe la quinta preparata devi scartarne una fra le
+cinque, anche quella appena scelta. Le debolezze sono preparabili e contano
+nel limite. **Registra lo scarto della carta** serve, fuori dalle prove e da
+Scoperta, per un effetto già risolto dal gruppo; non ne automatizza la capacità.
+
+Prova abilità e Scoperta si escludono: prima concludi la rivelazione in corso.
+Il PC salva le carte rivelate e permette di riprendere la richiesta dopo un
+riavvio o un ripristino. Le selezioni del modulo non ancora confermate si
+mantengono durante il polling, finché la pagina rimane aperta.
 
 ## Prove abilità
 
@@ -99,6 +121,9 @@ npm test
 
 [Contratto delle prove abilità](docs/planning/skill-tests-spec.md) e
 [verifiche delle prove persistenti](docs/testing/skill-tests-verification.md).
+
+[Contratto di Scoperta](docs/planning/scouting-spec.md) e
+[verifiche di Scoperta e carte preparate](docs/testing/scouting-verification.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 

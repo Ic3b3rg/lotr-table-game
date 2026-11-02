@@ -24,10 +24,13 @@ Stesso stack, contenuti privati e confine HTTP reale già approvati.
 - Le debolezze sono preparabili e contano nel limite. La carta ruolo 1 può
   lasciare le preparate; rimane una delle quindici copie dell'eroe.
 - Un comando separato registra lo scarto di una preparata quando un effetto
-  già risolto dal gruppo lo richiede. Non automatizza la sua capacità.
+  già risolto dal gruppo lo richiede, fuori dalle prove e da Scoperta.
+  Le finestre delle capacità durante una prova seguiranno con gli effetti.
 - Una sola rivelazione resta aperta sul tavolo: prova abilità e Scoperta si
   escludono. Durante Scoperta non si scartano altre preparate. Il recupero
   non ripete pesca o mescolamento; la scelta pendente è nello stato salvato.
+  Sono salvate le rivelate e la richiesta; le scelte del modulo non confermate
+  restano sul dispositivo finché la pagina rimane aperta.
 - Mazzo vuoto: si ricompongono soltanto gli scarti disponibili, anche a metà
   pesca. Se le carte disponibili sono meno di X si rivela il possibile.
   Preparate, mazzo, scarti e rivelate conservano sempre quindici copie.

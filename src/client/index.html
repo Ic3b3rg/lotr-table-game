@@ -112,6 +112,66 @@
             <p id="content-status" role="status">Caricamento delle carte…</p>
           </div>
           <div id="company-preparation"></div>
+          <section id="scouting" class="skill-tests" aria-labelledby="scouting-title" hidden>
+            <h3 id="scouting-title">Scoperta e carte preparate</h3>
+            <p class="company-help">
+              Scopri carte quando una regola o una capacità lo richiede. Puoi prepararne una e
+              scegliere l’ordine delle altre sopra o sotto il mazzo. Per riorganizzare l’eroe,
+              ricomponi prima il mazzo e scopri due carte.
+            </p>
+            <p id="scout-observer" class="company-help">
+              Il proprietario dell’eroe sceglie dalla propria vista personale. Qui tutti seguono le
+              carte.
+            </p>
+            <form id="scout-start-form">
+              <div class="test-fields">
+                <label>Eroe da gestire<select id="scout-hero" required></select></label>
+                <label
+                  >Carte da scoprire<input
+                    id="scout-count"
+                    type="number"
+                    min="1"
+                    max="15"
+                    step="1"
+                    value="2"
+                    required
+                /></label>
+              </div>
+              <div class="test-actions">
+                <button id="start-scout" type="submit" class="company-action" data-write>
+                  Scopri le carte richieste
+                </button>
+                <button id="rally-scout" type="button" class="company-action" data-write>
+                  Ricomponi e scopri 2
+                </button>
+              </div>
+            </form>
+            <div id="scout-discard-controls">
+              <label
+                >Scarta una preparata per un effetto già risolto<select
+                  id="prepared-discard-copy"
+                ></select
+              ></label>
+              <button id="discard-prepared" type="button" class="company-link" data-write>
+                Registra lo scarto della carta
+              </button>
+            </div>
+            <p id="scout-status" class="test-status" role="status" tabindex="-1"></p>
+            <ul id="scout-cards" class="test-revealed"></ul>
+            <form id="scout-choice-form" hidden>
+              <p id="scout-choice-help" class="company-help" role="status"></p>
+              <label id="scout-limit-field" hidden
+                >Scarta una delle cinque preparate<select id="scout-limit-discard"></select
+              ></label>
+              <button id="confirm-scout" type="submit" class="company-action" data-write>
+                Conferma preparazione e ordine
+              </button>
+            </form>
+            <p id="scout-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+            <p class="company-help">
+              Le capacità delle carte e le fasi del round non sono ancora automatizzate.
+            </p>
+          </section>
           <section id="skill-tests" class="skill-tests" aria-labelledby="skill-tests-title" hidden>
             <h3 id="skill-tests-title">Prove abilità</h3>
             <p class="company-help" id="skill-test-help">
@@ -284,7 +344,7 @@
         <span class="small-mark" aria-hidden="true">✧</span>
         <p>
           Compagnia e carte · tavolo locale<br /><span
-            >Prove standard disponibili. Capacità, movimento, combattimento e campagna
+            >Prove e Scoperta disponibili. Capacità, movimento, combattimento e campagna
             seguono.</span
           >
         </p>
