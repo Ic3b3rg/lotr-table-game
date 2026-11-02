@@ -62,3 +62,6 @@ delle preparate disponibile fuori dalle prove e da Scoperta.
 
 Lo schema 4 richiede una copia precedente per il downgrade. La prova fisica
 su Mac/Windows e telefoni senza WAN resta nel ticket #5.
+
+[Revisione indipendente Standards/Spec e UI](../reviews/2026-11-02-scouting.md):
+nessun rilievo nel perimetro della consegna.
