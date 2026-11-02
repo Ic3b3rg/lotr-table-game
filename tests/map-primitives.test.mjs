@@ -163,3 +163,98 @@ test('la politica float32 dichiarata può arrotondare a uno e conserva gli estre
   assert.equal(same.snapshot().samples, 1);
 });
 
+test('shuffle usa il range completo in ordine crescente e consuma anche il singleton', () => {
+  for (const vector of vectors.shuffle) {
+    const random = new SourceRandom(vector.seed);
+    const values = Array.from({ length: vector.size }, (_, i) => i);
+    sourceShuffle(values, random);
+    assert.deepEqual(values, vector.order);
+    assert.equal(random.snapshot().samples, vector.samples);
+    assert.deepEqual(sourceState(random), vector.state);
+  }
+  const random = new SourceRandom(0);
+  sourceShuffle(null, random);
+  assert.equal(random.snapshot().samples, 0);
+});
+
+test('shuffle rifiuta un contatore insufficiente prima di modificare lista o casualità', () => {
+  const state = new SourceRandom(0).snapshot();
+  state.samples = Number.MAX_SAFE_INTEGER - 1;
+  state.inext = ((state.samples - 1) % 55) + 1;
+  state.inextp = (((state.samples % 55) + 20) % 55) + 1;
+  const random = SourceRandom.restore(state);
+  const values = ['a', 'b'];
+  assert.throws(() => sourceShuffle(values, random));
+  assert.deepEqual(random.snapshot(), state);
+  assert.deepEqual(values, ['a', 'b']);
+});
+
+test('Comparison sort conserva pari e sequenza dei confronti di insertion, partition e heap', () => {
+  assert.ok(vectors.sort.some((v) => v.heapCalls > 0));
+  for (const vector of vectors.sort) {
+    const values = vector.keys.map((key, id) => ({ id, key }));
+    const comparisons = [];
+    comparisonSort(values, (a, b) => {
+      comparisons.push([a.id, b.id]);
+      return a.key - b.key;
+    });
+    assert.deepEqual(
+      values.map((v) => v.id),
+      vector.order,
+      vector.name,
+    );
+    assert.equal(comparisons.length, vector.comparisonCount, vector.name);
+    assert.equal(hash(comparisons), vector.comparisonHash, vector.name);
+    assert.deepEqual(
+      values.map((v) => v.key),
+      [...vector.keys].sort((a, b) => a - b),
+    );
+  }
+});
+
+test('il comparatore asimmetrico delle sezioni segue i due passaggi originali', () => {
+  const values = [
+    { id: 0, required: [1] },
+    { id: 1, required: [0, 3, 2] },
+    { id: 2, required: [3, 1] },
+    { id: 3, required: [2, 1] },
+  ];
+  let most = null;
+  function compare(a, b) {
+    if (most && a.id === most.id) return -1;
+    if (most && b.id === most.id) return 1;
+    if (a.required.length !== b.required.length) return b.required.length - a.required.length;
+    return most ? (a.required.includes(most.id) ? -1 : 1) : 0;
+  }
+  comparisonSort(values, compare);
+  assert.deepEqual(
+    values.map((v) => v.id),
+    [1, 2, 3, 0],
+  );
+  most = values[0];
+  comparisonSort(values, compare);
+  assert.deepEqual(
+    values.map((v) => v.id),
+    [1, 3, 2, 0],
+  );
+});
+
+test('Comparison sort rifiuta risultati fuori int32 e confronti che escono dalla lista', () => {
+  assert.throws(() => comparisonSort([], null));
+  for (const value of [NaN, Infinity, 0.5, 2147483648, -2147483649])
+    assert.throws(() => comparisonSort([2, 1], () => value));
+  assert.throws(() =>
+    comparisonSort(
+      Array.from({ length: 17 }, (_, i) => i),
+      () => -1,
+    ),
+  );
+  const error = new Error('callback failed');
+  assert.throws(
+    () =>
+      comparisonSort([2, 1], () => {
+        throw error;
+      }),
+    (e) => e === error,
+  );
+});

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export { comparisonSort } from './comparison-sort';
 
 const MIN = -2147483648;
 const MAX = 2147483647;
@@ -134,5 +135,16 @@ export class SourceRandom {
     if (![a, b, range].every(Number.isFinite))
       throw new RangeError('Intervallo fuori dal formato float32.');
     return Math.fround(a + Math.fround(Math.fround(this.nextDouble()) * range));
+  }
+}
+
+/** Source full-range ascending swaps, including a draw for singleton lists. */
+export function sourceShuffle<T>(items: T[] | null, random: SourceRandom): void {
+  if (items === null || items.length === 0) return;
+  if (Number.MAX_SAFE_INTEGER - random.snapshot().samples < items.length)
+    throw new RangeError('Contatore insufficiente per mescolare la lista.');
+  for (let i = 0; i < items.length; i++) {
+    const other = random.nextInt(0, items.length);
+    [items[i], items[other]] = [items[other]!, items[i]!];
   }
 }
