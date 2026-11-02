@@ -8,6 +8,7 @@ import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
 import { preparationView } from '../shared/preparation';
+import { skillTestView } from '../shared/skill-tests';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
 export type { State } from './state';
 
@@ -36,7 +37,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
@@ -45,6 +46,7 @@ export class Store {
       demo: null,
       content: null,
       preparation: null,
+      skillTest: null,
     };
     this.db
       .prepare('INSERT OR IGNORE INTO session (id, data) VALUES (1, ?)')
@@ -251,7 +253,8 @@ export function publicSession(state: State) {
     updatedAt: state.updatedAt,
     players: state.players.map(({ id, name }) => ({ id, name })),
     demo: state.demo,
-    preparation: preparationView(state.preparation),
+    preparation: preparationView(state.preparation, state.skillTest),
+    skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
 }

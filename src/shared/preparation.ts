@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ContentIdSchema, type Catalog } from './catalog';
+import type { SkillTest } from './skill-tests';
 
 export const CopyIdSchema = z
   .string()
@@ -10,6 +11,7 @@ export const PreparedHeroSchema = z.strictObject({
   playerId: z.uuid(),
   roleId: ContentIdSchema.nullable(),
   itemCopies: z.array(CopyIdSchema).max(3),
+  inspiration: z.int().nonnegative(),
   prepared: z.array(CopyIdSchema).max(4),
   deck: z.array(CopyIdSchema).max(30),
   discard: z.array(CopyIdSchema).max(30),
@@ -44,6 +46,7 @@ export function preparationProblem(
   catalog: Catalog,
   playerIds: string[],
   preparation: Preparation,
+  test: SkillTest | null = null,
 ): string | null {
   const heroes = preparation.heroes;
   if (
@@ -68,6 +71,10 @@ export function preparationProblem(
       (copy) => catalog.items.find((entry) => entry.id === definitionId(copy))!,
     );
     if (
+      hero.inspiration > catalog.heroes.find((entry) => entry.id === hero.heroId)!.stats.inspiration
+    )
+      return 'L’ispirazione supera il limite dell’eroe.';
+    if (
       items.some((item) => item.rank !== 1 || item.slot === 'trinket') ||
       items.reduce((n, item) => n + item.hands, 0) >
         catalog.heroes.find((entry) => entry.id === hero.heroId)!.maxHands ||
@@ -76,7 +83,7 @@ export function preparationProblem(
       return `Scegli oggetti iniziali di rango I: questo eroe può equipaggiare al massimo ${catalog.heroes.find((entry) => entry.id === hero.heroId)!.maxHands} mani e un’armatura, senza monili.`;
     if (
       preparation.status === 'draft' &&
-      (hero.prepared.length || hero.deck.length || hero.discard.length)
+      (hero.prepared.length || hero.deck.length || hero.discard.length || hero.inspiration)
     )
       return 'Un mazzo non può esistere prima della preparazione.';
   }
@@ -99,15 +106,16 @@ export function preparationProblem(
     for (const hero of heroes) {
       const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
       const role = catalog.roles.find((entry) => entry.id === hero.roleId)!;
+      const revealed =
+        test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : [];
       if (
         hero.prepared.length !== 1 ||
         hero.prepared[0] !== `${role.skills[0]}:1` ||
-        hero.deck.length !== 14 ||
-        hero.discard.length !== 0
+        hero.deck.length + hero.discard.length + revealed.length !== 14
       )
-        return 'Mazzo iniziale o carta preparata non validi.';
+        return 'Mazzo o carta preparata non validi.';
       const expected = [...catalog.basicSkills, ...definition.skills, ...role.skills];
-      const actual = [...hero.prepared, ...hero.deck];
+      const actual = [...hero.prepared, ...hero.deck, ...hero.discard, ...revealed];
       const definitions = actual.map(definitionId);
       if (
         expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
@@ -125,7 +133,7 @@ export function preparationProblem(
     return 'La riserva non è ancora preparata.';
   return null;
 }
-export function preparationView(preparation: Preparation | null) {
+export function preparationView(preparation: Preparation | null, test: SkillTest | null = null) {
   if (!preparation) return null;
   return {
     status: preparation.status,
@@ -133,7 +141,12 @@ export function preparationView(preparation: Preparation | null) {
       ...hero,
       deckCount: deck.length,
       discardCount: discard.length,
-      composition: [...hero.prepared, ...deck, ...discard].sort(),
+      composition: [
+        ...hero.prepared,
+        ...deck,
+        ...discard,
+        ...(test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : []),
+      ].sort(),
     })),
   };
 }

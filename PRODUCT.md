@@ -23,7 +23,7 @@ Un processo host su PC macOS o Windows conserva il salvataggio e serve le interf
 - Salvataggio automatico prima della conferma di ogni azione accettata; copia esportabile e importabile.
 - Codice personale per recuperare il proprio posto su un altro dispositivo; il QR pubblico non contiene il codice.
 - Decisioni comuni secondo le regole del gioco, senza introdurre votazioni o precedenze di gioco basate sulla velocità dei telefoni.
-- Sono implementati sessione, QR, recupero, prova condivisa e backup, più la preparazione persistente con sei eroi, sei ruoli, equipaggiamento iniziale e mazzi reali. Il catalogo italiano privato distingue testi ufficiali, traduzioni e associazioni candidate. Effetti, prove, movimento, combattimento e campagna giocabile seguono negli incrementi successivi.
+- Sono implementati sessione, QR, recupero, prova condivisa e backup, preparazione persistente con sei eroi, sei ruoli, equipaggiamento iniziale e mazzi reali, e prove standard con pesca, fato e ispirazione recuperabili. Il catalogo italiano privato distingue testi ufficiali, traduzioni e associazioni candidate. Capacità delle carte, turni, movimento, combattimento e campagna giocabile seguono negli incrementi successivi.
 - Stack esistente: Node 24, HTTP locale, SQLite, TypeScript, HTML e CSS. La futura tecnologia di rendering della mappa non è ancora decisa.
 - Uso personale; distribuzione pubblica e gioco remoto via Internet non fanno parte del primo rilascio.
 

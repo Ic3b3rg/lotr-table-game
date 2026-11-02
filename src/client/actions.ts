@@ -1,22 +1,22 @@
 let online = false;
 let busy = false;
-function render() {
+export function refreshActions() {
   document.querySelectorAll<HTMLButtonElement>('button[data-write]').forEach((button) => {
     button.disabled = !online || busy || button.dataset.blocked === 'true';
   });
 }
 export function setOnline(value: boolean) {
   online = value;
-  render();
+  refreshActions();
 }
 export async function action(work: () => Promise<void>) {
   if (!online || busy) return;
   busy = true;
-  render();
+  refreshActions();
   try {
     await work();
   } finally {
     busy = false;
-    render();
+    refreshActions();
   }
 }

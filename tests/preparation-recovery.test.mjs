@@ -185,6 +185,7 @@ test('sessioni e backup precedenti migrano conservando posti e codice personale'
   const backup = await (await first.request('/api/backups', undefined, ada.cookie)).json();
   delete backup.payload.state.content;
   delete backup.payload.state.preparation;
+  delete backup.payload.state.skillTest;
   backup.payload.state.schemaVersion = 1;
   signed(backup);
   await first.stop();
@@ -199,7 +200,7 @@ test('sessioni e backup precedenti migrano conservando posti e codice personale'
     await first.dispose();
   });
   const migrated = await (await host.request('/api/session')).json();
-  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.schemaVersion, 3);
   assert.deepEqual(migrated.players, [{ id: ada.body.player.id, name: 'Ada' }]);
   assert.equal(migrated.catalog, null);
   assert.equal(migrated.preparation, null);

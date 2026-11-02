@@ -2,7 +2,7 @@
 
 # Viaggi · tavolo locale
 
-Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR e conserva la preparazione della compagnia: eroi, ruoli, equipaggiamento e mazzi iniziali. Effetti, prove, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Specifica e task della preparazione](https://github.com/Ic3b3rg/lotr-table-game/issues/20).
+Versione digitale personale di Viaggi nella Terra di Mezzo, in sviluppo. Il tavolo sul PC accoglie i telefoni via QR, conserva la compagnia e permette prove standard con i mazzi degli eroi, fato e ispirazione. Capacità delle carte, movimento, combattimento e campagna giocabile seguono nei prossimi incrementi. [Prove abilità](https://github.com/Ic3b3rg/lotr-table-game/issues/25).
 
 ## Preparazione iniziale
 
@@ -58,11 +58,30 @@ Aprire [il tavolo della compagnia](http://127.0.0.1:4321). Il percorso dati dist
 
 Da **Eroi e carte**, entrare al tavolo e scegliere i propri eroi: da due a quattro in solitario, uno per persona con due–cinque partecipanti. Ruoli e oggetti suggeriti sono modificabili; le copie già assegnate restano riservate. I limiti individuali dell'eroe, le mani, l'armatura e il rango iniziale vengono controllati dall'host. Il PC condiviso può consultare tutte le schede senza entrare.
 
-Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Non sono ancora disponibili cambi al campo o azioni dell'avventura.
+Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Le prove standard sono disponibili subito sotto; cambi al campo e avventure seguiranno.
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup della sessione vengono migrati allo schema 2. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 2.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1 e 2 vengono migrati allo schema 3, conservando la compagnia e l'ordine dei mazzi. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 3.
+
+## Prove abilità
+
+Dalla vista personale, nella sezione **Prove abilità**, scegli un tuo eroe,
+la caratteristica e la soglia indicate dalla regola. Puoi anche scegliere il
+semplice conteggio dei successi. Lascia il modificatore a zero, salvo un effetto
+già determinato dal gruppo, poi premi **Rivela le carte della prova**.
+
+Nelle carte rivelate contano soltanto i simboli. Ogni ispirazione spesa converte
+un fato in un successo; **Concludi la prova** registra il risultato e scarta le
+carte. L'host ricompone automaticamente il mazzo quando si esaurisce, escludendo
+le carte preparate e quelle ancora nella prova. **Registra 1 ispirazione ottenuta**
+serve per un effetto già risolto dal gruppo, entro il limite dell'eroe.
+
+Una sola prova resta aperta sul tavolo; il suo proprietario la gestisce e gli
+altri schermi ne seguono l'esito. Ricarica, recupero, riavvio e backup conservano
+anche una prova interrotta fra pesca e conversioni. Le capacità di eroi, carte
+preparate e oggetti non sono automatizzate: questa è la base delle prove, ancora
+separata da turni, attacchi e campagna giocabile.
 
 ## Sviluppo e verifiche
 
@@ -77,6 +96,9 @@ npm test
 [Risultati delle verifiche e prova sui dispositivi](docs/testing/offline-session-verification.md), [revisione di standard e specifica](docs/reviews/2026-10-23-offline-session.md).
 
 [Verifiche della preparazione reale](docs/testing/party-preparation-verification.md), [revisione indipendente della preparazione](docs/reviews/2026-10-25-party-preparation.md).
+
+[Contratto delle prove abilità](docs/planning/skill-tests-spec.md) e
+[verifiche delle prove persistenti](docs/testing/skill-tests-verification.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 

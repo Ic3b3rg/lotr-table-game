@@ -159,6 +159,13 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     if (current!.preparation?.status === 'prepared') {
       const prepared = text('div', '', 'prepared-card-area');
       prepared.append(text('h4', 'Carta preparata'));
+      prepared.append(
+        text(
+          'p',
+          `Ispirazione: ${hero.inspiration} / ${definition.stats.inspiration} · Scarti: ${hero.discardCount}`,
+          'company-help',
+        ),
+      );
       for (const copy of hero.prepared) {
         const card = content.skills.find((entry) => entry.id === definitionId(copy));
         if (card) prepared.append(cardButton(card, (button) => reader.card(card, button)));
@@ -288,7 +295,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
     const description = text(
       'p',
       prepared
-        ? 'Eroi e mazzi sono salvati. Prove, movimento e combattimento arriveranno nel prossimo incremento.'
+        ? 'Eroi e mazzi sono salvati. Puoi effettuare le prove standard qui sotto; movimento e combattimento seguiranno.'
         : player
           ? session.players.length === 1
             ? 'Se giochi da solo, scegli da due a quattro eroi. Ogni eroe avrà il suo mazzo.'
