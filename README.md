@@ -144,6 +144,23 @@ e Home controllano la camera dalla mappa. Ricarica, recupero e backup
 conservano posizioni e viaggio interrotto; il ripristino funziona senza il
 pacchetto, mentre le immagini opzionali vanno reinstallate separatamente.
 
+Per lo sviluppo della mappa completa è disponibile un compilatore geometrico
+separato dal tavolo. Dopo `npm run build`, con un pacchetto privato nel
+[formato descritto](docs/planning/initial-map-geometry-spec.md):
+
+```sh
+node dist/map-geometry.mjs --input geometry.json --rotation 0 --list
+node dist/map-geometry.mjs --input geometry.json --rotation 0 --placement 0 --output composed.json
+```
+
+La prima chiamata elenca le giunzioni legali; la seconda congela quella
+selezionata in un file nuovo, senza sovrascrivere. Senza `--output` il JSON va
+su stdout. Il risultato `scope: geometry-only` conserva pacchetto, impronta,
+pose e grafo; non viene caricato dall'host. La verifica originale copre la
+prima sezione 302A/custom100A. Scelta casuale, mappa completa e avvio dello
+scenario restano in [#41](https://github.com/Ic3b3rg/lotr-table-game/issues/41)
+e [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38).
+
 ## Scoperta e carte preparate
 
 Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato
