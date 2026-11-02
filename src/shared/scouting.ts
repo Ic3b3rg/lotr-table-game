@@ -5,6 +5,7 @@ import { CopyIdSchema, type Preparation } from './preparation';
 export const ScoutingSchema = z.strictObject({
   id: z.uuid(),
   heroId: ContentIdSchema,
+  roundId: z.uuid().nullable(),
   count: z.int().min(1).max(15),
   resetBefore: z.boolean(),
   revealed: z.array(CopyIdSchema).min(1).max(15),

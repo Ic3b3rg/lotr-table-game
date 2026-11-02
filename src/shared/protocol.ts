@@ -3,6 +3,7 @@ import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
 import { SkillTestViewSchema, StatSchema } from './skill-tests';
 import { ScoutingSchema } from './scouting';
+import { RoundSchema, ShadowStepSchema } from './rounds';
 
 export const NameSchema = z
   .string()
@@ -37,7 +38,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(4),
+  schemaVersion: z.literal(5),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -48,6 +49,7 @@ export const SessionSchema = z.strictObject({
   preparation: PreparationViewSchema.nullable(),
   skillTest: SkillTestViewSchema.nullable(),
   scout: ScoutingSchema.nullable(),
+  round: RoundSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -55,7 +57,43 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
+const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('START_ROUNDS'),
+    expectedRevision: z.int().nonnegative(),
+    agreed: z.literal(true),
+  }),
+  z.strictObject({
+    ...RoundBase,
+    type: z.literal('START_TURN'),
+    heroId: ContentIdSchema,
+    agreed: z.literal(true),
+  }),
+  z.strictObject({
+    ...RoundBase,
+    type: z.literal('END_TURN'),
+    heroId: ContentIdSchema,
+    turnId: z.uuid(),
+  }),
+  z.strictObject({ ...RoundBase, type: z.literal('BEGIN_SHADOW'), agreed: z.literal(true) }),
+  z.strictObject({
+    ...RoundBase,
+    type: z.literal('CONFIRM_SHADOW_STEP'),
+    step: ShadowStepSchema,
+    agreed: z.literal(true),
+  }),
+  z.strictObject({ ...RoundBase, type: z.literal('END_RALLY'), agreed: z.literal(true) }),
+  z.strictObject({
+    ...RoundBase,
+    type: z.literal('START_INTERACTION_TEST'),
+    turnId: z.uuid(),
+    heroId: ContentIdSchema,
+    stat: StatSchema,
+    modifier: z.int().min(-20).max(20),
+    target: z.int().min(1).max(99).nullable(),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('DISCARD_PREPARED_SKILL'),
@@ -68,6 +106,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
     type: z.literal('START_RALLY_SCOUT'),
     expectedRevision: z.int().nonnegative(),
     heroId: ContentIdSchema,
+    roundId: z.uuid().optional(),
   }),
   z.strictObject({
     ...CommandBase,
@@ -157,6 +196,24 @@ export const ReceiptSchema = z.union([
   DemoReceiptSchema,
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum([
+      'START_ROUNDS',
+      'START_TURN',
+      'END_TURN',
+      'BEGIN_SHADOW',
+      'START_INTERACTION_TEST',
+      'CONFIRM_SHADOW_STEP',
+      'END_RALLY',
+    ]),
+    appliedRevision: z.int().nonnegative(),
+    roundId: z.uuid(),
+    roundNumber: z.int().positive(),
+    phase: z.enum(['action', 'shadow', 'rally']),
+    turnId: z.uuid().nullable(),
+    testId: z.uuid().nullable(),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['START_SCOUT', 'START_RALLY_SCOUT', 'RESOLVE_SCOUT', 'DISCARD_PREPARED_SKILL']),
     appliedRevision: z.int().nonnegative(),
     heroId: ContentIdSchema,
@@ -207,4 +264,17 @@ export type SkillTestCommand = Extract<
 export type ScoutingCommand = Extract<
   Command,
   { type: 'START_SCOUT' | 'START_RALLY_SCOUT' | 'RESOLVE_SCOUT' | 'DISCARD_PREPARED_SKILL' }
+>;
+export type RoundCommand = Extract<
+  Command,
+  {
+    type:
+      | 'START_ROUNDS'
+      | 'START_TURN'
+      | 'END_TURN'
+      | 'BEGIN_SHADOW'
+      | 'START_INTERACTION_TEST'
+      | 'CONFIRM_SHADOW_STEP'
+      | 'END_RALLY';
+  }
 >;

@@ -4,6 +4,7 @@ import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema, PreparedHeroSchema, preparationProblem } from '../shared/preparation';
 import { SkillTestSchema, skillTestProblem } from '../shared/skill-tests';
 import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
+import { RoundSchema, roundProblem } from '../shared/rounds';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -14,11 +15,13 @@ const BaseStateSchema = SessionSchema.omit({
   preparation: true,
   skillTest: true,
   scout: true,
+  round: true,
 }).extend({
   content: CatalogSchema.nullable(),
   preparation: PreparationSchema.nullable().default(null),
   skillTest: SkillTestSchema.nullable(),
   scout: ScoutingSchema.nullable(),
+  round: RoundSchema.nullable(),
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
@@ -43,6 +46,8 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
   if (testProblem) ctx.addIssue({ code: 'custom', message: testProblem });
   const scoutProblem = scoutingProblem(state.content, state.preparation, state.scout);
   if (scoutProblem) ctx.addIssue({ code: 'custom', message: scoutProblem });
+  const roundError = roundProblem(state.round, state.preparation, state.skillTest, state.scout);
+  if (roundError) ctx.addIssue({ code: 'custom', message: roundError });
   if (state.scout && state.skillTest?.status === 'converting')
     ctx.addIssue({
       code: 'custom',
@@ -68,10 +73,15 @@ const LegacyStateSchema = BaseStateSchema.omit({
   preparation: true,
   skillTest: true,
   scout: true,
+  round: true,
 }).extend({
   schemaVersion: z.literal(1),
 });
-const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true, scout: true }).extend({
+const VersionTwoStateSchema = BaseStateSchema.omit({
+  skillTest: true,
+  scout: true,
+  round: true,
+}).extend({
   schemaVersion: z.literal(2),
   preparation: PreparationSchema.extend({
     heroes: z.array(PreparedHeroSchema.omit({ inspiration: true })).max(5),
@@ -79,9 +89,13 @@ const VersionTwoStateSchema = BaseStateSchema.omit({ skillTest: true, scout: tru
     .nullable()
     .default(null),
 });
-const VersionThreeStateSchema = BaseStateSchema.omit({ scout: true }).extend({
+const VersionThreeStateSchema = BaseStateSchema.omit({ scout: true, round: true }).extend({
   schemaVersion: z.literal(3),
   skillTest: SkillTestSchema.omit({ availableCount: true }).nullable(),
+});
+const VersionFourStateSchema = BaseStateSchema.omit({ round: true }).extend({
+  schemaVersion: z.literal(4),
+  scout: ScoutingSchema.omit({ roundId: true }).nullable(),
 });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -90,19 +104,21 @@ export function parseState(raw: unknown): State {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 4,
+        schemaVersion: 5,
         content: null,
         skillTest: null,
         scout: null,
+        round: null,
       });
     }
     if (version === 2) {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 4,
+        schemaVersion: 5,
         skillTest: null,
         scout: null,
+        round: null,
         preparation: previous.preparation
           ? {
               ...previous.preparation,
@@ -115,9 +131,19 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 4,
+        schemaVersion: 5,
         scout: null,
+        round: null,
         skillTest: previous.skillTest ? { ...previous.skillTest, availableCount: 14 } : null,
+      });
+    }
+    if (version === 4) {
+      const previous = VersionFourStateSchema.parse(raw);
+      return StateSchema.parse({
+        ...previous,
+        schemaVersion: 5,
+        round: null,
+        scout: previous.scout ? { ...previous.scout, roundId: null } : null,
       });
     }
   }

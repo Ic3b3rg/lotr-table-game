@@ -19,3 +19,17 @@ _Avoid_: Avventura
 **Avventura**:
 Uno scenario della campagna, con obiettivi, eventi e un esito che contribuisce alla sua prosecuzione.
 _Avoid_: Campagna
+
+**Round**:
+Il ciclo composto da Fase di Azione, Fase di Ombra e Fase di Riorganizzazione.
+_Avoid_: Turno
+
+**Turno**:
+Il periodo della Fase di Azione in cui un solo eroe completa fino a due azioni
+prima che inizi il turno di un altro eroe.
+_Avoid_: Round, turno del giocatore
+
+**Azione**:
+Una delle attività che consumano il limite del turno dell'eroe: viaggio,
+attacco, interazione o una capacità che richieda esplicitamente un'azione.
+Un effetto che concede un'attività non è di per sé un'azione.
