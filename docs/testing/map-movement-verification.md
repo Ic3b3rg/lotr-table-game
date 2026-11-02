@@ -190,3 +190,17 @@ Il controllo dell'autore su contratto/diff è distinto dalle review fresche
 Standards/Spec richieste al root. Nessun subagente, altro checkout, push, PR,
 commento, aggiornamento o chiusura GitHub. Nessun avvio Unity o accesso a
 salvataggi originali, browser/host attivo root o dati di sessione.
+
+## Integrazione root
+
+Le [review Standards e Spec](../reviews/2026-11-02-map-movement.md) sono
+concluse senza rilievi su entrambi gli assi. Il root ha ripetuto la suite
+completa (**222/222**, zero skipped), typecheck, format e diff check.
+Ripetuti inoltre **47/47** casi, entrambi i checker e tutti i confronti
+fonte/baseline: impronta della matrice identica a quella riportata sopra.
+Il replay H3 e lo stop finale sono stati ripetuti nel checkout root,
+con 91.998 osservazioni e byte identici tra le due esecuzioni del replay.
+Log e output root: `.scratch/movement-root-review/`; il bundle baseline
+catturato prima della build ha SHA-256
+`01acdcf1820bbe10e6adae8b180ed921f64500cc5e95f645484799d68a3564a6`,
+uguale alla baseline privata del child.

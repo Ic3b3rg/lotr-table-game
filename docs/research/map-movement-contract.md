@@ -3,6 +3,11 @@
 Follow-up di #48, 2 novembre 2026. Questo documento fissa il confine del
 prossimo incremento; il movimento non è ancora un consumatore dell'assemblatore.
 
+Aggiornamento #50: l'adattatore `movementGraph` è ora implementato nella
+libreria/CLI, con [verifica](../testing/map-movement-verification.md).
+Il runtime degli eroi/nemici non lo consuma ancora e `runtimeReady` resta
+falso. Il contratto seguente descrive la separazione da conservare.
+
 ## Due dati con responsabilità diverse
 
 `TileSpace.Reset` (`A0ea8`) svuota ConnectedSpaces. Il generatore originale
