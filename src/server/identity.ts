@@ -31,6 +31,12 @@ export function joinPlayer(store: Store, body: z.infer<typeof JoinSchema>) {
         );
       return publicPlayer(previous);
     }
+    if (state.preparation?.status === 'prepared')
+      throw new ApiError(
+        409,
+        'COMPANY_PREPARED',
+        'La compagnia è già pronta. Recupera un posto esistente con il codice personale.',
+      );
     if (state.players.some((player) => player.recoveryHash === recoveryHash))
       throw new ApiError(409, 'CODE_IN_USE', 'Usa un nuovo codice personale per un nuovo posto.');
     if (state.players.length >= 5)

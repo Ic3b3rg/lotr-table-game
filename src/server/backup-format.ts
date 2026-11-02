@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { IntentIdSchema, ReceiptSchema } from '../shared/protocol';
-import { StateSchema } from './state';
+import { StateSchema, parseState } from './state';
 
 const HashSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const BackupCommandSchema = z.strictObject({
@@ -30,7 +30,7 @@ export const BackupPayloadSchema = z
   });
 export type BackupPayload = z.infer<typeof BackupPayloadSchema>;
 
-function canonical(value: unknown): string {
+export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (value && typeof value === 'object')
     return `{${Object.entries(value)
@@ -39,19 +39,37 @@ function canonical(value: unknown): string {
       .join(',')}}`;
   return JSON.stringify(value) ?? 'null';
 }
-export const checksum = (payload: BackupPayload) =>
+export const checksum = (payload: unknown) =>
   createHash('sha256').update(canonical(payload)).digest('hex');
 export const BackupSchema = z
   .strictObject({
     format: z.literal('lotr-offline-session'),
     formatVersion: z.literal(1),
     exportedAt: z.iso.datetime(),
-    payload: BackupPayloadSchema,
+    payload: z.unknown(),
     checksum: HashSchema,
   })
-  .superRefine((backup, ctx) => {
-    if (checksum(backup.payload) !== backup.checksum)
+  .transform((backup, ctx) => {
+    if (checksum(backup.payload) !== backup.checksum) {
       ctx.addIssue({ code: 'custom', message: 'La copia è stata modificata o è incompleta.' });
+      return z.NEVER;
+    }
+    try {
+      const raw = z
+        .strictObject({ state: z.unknown(), commands: z.unknown() })
+        .parse(backup.payload);
+      const payload = BackupPayloadSchema.parse({
+        state: parseState(raw.state),
+        commands: raw.commands,
+      });
+      return { ...backup, payload };
+    } catch {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Il salvataggio contiene dati incompatibili o incoerenti.',
+      });
+      return z.NEVER;
+    }
   });
 export const RestoreSchema = z.strictObject({
   backup: BackupSchema,

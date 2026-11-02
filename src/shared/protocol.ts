@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { CatalogSummarySchema, ContentIdSchema } from './catalog';
+import { CopyIdSchema, PreparationViewSchema } from './preparation';
 
 export const NameSchema = z
   .string()
@@ -33,13 +35,15 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
   updatedAt: z.iso.datetime(),
   players: z.array(PlayerSchema).max(5),
   demo: DemoSchema.nullable().default(null),
+  catalog: CatalogSummarySchema.nullable(),
+  preparation: PreparationViewSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -48,6 +52,26 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('PREPARE_COMPANY'),
+    expectedRevision: z.int().nonnegative(),
+    agreed: z.literal(true),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('SELECT_HEROES'),
+    expectedRevision: z.int().nonnegative(),
+    heroIds: z.array(ContentIdSchema).max(4),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('CONFIGURE_HERO'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    roleId: ContentIdSchema.nullable(),
+    itemCopies: z.array(CopyIdSchema).max(3),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('OPEN_DEMO'),
@@ -61,13 +85,22 @@ export const CommandSchema = z.discriminatedUnion('type', [
     agreed: z.literal(true),
   }),
 ]);
-export const ReceiptSchema = z.strictObject({
+const DemoReceiptSchema = z.strictObject({
   requestId: IntentIdSchema,
   type: z.enum(['OPEN_DEMO', 'RESOLVE_DEMO']),
   appliedRevision: z.int().nonnegative(),
   demoId: z.uuid(),
   choice: z.enum(['A', 'B']).nullable(),
 });
+export const ReceiptSchema = z.union([
+  DemoReceiptSchema,
+  z.strictObject({
+    requestId: IntentIdSchema,
+    type: z.enum(['SELECT_HEROES', 'CONFIGURE_HERO', 'PREPARE_COMPANY']),
+    appliedRevision: z.int().nonnegative(),
+    preparationStatus: z.enum(['draft', 'prepared']),
+  }),
+]);
 export const BackupPreviewSchema = z.object({
   format: z.literal('lotr-offline-session'),
   formatVersion: z.literal(1),
@@ -85,3 +118,8 @@ export type HostInfo = z.infer<typeof HostSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
 export type Command = z.infer<typeof CommandSchema>;
 export type Receipt = z.infer<typeof ReceiptSchema>;
+
+export type PreparationCommand = Extract<
+  Command,
+  { type: 'SELECT_HEROES' | 'CONFIGURE_HERO' | 'PREPARE_COMPANY' }
+>;

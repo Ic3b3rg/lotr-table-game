@@ -10,6 +10,9 @@ import { Store, publicSession } from './store';
 import { identity, joinPlayer, recoverPlayer, setIdentity } from './identity';
 import { performCommand } from './commands';
 import { RestoreSchema } from './backup-format';
+import { catalogAsset } from './catalog';
+import { dataDirectory } from './store';
+import { join } from 'node:path';
 
 const config = z
   .object({ port: z.coerce.number().int().min(0).max(65535), bind: z.ipv4() })
@@ -22,6 +25,7 @@ const staticFiles = new Map([
   ['/join', 'index.html'],
   ['/app.js', 'app.js'],
   ['/style.css', 'style.css'],
+  ['/assets/cormorant-garamond.ttf', 'assets/cormorant-garamond.ttf'],
 ]);
 const attempts = new Map<string, { count: number; endsAt: number }>();
 
@@ -65,6 +69,18 @@ const server = createServer(async (req, res) => {
     )
       limitRecovery(req.socket.remoteAddress ?? 'unknown');
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
+    if (req.method === 'GET' && url.pathname === '/api/catalog')
+      return json(res, store.read().content);
+    if (req.method === 'GET' && url.pathname.startsWith('/api/content/')) {
+      const asset = catalogAsset(
+        store.read().content,
+        url.pathname.slice('/api/content/'.length),
+        process.env.LOTR_CONTENT_PACK ?? join(dataDirectory(), 'catalog.json'),
+      );
+      if (!asset) throw new ApiError(404, 'ASSET_MISSING', 'Immagine non disponibile.');
+      res.writeHead(200, { 'content-type': 'image/png' });
+      return res.end(asset);
+    }
     const canManageBackups = () =>
       Boolean(
         identity(req, store) ||
@@ -136,11 +152,13 @@ const server = createServer(async (req, res) => {
     const asset = staticFiles.get(url.pathname);
     if (req.method === 'GET' && asset) {
       const content = await readFile(new URL(`./public/${asset}`, import.meta.url));
-      const type = asset.endsWith('.html')
-        ? 'text/html'
-        : asset.endsWith('.css')
-          ? 'text/css'
-          : 'text/javascript';
+      const type = asset.endsWith('.ttf')
+        ? 'font/ttf'
+        : asset.endsWith('.html')
+          ? 'text/html'
+          : asset.endsWith('.css')
+            ? 'text/css'
+            : 'text/javascript';
       res.writeHead(200, { 'content-type': `${type}; charset=utf-8` });
       return res.end(content);
     }

@@ -6,7 +6,7 @@ test('la vista condivisa non occupa posti e possono entrare cinque giocatori', a
   const host = await startHost();
   t.after(() => host.dispose());
   const initial = await (await host.request('/api/session')).json();
-  assert.equal(initial.schemaVersion, 1);
+  assert.equal(initial.schemaVersion, 2);
   assert.deepEqual(initial.players, []);
   for (const name of ['Ada', 'Bilbo', 'Ciro', 'Dora', 'Elio']) {
     const response = await joinPlayer(host, name);
