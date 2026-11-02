@@ -37,6 +37,7 @@ for (const [entry, outfile] of [
   ['src/map-selection/selection.ts', 'dist/map-selection-library.mjs'],
   ['src/map-encounters/main.ts', 'dist/map-encounters.mjs'],
   ['src/map-encounters/encounters.ts', 'dist/map-encounters-library.mjs'],
+  ['src/map-freeze/index.ts', 'dist/map-freeze-library.mjs'],
 ]) {
   await build({
     entryPoints: [entry],
