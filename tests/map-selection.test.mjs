@@ -358,3 +358,325 @@ test('H3 scales a shuffled copy of all four builders once into a permutation of 
     assert.equal(v.checkpoints.find((c) => c.stage === 'scaling').rng.samples, 124);
   });
 });
+
+function reserve(tile, isStandard = true) {
+  return { isStandard, modelSource: tile.modelSource };
+}
+function active(f, id, min = 1, max = min) {
+  Object.assign(f.sections[id], { minimumSpaces: min, maximumSpaces: max });
+}
+function onlyTiles(f, indices) {
+  for (const t of f.standard) t.set = indices.includes(t.index) ? 1 : 4;
+}
+
+test('all starts precede all required, explicit references bypass generic restrictions and ignore IsStandard', async () => {
+  const f = fixture();
+  f.sections[0].required = [reserve(f.standard[0], false)];
+  f.sections[3].start = reserve(f.standard[2], false);
+  f.requiredConnections = [
+    [0, 1],
+    [2, 3],
+    [3, 1],
+    [2, 1],
+  ];
+  await run(f, (r) => {
+    const v = selected(r),
+      seeds = v.trace.filter((t) => t.operation === 'seed');
+    assert.deepEqual(
+      seeds.map((t) => [t.stage, t.sectionId, t.tileSource]),
+      [
+        ['starts', 3, ref(1002)],
+        ['required', 0, ref(1000)],
+      ],
+    );
+    assert.deepEqual(
+      v.sections.map((s) => s.spacesFromAvailableTiles),
+      [1, 0, 0, 1],
+    );
+    assert.deepEqual(
+      v.sections.map((s) => s.requiredConnectedSectionIds),
+      [[1], [0, 3, 2], [3, 1], [2, 1]],
+    );
+    assert.equal(v.buckets.standard.find((t) => t.source === ref(1000)).used, true);
+    assert.equal(v.buckets.standard.find((t) => t.source === ref(1001)).used, false);
+  });
+});
+
+test('custom prefab shadows standard by HashId even when IsStandard is true', async () => {
+  const f = fixture();
+  f.custom.push({
+    ...structuredClone(f.standard[0]),
+    index: 0,
+    source: ref(9000),
+    spaces: [{ index: 0, source: ref(9001), traits: 2 }],
+  });
+  f.sections[0].start = reserve(f.standard[0]);
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.sections[0].availableTiles, [ref(9000)]);
+    assert.equal(v.buckets.custom[0].used, true);
+    assert.equal(v.buckets.standard[0].used, false);
+  });
+  f.sections[1].required = [reserve(f.standard[0])];
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.status, 'source-failure');
+    assert.equal(result.failure.sourceErrorCode, 2);
+    assert.equal(result.failure.stage, 'required');
+    assert.equal(result.checkpoint, null);
+    assert.equal(
+      result.buckets.standard[0].used,
+      false,
+      'used custom must never fall back to standard',
+    );
+  });
+});
+
+test('unowned explicit seed is source success with used flag and no AvailableTiles geometry', async () => {
+  const f = fixture();
+  f.products[0].tileCodes = f.products[0].tileCodes.filter((c) => c !== f.standard[0].code);
+  f.sections[0].start = reserve(f.standard[0]);
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.sections[0].availableTiles, []);
+    const event = v.trace.find((t) => t.operation === 'seed');
+    assert.equal(event.added, false);
+    assert.equal(event.reason, 'unowned-phantom');
+    assert.equal(v.buckets.standard[0].used, true);
+    assert.equal(v.buckets.standard[0].owned, false);
+  });
+});
+
+test('generic scan preserves phantom successes without new RNG draws, then finds owned capacity', async () => {
+  const f = fixture();
+  onlyTiles(f, [87, 16]);
+  active(f, 0);
+  f.products[0].tileCodes = [f.standard[16].code];
+  await run(f, (r) => {
+    const v = selected(r),
+      seeds = v.trace.filter((t) => t.operation === 'seed');
+    assert.deepEqual(
+      seeds.map((t) => [t.hashId, t.added, t.samples]),
+      [
+        [10087, false, 120],
+        [10016, true, 120],
+      ],
+    );
+    assert.deepEqual(v.sections[0].availableTiles, [ref(1016)]);
+    assert.equal(v.buckets.standard[87].used, true);
+  });
+});
+
+test('one multi-trait space cannot cover two distinct requirements even when independent counts suffice', async () => {
+  const f = fixture();
+  f.standard[87].spaces[0].traits = 3;
+  f.sections[0].start = reserve(f.standard[87]);
+  active(f, 0, 1, 2);
+  f.sections[0].traitRequirements = [
+    { trait: 1, count: 1 },
+    { trait: 2, count: 1 },
+  ];
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.status, 'source-failure');
+    assert.equal(result.failure.stage, 'traits');
+    assert.equal(result.failure.sourceErrorCode, 2);
+    assert.equal(result.sections[0].traitsMet, false);
+    assert.equal(result.checkpoint, null);
+    assert.equal(result.rng.samples, 120);
+  });
+});
+
+test('trait matching backtracks its space reservation to fit a later narrow requirement', async () => {
+  const f = fixture();
+  f.standard[0].spaces[0].traits = 3;
+  f.sections[0].start = reserve(f.standard[0]);
+  f.sections[0].required = [reserve(f.standard[2])];
+  f.sections[0].traitRequirements = [
+    { trait: 1, count: 1 },
+    { trait: 2, count: 1 },
+  ];
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.equal(v.sections[0].traitsMet, true);
+    assert.deepEqual(
+      v.sections[0].traitMatching.map((s) => [s.tileSource, s.spaceIndex]),
+      [
+        [ref(1002), 0],
+        [ref(1000), 0],
+      ],
+    );
+  });
+});
+
+for (const phase of ['traits', 'minimum']) {
+  test(`${phase} backtracks a genuine dead end with prefix pruning and returns only the removed face`, async () => {
+    const f = fixture();
+    onlyTiles(f, [87, 16]);
+    f.standard[87].set = 2;
+    f.sections[0].allowedTileSets = 3;
+    f.sections[1].allowedTileSets = 2;
+    active(f, 0);
+    active(f, 1);
+    if (phase === 'traits')
+      for (const s of f.sections.slice(0, 2)) s.traitRequirements = [{ trait: 1, count: 1 }];
+    await run(f, (r) => {
+      const v = selected(r),
+        rollbacks = v.trace.filter((t) => t.operation === 'rollback');
+      assert.deepEqual(
+        v.sections.slice(0, 2).map((s) => s.availableTiles),
+        [[ref(1016)], [ref(1087)]],
+      );
+      assert.equal(rollbacks.length, 1);
+      assert.equal(rollbacks[0].stage, phase);
+      assert.deepEqual(rollbacks[0].failedSequence, [10087]);
+      assert.equal(rollbacks[0].invalidCount, 1);
+      assert.equal(rollbacks[0].samples, 120);
+      assert.deepEqual(v.search, {
+        sequence: [],
+        history: [],
+        invalidSequences: [],
+        invalidCount: 0,
+      });
+      assert.equal(v.buckets.standard[86].used, false);
+      assert.equal(v.rng.samples, 124);
+    });
+  });
+}
+
+test('generic eligibility honors other reservations, opposite AvailableTiles, full set mask and max space count', async () => {
+  const f = fixture();
+  onlyTiles(f, [87, 16, 56, 93, 78]);
+  active(f, 0, 1, 1);
+  f.standard[87].set = 3; // one forbidden bit rejects entire tile
+  f.standard[16].spaces.push({ index: 1, source: ref(9901), traits: 1 }); // too big
+  f.sections[1].required = [reserve(f.standard[57])]; // opposite of 56
+  f.sections[2].required = [reserve(f.standard[93])]; // reservation
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.sections[0].availableTiles, [ref(1078)]);
+    assert.equal(v.buckets.standard[87].used, false);
+    assert.equal(v.buckets.standard[16].used, false);
+    assert.equal(v.buckets.standard[56].used, false);
+    assert.equal(v.buckets.standard[93].used, true);
+  });
+});
+
+test('optional selection cycles with draws, stops on strict greater-than, and never adds history or rolls back', async () => {
+  const f = fixture();
+  onlyTiles(f, [87, 16, 56]);
+  active(f, 0, 0, 2);
+  f.sections[0].relativeSizeFactor = 1;
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.sections[0].availableTiles, [ref(1087), ref(1016)]);
+    assert.equal(v.sections[0].spacesFromAvailableTiles, 2);
+    assert.equal(v.rng.samples, 126); // s0 three draws; other sections one each
+    assert.equal(v.trace.filter((t) => t.operation === 'rollback').length, 0);
+    assert.deepEqual(v.search.sequence, []);
+    assert.equal(v.checkpoints.at(-1).stage, 'selection-boundary');
+  });
+});
+
+test('administrative operation exhaustion is diagnostic, never source Timeout or selected output', async () => {
+  const f = fixture();
+  f.budget.maxOperations = 1;
+  active(f, 0);
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.status, 'administrative-stop');
+    assert.equal(result.failure.policy, 'selection-operations-v1');
+    assert.equal(result.failure.sourceErrorCode, undefined);
+    assert.equal(result.checkpoint, null);
+    assert.ok(result.trace.some((t) => t.operation === 'failure'));
+  });
+});
+
+test('library preserves a deeply frozen input and deterministic RNG state', async () => {
+  const { selectMapTiles } = await import('../dist/map-selection-library.mjs');
+  const f = fixture();
+  active(f, 0);
+  const before = JSON.stringify(f);
+  function freeze(o) {
+    if (o && typeof o === 'object') {
+      Object.values(o).forEach(freeze);
+      Object.freeze(o);
+    }
+    return o;
+  }
+  const result = selectMapTiles(freeze(f));
+  assert.equal(result.status, 'selected');
+  assert.equal(JSON.stringify(f), before);
+  assert.deepEqual(selectMapTiles(f), result);
+});
+
+test('mixture equality chooses chain at the exact portable float32 boundary', async () => {
+  const f = fixture();
+  const n = encounter(f, 1),
+    c = encounter(f, 2, 2);
+  f.context.unlockedChainIds = [2];
+  f.incoming.percentNormal = 0.6880244016647339; // independently pinned seed1 sample123
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.randomEncounterPool, [c, n]);
+    assert.equal(v.pools.percentNormal, 1.3760488033294678);
+  });
+});
+
+test('item quantities sum across owned products, while hero upgrades do not exclude a lower item', async () => {
+  const f = fixture(),
+    a = item(f, 1, 1),
+    upgrade = item(f, 2);
+  f.items[0].upgradeSources = [upgrade];
+  f.context.heroes[0].itemIds = [1, 2];
+  f.products.push({
+    index: 1,
+    source: ref(2),
+    id: 1,
+    tileCodes: [],
+    encounterSources: [],
+    groupSources: [],
+    itemQuantities: [{ itemSource: a, quantity: 1 }],
+  });
+  f.context.ownedProductIds.push(1);
+  const e = encounter(f, 1, 4, { itemSources: [a] });
+  await run(f, (r) => {
+    const v = selected(r);
+    assert.deepEqual(v.pools.itemEligible, [e]);
+    assert.deepEqual(v.pools.itemCapacity[0], { id: 1, owned: 2, held: 1 });
+  });
+});
+
+test('administrative stop during filtering retains already appended retry items and has no fabricated RNG', async () => {
+  const f = fixture(),
+    a = item(f, 1),
+    e = encounter(f, 1, 4, { itemSources: [a] });
+  encounter(f, 2);
+  f.incoming.itemEncounterPool = [e];
+  f.budget.maxOperations = 2;
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.status, 'administrative-stop');
+    assert.deepEqual(result.pools.itemEncounterPool, [e, e]);
+    assert.equal(result.rng, null);
+  });
+});
+
+test('heuristic trait counts use HasAny while satisfaction requires every bit of a compound mask', async () => {
+  const f = fixture();
+  onlyTiles(f, [87]);
+  active(f, 0, 0, 1);
+  f.standard[87].spaces[0].traits = 1;
+  f.sections[0].traitRequirements = [{ trait: 3, count: 1 }];
+  await run(f, ({ process, result }) => {
+    assert.equal(process.status, 2);
+    assert.equal(result.status, 'source-failure');
+    assert.ok(
+      result.trace.some(
+        (t) => t.stage === 'traits' && t.operation === 'seed' && t.hashId === 10087,
+      ),
+    );
+    assert.ok(result.trace.some((t) => t.operation === 'rollback' && t.hashId === 10087));
+    assert.equal(result.search.invalidCount, 1);
+  });
+});

@@ -7,8 +7,7 @@ type Observe = {
   checkpoint: (stage: string) => void;
 };
 
-/** CreateMap 00fb–0377; retained pools are copied, never cleared on retry. */
-export function collectPools(p: SelectionInput, observe: Observe) {
+export function createPools(p: SelectionInput) {
   const products = p.products.filter((x) => p.context.ownedProductIds.includes(x.id));
   const ownedCodes = new Set(products.flatMap((x) => x.tileCodes));
   const items = new Map(p.items.map((x) => [x.source, x]));
@@ -25,7 +24,29 @@ export function collectPools(p: SelectionInput, observe: Observe) {
       p.context.groupItemIds.filter((id) => id === i.id).length +
       p.context.heroes.filter((h) => h.itemIds.includes(i.id)).length,
   }));
-  const capacities = new Map(itemCapacity.map((x) => [x.id, x]));
+  return {
+    ownedCodes,
+    itemCapacity,
+    normalEligible: [] as string[],
+    chainEligible: [] as string[],
+    itemEligible: [] as string[],
+    normalShuffled: [] as string[],
+    chainShuffled: [] as string[],
+    itemEncounterPool: [...p.incoming.itemEncounterPool],
+    randomEncounterPool: [...p.incoming.randomEncounterPool],
+    percentNormal: p.incoming.percentNormal,
+  };
+}
+
+/** CreateMap 00fb–0377; retained pools are never cleared on retry. */
+export function collectPools(
+  p: SelectionInput,
+  pools: ReturnType<typeof createPools>,
+  observe: Observe,
+): void {
+  const products = p.products.filter((x) => p.context.ownedProductIds.includes(x.id));
+  const items = new Map(p.items.map((x) => [x.source, x]));
+  const capacities = new Map(pools.itemCapacity.map((x) => [x.id, x]));
   const canUpgrade = (source: string, target: number): boolean => {
     // Explicit stack preserves depth-first order without relying on JS stack size.
     const stack = [...items.get(source)!.upgradeSources].reverse();
@@ -46,9 +67,7 @@ export function collectPools(p: SelectionInput, observe: Observe) {
       const e = encounterBySource.get(r)!;
       if (!collection.has(e.id)) collection.set(e.id, e);
     }
-  const normalEligible: string[] = [],
-    chainEligible: string[] = [],
-    itemEligible: string[] = [];
+  const { normalEligible, chainEligible, itemEligible } = pools;
   const fixed = new Set([
     ...p.adventureEncounterSources,
     ...p.sections.flatMap((s) => s.fixedEncounterSources),
@@ -99,28 +118,21 @@ export function collectPools(p: SelectionInput, observe: Observe) {
             break;
           }
         }
-        if (reason === 'item') itemEligible.push(e.source);
+        if (reason === 'item') {
+          itemEligible.push(e.source);
+          pools.itemEncounterPool.push(e.source);
+        }
       }
     }
     observe.emit('filter', { encounterSource: e.source, reason });
   }
-  return {
-    ownedCodes,
-    normalEligible,
-    chainEligible,
-    itemEligible,
-    itemCapacity,
-    normalShuffled: [...normalEligible],
-    chainShuffled: [...chainEligible],
-    itemEncounterPool: [...p.incoming.itemEncounterPool, ...itemEligible],
-    randomEncounterPool: [...p.incoming.randomEncounterPool],
-    percentNormal: p.incoming.percentNormal,
-  };
+  pools.normalShuffled = [...normalEligible];
+  pools.chainShuffled = [...chainEligible];
 }
 
 /** CreateMap 044f–0503; strict float comparison and no clamp. */
 export function shuffleAndMerge(
-  pools: ReturnType<typeof collectPools>,
+  pools: ReturnType<typeof createPools>,
   rng: SourceRandom,
   observe: Observe,
 ): void {
