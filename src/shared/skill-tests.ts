@@ -1,0 +1,69 @@
+import { z } from 'zod';
+import { ContentIdSchema, type Catalog } from './catalog';
+import { CopyIdSchema, definitionId, type Preparation } from './preparation';
+
+export const StatSchema = z.enum(['might', 'wisdom', 'agility', 'spirit', 'wit']);
+export const STAT_LABELS = {
+  might: 'Forza',
+  wisdom: 'Saggezza',
+  agility: 'Agilità',
+  spirit: 'Spirito',
+  wit: 'Ingegno',
+} as const;
+export const SkillTestSchema = z.strictObject({
+  id: z.uuid(),
+  heroId: ContentIdSchema,
+  stat: StatSchema,
+  modifier: z.int().min(-20).max(20),
+  target: z.int().min(1).max(99).nullable(),
+  revealed: z.array(CopyIdSchema).min(1).max(30),
+  converted: z.int().min(0).max(60),
+  status: z.enum(['converting', 'resolved']),
+});
+export const SkillTestViewSchema = SkillTestSchema.extend({
+  successes: z.int().nonnegative(),
+  fateRemaining: z.int().nonnegative(),
+  outcome: z.enum(['pass', 'fail', 'count']).nullable(),
+});
+export type SkillTest = z.infer<typeof SkillTestSchema>;
+
+export function skillTestView(catalog: Catalog | null, test: SkillTest | null) {
+  if (!test || !catalog) return null;
+  const cards = test.revealed.map(
+    (copy) => catalog.skills.find((card) => card.id === definitionId(copy))!,
+  );
+  const successes = cards.reduce((n, card) => n + card.success, test.converted);
+  const fateRemaining = cards.reduce((n, card) => n + card.fate, -test.converted);
+  const outcome: 'pass' | 'fail' | 'count' | null =
+    test.status !== 'resolved'
+      ? null
+      : test.target === null
+        ? 'count'
+        : successes >= test.target
+          ? 'pass'
+          : 'fail';
+  return { ...test, successes, fateRemaining, outcome };
+}
+
+export function skillTestProblem(
+  catalog: Catalog | null,
+  preparation: Preparation | null,
+  test: SkillTest | null,
+): string | null {
+  if (!test) return null;
+  const hero = preparation?.heroes.find((entry) => entry.heroId === test.heroId);
+  if (!catalog || !hero || preparation?.status !== 'prepared')
+    return 'La prova richiede un eroe della compagnia preparata.';
+  const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
+  const available = [...hero.deck, ...hero.discard];
+  if (test.status === 'converting') available.push(...test.revealed);
+  if (
+    new Set(test.revealed).size !== test.revealed.length ||
+    test.revealed.some((copy) => !available.includes(copy)) ||
+    test.revealed.length !== Math.min(14, Math.max(1, definition.stats[test.stat] + test.modifier))
+  )
+    return 'Carte rivelate non coerenti con la prova.';
+  const view = skillTestView(catalog, test)!;
+  if (view.fateRemaining < 0) return 'La prova ha convertito più fato di quello disponibile.';
+  return null;
+}

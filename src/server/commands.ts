@@ -3,11 +3,29 @@ import type { Command } from '../shared/protocol';
 import { ApiError } from './errors';
 import { Store, advance } from './store';
 import { applyPreparation } from './preparation';
+import { applySkillTest } from './skill-tests';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (
+      command.type === 'START_SKILL_TEST' ||
+      command.type === 'RESOLVE_SKILL_TEST' ||
+      command.type === 'GAIN_INSPIRATION' ||
+      command.type === 'CONVERT_FATE'
+    ) {
+      const hero = applySkillTest(state, playerId, command);
+      advance(state);
+      return {
+        requestId,
+        type: command.type,
+        appliedRevision: state.revision,
+        heroId: hero.heroId,
+        testId: state.skillTest?.id ?? null,
+        inspiration: hero.inspiration,
+      };
+    }
     if (
       command.type === 'SELECT_HEROES' ||
       command.type === 'CONFIGURE_HERO' ||

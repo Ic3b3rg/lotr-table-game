@@ -1,8 +1,8 @@
-import { randomInt } from 'node:crypto';
 import type { PreparationCommand } from '../shared/protocol';
 import { preparationProblem, rosterProblem, type PreparedHero } from '../shared/preparation';
 import { ApiError } from './errors';
 import type { State } from './state';
+import { shuffled } from './shuffle';
 
 export function applyPreparation(
   state: State,
@@ -98,6 +98,7 @@ export function applyPreparation(
           ? null
           : definition.suggestedRoleId,
         itemCopies,
+        inspiration: 0,
         prepared: [],
         deck: [],
         discard: [],
@@ -119,13 +120,4 @@ export function applyPreparation(
   );
   if (problem) throw new ApiError(409, 'PREPARATION_INVALID', problem);
   state.preparation = preparation;
-}
-
-function shuffled<T>(input: T[]): T[] {
-  const result = [...input];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
 }

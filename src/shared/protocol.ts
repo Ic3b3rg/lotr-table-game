@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
+import { SkillTestViewSchema, StatSchema } from './skill-tests';
 
 export const NameSchema = z
   .string()
@@ -35,7 +36,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -44,6 +45,7 @@ export const SessionSchema = z.strictObject({
   demo: DemoSchema.nullable().default(null),
   catalog: CatalogSummarySchema.nullable(),
   preparation: PreparationViewSchema.nullable(),
+  skillTest: SkillTestViewSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -52,6 +54,33 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('CONVERT_FATE'),
+    expectedRevision: z.int().nonnegative(),
+    testId: z.uuid(),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('GAIN_INSPIRATION'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('START_SKILL_TEST'),
+    expectedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    stat: StatSchema,
+    modifier: z.int().min(-20).max(20),
+    target: z.int().min(1).max(99).nullable(),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('RESOLVE_SKILL_TEST'),
+    expectedRevision: z.int().nonnegative(),
+    testId: z.uuid(),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('PREPARE_COMPANY'),
@@ -96,6 +125,14 @@ export const ReceiptSchema = z.union([
   DemoReceiptSchema,
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum(['START_SKILL_TEST', 'RESOLVE_SKILL_TEST', 'GAIN_INSPIRATION', 'CONVERT_FATE']),
+    appliedRevision: z.int().nonnegative(),
+    heroId: ContentIdSchema,
+    testId: z.uuid().nullable(),
+    inspiration: z.int().nonnegative(),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['SELECT_HEROES', 'CONFIGURE_HERO', 'PREPARE_COMPANY']),
     appliedRevision: z.int().nonnegative(),
     preparationStatus: z.enum(['draft', 'prepared']),
@@ -122,4 +159,8 @@ export type Receipt = z.infer<typeof ReceiptSchema>;
 export type PreparationCommand = Extract<
   Command,
   { type: 'SELECT_HEROES' | 'CONFIGURE_HERO' | 'PREPARE_COMPANY' }
+>;
+export type SkillTestCommand = Extract<
+  Command,
+  { type: 'START_SKILL_TEST' | 'RESOLVE_SKILL_TEST' | 'GAIN_INSPIRATION' | 'CONVERT_FATE' }
 >;
