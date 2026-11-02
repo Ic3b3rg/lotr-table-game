@@ -5,6 +5,7 @@ import { SkillTestViewSchema, StatSchema } from './skill-tests';
 import { ScoutingSchema } from './scouting';
 import { RoundSchema, ShadowStepSchema } from './rounds';
 import { JourneySchema, SpaceIdSchema } from './journey-map';
+import { GroupSchema } from './group';
 
 export const NameSchema = z
   .string()
@@ -39,7 +40,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(6),
+  schemaVersion: z.literal(7),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -52,6 +53,7 @@ export const SessionSchema = z.strictObject({
   scout: ScoutingSchema.nullable(),
   round: RoundSchema.nullable(),
   journey: JourneySchema.nullable(),
+  group: GroupSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -62,6 +64,13 @@ const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('SET_GROUP_SIZE'),
+    playerCount: z.int().min(1).max(5),
+    expectedRevision: z.int().nonnegative(),
+    agreed: z.literal(true),
+  }),
   z.strictObject({ ...MapTurnBase, type: z.literal('START_TRAVEL') }),
   z.strictObject({
     ...MapTurnBase,
@@ -213,6 +222,12 @@ const DemoReceiptSchema = z.strictObject({
 export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.literal('SET_GROUP_SIZE'),
+    appliedRevision: z.int().nonnegative(),
+    expectedPlayers: z.int().min(1).max(5),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['OPEN_JOURNEY_MAP', 'START_TRAVEL', 'MOVE_HERO']),
     appliedRevision: z.int().nonnegative(),
     mapId: z.uuid(),
@@ -277,6 +292,7 @@ export const HostSchema = z.object({
   addresses: z.array(z.object({ address: z.ipv4(), label: z.string(), joinUrl: z.url() })),
 });
 export type Session = z.infer<typeof SessionSchema>;
+export type GroupCommand = Extract<Command, { type: 'SET_GROUP_SIZE' }>;
 export type JourneyCommand = Extract<
   Command,
   { type: 'OPEN_JOURNEY_MAP' | 'START_TRAVEL' | 'MOVE_HERO' }

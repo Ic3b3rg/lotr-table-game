@@ -39,8 +39,12 @@ export function joinPlayer(store: Store, body: z.infer<typeof JoinSchema>) {
       );
     if (state.players.some((player) => player.recoveryHash === recoveryHash))
       throw new ApiError(409, 'CODE_IN_USE', 'Usa un nuovo codice personale per un nuovo posto.');
-    if (state.players.length >= 5)
-      throw new ApiError(409, 'TABLE_FULL', 'Il tavolo ha già cinque giocatori.');
+    if (state.players.length >= (state.group?.expectedPlayers ?? 5))
+      throw new ApiError(
+        409,
+        'TABLE_FULL',
+        'Tutti i posti previsti sono occupati. Recupera il tuo posto, oppure concordate un gruppo più grande prima di preparare.',
+      );
     const player = { id: randomUUID(), name: body.name, recoveryHash, requestId: body.requestId };
     state.players.push(player);
     advance(state);

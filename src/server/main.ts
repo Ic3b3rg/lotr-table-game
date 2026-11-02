@@ -12,6 +12,7 @@ import { performCommand } from './commands';
 import { RestoreSchema } from './backup-format';
 import { catalogAsset } from './catalog';
 import { contentAsset } from './content-assets';
+import { ruleCatalog, ruleDocument } from './rules';
 import { dataDirectory } from './store';
 import { join } from 'node:path';
 
@@ -70,6 +71,20 @@ const server = createServer(async (req, res) => {
     )
       limitRecovery(req.socket.remoteAddress ?? 'unknown');
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
+    const rulesDirectory = process.env.LOTR_RULES_DIR ?? join(dataDirectory(), 'rules');
+    if (req.method === 'GET' && url.pathname === '/api/rules')
+      return json(res, ruleCatalog(rulesDirectory));
+    if (req.method === 'GET' && url.pathname.startsWith('/api/rules/')) {
+      const document = ruleDocument(rulesDirectory, url.pathname.slice('/api/rules/'.length));
+      if (!document)
+        throw new ApiError(
+          404,
+          'RULES_MISSING',
+          'Questo documento non è disponibile sul PC. La guida al tavolo rimane disponibile.',
+        );
+      res.writeHead(200, { 'content-type': 'application/pdf' });
+      return res.end(document);
+    }
     if (req.method === 'GET' && url.pathname === '/api/catalog')
       return json(res, store.read().content);
     if (req.method === 'GET' && url.pathname === '/api/journey-map-plan')

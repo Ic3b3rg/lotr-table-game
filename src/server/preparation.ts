@@ -29,6 +29,12 @@ export function applyPreparation(
     );
   const preparation = state.preparation ?? { status: 'draft', heroes: [], weaknessDeck: [] };
   if (command.type === 'PREPARE_COMPANY') {
+    if (state.group && state.players.length !== state.group.expectedPlayers)
+      throw new ApiError(
+        409,
+        'PLAYERS_PENDING',
+        `Attendete tutti i compagni: presenti ${state.players.length} su ${state.group.expectedPlayers}.`,
+      );
     const roster = rosterProblem(
       state.players.map((player) => player.id),
       preparation,
@@ -50,7 +56,7 @@ export function applyPreparation(
   } else if (command.type === 'SELECT_HEROES') {
     if (
       new Set(command.heroIds).size !== command.heroIds.length ||
-      (state.players.length > 1 && command.heroIds.length > 1)
+      ((state.group?.expectedPlayers ?? state.players.length) > 1 && command.heroIds.length > 1)
     )
       throw new ApiError(
         409,
