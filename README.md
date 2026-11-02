@@ -62,7 +62,7 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3, 4 e 5 vengono migrati allo schema 6, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I round restano disattivati finché il gruppo non li avvia. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 6.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi 1, 2, 3, 4 e 5 vengono migrati allo schema 6, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 6.
 
 ## Turni e fasi del round
 
