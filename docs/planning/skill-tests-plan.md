@@ -26,33 +26,33 @@ File: `src/shared/skill-tests.ts`, `src/shared/protocol.ts`,
 `src/shared/preparation.ts`, `src/server/skill-tests.ts`,
 `src/server/{state,store,commands}.ts`, `tests/skill-tests.test.mjs`.
 
-- [ ] Test HTTP rosso: compagnia preparata, pesca tre carte, soglia tre,
+- [x] Test HTTP rosso: compagnia preparata, pesca tre carte, soglia tre,
   risultato positivo; quindici copie conservate, ordine nascosto.
-- [ ] Aggiungere `START_SKILL_TEST` e `RESOLVE_SKILL_TEST`, stato versione 3,
+- [x] Aggiungere `START_SKILL_TEST` e `RESOLVE_SKILL_TEST`, stato versione 3,
   migrazione 1/2 e vista pubblica con totali/esito derivati dal catalogo.
-- [ ] Eseguire test mirato e typecheck, quindi salvare l'incremento.
+- [x] Eseguire test mirato e typecheck, quindi salvare l'incremento.
 
 ## 2. Ispirazione, esaurimento e ripresa
 
 Stessi moduli; aggiungere `tests/skill-test-recovery.test.mjs`.
 
-- [ ] Un test rosso per volta: ottenere ispirazione entro limite; convertire
+- [x] Un test rosso per volta: ottenere ispirazione entro limite; convertire
   un fato una sola volta; controllo proprietario/revisione/prova corrente.
-- [ ] Aggiungere `GAIN_INSPIRATION` e `CONVERT_FATE` con ricevute idempotenti.
-- [ ] Testare ricomposizione anche a metà pesca, minimo una carta, conteggio
+- [x] Aggiungere `GAIN_INSPIRATION` e `CONVERT_FATE` con ricevute idempotenti.
+- [x] Testare ricomposizione anche a metà pesca, minimo una carta, conteggio
   e fallimento; usare backup HTTP per fissare casi iniziali controllati.
-- [ ] Testare SIGKILL, recupero, ripristino su altro host, migrazione schema 2
+- [x] Testare SIGKILL, recupero, ripristino su altro host, migrazione schema 2
   e rifiuto dei backup con copie o ispirazione incoerenti.
-- [ ] Eseguire test mirati e typecheck, quindi salvare l'incremento.
+- [x] Eseguire test mirati e typecheck, quindi salvare l'incremento.
 
 ## 3. Interfaccia e consegna
 
 File: `src/client/skill-tests.ts`, `src/client/company.ts`,
 `src/client/index.html`, `src/client/style.css`, README e verifiche.
 
-- [ ] Aggiungere area personale e vista condivisa, carte leggibili, totali,
+- [x] Aggiungere area personale e vista condivisa, carte leggibili, totali,
   limite esplicito sulle capacità non automatizzate e moduli stabili al polling.
-- [ ] Provare realmente desktop e telefono nel browser; correggere i difetti
+- [x] Provare realmente desktop e telefono nel browser; correggere i difetti
   osservati in un passaggio e verificare il risultato.
 - [ ] Eseguire typecheck, formattazione e suite completa; revisione standard e
   specifica in parallelo. Correggere i rilievi, documentare le evidenze e commit.

@@ -1022,3 +1022,76 @@ details[open] {
   min-height: 44px;
   font-size: 14px;
 }
+.skill-tests {
+  border-block: 1px solid #778276;
+  margin: 40px 0;
+  padding: 24px 0 32px;
+}
+.skill-tests h3 {
+  font-size: clamp(28px, 4vw, 36px);
+  margin: 0 0 16px;
+}
+.test-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px 24px;
+}
+.test-fields label {
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+.test-fields select,
+.test-fields input {
+  min-height: 48px;
+  margin-top: 8px;
+  background: #19282b;
+  border-color: #778276;
+  color: #f3ead6;
+  font-size: 16px;
+  caret-color: #edc77a;
+}
+.test-inspiration {
+  margin: 24px 0;
+  font-variant-numeric: tabular-nums;
+}
+.test-inspiration p {
+  margin: 8px 0;
+}
+.test-status {
+  color: #edc77a;
+  font-size: 17px;
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+  margin: 32px 0 16px;
+}
+.test-revealed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+}
+.test-revealed .physical-card {
+  height: 100%;
+  min-height: 240px;
+}
+.test-symbols {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.test-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+.skill-tests :focus-visible {
+  outline: 3px solid #edc77a;
+  outline-offset: 4px;
+}
+.skill-tests ::selection {
+  background: #edc77a;
+  color: #19282b;
+}

@@ -112,6 +112,84 @@
             <p id="content-status" role="status">Caricamento delle carte…</p>
           </div>
           <div id="company-preparation"></div>
+          <section id="skill-tests" class="skill-tests" aria-labelledby="skill-tests-title" hidden>
+            <h3 id="skill-tests-title">Prove abilità</h3>
+            <p class="company-help" id="skill-test-help">
+              Effettua una prova standard con le carte del tuo eroe. Nelle carte rivelate contano
+              soltanto successi e fato; il testo viene ignorato. Le capacità di eroi, carte
+              preparate e oggetti non sono ancora automatizzate.
+            </p>
+            <p id="skill-test-observer" class="company-help">
+              Il giocatore effettua la prova dalla propria vista personale. Qui tutti possono
+              seguire le carte e l’esito.
+            </p>
+            <form id="skill-test-form" aria-describedby="skill-test-help">
+              <div class="test-fields">
+                <label>Eroe<select id="test-hero" required></select></label>
+                <label
+                  >Caratteristica<select id="test-stat">
+                    <option value="might">Forza</option>
+                    <option value="wisdom">Saggezza</option>
+                    <option value="agility">Agilità</option>
+                    <option value="spirit">Spirito</option>
+                    <option value="wit">Ingegno</option>
+                  </select></label
+                >
+                <label
+                  >Tipo di prova<select id="test-mode">
+                    <option value="threshold">Superare una soglia</option>
+                    <option value="count">Contare i successi</option>
+                  </select></label
+                >
+                <label id="test-target-field"
+                  >Soglia<input
+                    id="test-target"
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    value="1"
+                    required
+                /></label>
+                <label
+                  >Modificatore alla pesca<input
+                    id="test-modifier"
+                    type="number"
+                    min="-20"
+                    max="20"
+                    step="1"
+                    value="0"
+                    required
+                    aria-describedby="test-modifier-help"
+                /></label>
+              </div>
+              <p id="test-modifier-help" class="company-help">
+                Lascia 0, salvo un effetto già determinato dal gruppo. La pesca è di almeno una
+                carta.
+              </p>
+              <button id="start-skill-test" class="company-action" type="submit" data-write>
+                Rivela le carte della prova
+              </button>
+            </form>
+            <div id="test-inspiration-controls" class="test-inspiration" hidden>
+              <p id="test-inspiration"></p>
+              <button id="gain-inspiration" class="company-link" type="button" data-write>
+                Registra 1 ispirazione ottenuta
+              </button>
+              <p class="company-help">Usalo solo dopo un effetto che ti assegna ispirazione.</p>
+            </div>
+            <p id="skill-test-status" class="test-status" role="status" tabindex="-1"></p>
+            <div id="skill-test-result"></div>
+            <div id="skill-test-buttons" class="test-actions" hidden>
+              <button id="convert-fate" class="company-action" type="button" data-write>
+                Spendi 1 ispirazione: converti 1 fato
+              </button>
+              <button id="resolve-skill-test" class="company-action" type="button" data-write>
+                Concludi la prova
+              </button>
+            </div>
+            <p id="skill-test-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+          </section>
           <div id="hero-catalog" class="hero-gallery"></div>
           <aside
             id="card-reader"
@@ -206,7 +284,8 @@
         <span class="small-mark" aria-hidden="true">✧</span>
         <p>
           Compagnia e carte · tavolo locale<br /><span
-            >Prove, movimento, combattimento e campagna seguono nei prossimi incrementi.</span
+            >Prove standard disponibili. Capacità, movimento, combattimento e campagna
+            seguono.</span
           >
         </p>
         <p id="saved" class="save-note">Stato locale</p>
