@@ -155,7 +155,10 @@ export function preparationView(
   };
 }
 
-export function rosterProblem(playerIds: string[], preparation: Preparation): string | null {
+export function rosterProblem(
+  playerIds: string[],
+  preparation: { heroes: Pick<PreparedHero, 'playerId' | 'roleId'>[] },
+): string | null {
   const heroes = preparation.heroes;
   if (playerIds.length === 1) {
     if (heroes.length < 2 || heroes.length > 4)

@@ -190,7 +190,7 @@ export function createGuide(navigate: (target: string) => void) {
       );
     }
   }
-  function open(id = 'start') {
+  function open(id?: string) {
     restoreFocus = true;
     caller = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     search.value = '';
@@ -200,6 +200,9 @@ export function createGuide(navigate: (target: string) => void) {
     if (entry) {
       entry.heading.focus();
       entry.heading.scrollIntoView({ block: 'start' });
+    } else {
+      dialog.scrollTop = 0;
+      search.focus({ preventScroll: true });
     }
     void rules();
   }

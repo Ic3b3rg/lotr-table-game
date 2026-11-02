@@ -1,4 +1,5 @@
 import type { Player, Session } from '../shared/protocol';
+import { rosterProblem } from '../shared/preparation';
 import { SHADOW_LABELS } from '../shared/rounds';
 import { refreshActions } from './actions';
 import { element } from './dom';
@@ -16,6 +17,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
   const toggle = element<HTMLButtonElement>('#toggle-tools');
   let current: Session | null = null;
   let groupKey = '';
+  let groupDirty = false;
   let generation = '';
   let tools = false;
   let topic = 'start';
@@ -69,14 +71,32 @@ export function createGuidedStart(sync: () => Promise<void>) {
       preference(true);
     };
   }
-  element<HTMLFormElement>('#group-form').oninput = () => commands.clear();
+  const cancelGroup = element<HTMLButtonElement>('#cancel-group');
+  element<HTMLFormElement>('#group-form').oninput = () => {
+    commands.clear();
+    groupDirty = true;
+    cancelGroup.hidden = false;
+  };
+  cancelGroup.onclick = () => {
+    groupDirty = false;
+    groupKey = '';
+    commands.clear();
+    element('#group-error').hidden = true;
+    void sync();
+  };
   element<HTMLFormElement>('#group-form').onsubmit = (event) => {
     event.preventDefault();
     if (agreed.checked)
-      void commands.submit(
-        { type: 'SET_GROUP_SIZE', playerCount: Number(size.value), agreed: true },
-        true,
-      );
+      void commands
+        .submit({ type: 'SET_GROUP_SIZE', playerCount: Number(size.value), agreed: true }, true)
+        .then((completed) => {
+          if (completed) {
+            groupDirty = false;
+            agreed.checked = false;
+            settings.open = false;
+            title.focus();
+          }
+        });
   };
 
   return {
@@ -85,6 +105,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
       const identity = personal ? player : null;
       if (generation !== session.generation) {
         generation = session.generation;
+        groupDirty = false;
         try {
           tools = localStorage.getItem(`viaggi-tools:${generation}`) === 'true';
         } catch {
@@ -99,7 +120,13 @@ export function createGuidedStart(sync: () => Promise<void>) {
       const missing = session.players.filter(
         (person) => !heroes.some((hero) => hero.playerId === person.id),
       );
-      const ready = !missing.length && heroes.length >= 2 && heroes.every((hero) => hero.roleId);
+      const ready = Boolean(
+        session.preparation &&
+          !rosterProblem(
+            session.players.map((person) => person.id),
+            session.preparation,
+          ),
+      );
       const myHeroes = heroes.filter((hero) => hero.playerId === identity?.id);
       const waiting = expected !== undefined && session.players.length < expected;
       let step: number;
@@ -161,7 +188,12 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : ready
               ? 'Controlla e prepara i mazzi'
               : 'Vai alla scelta degli eroi';
-      } else if (!session.journey && !session.round) {
+      } else if (
+        !session.journey &&
+        !session.round &&
+        !session.scout &&
+        session.skillTest?.status !== 'converting'
+      ) {
         step = 5;
         heading = 'Collocate gli eroi sulla mappa';
         topic = 'map';
@@ -252,18 +284,25 @@ export function createGuidedStart(sync: () => Promise<void>) {
       settings.hidden = !identity || prepared;
       const nextGroup = `${session.generation}:${identity?.id}:${expected}`;
       if (groupKey !== nextGroup) {
-        if (expected) size.value = String(expected);
-        else size.value = '3';
-        agreed.checked = false;
-        settings.open = !expected;
+        if (!groupDirty || !identity) {
+          groupDirty = false;
+          if (expected) size.value = String(expected);
+          else size.value = '3';
+          agreed.checked = false;
+          settings.open = !expected;
+        }
         groupKey = nextGroup;
       }
+      cancelGroup.hidden = !groupDirty;
       element('#group-summary').textContent = expected
         ? `Giocherete in ${expected} · modifica prima di preparare`
         : 'Quanti giocatori siete?';
-      const groupStatus = expected
-        ? `Presenti ${session.players.length} su ${expected}. Gli ingressi e le scelte già salvate saranno conservati.`
-        : 'Un solo partecipante conferma per tutto il gruppo.';
+      const groupStatus =
+        groupDirty && expected && Number(size.value) !== expected
+          ? `Il gruppo salvato prevede ${expected} giocatori. La tua scelta di ${size.value} non è ancora confermata: controllala prima di salvare, oppure annulla.`
+          : expected
+            ? `Presenti ${session.players.length} su ${expected}. Gli ingressi e le scelte già salvate saranno conservati.`
+            : 'Un solo partecipante conferma per tutto il gruppo.';
       if (element('#group-status').textContent !== groupStatus)
         element('#group-status').textContent = groupStatus;
       element('#screen-help').textContent = personal

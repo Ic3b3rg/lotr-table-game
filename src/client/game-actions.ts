@@ -87,6 +87,7 @@ export function createGameActions(
           status.focus();
         else caller.focus({ preventScroll: true });
       }
+      return completed;
     },
   };
 }

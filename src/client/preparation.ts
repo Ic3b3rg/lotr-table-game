@@ -1,6 +1,6 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
-import { definitionId } from '../shared/preparation';
+import { definitionId, rosterProblem } from '../shared/preparation';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 import { cardButton, picture, type CardReader } from './cards';
@@ -356,12 +356,12 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       const waiting = Boolean(
         session.group && session.players.length < session.group.expectedPlayers,
       );
-      const incomplete =
-        session.players.some(
-          (person) => !session.preparation!.heroes.some((hero) => hero.playerId === person.id),
-        ) ||
-        session.preparation.heroes.some((hero) => !hero.roleId) ||
-        (session.players.length === 1 && session.preparation.heroes.length < 2);
+      const incomplete = Boolean(
+        rosterProblem(
+          session.players.map((person) => person.id),
+          session.preparation,
+        ),
+      );
       button.dataset.blocked = String(waiting || incomplete);
       form.append(
         label,
