@@ -20,7 +20,13 @@ type Run = {
 /** No checkpoint input. The two upstream executions must agree before projection. */
 export function runGenerationAttempt(pack: GeneratorPack, context: GenerationContext, run: Run) {
   const input = parseEncounterInput(
-    buildAttemptInput(pack, context, run.seed, run.incoming, run.attempt),
+    buildAttemptInput(
+      pack,
+      { ...context, ...(run.attempts.at(-1)?.history ?? {}) },
+      run.seed,
+      run.incoming,
+      run.attempt,
+    ),
   );
   const assembly = assembleMap(input.assembly),
     encounters = placeMapEncounters(input);
@@ -76,6 +82,7 @@ export function runGenerationAttempt(pack: GeneratorPack, context: GenerationCon
     incomingFingerprint: digest(run.incoming),
     retainedFingerprint: digest(incoming),
     historyFingerprint: digest(history),
+    history,
     rng: encounters.rng,
     evidenceFingerprint: digest([
       assembly.trace,

@@ -49,6 +49,7 @@ export type GenerationContext = z.infer<typeof GenerationContextSchema>;
 
 // Only selected shapes cross this boundary; the unused pack and search state do not.
 import { GeometryPackSchema } from '../map-assembly/model';
+import { PlacementPackSchema } from '../map-encounters/model';
 import { StoredFloatSchema } from '../map-selection/model';
 import { SourceRandomStateSchema } from '../map-generation/primitives';
 
@@ -83,6 +84,7 @@ export const AttemptRecordSchema = z.strictObject({
   incomingFingerprint: HashSchema,
   retainedFingerprint: HashSchema,
   historyFingerprint: HashSchema,
+  history: HistorySchema,
   rng: SourceRandomStateSchema.nullable(),
   evidenceFingerprint: HashSchema,
 });
@@ -298,6 +300,10 @@ export const ProjectionDataSchema = z.strictObject({
     )
     .max(1000),
   selectedModels: z.array(selectedModel).max(1000),
+  encounterRequirements: PlacementPackSchema.pick({
+    sections: true,
+    adventureEncounterSources: true,
+  }),
   spawnOrder: z.array(spaceId).max(1000),
   chosenGroup: z.strictObject({
     index,

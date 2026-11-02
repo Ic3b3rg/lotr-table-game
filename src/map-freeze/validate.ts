@@ -206,7 +206,11 @@ function validateGeometry(p: Projection) {
     let max = 0;
     for (const t of s.tiles)
       for (const h of t.hexes) max = Math.max(max, sqr(minus(h.worldCenter, s.position)));
-    invariant(s.boundingSphere.radius === f(Math.sqrt(max)), 'Raggio bounds incoerente.');
+    invariant(
+      Math.abs(s.boundingSphere.radius - f(Math.sqrt(max))) <=
+        Math.max(1, s.boundingSphere.radius) * 1e-6,
+      'Raggio bounds incoerente.',
+    );
   }
   invariant(
     same(
@@ -412,6 +416,73 @@ function validateEncounters(p: Projection) {
       );
     }
   }
+  for (const section of p.encounterRequirements.sections) {
+    invariant(
+      section.index === p.encounterRequirements.sections.indexOf(section) &&
+        section.source === p.sections[section.index]!.source,
+      'Requisiti sezione incoerenti.',
+    );
+    for (const fixed of section.tileEncounters ?? [])
+      invariant(
+        p.assignments.some((a) => {
+          const space = bySpace.get(a.spaceId)!,
+            tile = tiles.find((t) => t.source === space.tileSource)!;
+          return (
+            a.modelSource === fixed.encounterSource &&
+            a.origin.stage === 'fixed-tile' &&
+            a.origin.sectionId === section.index &&
+            space.sectionId === section.index &&
+            tile.hashId === fixed.tileId &&
+            (!fixed.specifySpaceIndex || space.index === fixed.spaceIndex)
+          );
+        }),
+        'Incontro fisso mancante.',
+      );
+    for (const source of section.sectionEncounterSources ?? [])
+      invariant(
+        p.assignments.some(
+          (a) => a.modelSource === source && bySpace.get(a.spaceId)!.sectionId === section.index,
+        ),
+        'Incontro sezione mancante.',
+      );
+  }
+  for (const source of p.encounterRequirements.adventureEncounterSources ?? [])
+    invariant(
+      p.assignments.some((a) => a.modelSource === source),
+      'Incontro avventura mancante.',
+    );
+  for (const a of p.assignments) {
+    const m = models.get(a.modelSource)!;
+    const requirements = p.encounterRequirements.sections[a.origin.sectionId ?? 0]!;
+    if (a.origin.stage === 'fixed-tile')
+      invariant(
+        requirements.tileEncounters?.some((v) => v.encounterSource === a.modelSource),
+        'Origine fixed non dichiarata.',
+      );
+    if (a.origin.stage === 'required-section')
+      invariant(
+        requirements.sectionEncounterSources?.includes(a.modelSource),
+        'Origine section non dichiarata.',
+      );
+    if (a.origin.stage === 'required-adventure')
+      invariant(
+        p.encounterRequirements.adventureEncounterSources?.includes(a.modelSource),
+        'Origine adventure non dichiarata.',
+      );
+    if (a.origin.stage === 'group-required')
+      invariant(
+        p.chosenGroup.requiredSources.includes(a.modelSource),
+        'Origine required group non dichiarata.',
+      );
+    if (a.origin.stage === 'group-optional')
+      invariant(
+        p.chosenGroup.optionalSources.includes(a.modelSource),
+        'Origine optional group non dichiarata.',
+      );
+    if (a.origin.stage === 'item') invariant(m.selection.type === 4, 'Origine item incompatibile.');
+    if (a.origin.stage === 'normal-fill')
+      invariant(m.selection.type === 0 || m.selection.type === 2, 'Origine normal incompatibile.');
+  }
   invariant(
     p.spaces.every((s) =>
       s.encounterId === -1
@@ -439,8 +510,10 @@ function validateEncounters(p: Projection) {
     'Gruppo optional incompleto.',
   );
   const history = {
-    usedEncounterIds: [...p.context.usedEncounterIds],
-    usedGroupIds: [...p.context.usedGroupIds],
+    usedEncounterIds: [
+      ...(p.attempts.at(-1)?.history.usedEncounterIds ?? p.context.usedEncounterIds),
+    ],
+    usedGroupIds: [...(p.attempts.at(-1)?.history.usedGroupIds ?? p.context.usedGroupIds)],
     unlockedChainIds: p.context.unlockedChainIds,
   };
   for (const id of p.spawnOrder) {

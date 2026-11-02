@@ -99,6 +99,10 @@ export function projectRealization(
     allSpaces: encounters.allSpaces,
     assignments: encounters.assignments,
     selectedModels: encounters.selectedModels,
+    encounterRequirements: {
+      sections: input.placement.sections,
+      adventureEncounterSources: input.placement.adventureEncounterSources,
+    },
     spawnOrder: encounters.spawnOrder.map((v) => v.spaceId),
     chosenGroup: encounters.chosenGroup,
     history: { ...encounters.history.result, unlockedChainIds: context.unlockedChainIds },

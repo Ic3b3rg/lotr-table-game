@@ -121,3 +121,72 @@ test('la pipeline grezza congela geometria, movimento e incontri al confine pre-
     p,
   );
 });
+
+async function realization() {
+  const { runGenerationAttempt } = await import('../dist/map-freeze-library.mjs');
+  const state = company(),
+    pack = parseGeneratorPack(generatorFixture(state.content)),
+    context = deriveContext(pack, state);
+  return runGenerationAttempt(pack, context, {
+    requestedSeed: 1,
+    seed: 1,
+    attempt: 0,
+    incoming: pack.template.selection.incoming,
+    attempts: [],
+  }).projection;
+}
+function rehash(p) {
+  const { fingerprint, ...data } = p;
+  p.fingerprint = hash(data);
+  return p;
+}
+test('il validatore preserva il raggio cached fonte entro la precisione float32 dopo il movimento della sezione', async () => {
+  const { validateProjection } = await import('../dist/map-freeze-library.mjs');
+  const p = await realization(),
+    radius = p.sections[0].boundingSphere.radius;
+  p.sections[0].boundingSphere.radius = Math.fround(radius + Math.max(1, radius) * 1e-7);
+  assert.equal(
+    validateProjection(rehash(p)).sections[0].boundingSphere.radius,
+    p.sections[0].boundingSphere.radius,
+  );
+});
+test('mappe malformate restano invalide anche con fingerprint e checksum ricalcolati', async () => {
+  const { validateProjection } = await import('../dist/map-freeze-library.mjs');
+  const p = await realization();
+  const mutations = [
+    (x) => x.sections.pop(),
+    (x) => x.sections[0].tiles[0].hexes[0].globalCoords[0]++,
+    (x) => (x.sections[0].tiles[0].shape.hexes[0].space = 99),
+    (x) => (x.sections[0].boundingSphere.radius += 1),
+    (x) => (x.spaces[0].id = 'invented.assets:999/space/0'),
+    (x) => (x.spaces[0].connected = []),
+    (x) => x.movementGraph.edges.pop(),
+    (x) => x.contacts.pop(),
+    (x) => (x.assignments[0].prefab.resourceKey = 'invented/wrong'),
+    (x) => (x.closure.selectedPrefabSources = []),
+    (x) => x.history.usedEncounterIds.push(100000),
+    (x) => (x.successfulSeed = 999),
+    (x) => x.rng.final.samples++,
+    (x) => (x.trace = []),
+    (x) => (x.context.heroes[0].items[0].id = 987),
+    (x) => (x.continuation.pending = []),
+  ];
+  for (const mutate of mutations) {
+    const x = structuredClone(p);
+    mutate(x);
+    assert.throws(() => validateProjection(rehash(x)));
+  }
+});
+test('la proiezione conserva e controlla requisiti fissi e origine delle assegnazioni', async () => {
+  const { validateProjection } = await import('../dist/map-freeze-library.mjs');
+  const p = await realization();
+  assert.equal(p.encounterRequirements.sections[0].tileEncounters.length, 1);
+  const x = structuredClone(p);
+  x.assignments = [];
+  x.selectedModels = [];
+  x.spawnOrder = [];
+  x.closure.selectedPrefabSources = [];
+  x.spaces.forEach((s) => (s.encounterId = -1));
+  x.history.usedEncounterIds = [];
+  assert.throws(() => validateProjection(rehash(x)));
+});
