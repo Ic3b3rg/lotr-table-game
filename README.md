@@ -168,6 +168,12 @@ La politica `FLOAT32_POLICY` identifica l'arrotondamento portabile adottato;
 la [verifica delle primitive](docs/testing/map-source-primitives-verification.md)
 ne registra prove e limiti rispetto al runtime originale.
 
+`dist/map-selection.mjs --input pacchetto.json --output nuovo-file.json`
+prepara i pool e seleziona le tessere delle quattro sezioni, conservando
+scelte e stato RNG. Il [formato privato](docs/planning/map-selection-spec.md)
+richiede contesto e provenienza espliciti. L'output `scope: selection-only`
+si ferma prima dell'assemblaggio geometrico; non viene caricato dal tavolo.
+
 ## Scoperta e carte preparate
 
 Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato

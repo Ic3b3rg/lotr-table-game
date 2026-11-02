@@ -30,6 +30,20 @@ await build({
   target: 'node24',
   outfile: 'dist/map-primitives.mjs',
 });
+for (const [entry, outfile] of [
+  ['src/map-selection/main.ts', 'dist/map-selection.mjs'],
+  ['src/map-selection/selection.ts', 'dist/map-selection-library.mjs'],
+]) {
+  await build({
+    entryPoints: [entry],
+    bundle: true,
+    packages: 'external',
+    platform: 'node',
+    format: 'esm',
+    target: 'node24',
+    outfile,
+  });
+}
 await build({
   entryPoints: ['src/client/app.ts'],
   bundle: true,
