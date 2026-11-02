@@ -1,5 +1,4 @@
-import { open, mkdtemp, link, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { readBounded, writeNew } from '../map-io/files';
 import { parseArgs } from 'node:util';
 import { GeometryPackSchema } from './model';
 import { composeGeometry, enumerateAttachments } from './geometry';
@@ -14,41 +13,11 @@ function integer(value: string | undefined, label: string): number {
   return Number(value);
 }
 async function readPack(path: string) {
-  const file = await open(path, 'r');
-  try {
-    const stat = await file.stat();
-    if (!stat.isFile() || stat.size > 1024 * 1024)
-      throw new Error('Il pacchetto deve essere un file di massimo 1 MB.');
-    const buffer = Buffer.alloc(1024 * 1024 + 1);
-    let length = 0;
-    while (length < buffer.length) {
-      const { bytesRead } = await file.read(buffer, length, buffer.length - length, length);
-      if (bytesRead === 0) break;
-      length += bytesRead;
-    }
-    if (length > 1024 * 1024) throw new Error('Il pacchetto supera 1 MB.');
-    return GeometryPackSchema.parse(JSON.parse(buffer.subarray(0, length).toString('utf8')));
-  } finally {
-    await file.close();
-  }
+  return GeometryPackSchema.parse(
+    JSON.parse((await readBounded(path, 1024 * 1024)).toString('utf8')),
+  );
 }
-async function writeNew(path: string, json: string): Promise<void> {
-  const temporary = await mkdtemp(join(dirname(path), '.lotr-geometry-'));
-  try {
-    const staged = join(temporary, 'result.json');
-    const file = await open(staged, 'wx', 0o600);
-    try {
-      await file.writeFile(json);
-      await file.sync();
-    } finally {
-      await file.close();
-    }
-    // A same-filesystem hard link publishes the complete file exclusively.
-    await link(staged, path);
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
-  }
-}
+
 try {
   const { values, tokens } = parseArgs({
     options: {
