@@ -2,6 +2,8 @@
 
 2 novembre 2026, issue #29, base `main` a `b3088ba` dopo il merge della PR #28.
 
+[Revisione indipendente e correzioni](../reviews/2026-11-02-rounds.md).
+
 ## Automatiche
 
 `npm test`: **60/60 passati**, nessun test saltato: i 51 precedenti e nove

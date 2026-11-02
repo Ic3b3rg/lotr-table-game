@@ -148,7 +148,8 @@ npm test
 [verifiche di Scoperta e carte preparate](docs/testing/scouting-verification.md).
 
 [Contratto dei round](docs/planning/rounds-spec.md) e
-[verifiche di turni, azioni e riorganizzazione](docs/testing/rounds-verification.md).
+[verifiche di turni, azioni e riorganizzazione](docs/testing/rounds-verification.md),
+[revisione e correzioni](docs/reviews/2026-11-02-rounds.md).
 
 Avvio e browser Chromium sono verificati sul Mac di sviluppo. L'host Windows, Safari su iPhone, Chrome su Android, la scansione fisica del QR e cinque telefoni con WAN scollegata devono ancora essere provati con il gruppo: [prova LAN](https://github.com/Ic3b3rg/lotr-table-game/issues/5).
 
