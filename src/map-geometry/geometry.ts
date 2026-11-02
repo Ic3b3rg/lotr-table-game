@@ -142,25 +142,38 @@ export function composeGeometry(pack: GeometryPack, startRotation: number, place
   };
   for (const tile of [pack.start, pack.attachment])
     for (const [a, b] of tile.links) connect(`${tile.id}:${a}`, `${tile.id}:${b}`);
+  const edgeIndices = [edgeIndex(pack.start), edgeIndex(pack.attachment)];
   const occupied = new Map(
-    start.hexes.map((hex, index) => [cubeKey(hex.coords), { ...hex, index }]),
+    tiles.flatMap((tile, tileIndex) =>
+      tile.hexes.map(
+        (hex, index) =>
+          [
+            cubeKey(hex.coords),
+            {
+              ...hex,
+              index,
+              tileIndex,
+              rotation: tile.rotation,
+              spaceId: `${tile.id}:${hex.space}`,
+            },
+          ] as const,
+      ),
+    ),
   );
-  const startEdges = edgeIndex(pack.start);
-  for (const border of outsideEdges(pack.attachment, attachment, false)) {
-    const neighbor = occupied.get(
-      cubeKey(add(border.coords, directionCube(border.globalDirection))),
-    );
-    if (!neighbor) continue;
-    const other = requiredEdge(
-      startEdges,
-      neighbor.index,
-      normalizeDirection(border.globalDirection + 3 - startRotation),
-    );
-    if (isConnection(other, border.edge))
-      connect(
-        `${start.id}:${neighbor.space}`,
-        `${attachment.id}:${attachment.hexes[border.edge.hex]!.space}`,
+  // CalculateConnectedSpaces considers every neighboring casella, including
+  // neighbors within one tile. Optional missing interior edges mean no passage.
+  for (const hex of occupied.values()) {
+    for (let direction = 0; direction < 6; direction++) {
+      const neighbor = occupied.get(cubeKey(add(hex.coords, directionCube(direction))));
+      if (!neighbor || hex.spaceId === neighbor.spaceId) continue;
+      const a = edgeIndices[hex.tileIndex]!.get(
+        edgeKey(hex.index, normalizeDirection(direction - hex.rotation)),
       );
+      const b = edgeIndices[neighbor.tileIndex]!.get(
+        edgeKey(neighbor.index, normalizeDirection(direction + 3 - neighbor.rotation)),
+      );
+      if (a && b && isConnection(a, b)) connect(hex.spaceId, neighbor.spaceId);
+    }
   }
   const graph = [...connections.values()].sort(([a, b], [c, d]) =>
     a < c ? -1 : a > c ? 1 : b < d ? -1 : b > d ? 1 : 0,

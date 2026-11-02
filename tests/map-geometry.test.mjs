@@ -180,6 +180,34 @@ test('un contatto bloccato può combaciare senza aggiungere movimento fra quelle
   }
 });
 
+test('il grafo deriva anche i passaggi interni e rispetta bordi interni assenti o bloccati', async (t) => {
+  for (const internal of ['standard', 'absent', 'blocked']) {
+    const pack = geometryPackFixture();
+    pack.start = twoHexTile('tile-a', [1, -1, 0]);
+    pack.attachment = twoHexTile('tile-b', [0, -1, 1]);
+    for (const tile of [pack.start, pack.attachment]) {
+      tile.spaces.push({ traits: 0, hasDarkness: false });
+      tile.hexes[1].space = 1;
+    }
+    if (internal === 'absent')
+      pack.start.edges = pack.start.edges.filter(
+        (e) => !(e.hex === 0 && e.direction === 0) && !(e.hex === 1 && e.direction === 3),
+      );
+    if (internal === 'blocked')
+      pack.start.edges.find((e) => e.hex === 0 && e.direction === 0).traits = 700;
+    const cli = await compiler(t, pack);
+    const result = success(cli.run('--rotation', '4', '--placement', '0'));
+    const a = result.spaces.find((s) => s.id === 'tile-a:0');
+    const b = result.spaces.find((s) => s.id === 'tile-b:0');
+    assert.equal(a.connected.includes('tile-a:1'), internal === 'standard', internal);
+    assert.ok(b.connected.includes('tile-b:1'), internal);
+    assert.equal(
+      result.connections.filter(([x, y]) => x === 'tile-b:0' && y === 'tile-b:1').length,
+      1,
+    );
+  }
+});
+
 test('input malformati e indici incoerenti sono rifiutati senza output', async (t) => {
   const cli = await compiler(t);
   for (const args of [

@@ -9,7 +9,7 @@ posa. Non cambia host, UI, schema 8, salvataggio o regole di viaggio.
 
 ## Prove pubbliche
 
-`node --test tests/map-geometry.test.mjs`: sette prove attraverso il processo
+`node --test tests/map-geometry.test.mjs`: otto prove attraverso il processo
 CLI reale. Il primo esagono standard produce 36 ancore; sono verificati
 ordine globale delle sei rotazioni, pose note, rive, ruscelli, strade,
 passaggi aperti/chiusi, contatti secondari, sovrapposizione, contatto bloccato
@@ -20,7 +20,13 @@ Tutte le forme delle fixture sono inventate.
 
 Il primo ciclo rosso ha mostrato sei fallimenti per compilatore assente;
 il caso che rifiuta input invalidi passava ancora senza il programma.
-Dopo l'implementazione tutte le sette prove passano contro la CLI funzionante.
+Dopo l'implementazione le sette prove passano contro la CLI funzionante.
+La revisione ha individuato l'assenza dei collegamenti interni derivati,
+quando due caselle della stessa tessera hanno bordi compatibili ma `links`
+vuoto. L'ottava prova riproduce il difetto (rosso), poi verifica i bordi
+interni standard, assenti e bloccati (verde). Il grafo ora considera tutti
+gli esagoni confinanti, come `CalculateConnectedSpaces`, e conserva comunque
+i collegamenti già dichiarati. I sei output originali restano identici.
 Il lettore usa un buffer limitato a 1 MB + 1 byte, anche se il file cambia
 dopo il controllo iniziale. La pubblicazione avviene collegando in modo
 esclusivo un file completo e sincronizzato nella stessa directory.

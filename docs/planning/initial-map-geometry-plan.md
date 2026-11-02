@@ -64,10 +64,10 @@ pose, caselle, esagoni globali e connessioni canoniche non duplicate.
 **Files:** CLI/test, README e rapporti in `docs/testing/` e `docs/reviews/`;
 estrazione e dati originali solo `.scratch/map-composition-source/`.
 
-- [ ] Testare output nuovo, determinismo e rifiuto di sovrascrittura senza alterazioni.
-- [ ] Estrarre in privato custom100A e 302A preservando ordine/indici/provenienza.
-- [ ] Eseguire il compilatore sulle sei rotazioni e verificare 4 caselle/16 esagoni,
+- [x] Testare output nuovo, determinismo e rifiuto di sovrascrittura senza alterazioni.
+- [x] Estrarre in privato custom100A e 302A preservando ordine/indici/provenienza.
+- [x] Eseguire il compilatore sulle sei rotazioni e verificare 4 caselle/16 esagoni,
   giunzioni legali e collegamenti ricavati dai bordi, senza spacciare il risultato
   per l'intera mappa A1.
-- [ ] Eseguire suite, tipi, formato; revisioni Standards/Spec e documentazione.
-- [ ] PR, merge e chiusura #42, lasciando #41/#38/#33 aperte.
+- [x] Eseguire suite, tipi, formato; revisioni Standards/Spec e documentazione.
+Consegna: PR, merge e chiusura #42, lasciando #41/#38/#33 aperte.
