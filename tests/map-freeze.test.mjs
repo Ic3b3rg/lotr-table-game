@@ -76,3 +76,48 @@ test('mapping incompleti, catalogo cambiato, upgrade e provenienza incoerenti so
   bad.template.selection.items[0].upgradeSources = [];
   assert.throws(() => deriveContext(parseGeneratorPack(bad), upgrade));
 });
+
+test('la pipeline grezza congela geometria, movimento e incontri al confine pre-startup senza diagnostici', async () => {
+  const { runGenerationAttempt, validateProjection } = await import(
+    '../dist/map-freeze-library.mjs'
+  );
+  const state = company(),
+    pack = parseGeneratorPack(generatorFixture(state.content)),
+    context = deriveContext(pack, state);
+  const result = runGenerationAttempt(pack, context, {
+    requestedSeed: 1,
+    seed: 1,
+    attempt: 0,
+    incoming: pack.template.selection.incoming,
+    attempts: [],
+  });
+  assert.equal(result.status, 'frozen');
+  const p = validateProjection(result.projection);
+  assert.equal(p.sections.length, 4);
+  assert.equal(p.sections.flatMap((s) => s.tiles).length, 8);
+  assert.equal(p.spaces.length, 16);
+  assert.equal(p.movementGraph.components.length, 1);
+  assert.equal(p.assignments.length, 1);
+  assert.deepEqual(p.history.usedEncounterIds, [100000]);
+  assert.equal(p.continuation.boundary, 'before-BeginAdventure(false)');
+  assert.equal(p.continuation.status, 'pending-startup');
+  assert.equal(p.continuation.gameplayRng, null);
+  assert.equal(p.closure.status, 'pending-prefab-execution');
+  assert.equal(p.requestedSeed, 1);
+  assert.equal(p.successfulSeed, 1);
+  assert.ok(JSON.stringify(p).length < 350000);
+  assert.equal('trace' in p, false);
+  assert.equal('candidates' in p, false);
+  assert.equal('positions' in p.continuation, false);
+  assert.deepEqual(validateProjection(JSON.parse(JSON.stringify(p))), p);
+  assert.deepEqual(
+    runGenerationAttempt(pack, context, {
+      requestedSeed: 1,
+      seed: 1,
+      attempt: 0,
+      incoming: pack.template.selection.incoming,
+      attempts: [],
+    }).projection,
+    p,
+  );
+});

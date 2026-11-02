@@ -6,7 +6,7 @@ const MAX = 2147483647;
 const ALGORITHM = 'system-random-subtractive-v1';
 export const FLOAT32_POLICY = 'float32-per-operation-v1';
 
-const StateSchema = z
+export const SourceRandomStateSchema = z
   .strictObject({
     formatVersion: z.literal(1),
     algorithm: z.literal(ALGORITHM),
@@ -23,7 +23,7 @@ const StateSchema = z
       s.inextp === (((s.samples % 55) + 20) % 55) + 1,
     'Indici o slot inutilizzato non coerenti con i campioni.',
   );
-export type SourceRandomState = z.infer<typeof StateSchema>;
+export type SourceRandomState = z.infer<typeof SourceRandomStateSchema>;
 
 function int32(value: number): void {
   if (!Number.isInteger(value) || value < MIN || value > MAX)
@@ -65,7 +65,7 @@ export class SourceRandom {
   }
 
   static restore(value: unknown): SourceRandom {
-    const state = StateSchema.parse(value);
+    const state = SourceRandomStateSchema.parse(value);
     const random = new SourceRandom(state.seed);
     random.#seedArray = [...state.seedArray];
     random.#inext = state.inext;
