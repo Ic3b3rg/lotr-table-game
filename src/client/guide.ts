@@ -79,6 +79,7 @@ const TOPICS = [
       'Quando una regola richiede Scoperta, rivela il numero di carte indicato. Puoi preparare al massimo una di quelle carte. Scegli se mettere le altre sopra o sotto il mazzo e in quale ordine; poi conferma. Le carte preparate restano separate dal mazzo e disponibili per i loro effetti.',
       'La capacità di preparare è limitata a quattro carte. Se vuoi prepararne una quinta, scegli prima quale preparata scartare. Una carta scartata per un effetto va registrata solo dopo averne risolto effettivamente il testo.',
       'Nella Fase di Riorganizzazione tutti i mazzi sono ricomposti, lasciando fuori le preparate. Ogni proprietario esegue la Scoperta del proprio eroe una volta; quando tutti hanno finito, potete avviare il round successivo. Controllate sulle schede eventuali capacità che modificano il numero di carte.',
+      'La Scoperta di Riorganizzazione è di due carte. Se Aragorn è nella compagnia, lui e gli eroi nella sua stessa casella o in una adiacente rivelano una carta aggiuntiva: tre in totale. Il tavolo applica questa capacità dalle posizioni salvate, senza costi o nuove mescolate. Nei vecchi round senza posizioni, il gruppo deve indicare esplicitamente se un altro eroe è vicino ad Aragorn; nessuna risposta è preselezionata. Una pesca già aperta conserva il numero e le carte salvate fino alla conclusione.',
     ],
   },
   {

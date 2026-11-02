@@ -1,6 +1,7 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import { PHASE_LABELS, SHADOW_LABELS } from '../shared/rounds';
+import { rallyScoutCount } from '../shared/rally-scout';
 import { refreshActions } from './actions';
 import { element, text } from './dom';
 import { createGameActions } from './game-actions';
@@ -56,8 +57,8 @@ export function createRounds(sync: () => Promise<void>) {
         : round.phase === 'shadow'
           ? `${SHADOW_LABELS[round.shadowStep!]} · da confermare insieme.`
           : allScouted
-            ? 'Tutti gli eroi hanno concluso Scoperta 2. Il prossimo round è pronto.'
-            : 'Tutti i mazzi sono ricomposti. Ogni eroe effettua Scoperta 2 una volta.';
+            ? 'Tutti gli eroi hanno concluso Scoperta. Il prossimo round è pronto.'
+            : 'Tutti i mazzi sono ricomposti. Ogni eroe effettua Scoperta 2 con l’eventuale bonus di Aragorn, una volta.';
     const nextStatus = message + (pending ? ' Concludi prima le carte rivelate.' : '');
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
     element('#round-phase-help').textContent = !round
@@ -172,10 +173,15 @@ export function createRounds(sync: () => Promise<void>) {
         element('#round-error').hidden = true;
         contextKey = nextContext;
       }
-      const nextProgress = `${session.generation}:${JSON.stringify(round)}`;
+      const nextProgress = `${session.generation}:${JSON.stringify(round)}:${session.scout?.id}:${session.scout?.count}`;
       if (nextProgress !== progressKey) {
         element('#round-heroes').replaceChildren(
           ...(round?.heroes ?? []).map((hero) => {
+            const scoutCount = rallyScoutCount(
+              session.preparation!.heroes,
+              session.journey,
+              hero.heroId,
+            );
             const row = text('li', '', hero.heroId === round?.activeHeroId ? 'round-active' : '');
             const owner = session.preparation!.heroes.find(
               (entry) => entry.heroId === hero.heroId,
@@ -187,8 +193,14 @@ export function createRounds(sync: () => Promise<void>) {
                 'span',
                 round?.phase === 'rally'
                   ? hero.rallyDone
-                    ? 'Scoperta 2 conclusa'
-                    : 'Scoperta 2 da fare'
+                    ? 'Scoperta conclusa'
+                    : current?.scout?.heroId === hero.heroId
+                      ? `Scoperta ${current.scout.count} in corso · pesca salvata`
+                      : scoutCount === 3
+                        ? 'Scoperta 2 + 1 di Aragorn da fare'
+                        : scoutCount === null
+                          ? 'Scoperta da fare · vicinanza da indicare'
+                          : 'Scoperta 2 da fare'
                   : hero.turnEnded
                     ? `Turno concluso · ${hero.actionsUsed} / 2 azioni usate`
                     : hero.heroId === round?.activeHeroId

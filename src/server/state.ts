@@ -55,7 +55,13 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
   if (testProblem) ctx.addIssue({ code: 'custom', message: testProblem });
   const scoutProblem = scoutingProblem(state.content, state.preparation, state.scout);
   if (scoutProblem) ctx.addIssue({ code: 'custom', message: scoutProblem });
-  const roundError = roundProblem(state.round, state.preparation, state.skillTest, state.scout);
+  const roundError = roundProblem(
+    state.round,
+    state.preparation,
+    state.skillTest,
+    state.scout,
+    state.journey,
+  );
   if (roundError) ctx.addIssue({ code: 'custom', message: roundError });
   const journeyError = journeyProblem(state.journey, state.preparation, state.round);
   if (journeyError) ctx.addIssue({ code: 'custom', message: journeyError });
@@ -127,25 +133,28 @@ const VersionFiveStateSchema = BaseStateSchema.omit({ journey: true, group: true
 const VersionSixStateSchema = BaseStateSchema.omit({ group: true }).extend({
   schemaVersion: z.literal(6),
 });
+const VersionSevenStateSchema = BaseStateSchema.extend({ schemaVersion: z.literal(7) });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 7)
+      return StateSchema.parse({ ...VersionSevenStateSchema.parse(raw), schemaVersion: 8 });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 7,
+        schemaVersion: 8,
         group: null,
       });
     }
     if (version === 5) {
       const previous = VersionFiveStateSchema.parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 7, group: null, journey: null });
+      return StateSchema.parse({ ...previous, schemaVersion: 8, group: null, journey: null });
     }
     if (version === 1) {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 7,
+        schemaVersion: 8,
         group: null,
         journey: null,
         content: null,
@@ -158,7 +167,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 7,
+        schemaVersion: 8,
         group: null,
         journey: null,
         skillTest: null,
@@ -176,7 +185,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 7,
+        schemaVersion: 8,
         group: null,
         journey: null,
         scout: null,
@@ -188,7 +197,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 7,
+        schemaVersion: 8,
         group: null,
         journey: null,
         round: null,

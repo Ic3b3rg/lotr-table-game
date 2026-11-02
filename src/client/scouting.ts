@@ -1,6 +1,7 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import { definitionId } from '../shared/preparation';
+import { rallyScoutCount } from '../shared/rally-scout';
 import { refreshActions } from './actions';
 import { cardButton, type CardReader } from './cards';
 import { element, text } from './dom';
@@ -13,6 +14,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   const form = element<HTMLFormElement>('#scout-start-form');
   const heroSelect = element<HTMLSelectElement>('#scout-hero');
   const count = element<HTMLInputElement>('#scout-count');
+  const proximity = element<HTMLSelectElement>('#rally-proximity');
   const start = element<HTMLButtonElement>('#start-scout');
   const rally = element<HTMLButtonElement>('#rally-scout');
   const choiceForm = element<HTMLFormElement>('#scout-choice-form');
@@ -30,6 +32,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   let scoutKey = '';
   let preparedKey = '';
   let limitKey = '';
+  let proximityKey = '';
   let choices: Choice[] = [];
   const commands = createGameActions(() => current, sync, root, status, error, controls);
   const label = (copy: string) =>
@@ -62,11 +65,38 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
     const mine = current.preparation?.heroes.find(
       (hero) => hero.heroId === heroSelect.value && hero.playerId === player?.id,
     );
+    const knownCount = inRally
+      ? rallyScoutCount(current.preparation!.heroes, current.journey, heroSelect.value)
+      : 2;
+    const nextProximity = `${current.generation}:${round?.id}:${heroSelect.value}:${knownCount}`;
+    if (proximityKey !== nextProximity) {
+      proximity.value = '';
+      proximityKey = nextProximity;
+    }
+    const unknown = inRally && knownCount === null;
+    element('#rally-proximity-field').hidden = !unknown;
+    proximity.required = Boolean(unknown);
+    proximity.disabled = !unknown;
+    const effective = knownCount ?? (proximity.value ? (proximity.value === 'near' ? 3 : 2) : null);
+    element('#rally-count-help').textContent = unknown
+      ? `Questo round precedente non ha posizioni registrate. Il gruppo deve indicare la vicinanza sul proprio tavolo.${effective ? ` Scoperta prevista: ${effective} carte.` : ''}`
+      : inRally
+        ? knownCount === 3
+          ? 'Scoperta 2 di base + 1 per la capacità di Aragorn: riveli 3 carte. La vicinanza segue le caselle della mappa.'
+          : 'Scoperta 2 di base. Nessun bonus di Aragorn applicabile a questo eroe.'
+        : '';
     form.hidden = Boolean(pending) || !mine;
-    start.dataset.blocked = rally.dataset.blocked = String(Boolean(pending) || activeTest || !mine);
+    start.dataset.blocked = String(Boolean(pending) || activeTest || !mine);
+    rally.dataset.blocked = String(
+      Boolean(pending) || activeTest || !mine || (unknown && !proximity.value),
+    );
     start.hidden = Boolean(inRally);
     rally.hidden = Boolean(round && !inRally);
-    rally.textContent = inRally ? 'Scopri 2 per la Riorganizzazione' : 'Ricomponi e scopri 2';
+    rally.textContent = inRally
+      ? effective
+        ? `Scopri ${effective} per la Riorganizzazione`
+        : 'Indica la vicinanza per scoprire'
+      : 'Ricomponi e scopri 2';
     element('#scout-count-field').hidden = Boolean(inRally);
     count.disabled = Boolean(inRally);
     element('#scout-discard-controls').hidden = !mine || Boolean(pending) || Boolean(inRally);
@@ -180,6 +210,11 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
         type: 'START_RALLY_SCOUT',
         heroId: heroSelect.value,
         ...(current?.round ? { roundId: current.round.id } : {}),
+        ...(current?.round?.phase === 'rally' &&
+        rallyScoutCount(current.preparation!.heroes, current.journey, heroSelect.value) === null &&
+        proximity.value
+          ? { proximity: proximity.value as 'near' | 'far' }
+          : {}),
       },
       true,
     );
@@ -209,7 +244,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
     );
   };
   root.oninput = () => commands.clear();
-  heroSelect.onchange = discardSelect.onchange = limit.onchange = controls;
+  heroSelect.onchange = discardSelect.onchange = limit.onchange = proximity.onchange = controls;
   return {
     update(session: Session, identity: Player | null, content: Catalog | null) {
       current = session;
@@ -220,7 +255,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
       element('#scout-phase-help').textContent = !session.round
         ? 'Scopri carte quando una regola o una capacità lo richiede. Puoi prepararne una e scegliere l’ordine delle altre sopra o sotto il mazzo. Per riorganizzare l’eroe, ricomponi prima il mazzo e scopri due carte.'
         : session.round.phase === 'rally'
-          ? 'Tutti i mazzi sono già ricomposti. Ogni eroe scopre due carte una sola volta: può prepararne una e ordinare le altre sopra o sotto il mazzo.'
+          ? 'Tutti i mazzi sono già ricomposti. Ogni eroe effettua Scoperta 2, più l’eventuale carta aggiuntiva di Aragorn, una volta. Può prepararne una e ordinare le altre sopra o sotto il mazzo.'
           : 'Scoperta da un effetto già determinato dal gruppo non consuma azioni. La ricomposizione dei mazzi avviene nella Riorganizzazione comune.';
       const mine = session.preparation!.heroes.filter((hero) => hero.playerId === player?.id);
       const nextRoster = `${session.generation}:${player?.id}:${mine.map((hero) => hero.heroId)}`;
@@ -261,7 +296,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
                   session.round!.heroes.find((progress) => progress.heroId === hero.heroId)!
                     .rallyDone,
               )
-            ? 'I tuoi eroi hanno concluso Scoperta 2 per questo round. Attendete la compagnia e aprite il prossimo round.'
+            ? 'I tuoi eroi hanno concluso Scoperta per questo round. Attendete la compagnia e aprite il prossimo round.'
             : 'Nessuna Scoperta in corso. Le carte preparate restano nell’area di ogni eroe.';
       if (status.textContent !== message) status.textContent = message;
       element('#scout-observer').hidden = mine.length > 0;

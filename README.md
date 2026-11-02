@@ -86,7 +86,7 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 6 vengono migrati allo schema 7, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 7. Il numero di giocatori dei tavoli precedenti resta non configurato: compagnie e round già attivi rimangono disponibili.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 7 vengono migrati allo schema 8, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 8. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento.
 
 ## Turni e fasi del round
 
@@ -103,11 +103,14 @@ risolvete o verificate che non si applichino; il tavolo non calcola ancora
 nemici, paura, minaccia o soglie. Dopo minaccia rendete pronti i nemici esauriti.
 
 La conferma finale ricompone tutti i mazzi senza le preparate. Solo dopo ogni
-eroe effettua **Scopri 2 per la Riorganizzazione**, una volta, in ordine
-concordato; il mazzo non viene mescolato una seconda volta. Concluse tutte
+eroe effettua **Scoperta di Riorganizzazione**, una volta, in ordine
+concordato: due carte di base, più una per Aragorn e per gli eroi nella
+sua stessa casella o in una adiacente. Il conteggio è mostrato nel pulsante; il mazzo non viene mescolato una seconda volta. Concluse tutte
 le Scoperte, una conferma comune apre il nuovo round. Nessun cambio di turno
 o fase è possibile con una rivelazione aperta. Turno, azioni e progressi
 sopravvivono a ricarica, recupero, arresto e backup.
+
+Il bonus di Aragorn segue le posizioni salvate, senza altri costi. Nei vecchi round senza mappa, per gli altri eroi il gruppo indica esplicitamente se sono vicini ad Aragorn sul proprio tavolo; nessuna risposta è preselezionata. Il nuovo avvio guidato registra già la mappa prima dei round.
 
 ## Mappa e viaggio
 

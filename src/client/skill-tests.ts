@@ -77,7 +77,7 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
         ? 'Rivela per l’effetto · nessuna azione'
         : 'Rivela le carte della prova';
     element('#test-round-help').textContent = rally
-      ? 'Durante Riorganizzazione completa Scoperta 2 per ogni eroe.'
+      ? 'Durante Riorganizzazione completa Scoperta per ogni eroe, con l’eventuale bonus di Aragorn.'
       : interaction
         ? canInteract
           ? 'L’interazione consuma un’azione quando riveli le carte, qualunque sia l’esito.'

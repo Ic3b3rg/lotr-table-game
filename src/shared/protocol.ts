@@ -40,7 +40,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(7),
+  schemaVersion: z.literal(8),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -134,6 +134,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
     expectedRevision: z.int().nonnegative(),
     heroId: ContentIdSchema,
     roundId: z.uuid().optional(),
+    proximity: z.enum(['near', 'far']).optional(),
   }),
   z.strictObject({
     ...CommandBase,

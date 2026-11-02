@@ -298,7 +298,15 @@
                     value="2"
                     required
                 /></label>
+                <label id="rally-proximity-field" hidden
+                  >Questo eroe è vicino ad Aragorn?<select id="rally-proximity">
+                    <option value="">Concordate la vicinanza sul vostro tavolo</option>
+                    <option value="near">Sì · stessa casella o casella adiacente</option>
+                    <option value="far">No · non è vicino</option>
+                  </select></label
+                >
               </div>
+              <p id="rally-count-help" class="company-help"></p>
               <div class="test-actions">
                 <button id="start-scout" type="submit" class="company-action" data-write>
                   Scopri le carte richieste
@@ -330,7 +338,10 @@
               </button>
             </form>
             <p id="scout-error" class="company-error" role="alert" tabindex="-1" hidden></p>
-            <p class="company-help">Le capacità delle carte non sono ancora automatizzate.</p>
+            <p class="company-help">
+              Il bonus di Aragorn in Riorganizzazione è applicato dal tavolo. Le altre capacità non
+              sono ancora automatizzate.
+            </p>
           </section>
           <section id="skill-tests" class="skill-tests" aria-labelledby="skill-tests-title" hidden>
             <h3 id="skill-tests-title">Prove abilità</h3>
