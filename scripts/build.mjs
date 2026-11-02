@@ -22,6 +22,15 @@ await build({
   outfile: 'dist/map-geometry.mjs',
 });
 await build({
+  entryPoints: ['src/map-generation/primitives.ts'],
+  bundle: true,
+  packages: 'external',
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  outfile: 'dist/map-primitives.mjs',
+});
+await build({
   entryPoints: ['src/client/app.ts'],
   bundle: true,
   platform: 'browser',

@@ -161,6 +161,13 @@ prima sezione 302A/custom100A. Scelta casuale, mappa completa e avvio dello
 scenario restano in [#41](https://github.com/Ic3b3rg/lotr-table-game/issues/41)
 e [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38).
 
+La build produce anche `dist/map-primitives.mjs`: `SourceRandom` con stato
+snapshot/ripristino, `sourceShuffle` e `comparisonSort` conservano le scelte
+e l'ordine richiesti dal generatore. Sono separati dalla casualità dei mazzi.
+La politica `FLOAT32_POLICY` identifica l'arrotondamento portabile adottato;
+la [verifica delle primitive](docs/testing/map-source-primitives-verification.md)
+ne registra prove e limiti rispetto al runtime originale.
+
 ## Scoperta e carte preparate
 
 Dalla vista personale scegli l'eroe e il numero di carte da scoprire indicato
