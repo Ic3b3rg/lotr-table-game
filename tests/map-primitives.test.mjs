@@ -1,0 +1,165 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import * as primitives from '../dist/map-primitives.mjs';
+
+const { SourceRandom, sourceShuffle, comparisonSort, FLOAT32_POLICY } = primitives;
+
+const vectors = JSON.parse(
+  await readFile(new URL('./fixtures/map-source-vectors.json', import.meta.url), 'utf8'),
+);
+const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+function bits(value) {
+  const buffer = Buffer.alloc(8);
+  buffer.writeDoubleBE(value);
+  return buffer.toString('hex');
+}
+function sourceState(random) {
+  const { seedArray, inext, inextp } = random.snapshot();
+  return { seedArray, inext, inextp };
+}
+
+test('Random riproduce valori, bit double e stato dei corpi IL su semi signed e intervalli grandi', () => {
+  for (const vector of vectors.random) {
+    const random = new SourceRandom(vector.seed);
+    for (const op of vector.operations) {
+      const result =
+        op.method === 'next' || op.method === 'nextDouble'
+          ? random[op.method]()
+          : random[op.method](op.min, op.max);
+      assert.equal(
+        op.bits ? bits(result) : result,
+        op.bits ?? op.result,
+        `${vector.seed}: ${op.method}`,
+      );
+    }
+    assert.equal(
+      hash(Array.from({ length: vector.tailCount }, () => random.next())),
+      vector.tailHash,
+    );
+    assert.equal(random.snapshot().samples, vector.samples);
+    assert.deepEqual(sourceState(random), vector.state);
+    assert.equal(random.snapshot().seed, vector.seed);
+  }
+});
+
+test('snapshot e ripristino conservano la sequenza senza condividere array modificabili', () => {
+  const random = new SourceRandom(-71);
+  for (let i = 0; i < 100; i++) random.nextInt(-2147483648, 2147483647);
+  const saved = random.snapshot();
+  const restored = SourceRandom.restore(JSON.parse(JSON.stringify(saved)));
+  const isolated = SourceRandom.restore(saved);
+  saved.seedArray.fill(0);
+  assert.notDeepEqual(random.snapshot().seedArray, saved.seedArray);
+  assert.notDeepEqual(isolated.snapshot().seedArray, saved.seedArray);
+  for (let i = 0; i < 200; i++) {
+    const expected = random.nextDouble();
+    assert.equal(restored.nextDouble(), expected);
+    assert.equal(isolated.nextDouble(), expected);
+  }
+  assert.deepEqual(restored.snapshot(), random.snapshot());
+  assert.deepEqual(isolated.snapshot(), random.snapshot());
+});
+
+test('semi, stati e argomenti invalidi sono rifiutati senza consumare casualità', () => {
+  for (const seed of [0.5, -2147483649, 2147483648, NaN, Infinity, '0'])
+    assert.throws(() => new SourceRandom(seed));
+  const random = new SourceRandom(0);
+  const before = random.snapshot();
+  for (const [min, max] of [
+    [3, 2],
+    [0, 1.5],
+    [-2147483649, 1],
+    [0, 2147483648],
+    [NaN, 1],
+    [0, Infinity],
+  ]) {
+    assert.throws(() => random.nextInt(min, max));
+    assert.deepEqual(random.snapshot(), before);
+  }
+  for (const [min, max] of [
+    [NaN, 1],
+    [0, Infinity],
+    [0, 1e100],
+    [-3.4e38, 3.4e38],
+  ]) {
+    assert.throws(() => random.nextFloat32(min, max));
+    assert.deepEqual(random.snapshot(), before);
+  }
+  const mutations = [
+    (s) => {
+      s.formatVersion = 2;
+    },
+    (s) => {
+      s.algorithm = 'other';
+    },
+    (s) => {
+      s.seed = 1.5;
+    },
+    (s) => {
+      s.seedArray.pop();
+    },
+    (s) => {
+      s.seedArray[0] = 1;
+    },
+    (s) => {
+      s.seedArray[1] = -1;
+    },
+    (s) => {
+      s.seedArray[1] = 2147483647;
+    },
+    (s) => {
+      s.inext = 56;
+    },
+    (s) => {
+      s.inextp = 20;
+    },
+    (s) => {
+      s.samples = -1;
+    },
+    (s) => {
+      s.samples = 1;
+    },
+    (s) => {
+      s.extra = true;
+    },
+  ];
+  for (const mutate of mutations) {
+    const invalid = structuredClone(before);
+    mutate(invalid);
+    assert.throws(() => SourceRandom.restore(invalid));
+    assert.deepEqual(random.snapshot(), before);
+  }
+  assert.throws(() => SourceRandom.restore(null));
+});
+
+test('il limite del contatore è controllato prima anche di un’operazione a due campioni', () => {
+  const state = new SourceRandom(1).snapshot();
+  state.samples = Number.MAX_SAFE_INTEGER - 1;
+  state.inext = ((state.samples - 1) % 55) + 1;
+  state.inextp = (((state.samples % 55) + 20) % 55) + 1;
+  const random = SourceRandom.restore(state);
+  assert.throws(() => random.nextInt(-2147483648, 2147483647));
+  assert.deepEqual(random.snapshot(), state);
+  random.next();
+  const end = random.snapshot();
+  assert.equal(end.samples, Number.MAX_SAFE_INTEGER);
+  assert.throws(() => random.nextDouble());
+  assert.deepEqual(random.snapshot(), end);
+});
+
+test('la politica float32 dichiarata può arrotondare a uno e conserva gli estremi inversi', () => {
+  assert.equal(FLOAT32_POLICY, 'float32-per-operation-v1');
+  const state = new SourceRandom(0).snapshot();
+  state.seedArray.fill(0);
+  state.seedArray[1] = 2147483646;
+  assert.ok(SourceRandom.restore(state).nextDouble() < 1);
+  assert.equal(SourceRandom.restore(state).nextFloat32(0, 1), 1);
+  assert.equal(SourceRandom.restore(state).nextFloat32(1, -1), -1);
+  assert.equal(SourceRandom.restore(state).nextFloat32(3, 3), 3);
+  const same = SourceRandom.restore(state);
+  same.nextFloat32(3, 3);
+  assert.equal(same.snapshot().samples, 1);
+});
+
