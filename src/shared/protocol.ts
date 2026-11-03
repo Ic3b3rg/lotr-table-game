@@ -1,4 +1,5 @@
 import { ScenarioSchema } from './scenario';
+import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
@@ -43,7 +44,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(12),
+  schemaVersion: z.literal(13),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -85,6 +86,7 @@ const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  CycleAnswerSchema.extend(CommandBase),
   z.strictObject({
     ...CommandBase,
     type: z.literal('START_SCENARIO'),
@@ -282,6 +284,14 @@ const DemoReceiptSchema = z.strictObject({
 export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.literal('CYCLE_INPUT'),
+    appliedRevision: z.int().nonnegative(),
+    runId: z.uuid(),
+    source: HashSchema,
+    completed: z.boolean(),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT']),
     appliedRevision: z.int().nonnegative(),
     scenarioId: z.uuid(),
@@ -312,6 +322,7 @@ export const ReceiptSchema = z.union([
     heroId: ContentIdSchema.nullable(),
     spaceId: SpaceIdSchema.nullable(),
     movesRemaining: z.int().min(0).max(4),
+    movesGranted: z.int().min(0).max(2).optional(),
     roundId: z.uuid().nullable(),
     turnId: z.uuid().nullable(),
   }),
@@ -335,6 +346,8 @@ export const ReceiptSchema = z.union([
     testId: z.uuid().nullable(),
     heroId: ContentIdSchema.nullable().optional(),
     sourceTurnId: z.uuid().nullable().optional(),
+    continuation: z.uuid().nullable().optional(),
+    completed: z.boolean().optional(),
   }),
   z.strictObject({
     requestId: IntentIdSchema,

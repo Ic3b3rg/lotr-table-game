@@ -126,11 +126,11 @@ export function allowScenarioPlay(state: State, command: Command) {
       'PHYSICAL_PENDING',
       'Risolvi la conseguenza corrente sul posto indicato. Le altre azioni attendono il suo completamento.',
     );
-  if (state.physical?.version === 2 && state.physical.snapshot.resolution!.faceup.length)
+  if (state.physical && state.physical.version !== 1 && command.type === 'START_INTERACTION_TEST')
     throw new ApiError(
       409,
-      'PHYSICAL_CYCLE_CAPABILITY',
-      'Gli effetti persistenti sono conservati. Il loro collegamento ai turni ordinari deve essere completato prima di proseguire; nessun effetto è ignorato.',
+      'PHYSICAL_INTERACTION_CAPABILITY',
+      'L’interazione richiede il proprio consumer fonte, compresi i costi prima di interagire. La prova libera non lo sostituisce e nessuna azione è stata consumata.',
     );
   const allowed =
     sc.phase === 'action' &&

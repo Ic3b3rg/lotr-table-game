@@ -48,7 +48,7 @@ export const FrontSnapshotSchema = z.strictObject({
         active: PhysicalDecisionSchema,
       }),
     )
-    .max(10000),
+    .max(100000),
   operations: z.int().min(0).max(100000),
 });
 export type FrontResources = z.infer<typeof FrontResourcesSchema>;

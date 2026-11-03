@@ -172,6 +172,7 @@ export const PersistentOpSchema = z.union([
   }),
 ]);
 export const PolicyEffectSchema = z.discriminatedUnion('op', [
+  z.strictObject({ op: z.literal('rest'), n: z.int().min(1).max(5) }),
   z.strictObject({ op: z.literal('guard'), n: z.int().min(1).max(5) }),
   z.strictObject({ op: z.literal('paid-prevent'), n: z.literal(1) }),
   z.strictObject({

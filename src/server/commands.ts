@@ -1,4 +1,5 @@
 import { applyScenario, allowScenarioPlay } from './scenario';
+import { applyPhysicalCycle, isPhysicalCycle } from './physical-cycle';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Command } from '../shared/protocol';
 import { ApiError } from './errors';
@@ -31,6 +32,13 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return { requestId, type: command.type, appliedRevision: state.revision, ...result };
     }
+    if (isPhysicalCycle(state, command)) {
+      const result = applyPhysicalCycle(state, playerId, command);
+      advance(state);
+      return result;
+    }
+    if (command.type === 'CYCLE_INPUT')
+      throw new ApiError(409, 'CYCLE_REQUEST_CHANGED', 'Nessuna conseguenza ordinaria corrente.');
     if (state.scenario) allowScenarioPlay(state, command);
     if (
       (!state.scenario && state.mapGeneration) ||

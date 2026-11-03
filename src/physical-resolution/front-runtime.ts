@@ -53,7 +53,7 @@ class FrontReplay {
   private answer = 0;
   private result!: PhysicalSnapshot['parents'][number]['results'][number];
   constructor(private readonly p: Omit<PhysicalState, 'snapshot'>) {
-    invariant(p.version === 2 && p.fronts, 'Runtime fronti senza freeze versione2.');
+    invariant(p.version !== 1 && p.fronts, 'Runtime fronti senza freeze versione2.');
     validateFrontArtifact(p.raw, p.fronts.artifact, p.fronts.catalog);
     this.rng = new PhysicalRandom(p.entropy);
     this.s = {
@@ -276,8 +276,16 @@ class FrontReplay {
     return this.persist(hero).some(({ effect }) => effect.op === 'prohibit');
   }
   private nearby(a: number, b: number) {
-    // P1 synthetic source is confined to the authentic startup space; no invented topology.
-    return a !== b && this.p.heroes[a]!.spaceId === this.p.heroes[b]!.spaceId;
+    const heroes = this.run.spatial?.heroes ?? this.p.heroes;
+    const from = heroes[a]!.spaceId,
+      to = heroes[b]!.spaceId;
+    return (
+      a !== b &&
+      (from === to ||
+        !!this.run.spatial?.connections.some(
+          ([x, y]) => (x === from && y === to) || (y === from && x === to),
+        ))
+    );
   }
   private scope(hero: number, scope: string) {
     return this.p.heroes.flatMap((_, n) =>
@@ -556,7 +564,7 @@ class FrontReplay {
   private physicalSelection(
     hero: number,
     families: Family[],
-    face: 'up' | 'any',
+    face: 'up' | 'down' | 'any',
     path: string,
     n: number,
     upTo = false,
@@ -564,7 +572,7 @@ class FrontReplay {
   ) {
     const options = families.flatMap((family) =>
       this.s.areas[hero]![family].flatMap((copy) =>
-        this.faceup.has(copy)
+        this.faceup.has(copy) && face !== 'down'
           ? [
               {
                 id: frontToken(this.p.entropy, copy),
@@ -574,7 +582,7 @@ class FrontReplay {
           : [],
       ),
     );
-    if (face === 'any')
+    if (face !== 'up')
       for (const family of families) {
         const count = this.s.areas[hero]![family].filter((c) => !this.faceup.has(c)).length;
         for (let k = 0; k < count; k++)
@@ -616,12 +624,97 @@ class FrontReplay {
       cap = this.catalog.heroes.find((x) => x.id === h.heroId)!.stats.inspiration;
     h.inspiration = Math.min(cap, h.inspiration + 1);
   }
-  private afterGuard(actor: number) {
+  private afterGuard(actor: number, paidEffects: PolicyEffect[] = []) {
     this.p.heroes.forEach((_, owner) => {
       if (owner === actor || this.nearby(owner, actor))
         for (const { effect } of this.policy(owner))
           if (effect.op === 'after-guard-inspiration') this.inspiration(actor);
     });
+    for (const effect of paidEffects)
+      if (effect.op === 'after-guard-inspiration') this.inspiration(actor);
+  }
+  private afterPrepare(hero: number, copy: string, path: string) {
+    const effects =
+      this.artifact.policies.find((p) => p.kind === 'skill' && p.id === definitionId(copy))
+        ?.effects ?? [];
+    for (const [n, e] of effects.entries()) {
+      if (e.op === 'after-prepare-inspiration') this.inspiration(hero);
+      if (e.op === 'after-prepare-flip-fear')
+        this.physicalSelection(
+          hero,
+          ['fear'],
+          'up',
+          this.run.spatial ? `${path}/effect-${n}` : `${path}/prepare-flip`,
+          1,
+          false,
+          true,
+        );
+    }
+  }
+  private endTurn(hero: number, path: string) {
+    // End-of-turn effects and optional Rest share a timing window. Recheck live
+    // availability after every descendant; an imposed discard never activates Rest.
+    const effects = this.persist(hero).filter(({ effect: e }) => e.window === 'end-own-turn');
+    const left = effects.map((_, n) => n);
+    let closed = false,
+      step = 0;
+    while (left.length || !closed) {
+      const rests = closed
+        ? []
+        : this.policy(hero).filter(
+            ({ copy, effect: e }) => e.op === 'rest' && this.hero(hero).prepared.includes(copy),
+          );
+      const options = [
+        ...left
+          .filter((n) => this.faceup.has(effects[n]!.copy))
+          .map((n) => ({
+            id: `effect:${n}`,
+            label: `Risolvi ${this.cards.get(effects[n]!.copy)!.name.value}`,
+          })),
+        ...rests.map(({ copy, effect: e, effectIndex }) => ({
+          id: `rest:${effectIndex}:${copy}`,
+          label: `Riposo ${e.op === 'rest' ? e.n : 0} · scarta ${this.skillName(copy)}`,
+        })),
+        ...(!closed && rests.length ? [{ id: 'close-rest', label: 'Non usare altro Riposo' }] : []),
+      ];
+      if (!options.length) break;
+      const selected = this.choose(
+        hero,
+        `${path}/window-${step++}`,
+        'Fine turno: scegli quale capacità risolvere. Il turno resta aperto fino al termine.',
+        options,
+      );
+      if (selected === 'close-rest') {
+        closed = true;
+        continue;
+      }
+      if (selected.startsWith('effect:')) {
+        const n = Number(selected.slice(7));
+        left.splice(left.indexOf(n), 1);
+        const { copy, effect: e } = effects[n]!;
+        if (!this.faceup.has(copy)) continue;
+        if (e.op === 'self-flip-down') this.down(copy);
+        else if (e.op === 'suffer')
+          this.suffer(hero, [{ family: e.family, amount: e.n }], 'faceup', `${path}/effect-${n}`);
+      } else {
+        const ability = rests.find(
+          ({ copy, effectIndex }) => selected === `rest:${effectIndex}:${copy}`,
+        )!;
+        invariant(ability.effect.op === 'rest', 'Riposo senza policy.');
+        const h = this.hero(hero);
+        h.prepared.splice(h.prepared.indexOf(ability.copy), 1);
+        h.discard.push(ability.copy);
+        this.physicalSelection(
+          hero,
+          ['damage', 'fear'],
+          'down',
+          `${path}/rest-${step}`,
+          ability.effect.n,
+          true,
+        );
+        this.event(hero, 'after-rest', `${path}/after-rest-${step}`, false, 0);
+      }
+    }
   }
   private suffer(
     hero: number,
@@ -689,7 +782,9 @@ class FrontReplay {
               this.policy(actor).flatMap<Offer>(({ copy, effect: e, effectIndex }) => {
                 const id = `${actor}:${effectIndex}:${copy}`,
                   self = actor === hero,
-                  same = this.p.heroes[actor]!.spaceId === this.p.heroes[hero]!.spaceId;
+                  same =
+                    (this.run.spatial?.heroes ?? this.p.heroes)[actor]!.spaceId ===
+                    (this.run.spatial?.heroes ?? this.p.heroes)[hero]!.spaceId;
                 if (used.has(id)) return [];
                 if (e.op === 'guard' && same && this.hero(actor).prepared.includes(copy))
                   return [
@@ -805,9 +900,15 @@ class FrontReplay {
           }
           if (offer.e.op === 'guard') {
             const h = this.hero(offer.actor);
+            const paidEffects = this.policy(offer.actor)
+              .filter((p) => p.copy === offer.copy)
+              .map((p) => p.effect);
             h.prepared.splice(h.prepared.indexOf(offer.copy), 1);
             h.discard.push(offer.copy);
-            this.afterGuard(offer.actor);
+            this.afterGuard(
+              offer.actor,
+              this.run.executionRules || this.run.spatial ? paidEffects : [],
+            );
           } else if (offer.e.op === 'paid-prevent') this.hero(hero).inspiration--;
           else if (offer.e.op === 'fear-facedown') {
             this.resources.depletion.find((d) => d.copy === offer.copy)!.remaining--;
@@ -865,6 +966,13 @@ class FrontReplay {
       if (!cards.length) return;
       this.r.revealed.push({ heroId: h.heroId, cards: [...cards] });
       const input = this.ask(hero, `${path}/arrange`, {
+        ...(this.run.spatial
+          ? {
+              scoutTopAllowed:
+                !rally ||
+                !this.persist(hero).some(({ effect: e }) => e.op === 'prohibit-scout-top'),
+            }
+          : {}),
         mode: 'scout',
         title: `Scoperta ${count}: prepara al massimo una carta e ordina le altre.`,
         options: cards.map((id) => ({ id, label: this.skillName(id) })),
@@ -896,13 +1004,8 @@ class FrontReplay {
       if (input.discard) h.discard.push(input.discard);
       h.deck = [...input.top, ...h.deck, ...input.bottom];
       this.r.revealed.pop();
-      if (input.prepare && h.prepared.includes(input.prepare))
-        for (const { copy, effect: e } of this.policy(hero))
-          if (copy === input.prepare) {
-            if (e.op === 'after-prepare-inspiration') this.inspiration(hero);
-            if (e.op === 'after-prepare-flip-fear')
-              this.physicalSelection(hero, ['fear'], 'up', `${path}/prepare-flip`, 1, false, true);
-          }
+      if (input.prepare && (this.run.spatial || h.prepared.includes(input.prepare)))
+        this.afterPrepare(hero, input.prepare, path);
     });
   }
   private test(
@@ -1100,6 +1203,13 @@ class FrontReplay {
       runIds.add(run.id);
       this.run = run;
       this.answer = 0;
+      if (run.spatial)
+        invariant(
+          this.p.version === 3 &&
+            digest(run.spatial.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))) ===
+              digest(this.p.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))),
+          'Contesto spaziale di un’altra compagnia o versione.',
+        );
       const context = FrontResourcesSchema.parse(run.context);
       invariant(
         context.preparation.heroes.length === this.p.heroes.length &&
@@ -1153,6 +1263,22 @@ class FrontReplay {
           parent.results.push(this.result);
           const path = `${run.id}/${index}`;
           switch (child.kind) {
+            case 'end-turn':
+              this.endTurn(child.hero, path);
+              break;
+            case 'rally-reset':
+              for (const [n, h] of this.resources.preparation.heroes.entries()) {
+                h.deck = this.random(
+                  `${path}/rally-${n}`,
+                  [...h.deck, ...h.discard],
+                  h.deck.length + h.discard.length,
+                );
+                h.discard = [];
+              }
+              break;
+            case 'rally-scout':
+              this.scout(child.hero, child.count, path, true);
+              break;
             case 'suffer':
               this.suffer(child.hero, child.cards, child.face, path, child.negate);
               break;

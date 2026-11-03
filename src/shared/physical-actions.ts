@@ -59,6 +59,11 @@ export function bindPhysicalDecision(
   const sc = session.scenario,
     q = sc?.pending,
     active = session.physical?.active;
+  const cycle = session.physical?.cycle?.pending;
+  if (cycle && active?.kind === 'decision' && active.runId === cycle.runId) {
+    const { type: _, ...binding } = cycle;
+    return { type: 'CYCLE_INPUT' as const, ...binding, input };
+  }
   if (
     !sc ||
     q?.kind !== 'physical' ||

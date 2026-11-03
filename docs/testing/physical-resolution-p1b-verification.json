@@ -1,0 +1,56 @@
+{
+  "issue": 67,
+  "base": "5cbf06a96efe1b2a2d3cfaeee5c12b706d507149",
+  "implementationHead": "cfcac851d273d551134d2d19cb6f0828cea05eaf",
+  "schemaVersion": 13,
+  "physicalVersion": 3,
+  "tests": {
+    "passed": 482,
+    "failed": 0,
+    "skipped": 0,
+    "baseline": 467,
+    "fullLogSha256": "1f211ea125fe0a2ef94e35296a642e1621dfbdf7673fec1f5d993a58aafe6c12",
+    "childImplementationPassed": 480,
+    "childFullLogSha256": "7dc9fe043cf2b775df4e1c23556c6e277d848be2328aa05a0771fd415ed7e311"
+  },
+  "evidence": {
+    "directory": ".scratch/physical-p1b",
+    "manifestSha256": "e58d0c1f1b0a680a1c2b38fbb5077a678e4ddef45929c2e0b02780b6dc2f8179",
+    "files": 161,
+    "bytes": 74890755,
+    "independentLockedFiles": 4,
+    "unchangedBodies": 36,
+    "boundPolicies": 21,
+    "physicalCopies": 56,
+    "parsedBackups": 17,
+    "browserIdentities": 3,
+    "viewportWidths": [320, 768, 1024, 1440],
+    "nativeFinalPostMs": 493,
+    "finalRevision": 72,
+    "ordinaryCommands": 26,
+    "physicalRuns": 8,
+    "knownFinalFavicon404": 1
+  },
+  "sourceFileSha256": [
+    "3d06fbbf8f767b3e5e78e859c7187986041ed77d7af173917c4c72f2126b0c52",
+    "ebdef100f890e2871d1678ddddc0d592a5b06c01616c76eae6a2dcd0647fdabc",
+    "0297c147f56f498fdc490657b995b63c169244f292c3684915b8783685b1f563",
+    "9c7ecb7110b6b6af3bbaf54ebddc3e8332e032f6e46c82fb6a9c4e05b0c7ba2a"
+  ],
+  "unfinishedIssues": [65, 33, 57],
+  "unverifiedPlatforms": ["phones", "LAN", "Windows", "Safari"],
+  "integration": {
+    "codeHead": "e40e1ac9a5d13c0d78ee9775969d039fbc1f5f2d",
+    "privateVerificationPath": ".scratch/physical-p1b-root-review/integration-verification.json",
+    "sha256": "971ef94087d35d1d270382ad1d37e03eb1cf8804e04b7845ad4f783ea3e96080",
+    "fullTestsLogSha256": "1f211ea125fe0a2ef94e35296a642e1621dfbdf7673fec1f5d993a58aafe6c12",
+    "standardsP1Corrected": 1,
+    "specP2Corrected": 1,
+    "regressionsRedThenGreen": 2,
+    "legacyCasesComparedWithHistoricalSources": 2,
+    "allRestoreGameplayFieldsCompared": true,
+    "fullFreezeUnchanged": true,
+    "originalManifestUnchanged": true,
+    "newBrowserRun": false
+  }
+}

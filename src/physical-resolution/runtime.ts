@@ -40,7 +40,8 @@ export function physicalFamilies(raw: unknown) {
   return { damage, fear };
 }
 export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapshot {
-  if (p.version === 2) return replayFronts(p);
+  if (p.version !== 1) return replayFronts(p);
+  invariant(p.runs.length <= 32, 'Budget padri P0 superato.');
   invariant(
     !p.fronts &&
       p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),
@@ -341,17 +342,23 @@ export function openPhysical(
   source: PhysicalSource,
   program: PhysicalProgram,
   context?: FrontResources,
+  spatial?: PhysicalState['runs'][number]['spatial'],
+  runId: string = randomUUID(),
 ) {
   validatePhysical(p);
   validatePhysicalProgram(program, p.heroes.length);
   const copy = structuredClone(p),
-    id = randomUUID();
+    id = runId;
   copy.runs.push({
     id,
     source: PhysicalSourceSchema.parse(source),
     program: PhysicalProgramSchema.parse(program),
+    // Unmarked, non-spatial version2 runs retain their published replay rules.
+    // Ordinary spatial runs already identify the version3 continuation rules.
+    ...(p.version === 2 ? { executionRules: 'retained-paid-effects-v1' as const } : {}),
     answers: [],
     ...(context ? { context } : {}),
+    ...(spatial ? { spatial } : {}),
   });
   copy.snapshot = replayPhysical(copy);
   Object.assign(p, PhysicalStateSchema.parse(copy));

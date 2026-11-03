@@ -80,6 +80,9 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
     count: amount,
   }),
   z.strictObject({ kind: z.literal('scout'), hero: slot, count: z.int().min(1).max(5) }),
+  z.strictObject({ kind: z.literal('end-turn'), hero: slot }),
+  z.strictObject({ kind: z.literal('rally-reset'), hero: slot }),
+  z.strictObject({ kind: z.literal('rally-scout'), hero: slot, count: z.int().min(2).max(3) }),
   z.strictObject({
     kind: z.literal('event'),
     hero: slot,
@@ -133,6 +136,7 @@ const activeBase = {
   actorPlayerId: z.uuid(),
 };
 export const PhysicalDecisionSchema = z.strictObject({
+  scoutTopAllowed: z.boolean().optional(),
   ...activeBase,
   kind: z.literal('decision'),
   cursor: z.string().regex(/^[a-f0-9]{64}$/),
@@ -182,7 +186,17 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
 ]);
 export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
-  kind: z.enum(['suffer', 'discard', 'flip', 'turn-down', 'scout', 'event']),
+  kind: z.enum([
+    'suffer',
+    'discard',
+    'flip',
+    'turn-down',
+    'scout',
+    'event',
+    'end-turn',
+    'rally-reset',
+    'rally-scout',
+  ]),
   heroId: ContentIdSchema,
   prevented: PhysicalCountsSchema,
   transferred: PhysicalCountsSchema,
@@ -207,6 +221,21 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  cycle: z
+    .strictObject({
+      pending: z
+        .strictObject({
+          runId: z.uuid(),
+          pendingId: z.uuid(),
+          sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+          type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP']),
+        })
+        .nullable(),
+      heroes: z
+        .array(z.strictObject({ heroId: ContentIdSchema, travelMoves: z.int().min(0).max(2) }))
+        .max(5),
+    })
+    .optional(),
   synthetic: z.literal(true),
   decks: PhysicalCountsSchema,
   heroes: z
@@ -237,7 +266,7 @@ export const PhysicalViewSchema = z.strictObject({
     })
     .nullable()
     .optional(),
-  parents: z.array(PhysicalParentSchema).max(32),
+  parents: z.array(PhysicalParentSchema).max(1000),
 });
 export type PhysicalProgram = z.infer<typeof PhysicalProgramSchema>;
 export type PhysicalInput = z.infer<typeof PhysicalInputSchema>;

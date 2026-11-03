@@ -4,6 +4,15 @@ import { definitionId } from '../shared/preparation';
 import { digest } from '../map-freeze/hash';
 import { ApiError } from '../server/errors';
 import { invariant } from '../map-freeze/validate';
+function prepareInspirationPolicy(state: State, copy: string) {
+  const id = definitionId(copy);
+  const legacy = state.scenario!.pack.preparedEffects?.find((p) => p.skillId === id);
+  if (legacy?.effect === 'inspiration') return legacy;
+  const policy = state.physical?.fronts?.artifact.policies.find(
+    (p) => p.kind === 'skill' && p.id === id,
+  );
+  return policy?.effects.some((e) => e.op === 'after-prepare-inspiration') ? policy : null;
+}
 export function validatePreparedPolicies(pack: ScenarioPack, content: State['content']) {
   const policies = pack.preparedEffects ?? [];
   invariant(
@@ -30,9 +39,9 @@ export function requirePreparedCapability(pack: ScenarioPack, copy: string | nul
 }
 export function preparedReward(state: State, heroId: string, copy: string, source: string) {
   const sc = state.scenario!,
-    p = sc.pack.preparedEffects?.find((p) => p.skillId === definitionId(copy));
+    p = prepareInspirationPolicy(state, copy);
   requirePreparedCapability(sc.pack, copy);
-  if (!p || p.effect !== 'inspiration') return;
+  if (!p) return;
   const id = `${source}:${heroId}:${copy}`;
   sc.cardEffects ??= [];
   invariant(!sc.cardEffects.some((e) => e.id === id), 'Trigger preparato duplicato.');
@@ -74,7 +83,7 @@ export function validatePreparedRewards(state: State) {
       values.get(state.skillTest.heroId)! - state.skillTest.converted,
     );
   const physical = state.physical;
-  if (physical?.version === 2 && physical.runs.length) {
+  if (physical && physical.version !== 1 && physical.runs.length) {
     const initial = physical.runs[0]!.context!.preparation;
     const resources = physical.snapshot.resolution!.resources!.preparation;
     for (const hero of heroes) {
@@ -97,18 +106,16 @@ export function validatePreparedRewards(state: State) {
     'Trigger preparati ripetuti.',
   );
   for (const e of effects) {
-    const p = sc.pack.preparedEffects?.find((p) => p.skillId === definitionId(e.copy));
+    const p = prepareInspirationPolicy(state, e.copy);
     invariant(
-      p?.effect === 'inspiration' &&
-        digest(p) === e.policyHash &&
-        e.id === `${e.source}:${e.heroId}:${e.copy}`,
+      p && digest(p) === e.policyHash && e.id === `${e.source}:${e.heroId}:${e.copy}`,
       'Trigger senza fonte.',
     );
     const hero = state.preparation!.heroes.find((h) => h.heroId === e.heroId);
     invariant(hero, 'Trigger senza eroe.');
     if (e.source === 'initial') {
       const initial =
-        physical?.version === 2 && physical.runs[0]?.context
+        physical && physical.version !== 1 && physical.runs[0]?.context
           ? physical.runs[0].context.preparation.heroes.find((h) => h.heroId === hero.heroId)!
           : hero;
       const first = state.content!.roles.find((r) => r.id === hero.roleId)!.skills[0]!;
@@ -130,8 +137,8 @@ export function validatePreparedRewards(state: State) {
   }
   for (const hero of state.preparation!.heroes) {
     const first = state.content!.roles.find((r) => r.id === hero.roleId)!.skills[0]!;
-    const p = sc.pack.preparedEffects?.find((p) => p.skillId === first);
-    if (p?.effect === 'inspiration')
+    const p = prepareInspirationPolicy(state, `${first}:1`);
+    if (p)
       invariant(
         effects.some(
           (e) =>

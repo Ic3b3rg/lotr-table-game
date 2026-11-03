@@ -120,7 +120,10 @@ export function createPhysicalControls(
             );
         } else if (active.kind === 'decision') {
           root.append(text('p', active.title, 'company-help'));
-          if (player?.id === active.actorPlayerId && q?.kind === 'physical') {
+          if (
+            player?.id === active.actorPlayerId &&
+            (q?.kind === 'physical' || view.cycle?.pending)
+          ) {
             const form = decisionForm(active, session, catalog, (input) => {
               if (current) submit(bindPhysicalDecision(current, input));
             });

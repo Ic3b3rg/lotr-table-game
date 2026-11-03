@@ -19,8 +19,9 @@ export function journeyBudgetProblem(state: State, receipts: Receipt[]): string 
       receipt.turnId === travel.turnId &&
       receipt.heroId === travel.heroId
     ) {
-      if (receipt.type === 'START_TRAVEL') granted += 2;
-      else moved++;
+      if (receipt.type === 'START_TRAVEL') {
+        granted += receipt.movesGranted ?? 2;
+      } else moved++;
     }
   }
   return travel.remaining === granted - moved
@@ -48,6 +49,7 @@ export function applyJourneyCommand(
   playerId: string,
   command: JourneyCommand,
   plan: JourneyPlan | null,
+  grantedMoves = 2,
 ) {
   if (state.revision !== command.expectedRevision)
     throw new ApiError(409, 'TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la mappa e riprova.');
@@ -123,7 +125,7 @@ export function applyJourneyCommand(
       roundId: round.id,
       turnId: round.turnId!,
       heroId: command.heroId,
-      remaining: (journey.travel?.remaining ?? 0) + 2,
+      remaining: (journey.travel?.remaining ?? 0) + grantedMoves,
     };
   } else {
     if (!journey.travel || journey.travel.remaining < 1)
@@ -152,6 +154,9 @@ export function applyJourneyCommand(
     heroId: command.heroId,
     spaceId: position.spaceId,
     movesRemaining: journey.travel.remaining,
+    ...(command.type === 'START_TRAVEL' && state.physical?.cycle
+      ? { movesGranted: grantedMoves }
+      : {}),
     roundId: round.id,
     turnId: round.turnId,
   };

@@ -2,10 +2,24 @@ import type { State } from '../server/state';
 import type { Receipt } from '../shared/protocol';
 import { adjacent } from '../shared/journey-map';
 import { invariant } from '../map-freeze/validate';
+import { validateCycleReceipts } from '../server/physical-cycle';
 export function validateSourcePlayReceipts(
   state: State,
   commands: { playerId: string; requestId: string; receipt: Receipt }[],
 ) {
+  if (state.physical?.cycle) {
+    validateCycleReceipts(state, commands);
+    const seed = state.physical.cycle.seed;
+    const previous = structuredClone(state);
+    previous.round = seed.round;
+    previous.journey = seed.journey;
+    delete previous.physical!.cycle;
+    validateSourcePlayReceipts(
+      previous,
+      commands.filter((c) => c.receipt.appliedRevision <= seed.revision),
+    );
+    return;
+  }
   const sc = state.scenario!,
     j = state.journey,
     round = state.round;

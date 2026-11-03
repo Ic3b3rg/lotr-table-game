@@ -63,17 +63,19 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     const activeHero = catalog?.heroes.find((h) => h.id === active);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
-      : q?.kind === 'physical'
-        ? current.physical?.active?.kind === 'gate'
-          ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
-          : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
-        : q?.heroId
-          ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-          : q
-            ? 'Un partecipante conferma per il gruppo.'
-            : activeHero
-              ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-              : 'Avvio completato · scegliete il prossimo eroe di turno.';
+      : current.physical?.cycle?.pending
+        ? `${current.players.find((p) => p.id === current!.physical!.active?.actorPlayerId)?.name ?? 'Il proprietario indicato'} completa la capacità qui sotto. Il comando ordinario riprende soltanto dopo tutti i figli.`
+        : q?.kind === 'physical'
+          ? current.physical?.active?.kind === 'gate'
+            ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
+            : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
+          : q?.heroId
+            ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+            : q
+              ? 'Un partecipante conferma per il gruppo.'
+              : activeHero
+                ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+                : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -85,6 +87,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     turnLink.textContent = active ? 'Apri la mappa del turno' : 'Scegli il prossimo turno';
     turnLink.href = active ? '#journey-map' : '#rounds';
     element('#scenario-limit').hidden = sc?.phase !== 'action';
+    if (current.physical?.cycle)
+      element('#scenario-limit').textContent =
+        'Turni, viaggio e Riorganizzazione usano gli effetti attivi. Gli incontri originali, il combattimento e l’Ombra originale restano da implementare; le conferme Ombra della fonte sintetica sono manuali.';
     refreshActions();
   }
   agreed.oninput = () => {
