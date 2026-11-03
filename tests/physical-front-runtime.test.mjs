@@ -367,3 +367,44 @@ test('P1 refuses synthetic limits and malformed source environments without chan
     assert.deepEqual(f.p, before);
   }
 });
+
+test('an absolute prevention prohibition also constrains the owner contributing Guard to another hero', () => {
+  const f = fresh(({ ir, catalog }) => {
+    const d = catalog.skills.find((c) => c.id === 'role-1-skill-1');
+    ir.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Policy!4' },
+      effects: [{ op: 'guard', n: 2 }],
+    });
+    for (const d of ir.definitions.filter((d) => d.cardId.includes('damage'))) {
+      d.body = [{ op: 'keep-faceup' }];
+      d.persistent = [
+        { op: 'prohibit', window: 'continuous', operation: 'prevent-damage-including-negate' },
+      ];
+    }
+  });
+  const id = openPhysical(
+    f.p,
+    source,
+    f.program([{ ...suffer(0, 1, 0), face: 'faceup' }, suffer(1, 1, 1)]),
+    f.context,
+  );
+  answerPhysical(
+    f.p,
+    id,
+    { kind: 'physical-choice', option: 'close' },
+    evidence(0, f.heroes[0].playerId),
+  );
+  const guard = f.p.snapshot.active.options.find((o) => o.id !== 'close').id;
+  answerPhysical(
+    f.p,
+    id,
+    { kind: 'physical-choice', option: guard },
+    evidence(1, f.heroes[1].playerId),
+  );
+  assert.equal(f.p.snapshot.active.actorHeroId, f.heroes[0].heroId);
+  assert.equal(f.p.snapshot.active.heroId, f.heroes[1].heroId);
+  assert.deepEqual(f.p.snapshot.active.remaining, { damage: 0, fear: 1 });
+});

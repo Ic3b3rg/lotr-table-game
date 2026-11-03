@@ -265,6 +265,9 @@ class FrontReplay {
           .persistent.map((effect) => ({ copy, effect })),
       );
   }
+  private cannotPreventDamage(hero: number) {
+    return this.persist(hero).some(({ effect }) => effect.op === 'prohibit');
+  }
   private nearby(a: number, b: number) {
     // P1 synthetic source is confined to the authentic startup space; no invented topology.
     return a !== b && this.p.heroes[a]!.spaceId === this.p.heroes[b]!.spaceId;
@@ -725,7 +728,11 @@ class FrontReplay {
               }),
             )
             .filter((o) =>
-              o.families.some((f) => remaining[f] > 0 && (f !== 'damage' || !cannotDamage)),
+              o.families.some(
+                (f) =>
+                  remaining[f] > 0 &&
+                  (f !== 'damage' || (!cannotDamage && !this.cannotPreventDamage(o.actor))),
+              ),
             );
           if (!offers.length) break;
           const selected = this.choose(
@@ -743,17 +750,27 @@ class FrontReplay {
           if (selected === 'close') break;
           const offer = offers.find((o) => o.id === selected)!;
           const available = {
-            damage: !cannotDamage && offer.families.includes('damage') ? remaining.damage : 0,
+            damage:
+              !cannotDamage &&
+              !this.cannotPreventDamage(offer.actor) &&
+              offer.families.includes('damage')
+                ? remaining.damage
+                : 0,
             fear: offer.families.includes('fear') ? remaining.fear : 0,
           };
-          const input = this.ask(offer.actor, `${path}/activation-${window++}`, {
-            mode: 'allocate',
-            title: `Prevenzione per ${this.catalog.heroes.find((h) => h.id === this.hero(hero).heroId)!.name.text}: fino a ${offer.n}. ${offer.cost}.`,
-            options: [{ id: offer.id, label: offer.cost }],
-            minimum: 0,
-            maximum: offer.n,
-            remaining: available,
-          });
+          const input = this.ask(
+            offer.actor,
+            `${path}/activation-${window++}`,
+            {
+              mode: 'allocate',
+              title: `Prevenzione per ${this.catalog.heroes.find((h) => h.id === this.hero(hero).heroId)!.name.text}: fino a ${offer.n}. ${offer.cost}.`,
+              options: [{ id: offer.id, label: offer.cost }],
+              minimum: 0,
+              maximum: offer.n,
+              remaining: available,
+            },
+            hero,
+          );
           invariant(
             input.kind === 'physical-allocate' &&
               input.ability === offer.id &&
