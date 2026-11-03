@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
+import { PhysicalProgramSchema } from './physical';
 
 export const SourceTextSchema = z
   .array(
@@ -72,6 +73,7 @@ const action = <O extends string, T extends z.ZodRawShape>(op: O, shape: T) =>
   z.strictObject({ ...actionBase, op: z.literal(op), ...shape });
 // No executable strings, catch-all action or unknown-action fallback.
 export const ScenarioActionSchema = z.discriminatedUnion('op', [
+  action('physical', { text: SourceTextSchema, program: PhysicalProgramSchema }),
   action('message', {
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
     text: SourceTextSchema,
@@ -160,7 +162,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
-    scope: z.literal('startup-only'),
+    scope: z.enum(['startup-only', 'synthetic-physical-p0']),
     evidenceHash: HashSchema,
     prefabs: z
       .array(
@@ -208,13 +210,20 @@ export const ScenarioRequestSchema = z.strictObject({
   state: z.int().nonnegative(),
   entry: z.int().nonnegative(),
   action: z.int().min(-1),
-  kind: z.enum(['message', 'placement', 'scout', 'test', 'objective', 'handoff']),
+  kind: z.enum(['message', 'placement', 'scout', 'test', 'objective', 'handoff', 'physical']),
   text: SourceTextSchema,
   heroId: ContentIdSchema.nullable(),
   actorPlayerId: z.uuid().nullable(),
   stage: z.enum(['ready', 'revealed']),
   tileSource: SourceSchema.nullable(),
   fingerprint: HashSchema,
+  physical: z
+    .strictObject({
+      parentId: z.uuid(),
+      child: z.int().min(0).max(32),
+      grant: z.int().min(0).max(4).nullable(),
+    })
+    .optional(),
 });
 const taskBase = {
   instanceId: z.string().max(200),
@@ -240,6 +249,7 @@ export const ScenarioSchema = z.strictObject({
   tasks: z
     .array(
       z.discriminatedUnion('kind', [
+        z.strictObject({ ...taskBase, kind: z.literal('physical'), parentId: z.uuid() }),
         z.strictObject({
           ...taskBase,
           kind: z.literal('explore'),

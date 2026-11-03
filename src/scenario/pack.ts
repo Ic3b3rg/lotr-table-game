@@ -56,6 +56,15 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (a.op === 'physical')
+          invariant(
+            pack.manifest.scope === 'synthetic-physical-p0' &&
+              pack.name.toLocaleLowerCase('it-IT').includes('sintetic') &&
+              d.source === pack.principal &&
+              s.actions.length === 1 &&
+              a.origin.parameterHash === digest(a.program),
+            'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti.',
+          );
         const refs = [
           ...('target' in a ? [a.target] : []),
           ...('ref' in a ? [a.ref] : []),

@@ -21,7 +21,13 @@ export function performCommand(store: Store, playerId: string, command: Command)
       return generationReceipt(state, requestId, command.type);
     }
     if (command.type === 'START_SCENARIO' || command.type === 'SCENARIO_INPUT') {
-      const result = applyScenario(state, playerId, command, store.scenarioPackPath);
+      const result = applyScenario(
+        state,
+        playerId,
+        command,
+        store.scenarioPackPath,
+        store.physicalPackPath,
+      );
       advance(state);
       return { requestId, type: command.type, appliedRevision: state.revision, ...result };
     }

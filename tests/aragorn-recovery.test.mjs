@@ -68,6 +68,7 @@ test('schema 7 con Scoperta 2 aperta resta esattamente quella pesca e conserva g
   state.schemaVersion = 7;
   delete state.mapGeneration;
   delete state.scenario;
+  delete state.physical;
   state.group = { expectedPlayers: 3 };
   state.scout = {
     id: state.round.id,
@@ -85,7 +86,7 @@ test('schema 7 con Scoperta 2 aperta resta esattamente quella pesca e conserva g
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 10);
+  assert.equal(migrated.schemaVersion, 11);
   assert.deepEqual(migrated.scout, state.scout);
   assert.deepEqual(migrated.group, state.group);
   assert.deepEqual((await readBackup(restarted)).payload.commands, backup.payload.commands);

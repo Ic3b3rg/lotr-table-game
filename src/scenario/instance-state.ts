@@ -70,6 +70,21 @@ export function validateInstanceFlags(sc: Scenario) {
     const f = flags.get(i.id)!;
     const d = defs.get(i.definition)!;
     const s = d.states.find((s) => s.index === i.state)!;
+    for (const action of s.actions.filter(
+      (a) => a.op === 'physical' && i.started.includes(a.index),
+    )) {
+      const waiting = sc.tasks.some(
+        (t) =>
+          t.kind === 'physical' &&
+          t.instanceId === i.id &&
+          t.entry === i.entry &&
+          t.action === action.index,
+      );
+      invariant(
+        waiting === !i.completed.includes(action.index) && (!waiting || (!i.stopped && !i.settled)),
+        'FSM fisica conclusa prima del ritorno del figlio.',
+      );
+    }
     invariant(
       i.settled ===
         (i.stopped ||

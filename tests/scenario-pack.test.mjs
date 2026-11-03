@@ -8,7 +8,7 @@ test('schema10 aggiunge scenario null senza attivare un consumer', async (t) => 
   const host = await startHost();
   t.after(() => host.dispose());
   const state = await (await host.request('/api/session')).json();
-  assert.equal(state.schemaVersion, 10);
+  assert.equal(state.schemaVersion, 11);
   assert.equal(state.scenario, null);
 });
 test('IR stretta: digest, transizioni, variabili, source e azioni sconosciute sono verificati', () => {

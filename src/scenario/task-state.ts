@@ -36,6 +36,17 @@ export function validateSourceTasks(state: State) {
         'Cursore sezione fuori dalla fonte.',
       );
     }
+    if (task.kind === 'physical') {
+      const parent = state.physical?.snapshot.parents.find((p) => p.id === task.parentId);
+      invariant(
+        action.op === 'physical' &&
+          parent &&
+          parent.source === effect.id &&
+          parent.status !== 'completed' &&
+          parent.returnCount === 0,
+        'Continuazione fisica non legata al padre sospeso.',
+      );
+    }
   }
   for (const effect of sc.effects) {
     const { action, instance, completed } = sourceCursor(state, effect);

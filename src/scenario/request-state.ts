@@ -21,6 +21,24 @@ export function validateSourceRequest(state: State) {
   }
   const a = s.actions.find((a) => a.index === q.action);
   invariant(a, 'Richiesta senza azione.');
+  if (a.op === 'physical') {
+    const active = state.physical?.snapshot.active;
+    invariant(
+      q.kind === 'physical' &&
+        q.stage === 'ready' &&
+        q.tileSource === null &&
+        digest(q.text) === digest(a.text) &&
+        active &&
+        q.heroId === active.actorHeroId &&
+        q.actorPlayerId === active.actorPlayerId &&
+        q.physical?.parentId === active.runId &&
+        q.physical.child === active.child &&
+        q.physical.grant === (active.kind === 'prevent' ? active.grant : null),
+      'Richiesta fisica diversa dalla finestra fonte.',
+    );
+    return;
+  }
+  invariant(!q.physical, 'Cursore fisico su una richiesta estranea.');
   if (a.op === 'message') {
     const kind =
       a.mode === 'scout'

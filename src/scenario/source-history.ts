@@ -3,10 +3,17 @@ import { HANDOFF_TEXT, type Scenario, type ScenarioRequest } from '../shared/sce
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { sourceCursor, sourceTile } from './source-cursor';
+import { physicalHistory } from './physical';
+import type { PhysicalEvidence } from '../physical-resolution/model';
 
 type Request = Omit<ScenarioRequest, 'id' | 'fingerprint'>;
 type Completion = Scenario['completedSetup'][number];
-type Expected = { request: Request; kind: string; completion?: Completion };
+type Expected = {
+  request: Request;
+  kind: string;
+  completion?: Completion;
+  evidence?: PhysicalEvidence;
+};
 
 /** Derive consumed requests from source entries, completed services and the current cursor. */
 export function validateSourceHistory(state: State) {
@@ -33,6 +40,7 @@ export function validateSourceHistory(state: State) {
       sc.pending.action === effect.action
         ? sc.pending
         : null;
+    if (action.op === 'physical') expected.push(...physicalHistory(state, effect));
     if (action.op === 'revealTile') visible.add(sourceTile(state, instance, action.tile).source);
     if (action.op === 'section') {
       const task = sc.tasks.find(
@@ -149,7 +157,7 @@ export function validateSourceHistory(state: State) {
     'Cronologia richieste fonte incompleta.',
   );
   const consumed = new Set<string>();
-  expected.forEach(({ request, kind, completion }, n) => {
+  expected.forEach(({ request, kind, completion, evidence }, n) => {
     const record = sc.commands[n + 1]!;
     invariant(
       record.kind === kind &&
@@ -159,7 +167,13 @@ export function validateSourceHistory(state: State) {
         record.revision > sc.commands[n]!.revision &&
         (request.actorPlayerId === null || record.playerId === request.actorPlayerId) &&
         record.source === digest({ scenarioId: sc.id, ...request, id: record.pendingId }) &&
-        (!completion || completion.requestId === record.pendingId),
+        (!completion || completion.requestId === record.pendingId) &&
+        (!evidence ||
+          (record.requestId === evidence.requestId &&
+            record.pendingId === evidence.pendingId &&
+            record.revision === evidence.revision &&
+            record.source === evidence.sourceFingerprint &&
+            record.playerId === evidence.playerId)),
       'Cronologia non legata a richiesta, cursore o eroe fonte.',
     );
     consumed.add(record.pendingId);

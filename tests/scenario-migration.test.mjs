@@ -17,6 +17,7 @@ async function downgrade(host) {
   const b = await readBackup(host);
   b.payload.state.schemaVersion = 9;
   delete b.payload.state.scenario;
+  delete b.payload.state.physical;
   signBackup(b);
   return b;
 }

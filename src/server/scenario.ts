@@ -5,6 +5,7 @@ import type { State } from './state';
 import { loadScenarioPack, validateScenarioBinding } from '../scenario/pack';
 import { beginScenario, resumeScenario } from '../scenario/runtime';
 import { ApiError } from './errors';
+import { needsPhysical, loadPhysicalSource } from '../scenario/physical';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -42,6 +43,7 @@ export function applyScenario(
   playerId: string,
   command: ScenarioCommand,
   path: string,
+  physicalPath: string,
 ) {
   if (state.revision !== command.expectedRevision)
     throw new ApiError(
@@ -87,7 +89,20 @@ export function applyScenario(
         'SCENARIO_BOUNDARY',
         'L’avventura richiede la preparazione iniziale di ruolo. Le Scoperte libere dei tavoli precedenti restano conservate, ma non costituiscono questo nuovo avvio.',
       );
-    beginScenario(state, loadScenarioPack(path));
+    const parsed = loadScenarioPack(path);
+    let physical;
+    if (needsPhysical(parsed.pack)) {
+      try {
+        physical = loadPhysicalSource(physicalPath);
+      } catch {
+        throw new ApiError(
+          409,
+          'PHYSICAL_SOURCE_REQUIRED',
+          'Il raw privato verificato dei mazzi danni e paure manca o non corrisponde. Nessun avvio è stato applicato.',
+        );
+      }
+    }
+    beginScenario(state, parsed, physical);
   } else resumeScenario(state, playerId, command);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
@@ -105,6 +120,12 @@ export function applyScenario(
 }
 export function allowScenarioPlay(state: State, command: Command) {
   const sc = state.scenario!;
+  if (state.physical?.snapshot.active)
+    throw new ApiError(
+      409,
+      'PHYSICAL_PENDING',
+      'Risolvi la conseguenza corrente sul posto indicato. Le altre azioni attendono il suo completamento.',
+    );
   const allowed =
     sc.phase === 'action' &&
     ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type);
