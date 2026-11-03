@@ -42,6 +42,15 @@ eroe, conversioni/scarto/esito e ricompensa capped; obiettivo0; singolo
 handoff a round1. Nessun costo azione, rally shuffle o bonus Aragorn nel setup.
 Il premio al limite completa con incremento zero.
 
+Il controllo bounded delle abilità già preparate include anche i trigger
+obbligatori della preparazione. Il pack può compilare un guadagno di
+ispirazione identificato e vincolato all'intera definizione di carta verificata;
+il consumer lo registra una sola volta prima di SCENARIO_BEGIN. Un trigger
+che richiede capacità fisiche non implementate resta un blocker esplicito
+per quella preparazione, senza applicare il solo testo come effetto. Questo
+non abilita le altre capacità delle carte. L'ingresso richiede la preparazione
+iniziale di ruolo, distinguendola da Scoperte libere legacy già risolte.
+
 Ogni comando porta identità autenticata, generation, expectedRevision,
 scenario/pack/projection fingerprint, pending request e source cursor, più
 hero/actor quando richiesto. La transazione conserva effetto, cursore, prova
