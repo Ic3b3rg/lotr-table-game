@@ -296,30 +296,63 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     completed: !cycle.pending,
   };
 }
-function replay(state: State, cycle: CycleState) {
+type Replay = { work: State; receipts: Receipt[] };
+let lastReplay: { context: string; records: string; result: Replay } | null = null;
+
+function replay(state: State, cycle: CycleState): Replay {
   const original = state.physical!;
-  const p = structuredClone(original);
-  delete p.cycle;
-  p.runs = p.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
-  p.snapshot = replayPhysical(p);
-  const preparation = p.snapshot.resolution!.resources?.preparation ?? cycle.seed.preparation;
-  invariant(preparation, 'Ledger ordinario senza origine delle risorse.');
-  if (cycle.seed.preparation)
-    invariant(
-      digest(cycle.seed.preparation) === digest(preparation),
-      'Risorse del confine ordinario non continue con la fonte precedente.',
-    );
-  const work = {
-    ...state,
-    revision: cycle.seed.revision,
-    round: structuredClone(cycle.seed.round),
-    journey: structuredClone(cycle.seed.journey),
-    physical: p,
-    preparation: structuredClone(preparation),
-  };
-  const ledger: CycleState = { ...cycle, records: [], pending: null };
-  const receipts: Receipt[] = [];
-  for (const record of cycle.records) {
+  const {
+    physical: _,
+    preparation: __,
+    round: ___,
+    journey: ____,
+    revision: _____,
+    updatedAt: ______,
+    ...environment
+  } = state;
+  const { snapshot: _snapshot, cycle: _cycle, ...origin } = original;
+  const prefix = original.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
+  const context = digest({ environment, origin: { ...origin, runs: prefix }, seed: cycle.seed });
+  // Only a byte-equivalent canonical input prefix can reuse proof. Persisted
+  // snapshots/runs/pending are outputs, still compared by the validators. Keep
+  // one bounded entry and clone both ways so callers cannot change that proof.
+  const previous = lastReplay;
+  let result: Replay;
+  if (
+    previous?.context === context &&
+    previous.result.receipts.length <= cycle.records.length &&
+    previous.records === digest(cycle.records.slice(0, previous.result.receipts.length))
+  )
+    result = structuredClone(previous.result);
+  else {
+    const p = structuredClone(original);
+    delete p.cycle;
+    p.runs = structuredClone(prefix);
+    p.snapshot = replayPhysical(p);
+    const preparation = p.snapshot.resolution!.resources?.preparation ?? cycle.seed.preparation;
+    invariant(preparation, 'Ledger ordinario senza origine delle risorse.');
+    if (cycle.seed.preparation)
+      invariant(
+        digest(cycle.seed.preparation) === digest(preparation),
+        'Risorse del confine ordinario non continue con la fonte precedente.',
+      );
+    p.cycle = { ...cycle, records: [], pending: null };
+    result = {
+      work: {
+        ...state,
+        revision: cycle.seed.revision,
+        round: structuredClone(cycle.seed.round),
+        journey: structuredClone(cycle.seed.journey),
+        physical: p,
+        preparation: structuredClone(preparation),
+      },
+      receipts: [],
+    };
+  }
+  const { work, receipts } = result,
+    p = work.physical!,
+    ledger = p.cycle!;
+  for (const record of cycle.records.slice(receipts.length)) {
     invariant(
       record.intent.expectedRevision >= work.revision,
       'Ordine del ledger ordinario modificato.',
@@ -331,7 +364,8 @@ function replay(state: State, cycle: CycleState) {
     work.revision++;
   }
   p.cycle = ledger;
-  return { work, receipts };
+  lastReplay = { context, records: digest(cycle.records), result: structuredClone(result) };
+  return result;
 }
 export function applyPhysicalCycle(state: State, playerId: string, command: Command) {
   const p = state.physical!,
