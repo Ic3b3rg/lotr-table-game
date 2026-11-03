@@ -8,6 +8,8 @@ import { element, text } from './dom';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
+  'adventure-loss-consumer-unavailable':
+    'La Compagnia ha perso. La conseguenza finale è salvata; il seguito originale dell’avventura non è ancora disponibile.',
   'weakness-deck-empty':
     'La riserva comune delle debolezze è vuota. La continuazione resta salvata senza creare copie.',
   'boon-quantity-unconfirmed':

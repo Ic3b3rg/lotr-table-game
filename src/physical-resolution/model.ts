@@ -1,5 +1,7 @@
 import { FrozenFrontsSchema, FrontResourcesSchema, FrontSnapshotSchema } from './front-state';
 import { z } from 'zod';
+import { LastStandArtifactSchema } from './last-stand-program';
+import { LastStandSnapshotSchema } from '../shared/last-stand';
 import { CycleStateSchema } from '../shared/physical-cycle';
 import { ContentIdSchema } from '../shared/catalog';
 import { HashSchema } from '../shared/generated-map';
@@ -41,6 +43,7 @@ const maxRandomRecords = 2 + 32 * 32 * 2 + 100000;
 // Each 28-copy shuffle needs 27 indices, with at most 128 words per index.
 const maxRandomWords = maxRandomRecords * 55 * 128;
 export const PhysicalSnapshotSchema = z.strictObject({
+  lastStand: LastStandSnapshotSchema.optional(),
   resolution: FrontSnapshotSchema.optional(),
   decks: z.strictObject({ damage: copies, fear: copies }),
   areas: z
@@ -65,6 +68,7 @@ export const PhysicalStateSchema = z.strictObject({
   version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   cycle: CycleStateSchema.optional(),
   fronts: FrozenFrontsSchema.optional(),
+  lastStand: LastStandArtifactSchema.optional(),
   algorithm: z.literal('sha256-counter-rejection-fisher-yates-v1'),
   raw: z.unknown(),
   rawSha256: HashSchema,
@@ -79,6 +83,12 @@ export const PhysicalStateSchema = z.strictObject({
         source: PhysicalSourceSchema,
         program: PhysicalProgramSchema,
         executionRules: z.literal('retained-paid-effects-v1').optional(),
+        lastStandRules: z
+          .strictObject({
+            version: z.literal('source-last-stand-v1'),
+            artifactFingerprint: HashSchema,
+          })
+          .optional(),
         context: FrontResourcesSchema.optional(),
         spatial: z
           .strictObject({

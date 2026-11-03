@@ -2,6 +2,7 @@ import { validatePhysicalProgram } from './program';
 export { validatePhysicalProgram } from './program';
 import { replayFronts } from './front-runtime';
 import { validateFrontArtifact } from './front-program';
+import { validateLastStandArtifact, type LastStandArtifact } from './last-stand-program';
 import type { FrontResources } from './front-state';
 import type { z } from 'zod';
 import type { FrozenFrontsSchema } from './front-state';
@@ -320,12 +321,18 @@ export function freezePhysical(
   entropy = randomBytes(32).toString('hex'),
   rawSha256 = digest(raw),
   fronts?: z.infer<typeof FrozenFrontsSchema>,
+  lastStand?: LastStandArtifact,
 ): PhysicalState {
   const families = physicalFamilies(raw);
   if (fronts) validateFrontArtifact(raw, fronts.artifact, fronts.catalog);
+  if (lastStand) {
+    invariant(fronts, 'Ultimo Sforzo richiede risorse e fronti verificati.');
+    validateLastStandArtifact(raw, lastStand);
+  }
   const base = {
     version: fronts ? (2 as const) : (1 as const),
     ...(fronts ? { fronts } : {}),
+    ...(lastStand ? { lastStand: structuredClone(lastStand) } : {}),
     algorithm: 'sha256-counter-rejection-fisher-yates-v1' as const,
     raw: structuredClone(raw),
     rawSha256,
@@ -356,6 +363,14 @@ export function openPhysical(
     // Unmarked, non-spatial version2 runs retain their published replay rules.
     // Ordinary spatial runs already identify the version3 continuation rules.
     ...(p.version === 2 ? { executionRules: 'retained-paid-effects-v1' as const } : {}),
+    ...(p.lastStand
+      ? {
+          lastStandRules: {
+            version: p.lastStand.rules,
+            artifactFingerprint: p.lastStand.fingerprint,
+          },
+        }
+      : {}),
     answers: [],
     ...(context ? { context } : {}),
     ...(spatial ? { spatial } : {}),

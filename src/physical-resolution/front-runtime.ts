@@ -16,6 +16,8 @@ import {
 } from './front-program';
 import { FrontResourcesSchema, type FrontResources } from './front-state';
 import { canResolveAlternative } from './front-feasibility';
+import { LastStandRuntime } from './last-stand-runtime';
+import { validateLastStandArtifact } from './last-stand-program';
 
 type Family = 'damage' | 'fear';
 type Decision = Extract<PhysicalActive, { kind: 'decision' }>;
@@ -41,6 +43,7 @@ export function replayFronts(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapsh
   return new FrontReplay(p).replay();
 }
 class FrontReplay {
+  private readonly lastStand;
   private readonly rng;
   private readonly cards = new Map<string, PhysicalCard>();
   private readonly faceup = new Set<string>();
@@ -84,6 +87,34 @@ class FrontReplay {
       const population = families[family].cards.flatMap((c) => c.copies.map((c) => c.id));
       this.s.decks[family] = this.random(`initialize:${family}`, population, population.length);
     }
+    if (p.lastStand) validateLastStandArtifact(p.raw, p.lastStand);
+    this.lastStand = new LastStandRuntime(p, this.s, {
+      choose: (...args) => this.choose(...args),
+      ask: (hero, path, title, options) =>
+        this.ask(hero, path, {
+          mode: 'choose',
+          title,
+          options,
+          minimum: 1,
+          maximum: 1,
+          remaining: empty(),
+        }),
+      test: (hero, stat, path) => this.test(hero, stat, path, false, true),
+      limits: (hero) => this.limits(hero),
+      upCount: (hero, family) =>
+        this.s.areas[hero]![family].filter((c) => this.faceup.has(c)).length,
+      returnCovered: (hero, family) => {
+        const copies = this.s.areas[hero]![family].filter((c) => !this.faceup.has(c));
+        copies.forEach((copy) => this.discard(copy, hero));
+        return copies.length;
+      },
+      reward: (hero) => {
+        const previous = this.hero(hero).inspiration;
+        this.inspiration(hero);
+        return this.hero(hero).inspiration - previous;
+      },
+      award: (hero, id, source, path) => this.awardTitle(hero, id, source, path),
+    });
   }
   private get r() {
     return this.s.resolution!;
@@ -274,6 +305,16 @@ class FrontReplay {
   }
   private cannotPreventDamage(hero: number) {
     return this.persist(hero).some(({ effect }) => effect.op === 'prohibit');
+  }
+  private limits(hero: number) {
+    const d = this.catalog.heroes.find((d) => d.id === this.hero(hero).heroId)!;
+    const limits = { damage: d.stats.damage, fear: d.stats.fear };
+    for (const { effect: e } of this.policy(hero))
+      if (e.op === 'limits') {
+        limits.damage += e.damage;
+        limits.fear += e.fear;
+      }
+    return limits;
   }
   private nearby(a: number, b: number) {
     const heroes = this.run.spatial?.heroes ?? this.p.heroes;
@@ -540,7 +581,52 @@ class FrontReplay {
     }
   }
   private skillName(copy: string) {
-    return this.catalog.skills.find((s) => s.id === definitionId(copy))!.name.text;
+    return (
+      this.catalog.skills.find((s) => s.id === definitionId(copy))?.name.text ??
+      this.titleCard(copy)!.name.value
+    );
+  }
+  private titleCard(copy: string) {
+    const id = definitionId(copy);
+    if (!this.p.lastStand?.titles.some((t) => t.cardId === id)) return undefined;
+    return requirePhysicalFamily(this.p.raw, 'title').cards.find((c) => c.id === id);
+  }
+  private skillSymbols(copy: string) {
+    const skill = this.catalog.skills.find((s) => s.id === definitionId(copy));
+    if (skill) return skill;
+    const title = this.titleCard(copy);
+    invariant(title, 'Carta della prova senza definizione verificata.');
+    const icons = title.printing.value.icons;
+    return {
+      success: icons.find((i) => i.symbol === 'success')?.count ?? 0,
+      fate: icons.find((i) => i.symbol === 'fate')?.count ?? 0,
+    };
+  }
+  private awardTitle(hero: number, cardId: string, source: string, path: string) {
+    const state = this.s.lastStand!,
+      h = this.hero(hero),
+      copy = `${cardId}:1`;
+    invariant(
+      !state.titles.some((t) => t.cardId === cardId),
+      'Titolo già posseduto dalla Compagnia.',
+    );
+    const ownership = { heroId: h.heroId, cardId, copy, source, removed: false, pending: true };
+    state.titles.push(ownership);
+    const prepared = [...h.prepared, copy];
+    const discarded =
+      prepared.length > 4
+        ? this.select(
+            hero,
+            `${path}/prepared-limit`,
+            `Titolo ottenuto: ${this.skillName(copy)}. Scegli una carta preparata da scartare per il limite quattro.`,
+            prepared.map((id) => ({ id, label: this.skillName(id) })),
+            1,
+          )[0]!
+        : null;
+    h.prepared = prepared.filter((c) => c !== discarded);
+    if (discarded) h.discard.push(discarded);
+    ownership.pending = false;
+    // These titles have no after-preparation ability. Their own windows apply later.
   }
   private flip(hero: number, family: Family, n: number, path: string) {
     const selected = this.random(
@@ -1013,6 +1099,7 @@ class FrontReplay {
     stat: 'might' | 'wisdom' | 'agility' | 'spirit' | 'wit',
     path: string,
     negate = false,
+    lastStand = false,
   ): number {
     return this.frame(path, hero, null, 'test', 0, () => {
       const h = this.hero(hero),
@@ -1028,14 +1115,8 @@ class FrontReplay {
         );
       const cards = this.reveal(hero, Math.max(1, definition.stats[stat] + modifier), path);
       this.r.revealed.push({ heroId: h.heroId, cards: [...cards] });
-      let successes = cards.reduce(
-          (n, c) => n + this.catalog.skills.find((s) => s.id === definitionId(c))!.success,
-          0,
-        ),
-        fate = cards.reduce(
-          (n, c) => n + this.catalog.skills.find((s) => s.id === definitionId(c))!.fate,
-          0,
-        ),
+      let successes = cards.reduce((n, c) => n + this.skillSymbols(c).success, 0),
+        fate = cards.reduce((n, c) => n + this.skillSymbols(c).fate, 0),
         n = 0,
         spentTrigger = false;
       const printed = successes;
@@ -1073,12 +1154,24 @@ class FrontReplay {
                 : 'Spendi 2 fati per 1 successo',
           })),
         ];
-        const selected = this.choose(
-          hero,
-          `${path}/convert-${n++}`,
-          `Prova: ${cards.map((c) => this.skillName(c)).join(', ')}. ${successes} successi.`,
-          options,
-        );
+        const title = `Prova: ${cards.map((c) => this.skillName(c)).join(', ')}. ${successes} successi.`;
+        const decisionPath = `${path}/convert-${n++}`;
+        let selected: string;
+        if (lastStand) {
+          const input = this.ask(hero, decisionPath, {
+            mode: 'choose',
+            title,
+            options,
+            minimum: 1,
+            maximum: 1,
+            remaining: empty(),
+          });
+          invariant(
+            input.kind === 'physical-choice' && options.some((o) => o.id === input.option),
+            'Conversione non disponibile.',
+          );
+          selected = input.option;
+        } else selected = this.choose(hero, decisionPath, title, options);
         if (selected === 'resolve') break;
         if (selected === 'inspiration') {
           h.inspiration--;
@@ -1316,19 +1409,16 @@ class FrontReplay {
           parent.completedChildren++;
         }
         this.child = run.program.children.length;
-        for (let hero = 0; hero < this.p.heroes.length; hero++) {
-          const h = this.hero(hero),
-            d = this.catalog.heroes.find((x) => x.id === h.heroId)!;
-          const limits = { damage: d.stats.damage, fear: d.stats.fear };
-          for (const { effect: e } of this.policy(hero))
-            if (e.op === 'limits') {
-              limits.damage += e.damage;
-              limits.fear += e.fear;
-            }
-          for (const family of ['damage', 'fear'] as const)
-            if (this.s.areas[hero]![family].length >= limits[family])
-              this.gate(hero, 'last-stand-unavailable', empty(), family, 'P2:last-stand');
-        }
+        if (run.lastStandRules) {
+          this.lastStand.settle(run);
+          if (this.s.lastStand?.terminal) this.gate(0, 'adventure-loss-consumer-unavailable');
+        } else
+          for (let hero = 0; hero < this.p.heroes.length; hero++) {
+            const limits = this.limits(hero);
+            for (const family of ['damage', 'fear'] as const)
+              if (this.s.areas[hero]![family].length >= limits[family])
+                this.gate(hero, 'last-stand-unavailable', empty(), family, 'P2:last-stand');
+          }
         parent.status = 'completed';
         parent.returnCount = 1;
       } catch (e) {

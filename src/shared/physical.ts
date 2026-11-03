@@ -178,6 +178,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
       'required-deck-empty',
       'weakness-deck-empty',
       'boon-quantity-unconfirmed',
+      'adventure-loss-consumer-unavailable',
     ]),
     remaining: PhysicalCountsSchema,
     family: PhysicalFamilySchema.nullable(),
