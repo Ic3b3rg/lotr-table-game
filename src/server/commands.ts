@@ -1,3 +1,4 @@
+import { applyScenario, allowScenarioPlay } from './scenario';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Command } from '../shared/protocol';
 import { ApiError } from './errors';
@@ -19,9 +20,16 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return generationReceipt(state, requestId, command.type);
     }
+    if (command.type === 'START_SCENARIO' || command.type === 'SCENARIO_INPUT') {
+      const result = applyScenario(state, playerId, command, store.scenarioPackPath);
+      advance(state);
+      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+    }
+    if (state.scenario) allowScenarioPlay(state, command);
     if (
-      state.mapGeneration ||
-      (store.generator.gatesPlay(state) &&
+      (!state.scenario && state.mapGeneration) ||
+      (!state.scenario &&
+        store.generator.gatesPlay(state) &&
         command.type !== 'OPEN_DEMO' &&
         command.type !== 'RESOLVE_DEMO')
     )

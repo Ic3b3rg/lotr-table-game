@@ -1,3 +1,4 @@
+import { scenarioReceiptProblem } from '../scenario/validate';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -30,8 +31,10 @@ export class Store {
   readonly cookieSecret: string;
   readonly journeyPlan: JourneyPlan | null;
   readonly generator: MapGenerationService;
+  readonly scenarioPackPath: string;
 
   constructor(readonly directory = dataDirectory()) {
+    this.scenarioPackPath = process.env.LOTR_SCENARIO_PACK ?? join(directory, 'scenario.json');
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     // FULL commits are acknowledged before an action returns success.
     // https://nodejs.org/download/release/v24.11.1/docs/api/sqlite.html#class-databasesync
@@ -134,7 +137,8 @@ export class Store {
             receipt: ReceiptSchema.parse(JSON.parse(row.result)),
           };
         });
-      const problem = generationReceiptProblem(state, commands);
+      const problem =
+        generationReceiptProblem(state, commands) ?? scenarioReceiptProblem(state, commands);
       if (problem) throw new Error(problem);
     }
     if (state.journey?.travel) {

@@ -1,3 +1,4 @@
+import { scenarioStateProblem } from '../scenario/validate';
 import { z } from 'zod';
 import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol';
 import { CatalogSchema } from '../shared/catalog';
@@ -28,6 +29,8 @@ const BaseStateSchema = SessionSchema.omit({
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
+  const scenarioError = scenarioStateProblem(state);
+  if (scenarioError) ctx.addIssue({ code: 'custom', message: scenarioError });
   const generationError = generationStateProblem(state);
   if (generationError) ctx.addIssue({ code: 'custom', message: generationError });
   const groupError = groupProblem(state.group, state.players.length, state.preparation);

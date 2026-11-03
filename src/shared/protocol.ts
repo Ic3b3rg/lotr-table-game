@@ -64,10 +64,44 @@ export const IdentitySchema = z.object({
   canManageBackups: z.boolean(),
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('ack') }),
+  z.strictObject({ kind: z.literal('scout-reveal') }),
+  z.strictObject({
+    kind: z.literal('scout-resolve'),
+    prepareCopy: CopyIdSchema.nullable(),
+    top: z.array(CopyIdSchema).max(15),
+    bottom: z.array(CopyIdSchema).max(15),
+    discardPreparedCopy: CopyIdSchema.nullable(),
+  }),
+  z.strictObject({ kind: z.literal('test-reveal') }),
+  z.strictObject({ kind: z.literal('convert') }),
+  z.strictObject({ kind: z.literal('test-resolve') }),
+]);
 const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('START_SCENARIO'),
+    expectedRevision: z.int().nonnegative(),
+    packFingerprint: HashSchema,
+    projectionFingerprint: HashSchema,
+    agreed: z.literal(true),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('SCENARIO_INPUT'),
+    expectedRevision: z.int().nonnegative(),
+    scenarioId: z.uuid(),
+    packFingerprint: HashSchema,
+    projectionFingerprint: HashSchema,
+    pendingId: z.uuid(),
+    sourceFingerprint: HashSchema,
+    heroId: ContentIdSchema.nullable(),
+    input: ScenarioInputSchema,
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('GENERATE_ADVENTURE_MAP'),
@@ -245,6 +279,16 @@ const DemoReceiptSchema = z.strictObject({
 export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT']),
+    appliedRevision: z.int().nonnegative(),
+    scenarioId: z.uuid(),
+    pendingId: z.uuid().nullable(),
+    source: z.string().max(300),
+    kind: z.string().max(50),
+    phase: z.enum(['setup', 'action']),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.enum(['GENERATE_ADVENTURE_MAP', 'RESUME_ADVENTURE_MAP']),
     appliedRevision: z.int().nonnegative(),
     jobId: z.uuid(),
@@ -363,3 +407,5 @@ export type MapGenerationCommand = Extract<
   Command,
   { type: 'GENERATE_ADVENTURE_MAP' | 'RESUME_ADVENTURE_MAP' }
 >;
+
+export type ScenarioCommand = Extract<Command, { type: 'START_SCENARIO' | 'SCENARIO_INPUT' }>;

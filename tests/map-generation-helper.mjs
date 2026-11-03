@@ -6,8 +6,8 @@ import { catalogFixture } from './fixtures/catalog.mjs';
 import { generatorFixture } from './fixtures/map-freeze.mjs';
 import { readyCompany, readSession } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
-export async function readyGenerator(t, edit = () => {}, extraEnv = {}) {
-  const catalog = catalogFixture();
+export async function readyGenerator(t, edit = () => {}, extraEnv = {}, catalogInput = null) {
+  const catalog = catalogInput ?? catalogFixture();
   catalog.heroes.forEach((h) => (h.maxHands = 2));
   const raw = generatorFixture(catalog);
   edit(raw);
