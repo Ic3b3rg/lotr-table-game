@@ -57,8 +57,7 @@ export function physicalPack() {
         }),
         front: fact({ kind: 'rules', orientation: 'portrait' }),
         back: fact({
-          kind:
-            family === 'boon' ? 'same-as-front' : `${family === 'title' ? 'skill' : family}-back`,
+          kind: family === 'boon' ? 'boon-back' : `${family === 'title' ? 'skill' : family}-back`,
           orientation: 'portrait',
         }),
         text: text('Scarta questa carta immaginaria.'),

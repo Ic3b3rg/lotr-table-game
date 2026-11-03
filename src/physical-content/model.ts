@@ -46,6 +46,7 @@ const symbol = z.enum([
   'wit',
   'inspiration',
   'depletion',
+  'trinket',
 ]);
 const strings = z.array(short).max(24);
 const fact = <S extends z.ZodType>(value: S) =>
@@ -148,7 +149,7 @@ const PackSchema = z.strictObject({
         front: fact(z.strictObject({ kind: z.literal('rules'), orientation })),
         back: fact(
           z.strictObject({
-            kind: z.enum(['damage-back', 'fear-back', 'skill-back', 'same-as-front', 'unknown']),
+            kind: z.enum(['damage-back', 'fear-back', 'skill-back', 'boon-back', 'unknown']),
             orientation,
           }),
         ),

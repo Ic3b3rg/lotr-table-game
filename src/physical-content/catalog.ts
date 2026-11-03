@@ -29,11 +29,14 @@ function freeze<T>(value: T): DeepReadonly<T> {
   return value as DeepReadonly<T>;
 }
 
-/** Validates submitted evidence, not source authenticity or execution semantics. */
-export function inspectPhysicalContent(value: unknown): DeepReadonly<Result> {
+function readPack(value: unknown): PhysicalPack {
   boundPhysicalInput(value);
   const pack = parsePhysicalPack(value);
   validatePhysicalPack(pack);
+  return pack;
+}
+
+function assess(pack: PhysicalPack): Result {
   const diagnostics: Diagnostic[] = [];
   for (const c of pack.cards) {
     for (const [field, fact] of cardFacts(c)) {
@@ -70,11 +73,14 @@ export function inspectPhysicalContent(value: unknown): DeepReadonly<Result> {
     .filter((c) => c.binding.value?.skillStatus === 'absent-in-checked-base')
     .map((c) => ({ cardId: c.id, field: 'binding', message: c.binding.note }));
   const common = { formatVersion: 1 as const, coverage, diagnostics, anomalies };
-  return freeze(
-    diagnostics.length
-      ? { ...common, status: 'diagnostic' as const }
-      : { ...common, status: 'verified' as const, catalog: pack },
-  );
+  return diagnostics.length
+    ? { ...common, status: 'diagnostic' as const }
+    : { ...common, status: 'verified' as const, catalog: pack };
+}
+
+/** Validates submitted evidence, not source authenticity or execution semantics. */
+export function inspectPhysicalContent(value: unknown): DeepReadonly<Result> {
+  return freeze(assess(readPack(value)));
 }
 
 export function requirePhysicalCatalog(value: unknown): DeepReadonly<PhysicalPack> {
@@ -82,4 +88,27 @@ export function requirePhysicalCatalog(value: unknown): DeepReadonly<PhysicalPac
   if (result.status !== 'verified')
     throw new Error('Catalogo diagnostic: contenuto non completamente verificato.');
   return result.catalog;
+}
+
+/** A partial export has its own profile and cannot certify the complete pack. */
+export function requirePhysicalFamily(value: unknown, family: string) {
+  const selected = FAMILIES.find((f) => f === family);
+  if (!selected) throw new Error('Famiglia fisica sconosciuta.');
+  const pack = readPack(value);
+  const result = assess(pack);
+  if (!result.coverage.find((c) => c.family === selected)?.complete)
+    throw new Error(`Famiglia ${selected} diagnostic: contenuto non completamente verificato.`);
+  const cards = pack.cards.filter((c) => c.family === selected);
+  const ids = new Set(cards.map((c) => c.id));
+  return freeze({
+    formatVersion: 1 as const,
+    profile: 'base-physical-family-v1' as const,
+    status: 'verified' as const,
+    language: pack.language,
+    family: selected,
+    sources: pack.sources,
+    cards,
+    errata: pack.errata.filter((e) => ids.has(e.cardId)),
+    anomalies: result.anomalies.filter((a) => ids.has(a.cardId)),
+  });
 }

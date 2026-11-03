@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { readBounded, writeNew } from '../map-io/files';
-import { inspectPhysicalContent, PHYSICAL_CONTENT_LIMITS } from './catalog';
+import { inspectPhysicalContent, requirePhysicalFamily, PHYSICAL_CONTENT_LIMITS } from './catalog';
 
 try {
   const { values, tokens } = parseArgs({
-    options: { input: { type: 'string' }, output: { type: 'string' } },
+    options: { input: { type: 'string' }, output: { type: 'string' }, family: { type: 'string' } },
     tokens: true,
     allowPositionals: false,
   });
@@ -14,7 +14,11 @@ try {
   if (!values.input || !values.output) throw new Error('Usare --input file --output nuovo-file.');
   const bytes = await readBounded(values.input, PHYSICAL_CONTENT_LIMITS.bytes);
   const json = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  const result = inspectPhysicalContent(JSON.parse(json));
+  const input: unknown = JSON.parse(json);
+  const result =
+    values.family === undefined
+      ? inspectPhysicalContent(input)
+      : requirePhysicalFamily(input, values.family);
   await writeNew(
     values.output,
     `${JSON.stringify(

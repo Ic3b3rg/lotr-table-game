@@ -130,7 +130,7 @@ export function validatePhysicalPack(p: PhysicalPack): void {
     const expectedBack = title
       ? 'skill-back'
       : c.family === 'boon'
-        ? 'same-as-front'
+        ? 'boon-back'
         : `${c.family}-back`;
     if (back !== expectedBack && !(back === 'unknown' && c.back.status !== 'verified'))
       fail(`${c.id}: retro incoerente.`);

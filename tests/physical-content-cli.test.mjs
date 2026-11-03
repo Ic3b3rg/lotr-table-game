@@ -46,6 +46,23 @@ test('CLI diagnostico exit 2 non contiene proprietà catalog', async (t) => {
   assert.equal(output.coverage[1].complete, true);
 });
 
+test('CLI esporta la sola famiglia completa con profilo distinto', async (t) => {
+  const p = physicalPack();
+  p.cards[0].text.status = 'conflict';
+  p.cards[0].text.note = 'Conflitto.';
+  const f = await files(t, JSON.stringify(p));
+  const r = run([...f.args, '--family', 'title']);
+  assert.equal(r.status, 0, r.stderr);
+  const output = JSON.parse(await readFile(f.output, 'utf8'));
+  assert.equal(output.profile, 'base-physical-family-v1');
+  assert.equal(output.family, 'title');
+  assert.equal(output.cards.length, 21);
+  assert.ok(output.cards.every((c) => c.family === 'title'));
+  const bad = run(['--input', f.input, '--output', join(f.dir, 'bad.json'), '--family', 'damage']);
+  assert.equal(bad.status, 1);
+  await assert.rejects(stat(join(f.dir, 'bad.json')), { code: 'ENOENT' });
+});
+
 for (const alias of ['existing', 'input', 'hardlink', 'symlink'])
   test(`CLI preserva output ${alias} e input`, async (t) => {
     const f = await files(t);

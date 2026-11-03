@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   inspectPhysicalContent,
   requirePhysicalCatalog,
+  requirePhysicalFamily,
 } from '../dist/physical-content-library.mjs';
 import { physicalPack, withCorrection } from './fixtures/physical-content.mjs';
 
@@ -402,6 +403,33 @@ test('un conflitto esplicito resta diagnostico anche se i conteggi coincidono', 
   assert.equal(r.status, 'diagnostic');
   assert.ok(r.diagnostics.some((d) => d.code === 'conflict' && d.cardId === p.cards[0].id));
   assert.equal(r.coverage[0].copies, 28);
+});
+
+test('simbolo accessorio e segnalino consumo restano distinti nelle annotazioni', () => {
+  const p = physicalPack();
+  p.cards[0].mechanics.symbols.value = ['trinket', 'depletion'];
+  const r = requirePhysicalCatalog(p);
+  assert.deepEqual(r.cards[0].mechanics.symbols.value, ['trinket', 'depletion']);
+});
+
+test('export della singola famiglia verificata rimane consumabile in presenza di una famiglia irrisolta', () => {
+  const p = physicalPack();
+  p.cards[36].quantity = {
+    ...p.cards[36].quantity,
+    value: null,
+    status: 'unresolved',
+    note: 'Copie non note.',
+  };
+  p.cards[36].copies = [];
+  const r = requirePhysicalFamily(p, 'title');
+  assert.equal(r.profile, 'base-physical-family-v1');
+  assert.equal(r.status, 'verified');
+  assert.equal(r.family, 'title');
+  assert.equal(r.cards.length, 21);
+  assert.equal(r.cards[0].id, 'invented-title-1');
+  assert.equal(Object.isFrozen(r.cards[0].text), true);
+  assert.throws(() => requirePhysicalFamily(p, 'boon'), /diagnostic/i);
+  assert.throws(() => requirePhysicalFamily(p, 'other'));
 });
 
 test('limiti di stringhe, cardinalità, nodi, profondità e input ciclico sono verificati prima dello schema', () => {
