@@ -1,5 +1,8 @@
+import { dirname, join } from 'node:path';
+import { FrontArtifactSchema } from '../physical-resolution/front-program';
+import { preparationProblem } from '../shared/preparation';
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import type { State } from '../server/state';
 import type { Scenario, ScenarioAction, ScenarioPack, ScenarioRequest } from '../shared/scenario';
 import type { PhysicalActive } from '../shared/physical';
@@ -27,7 +30,16 @@ export function loadPhysicalSource(path: string) {
   const bytes = readFileSync(path),
     raw: unknown = JSON.parse(bytes.toString('utf8'));
   physicalFamilies(raw);
-  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex') };
+  const frontPath = join(dirname(path), 'physical-fronts.json');
+  if (existsSync(frontPath))
+    invariant(
+      statSync(frontPath).size <= PHYSICAL_CONTENT_LIMITS.bytes,
+      'Artifact fronti troppo grande.',
+    );
+  const fronts = existsSync(frontPath)
+    ? FrontArtifactSchema.parse(JSON.parse(readFileSync(frontPath, 'utf8')))
+    : undefined;
+  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex'), fronts };
 }
 export function initializeScenarioPhysical(
   state: State,
@@ -54,6 +66,9 @@ export function initializeScenarioPhysical(
     })),
     undefined,
     source.rawSha256,
+    sc.pack.manifest.scope === 'synthetic-physical-p1'
+      ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
+      : undefined,
   );
 }
 export function beginPhysicalAction(
@@ -71,7 +86,23 @@ export function beginPhysicalAction(
     'La prova fisica richiede lo startup fonte completato.',
   );
   validatePhysicalProgram(action.program, state.preparation!.heroes.length);
-  const parentId = openPhysical(state.physical, physicalOrigin(effect, action), action.program);
+  const context =
+    action.program.profile === 'source-fronts-v1'
+      ? {
+          preparation: structuredClone(state.preparation!),
+          depletion: structuredClone(
+            state.physical.snapshot.resolution?.resources?.depletion ?? [],
+          ),
+          boons: structuredClone(state.physical.snapshot.resolution?.resources?.boons ?? []),
+        }
+      : undefined;
+  const parentId = openPhysical(
+    state.physical,
+    physicalOrigin(effect, action),
+    action.program,
+    context,
+  );
+  syncPhysicalResources(state);
   sc.tasks.push({
     kind: 'physical',
     instanceId: effect.instanceId,
@@ -110,6 +141,7 @@ export function physicalRequestData(
     tileSource: null,
     physical: {
       parentId: active.runId,
+      ...(active.kind === 'decision' ? { cursor: active.cursor } : {}),
       child: active.child,
       grant: active.kind === 'prevent' ? active.grant : null,
     },
@@ -122,11 +154,7 @@ export function answerScenarioPhysical(
 ) {
   const p = state.physical,
     q = state.scenario!.pending;
-  if (
-    !p ||
-    !q?.physical ||
-    (command.input.kind !== 'physical-prevent' && command.input.kind !== 'physical-discard')
-  )
+  if (!p || !q?.physical || !command.input.kind.startsWith('physical-'))
     throw new ApiError(
       409,
       'PHYSICAL_INPUT_REQUIRED',
@@ -153,7 +181,13 @@ export function answerScenarioPhysical(
       'L’allocazione non rispetta quantità residue, budget o destinatario della richiesta. Nessuna carta o costo è cambiato.',
     );
   }
+  syncPhysicalResources(state);
   state.scenario!.pending = null;
+}
+
+function syncPhysicalResources(state: State) {
+  const resources = state.physical?.snapshot.resolution?.resources;
+  if (resources) state.preparation = structuredClone(resources.preparation);
 }
 
 /** Reconstruct physical effects before accepting state, task flags or paired receipts. */
@@ -174,6 +208,32 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  invariant(
+    (p.version === 2) === (sc.pack.manifest.scope === 'synthetic-physical-p1'),
+    'Profilo fronti diverso dalla fonte.',
+  );
+  if (p.version === 2) {
+    invariant(
+      digest(p.fronts!.catalog) === digest(state.content),
+      'Catalogo delle policy modificato.',
+    );
+    const initial = p.runs[0]?.context;
+    if (initial)
+      invariant(
+        !preparationProblem(
+          state.content!,
+          state.players.map((p) => p.id),
+          initial.preparation,
+        ),
+        'Risorse iniziali fisiche non valide.',
+      );
+    const resources = p.snapshot.resolution!.resources;
+    if (resources)
+      invariant(
+        digest(resources.preparation) === digest(state.preparation),
+        'Risorse non riconciliate con la risoluzione fisica.',
+      );
+  }
   invariant(
     digest(p.binding) ===
       digest({
@@ -253,6 +313,14 @@ export function validateScenarioPhysical(state: State) {
 export function physicalHistory(state: State, effect: SourceEffect) {
   const p = state.physical!,
     run = p.runs.find((r) => r.source.effectId === effect.id)!;
+  if (p.version === 2)
+    return p.snapshot
+      .resolution!.history.filter((h) => h.runId === run.id)
+      .map((h) => ({
+        request: physicalRequestData(state, effect, h.active),
+        kind: run.answers[h.answer]!.input.kind,
+        evidence: run.answers[h.answer]!.evidence,
+      }));
   return run.answers.map((answer) => {
     const child = run.program.children[answer.child]!,
       actorSlot = child.kind === 'suffer' ? child.prevention[answer.grant!]!.actor : child.hero;

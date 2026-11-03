@@ -162,7 +162,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
-    scope: z.enum(['startup-only', 'synthetic-physical-p0']),
+    scope: z.enum(['startup-only', 'synthetic-physical-p0', 'synthetic-physical-p1']),
     evidenceHash: HashSchema,
     prefabs: z
       .array(
@@ -220,6 +220,7 @@ export const ScenarioRequestSchema = z.strictObject({
   physical: z
     .strictObject({
       parentId: z.uuid(),
+      cursor: HashSchema.optional(),
       child: z.int().min(0).max(32),
       grant: z.int().min(0).max(4).nullable(),
     })

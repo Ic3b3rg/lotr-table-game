@@ -98,7 +98,7 @@ export const FrontOpSchema: z.ZodType<FrontOp> = z.lazy(() =>
     }),
   ]),
 );
-export const PersistentOpSchema = z.discriminatedUnion('op', [
+export const PersistentOpSchema = z.union([
   z.strictObject({
     op: z.literal('replace-discard'),
     window: z.literal('would-discard'),
@@ -193,6 +193,7 @@ export const PolicyEffectSchema = z.discriminatedUnion('op', [
     noPrintedSuccess: z.boolean(),
     scout: z.int().min(0).max(2),
   }),
+  z.strictObject({ op: z.literal('convert-one-scout'), scout: z.literal(1) }),
   z.strictObject({ op: z.literal('convert-pair-alone') }),
   z.strictObject({ op: z.literal('after-prepare-inspiration') }),
   z.strictObject({ op: z.literal('after-prepare-flip-fear') }),

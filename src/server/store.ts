@@ -50,7 +50,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 11,
+      schemaVersion: 12,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -362,7 +362,12 @@ export function publicSession(state: State) {
     updatedAt: state.updatedAt,
     players: state.players.map(({ id, name }) => ({ id, name })),
     demo: state.demo,
-    preparation: preparationView(state.preparation, state.skillTest, state.scout),
+    preparation: preparationView(
+      state.preparation,
+      state.skillTest,
+      state.scout,
+      state.physical?.snapshot.resolution?.revealed,
+    ),
     scout: state.scout,
     round: state.round,
     journey: state.journey,

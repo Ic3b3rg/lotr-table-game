@@ -66,7 +66,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       : q?.kind === 'physical'
         ? current.physical?.active?.kind === 'gate'
           ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
-          : `${actor?.name ?? 'Il proprietario indicato'} risolve l’allocazione qui sotto. La fonte riprende dopo le conseguenze.`
+          : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
         : q?.heroId
           ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
           : q

@@ -286,6 +286,9 @@ export function scenarioStateProblem(state: State): string | null {
         ...hero.deck,
         ...hero.discard,
         ...hero.prepared,
+        ...(state.physical?.snapshot.resolution?.revealed
+          .filter((h) => h.heroId === hero.heroId)
+          .flatMap((h) => h.cards) ?? []),
         ...(state.scout?.heroId === hero.heroId ? state.scout.revealed : []),
         ...(state.skillTest?.status === 'converting' && state.skillTest.heroId === hero.heroId
           ? state.skillTest.revealed

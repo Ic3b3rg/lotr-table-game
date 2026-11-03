@@ -8,7 +8,7 @@ export const PhysicalCountsSchema = z.strictObject({
 });
 const slot = z.int().min(0).max(4);
 const amount = z.int().min(0).max(56);
-export const PhysicalProgramSchema = z.strictObject({
+const LegacyPhysicalProgramSchema = z.strictObject({
   profile: z.literal('synthetic-no-abilities-v1'),
   initialCredits: z.array(z.int().min(0).max(32)).min(1).max(5),
   limits: z
@@ -62,7 +62,66 @@ export const PhysicalProgramSchema = z.strictObject({
     .min(1)
     .max(32),
 });
+const FrontChildSchema = z.discriminatedUnion('kind', [
+  LegacyPhysicalProgramSchema.shape.children.element.options[0].extend({
+    negate: z.enum(['might', 'wisdom', 'agility', 'spirit', 'wit']).optional(),
+  }),
+  LegacyPhysicalProgramSchema.shape.children.element.options[1],
+  z.strictObject({
+    kind: z.literal('flip'),
+    hero: slot,
+    family: PhysicalFamilySchema,
+    count: amount,
+  }),
+  z.strictObject({
+    kind: z.literal('turn-down'),
+    hero: slot,
+    family: PhysicalFamilySchema,
+    count: amount,
+  }),
+  z.strictObject({ kind: z.literal('scout'), hero: slot, count: z.int().min(1).max(5) }),
+  z.strictObject({
+    kind: z.literal('event'),
+    hero: slot,
+    event: z.enum([
+      'end-own-turn',
+      'after-rest',
+      'rally-scout',
+      'before-interact',
+      'during-own-turn',
+      'after-darkness-suffering-batch',
+    ]),
+    threat: z.boolean(),
+    sufferedFear: amount,
+  }),
+]);
+export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
+  profile: z.literal('source-fronts-v1'),
+  children: z.array(FrontChildSchema).min(1).max(32),
+  darknessHeroes: z.array(slot).max(5),
+});
+export const PhysicalProgramSchema = z.discriminatedUnion('profile', [
+  LegacyPhysicalProgramSchema,
+  FrontPhysicalProgramSchema,
+]);
 export const PhysicalInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('physical-choice'), option: z.string().min(1).max(200) }),
+  z.strictObject({
+    kind: z.literal('physical-select'),
+    ids: z.array(z.string().min(1).max(200)).max(56),
+  }),
+  z.strictObject({
+    kind: z.literal('physical-allocate'),
+    ability: z.string().max(200).nullable(),
+    ...PhysicalCountsSchema.shape,
+  }),
+  z.strictObject({
+    kind: z.literal('physical-scout'),
+    prepare: z.string().max(120).nullable(),
+    discard: z.string().max(120).nullable(),
+    top: z.array(z.string().max(120)).max(56),
+    bottom: z.array(z.string().max(120)).max(56),
+  }),
   z.strictObject({ kind: z.literal('physical-prevent'), ...PhysicalCountsSchema.shape }),
   z.strictObject({ kind: z.literal('physical-discard'), ...PhysicalCountsSchema.shape }),
 ]);
@@ -73,7 +132,21 @@ const activeBase = {
   actorHeroId: ContentIdSchema,
   actorPlayerId: z.uuid(),
 };
+export const PhysicalDecisionSchema = z.strictObject({
+  ...activeBase,
+  kind: z.literal('decision'),
+  cursor: z.string().regex(/^[a-f0-9]{64}$/),
+  mode: z.enum(['choose', 'select', 'allocate', 'scout']),
+  title: z.string().min(1).max(1000),
+  options: z
+    .array(z.strictObject({ id: z.string().min(1).max(200), label: z.string().min(1).max(1000) }))
+    .max(100),
+  minimum: z.int().min(0).max(56),
+  maximum: z.int().min(0).max(56),
+  remaining: PhysicalCountsSchema,
+});
 export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
+  PhysicalDecisionSchema,
   z.strictObject({
     ...activeBase,
     kind: z.literal('prevent'),
@@ -99,6 +172,8 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
       'effective-limits-unavailable',
       'last-stand-unavailable',
       'required-deck-empty',
+      'weakness-deck-empty',
+      'boon-quantity-unconfirmed',
     ]),
     remaining: PhysicalCountsSchema,
     family: PhysicalFamilySchema.nullable(),
@@ -107,7 +182,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
 ]);
 export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
-  kind: z.enum(['suffer', 'discard']),
+  kind: z.enum(['suffer', 'discard', 'flip', 'turn-down', 'scout', 'event']),
   heroId: ContentIdSchema,
   prevented: PhysicalCountsSchema,
   transferred: PhysicalCountsSchema,
@@ -139,6 +214,29 @@ export const PhysicalViewSchema = z.strictObject({
     .min(1)
     .max(5),
   active: PhysicalActiveSchema.nullable(),
+  fronts: z
+    .array(
+      z.strictObject({
+        token: z.string().max(100),
+        heroId: ContentIdSchema,
+        family: PhysicalFamilySchema,
+        name: z.string().max(1000),
+        text: z.string().max(20000),
+        persistent: z.array(z.string().max(1000)).max(8),
+      }),
+    )
+    .max(56)
+    .optional(),
+  current: z
+    .strictObject({
+      heroId: ContentIdSchema,
+      family: PhysicalFamilySchema,
+      name: z.string().max(1000),
+      text: z.string().max(20000),
+      step: z.string().max(1000),
+    })
+    .nullable()
+    .optional(),
   parents: z.array(PhysicalParentSchema).max(32),
 });
 export type PhysicalProgram = z.infer<typeof PhysicalProgramSchema>;

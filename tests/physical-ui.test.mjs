@@ -78,3 +78,33 @@ test('physical allocation UI distinguishes optional prevention from mandatory ex
   assert.equal(lib.physicalAllocationProblem(discard, { damage: 1, fear: 1 }), null);
   assert.ok(lib.physicalAllocationProblem(discard, { damage: 0, fear: 2 }));
 });
+
+test('P1 UI binds a typed decision to its precise source cursor without hidden state', () => {
+  const s = session();
+  s.physical.active = {
+    ...active,
+    kind: 'decision',
+    cursor: 'c'.repeat(64),
+    mode: 'choose',
+    title: 'Scelta inventata',
+    options: [
+      { id: '0', label: 'Scarta una preparata' },
+      { id: '1', label: 'Subisci' },
+    ],
+    minimum: 1,
+    maximum: 1,
+    remaining: { damage: 0, fear: 0 },
+  };
+  s.scenario.pending.physical = {
+    parentId: active.runId,
+    child: 0,
+    grant: null,
+    cursor: 'c'.repeat(64),
+  };
+  assert.equal(typeof lib.bindPhysicalDecision, 'function');
+  const intent = lib.bindPhysicalDecision(s, { kind: 'physical-choice', option: '0' });
+  assert.deepEqual(intent.input, { kind: 'physical-choice', option: '0' });
+  assert.equal(intent.sourceFingerprint, 'source');
+  s.scenario.pending.physical.cursor = 'd'.repeat(64);
+  assert.throws(() => lib.bindPhysicalDecision(s, { kind: 'physical-choice', option: '0' }));
+});

@@ -49,6 +49,7 @@ export function preparationProblem(
   preparation: Preparation,
   test: SkillTest | null = null,
   scout: Scouting | null = null,
+  physical?: { held: { heroId: string; cards: string[] }[] },
 ): string | null {
   const heroes = preparation.heroes;
   if (
@@ -103,7 +104,7 @@ export function preparationProblem(
         return 'Riserva delle debolezze incoerente.';
       seen.add(copy);
     }
-    if (reserve.length !== 20 - heroes.length)
+    if (!physical && reserve.length !== 20 - heroes.length)
       return 'Numero di debolezze nella riserva non valido.';
     for (const hero of heroes) {
       const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
@@ -111,14 +112,17 @@ export function preparationProblem(
       const revealed = [
         ...(test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : []),
         ...(scout?.heroId === hero.heroId ? scout.revealed : []),
+        ...(physical?.held.filter((h) => h.heroId === hero.heroId).flatMap((h) => h.cards) ?? []),
       ];
       const expected = [...catalog.basicSkills, ...definition.skills, ...role.skills];
       const actual = [...hero.prepared, ...hero.deck, ...hero.discard, ...revealed];
-      if (actual.length !== 15) return 'L’eroe deve conservare le sue quindici carte abilità.';
+      if (!physical && actual.length !== 15)
+        return 'L’eroe deve conservare le sue quindici carte abilità.';
       const definitions = actual.map(definitionId);
       if (
         expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
-        definitions.filter((id) => catalog.weaknessCards.includes(id)).length !== 1
+        definitions.filter((id) => catalog.weaknessCards.includes(id)).length < 1 ||
+        actual.length !== 14 + definitions.filter((id) => catalog.weaknessCards.includes(id)).length
       )
         return 'Composizione del mazzo iniziale non valida.';
       for (const copy of actual) {
@@ -127,6 +131,8 @@ export function preparationProblem(
         seen.add(copy);
       }
     }
+    if (catalog.weaknessCards.some((id) => !seen.has(`${id}:1`)))
+      return 'La riserva comune delle debolezze non è conservata.';
   }
   if (preparation.status === 'draft' && preparation.weaknessDeck.length)
     return 'La riserva non è ancora preparata.';
@@ -136,6 +142,7 @@ export function preparationView(
   preparation: Preparation | null,
   test: SkillTest | null = null,
   scout: Scouting | null = null,
+  physicalHeld: { heroId: string; cards: string[] }[] = [],
 ) {
   if (!preparation) return null;
   return {
@@ -150,6 +157,7 @@ export function preparationView(
         ...discard,
         ...(test?.status === 'converting' && test.heroId === hero.heroId ? test.revealed : []),
         ...(scout?.heroId === hero.heroId ? scout.revealed : []),
+        ...physicalHeld.filter((h) => h.heroId === hero.heroId).flatMap((h) => h.cards),
       ].sort(),
     })),
   };

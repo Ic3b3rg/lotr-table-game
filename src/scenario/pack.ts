@@ -58,7 +58,10 @@ export function parseScenarioPack(raw: unknown) {
         validateSourceHandler(a);
         if (a.op === 'physical')
           invariant(
-            pack.manifest.scope === 'synthetic-physical-p0' &&
+            pack.manifest.scope ===
+              (a.program.profile === 'source-fronts-v1'
+                ? 'synthetic-physical-p1'
+                : 'synthetic-physical-p0') &&
               pack.name.toLocaleLowerCase('it-IT').includes('sintetic') &&
               d.source === pack.principal &&
               s.actions.length === 1 &&

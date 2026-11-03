@@ -1,25 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { hash } from './fixtures/map-freeze.mjs';
-import { diagnosticRaw } from './fixtures/physical-resolution.mjs';
+import { diagnosticRaw, inventedFrontInput as input } from './fixtures/physical-fronts.mjs';
 import { compilePhysicalFronts } from '../dist/physical-resolution-library.mjs';
 
-function input(raw) {
-  return {
-    version: 1,
-    definitions: raw.cards
-      .filter((c) => ['damage', 'fear'].includes(c.family))
-      .map((c) => ({
-        cardId: c.id,
-        cardHash: hash(c),
-        originalHash: hash(c.text.original),
-        source: c.text.original?.reference ?? c.text.evidence[0],
-        body: [{ op: 'self-flip-down' }],
-        persistent: [],
-      })),
-    policies: [],
-  };
-}
 test('front compiler binds all 36 definitions to raw fields and rejects unknown or altered programs', () => {
   const raw = diagnosticRaw(),
     ir = input(raw);
@@ -53,4 +37,3 @@ test('front compiler binds all 36 definitions to raw fields and rejects unknown 
   duplicate.definitions[1] = duplicate.definitions[0];
   assert.throws(() => compilePhysicalFronts(raw, duplicate));
 });
-export { input as inventedFrontInput };

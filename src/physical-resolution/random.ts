@@ -5,7 +5,7 @@ export class PhysicalRandom {
   cursor = 0;
   constructor(private readonly entropy: string) {}
   index(size: number) {
-    if (!Number.isInteger(size) || size < 1 || size > 28)
+    if (!Number.isInteger(size) || size < 1 || size > 56)
       throw new Error('Popolazione casuale fisica non valida.');
     const bound = 0x100000000 - (0x100000000 % size);
     for (let n = 0; n < 128; n++) {

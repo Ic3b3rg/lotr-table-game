@@ -1,3 +1,8 @@
+import { replayFronts } from './front-runtime';
+import { validateFrontArtifact } from './front-program';
+import type { FrontResources } from './front-state';
+import type { z } from 'zod';
+import type { FrozenFrontsSchema } from './front-state';
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
   PhysicalInputSchema,
@@ -38,6 +43,22 @@ export function validatePhysicalProgram(program: PhysicalProgram, count: number)
     program.initialCredits.length === count && program.limits.length === count,
     'Stati sintetici non legati alla compagnia.',
   );
+  if (program.profile === 'source-fronts-v1') {
+    invariant(
+      program.initialCredits.every((n) => n === 0),
+      'Crediti sintetici su fonte P1.',
+    );
+    for (const c of program.children)
+      invariant(
+        c.hero < count &&
+          (c.kind !== 'suffer' ||
+            (!c.prevention.length &&
+              new Set(c.cards.map((x) => x.family)).size === c.cards.length)) &&
+          (c.kind !== 'discard' || new Set(c.families).size === c.families.length),
+        'Fonte P1 non valida.',
+      );
+    return;
+  }
   for (const child of program.children) {
     invariant(child.hero < count, 'Destinatario fonte assente.');
     if (child.kind === 'suffer') {
@@ -55,6 +76,12 @@ export function validatePhysicalProgram(program: PhysicalProgram, count: number)
   }
 }
 export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapshot {
+  if (p.version === 2) return replayFronts(p);
+  invariant(
+    !p.fronts &&
+      p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),
+    'Dati fronti in un runtime P0.',
+  );
   const families = physicalFamilies(p.raw);
   invariant(digest(families) === p.contentFingerprint, 'Contenuto fisico congelato modificato.');
   invariant(
@@ -93,6 +120,7 @@ export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnap
     sources.add(run.source.effectId);
     runIds.add(run.id);
     const pr = run.program;
+    invariant(pr.profile === 'synthetic-no-abilities-v1', 'Profilo P0 cambiato.');
     validatePhysicalProgram(pr, p.heroes.length);
     snapshot.credits = [...pr.initialCredits];
     const parent: PhysicalSnapshot['parents'][number] = {
@@ -326,10 +354,13 @@ export function freezePhysical(
   heroes: PhysicalHero[],
   entropy = randomBytes(32).toString('hex'),
   rawSha256 = digest(raw),
+  fronts?: z.infer<typeof FrozenFrontsSchema>,
 ): PhysicalState {
   const families = physicalFamilies(raw);
+  if (fronts) validateFrontArtifact(raw, fronts.artifact, fronts.catalog);
   const base = {
-    version: 1 as const,
+    version: fronts ? (2 as const) : (1 as const),
+    ...(fronts ? { fronts } : {}),
     algorithm: 'sha256-counter-rejection-fisher-yates-v1' as const,
     raw: structuredClone(raw),
     rawSha256,
@@ -341,8 +372,14 @@ export function freezePhysical(
   };
   return PhysicalStateSchema.parse({ ...base, snapshot: replayPhysical(base) });
 }
-export function openPhysical(p: PhysicalState, source: PhysicalSource, program: PhysicalProgram) {
+export function openPhysical(
+  p: PhysicalState,
+  source: PhysicalSource,
+  program: PhysicalProgram,
+  context?: FrontResources,
+) {
   validatePhysical(p);
+  validatePhysicalProgram(program, p.heroes.length);
   const copy = structuredClone(p),
     id = randomUUID();
   copy.runs.push({
@@ -350,6 +387,7 @@ export function openPhysical(p: PhysicalState, source: PhysicalSource, program: 
     source: PhysicalSourceSchema.parse(source),
     program: PhysicalProgramSchema.parse(program),
     answers: [],
+    ...(context ? { context } : {}),
   });
   copy.snapshot = replayPhysical(copy);
   Object.assign(p, PhysicalStateSchema.parse(copy));
@@ -367,6 +405,7 @@ export function answerPhysical(
   const copy = structuredClone(p),
     run = copy.runs.find((r) => r.id === runId)!;
   run.answers.push({
+    ...(q.kind === 'decision' ? { cursor: q.cursor } : {}),
     child: q.child,
     grant: q.kind === 'prevent' ? q.grant : null,
     input: PhysicalInputSchema.parse(input),
