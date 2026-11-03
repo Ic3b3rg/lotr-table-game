@@ -60,18 +60,22 @@ export function bindPhysicalDecision(
     q = sc?.pending,
     active = session.physical?.active;
   const cycle = session.physical?.cycle?.pending;
-  if (cycle && active?.kind === 'decision' && active.runId === cycle.runId) {
+  const continuing =
+    active?.kind === 'gate' &&
+    active.reason === 'last-stand-unavailable' &&
+    input.kind === 'physical-continue-last-stand';
+  if (cycle && (active?.kind === 'decision' || continuing) && active.runId === cycle.runId) {
     const { type: _, ...binding } = cycle;
     return { type: 'CYCLE_INPUT' as const, ...binding, input };
   }
   if (
     !sc ||
     q?.kind !== 'physical' ||
-    active?.kind !== 'decision' ||
+    (!continuing && active?.kind !== 'decision') ||
     q.physical?.parentId !== active.runId ||
     q.physical.child !== active.child ||
     q.physical.grant !== null ||
-    q.physical.cursor !== active.cursor
+    q.physical.cursor !== (active.kind === 'decision' ? active.cursor : undefined)
   )
     throw new Error('La decisione fisica è cambiata.');
   return {

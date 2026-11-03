@@ -123,7 +123,10 @@ export function decisionForm(
         { id: '', label: 'Nessuna carta' },
         ...copies.map((id) => ({
           id,
-          label: catalog?.skills.find((s) => s.id === definitionId(id))?.name.text ?? id,
+          label:
+            catalog?.skills.find((s) => s.id === definitionId(id))?.name.text ??
+            session.physical?.lastStand?.titles.find((t) => t.copy === id)?.name ??
+            id,
         })),
       ],
     );

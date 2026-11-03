@@ -1179,7 +1179,28 @@ class FrontReplay {
           (n, { effect: e }) => n + (e.op === 'negate-bonus' ? e.n : 0),
           0,
         );
+      const updateTest = () => {
+        if (!lastStand) return;
+        this.s.lastStand!.test = {
+          heroId: h.heroId,
+          stat,
+          difficulty: this.s.lastStand!.selections.at(-1)!.difficulty,
+          successes,
+          fateRemaining: fate,
+          forcedFailure: (['damage', 'fear'] as const).some(
+            (f) =>
+              this.s.areas[hero]![f].filter((c) => this.faceup.has(c)).length >=
+              this.limits(hero)[f],
+          ),
+          cards: cards.map((c) => ({
+            name: this.skillName(c),
+            success: this.skillSymbols(c).success,
+            fate: this.skillSymbols(c).fate,
+          })),
+        };
+      };
       while (true) {
+        updateTest();
         const titleHelp = lastStand
           ? this.p.heroes.flatMap((_, owner) =>
               owner === hero || this.nearby(owner, hero)
@@ -1264,6 +1285,7 @@ class FrontReplay {
           h.inspiration--;
           fate--;
           successes++;
+          updateTest();
           if (
             !spentTrigger &&
             this.policy(hero).some(({ effect: e }) => e.op === 'after-test-spend-inspiration')
@@ -1300,6 +1322,7 @@ class FrontReplay {
             const converted = ability.effect.op === 'convert-all' ? fate : 1;
             successes += converted;
             fate -= converted;
+            updateTest();
             if (ability.effect.scout)
               this.scout(hero, ability.effect.scout, `${path}/conversion-scout-${n}`);
           }
@@ -1307,6 +1330,7 @@ class FrontReplay {
       }
       this.r.revealed.pop();
       h.discard.push(...cards);
+      if (lastStand) this.s.lastStand!.test = null;
       return successes;
     });
   }

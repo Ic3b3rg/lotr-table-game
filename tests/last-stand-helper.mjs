@@ -1,3 +1,8 @@
+import assert from 'node:assert/strict';
+import { reachPhysical } from './physical-helper.mjs';
+import { scenarioInput } from './scenario-helper.mjs';
+import { readSession } from './skill-test-helper.mjs';
+import { hash } from './fixtures/physical-fronts.mjs';
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
 import { relative } from 'node:path';
@@ -70,4 +75,33 @@ export async function historicalPhysical() {
   return import(
     'data:text/javascript;base64,' + Buffer.from(outputFiles[0].text).toString('base64')
   );
+}
+
+export async function waitingLastStand(t) {
+  const ready = await readyLastStand(t, (pack) => {
+    pack.preparedEffects = [
+      {
+        skillId: 'role-1-skill-1',
+        cardHash: hash(catalogFixture().skills.find((s) => s.id === 'role-1-skill-1')),
+        effect: 'inspiration',
+        amount: 1,
+      },
+    ];
+  });
+  await reachPhysical(ready);
+  const r = await scenarioInput(ready.host, ready.player, {
+    kind: 'physical-choice',
+    option: 'reveal',
+  });
+  assert.equal(r.status, 200, await r.text());
+  return ready;
+}
+export async function recoverSeat(host, seat) {
+  const s = await readSession(host);
+  const r = await host.request('/api/recover', {
+    generation: s.generation,
+    recoveryCode: seat.recoveryCode,
+  });
+  assert.equal(r.status, 200, await r.text());
+  seat.cookie = r.headers.get('set-cookie')?.split(';')[0];
 }

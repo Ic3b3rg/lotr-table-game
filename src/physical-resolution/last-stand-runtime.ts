@@ -5,6 +5,7 @@ import type { LastStandArtifact } from './last-stand-program';
 import { PhysicalRandom } from './random';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { STAT_LABELS } from '../shared/skill-tests';
 
 type Family = 'damage' | 'fear';
 type Stat = LastStandArtifact['instructions'][number]['stat'];
@@ -61,6 +62,7 @@ export class LastStandRuntime {
       rngCursor: 0,
       lossDue: null,
       terminal: null,
+      test: null,
     });
   }
   settle(run: Run, reactions: LastStandReaction[] = []) {
@@ -138,7 +140,7 @@ export class LastStandRuntime {
       const reveal = this.host.ask(
         hero,
         `${id}/reveal`,
-        `Ultimo Sforzo · ${instruction.stat} · difficoltà ${record.difficulty}. ${instruction.text.replace('{0}', String(record.difficulty))}`,
+        `Ultimo Sforzo · ${STAT_LABELS[instruction.stat]} · difficoltà ${record.difficulty}. Rivela e risolvi le carte della prova.`,
         [{ id: 'reveal', label: 'Rivela le carte della prova' }],
       );
       invariant(

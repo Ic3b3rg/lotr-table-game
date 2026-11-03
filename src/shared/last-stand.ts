@@ -67,10 +67,30 @@ export const LastStandSnapshotSchema = z.strictObject({
     .strictObject({ runId: z.uuid(), heroId: ContentIdSchema, instructionHash: HashSchema })
     .nullable(),
   terminal: AdventureLossSchema.nullable(),
+  test: z
+    .strictObject({
+      heroId: ContentIdSchema,
+      stat: StatSchema,
+      difficulty: z.int().min(1).max(100001),
+      successes: z.int().min(0).max(200),
+      fateRemaining: z.int().min(0).max(112),
+      forcedFailure: z.boolean(),
+      cards: z
+        .array(
+          z.strictObject({
+            name: z.string().max(1000),
+            success: z.int().min(0).max(9),
+            fate: z.int().min(0).max(9),
+          }),
+        )
+        .max(56),
+    })
+    .nullable(),
 });
 export type LastStandSnapshot = z.infer<typeof LastStandSnapshotSchema>;
 export type AdventureLoss = z.infer<typeof AdventureLossSchema>;
 export const LastStandViewSchema = z.strictObject({
+  test: LastStandSnapshotSchema.shape.test,
   heroes: LastStandSnapshotSchema.shape.heroes,
   selections: z
     .array(

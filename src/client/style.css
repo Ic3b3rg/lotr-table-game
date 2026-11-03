@@ -1885,6 +1885,28 @@ body[data-scenario='setup'] #scout-discard-controls {
   margin-block: 1rem;
   max-width: 46rem;
 }
+.physical-last-stand,
+.physical-title {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+.physical-test-cards {
+  display: grid;
+  gap: 0.5rem;
+  padding-inline-start: 1.25rem;
+}
+.physical-warning {
+  border-inline-start: 3px solid #995421;
+  padding: 0.75rem;
+  background: #99542112;
+}
+.physical-outcome,
+.physical-test-target,
+.physical-test-total {
+  font-weight: 600;
+}
 .physical-front-text {
   white-space: pre-line;
 }

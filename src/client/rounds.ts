@@ -40,7 +40,10 @@ export function createRounds(sync: () => Promise<void>) {
         ),
     );
     const pending = Boolean(
-      current.physical?.active || current.scout || current.skillTest?.status === 'converting',
+      current.physical?.active ||
+        current.physical?.lastStand?.terminal ||
+        current.scout ||
+        current.skillTest?.status === 'converting',
     );
     const cycle = !!current.physical?.cycle;
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
@@ -62,7 +65,9 @@ export function createRounds(sync: () => Promise<void>) {
           : allScouted
             ? 'Tutti gli eroi hanno concluso Scoperta. Il prossimo round è pronto.'
             : 'Tutti i mazzi sono ricomposti. Ogni eroe effettua Scoperta 2 con l’eventuale bonus di Aragorn, una volta.';
-    const nextStatus = message + (pending ? ' Concludi prima le carte rivelate.' : '');
+    const nextStatus = current.physical?.lastStand?.terminal
+      ? 'La Compagnia ha perso. La conseguenza finale è salvata.'
+      : message + (pending ? ' Concludi prima la conseguenza corrente.' : '');
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
     element('#round-phase-help').textContent = !round
       ? current.group && !current.journey
@@ -214,21 +219,23 @@ export function createRounds(sync: () => Promise<void>) {
               text('span', session.players.find((entry) => entry.id === owner)!.name),
               text(
                 'span',
-                round?.phase === 'rally'
-                  ? hero.rallyDone
-                    ? 'Scoperta conclusa'
-                    : current?.scout?.heroId === hero.heroId
-                      ? `Scoperta ${current.scout.count} in corso · pesca salvata`
-                      : scoutCount === 3
-                        ? 'Scoperta 2 + 1 di Aragorn da fare'
-                        : scoutCount === null
-                          ? 'Scoperta da fare · vicinanza da indicare'
-                          : 'Scoperta 2 da fare'
-                  : hero.turnEnded
-                    ? `Turno concluso · ${hero.actionsUsed} / 2 azioni usate`
-                    : hero.heroId === round?.activeHeroId
-                      ? `Di turno · ${hero.actionsUsed} / 2 azioni usate`
-                      : 'Turno da iniziare',
+                session.physical?.lastStand?.heroes.find((h) => h.heroId === hero.heroId)?.defeated
+                  ? 'Sconfitto · non effettua altre azioni'
+                  : round?.phase === 'rally'
+                    ? hero.rallyDone
+                      ? 'Scoperta conclusa'
+                      : current?.scout?.heroId === hero.heroId
+                        ? `Scoperta ${current.scout.count} in corso · pesca salvata`
+                        : scoutCount === 3
+                          ? 'Scoperta 2 + 1 di Aragorn da fare'
+                          : scoutCount === null
+                            ? 'Scoperta da fare · vicinanza da indicare'
+                            : 'Scoperta 2 da fare'
+                    : hero.turnEnded
+                      ? `Turno concluso · ${hero.actionsUsed} / 2 azioni usate`
+                      : hero.heroId === round?.activeHeroId
+                        ? `Di turno · ${hero.actionsUsed} / 2 azioni usate`
+                        : 'Turno da iniziare',
               ),
             );
             return row;

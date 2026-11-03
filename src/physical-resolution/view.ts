@@ -27,6 +27,7 @@ export function physicalView(p: PhysicalState | null): PhysicalView | null {
     const terminal = p.cycle?.terminal ?? ls.terminal;
     const titleCards = requirePhysicalFamily(p.raw, 'title').cards;
     view.lastStand = {
+      test: structuredClone(ls.test),
       heroes: structuredClone(ls.heroes),
       selections: ls.selections.map(
         ({ id: _, sourceFingerprint: __, instructionId, instructionHash: ___, ...s }) => ({

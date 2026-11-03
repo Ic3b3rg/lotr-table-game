@@ -108,3 +108,23 @@ test('P1 UI binds a typed decision to its precise source cursor without hidden s
   s.scenario.pending.physical.cursor = 'd'.repeat(64);
   assert.throws(() => lib.bindPhysicalDecision(s, { kind: 'physical-choice', option: '0' }));
 });
+
+test('legacy P2 continuation binds the saved gate instead of a freely chosen test', () => {
+  const s = session();
+  s.physical.active = {
+    ...active,
+    kind: 'gate',
+    reason: 'last-stand-unavailable',
+    family: 'damage',
+    capability: 'P2:last-stand',
+  };
+  s.scenario.pending.physical = { parentId: active.runId, child: 0, grant: null };
+  const input = { kind: 'physical-continue-last-stand', rules: 'source-last-stand-v1' };
+  const bound = lib.bindPhysicalDecision(s, input);
+  assert.equal(bound.pendingId, 'pending');
+  assert.equal(bound.heroId, 'hero-2');
+  assert.deepEqual(bound.input, input);
+  assert.throws(() => lib.bindPhysicalDecision(s, { kind: 'physical-choice', option: 'pass' }));
+  s.physical.active.reason = 'required-deck-empty';
+  assert.throws(() => lib.bindPhysicalDecision(s, input));
+});
