@@ -16,7 +16,10 @@ export async function readyFronts(t, edit = () => {}, catalogEdit = () => {}) {
       pr.limits = [0, 1].map(() => ({ kind: 'requires-capability', capability: 'source-derived' }));
       pr.children = [{ ...suffer(0, 2, 0), face: 'faceup' }];
       edit(pack, pr);
-      pack.definitions[0].states.at(-1).actions[0].origin.parameterHash = hash(pr);
+      const action = pack.definitions[0].states
+        .flatMap((s) => s.actions)
+        .find((a) => a.op === 'physical' && a.program === pr);
+      action.origin.parameterHash = hash(pr);
     },
     catalogEdit,
   );

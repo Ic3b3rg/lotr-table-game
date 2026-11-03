@@ -26,6 +26,30 @@ export function answer(f, input) {
   const n = f.p.runs.reduce((n, r) => n + r.answers.length, 0);
   physical.answerPhysical(f.p, active.runId, input, evidence(n, active.actorPlayerId));
 }
+test('last-stand compilation rejects unknown instruction sources, duplicate awards and unbound title fields', () => {
+  const f = lastStandFixture();
+  for (const edit of [
+    (ir) => {
+      ir.instructions[0].model.sourceId = 'not-a-frozen-source';
+    },
+    (ir) => {
+      ir.awards[1].titleId = ir.awards[0].titleId;
+    },
+    (ir) => {
+      ir.instructions[0].text += ' altered';
+    },
+    (ir) => {
+      ir.titles[0].cardHash = '0'.repeat(64);
+    },
+    (ir) => {
+      ir.titles[0].effects[0].op = 'ignored-unknown-opcode';
+    },
+  ]) {
+    const changed = structuredClone(f.lastStandInput);
+    edit(changed);
+    assert.throws(() => physical.compileLastStand(f.raw, changed));
+  }
+});
 test('last stand crosses the entire source, persists its instruction and returns covered cards once', () => {
   const f = freshLastStand();
   physical.openPhysical(f.p, source, f.program([suffer(0, 3, 0), suffer(0, 2, 1)]), f.context);
@@ -251,6 +275,7 @@ test('the last active hero’s failure produces an immediate typed terminal boun
     answer(f, { kind: 'physical-choice', option: 'resolve' });
   }
   assert.equal(f.p.snapshot.active.reason, 'adventure-loss-consumer-unavailable');
+  assert.equal(f.p.snapshot.active.heroId, 'hero-3');
   assert.equal(f.p.snapshot.lastStand.terminal.timing, 'no-active-heroes');
   assert.equal(f.p.snapshot.parents[0].returnCount, 0);
   assert.equal(
@@ -264,6 +289,37 @@ test('the last active hero’s failure produces an immediate typed terminal boun
   const before = structuredClone(f.p);
   assert.throws(() => answer(f, { kind: 'physical-choice', option: 'resolve' }));
   assert.deepEqual(f.p, before);
+});
+
+test('a nearby title owner consents for the tested recipient and pays their own prepared copy', () => {
+  const f = freshLastStand(({ lastStandInput }) => {
+    const [help, rest] = lastStandInput.titles;
+    lastStandInput.awards = [
+      { ...lastStandInput.awards[1], titleId: help.cardId, minimum: 1 },
+      { ...lastStandInput.awards[0], titleId: rest.cardId },
+    ];
+  });
+  physical.openPhysical(f.p, source, f.program([suffer(0, 5, 0)]), f.context);
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  physical.openPhysical(
+    f.p,
+    { ...source, effectId: 'nearby-title' },
+    f.program([suffer(1, 5, 0)]),
+    structuredClone(f.p.snapshot.resolution.resources),
+  );
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  const help = f.p.snapshot.active.options.find((o) => o.id.startsWith('title-help:'));
+  answer(f, { kind: 'physical-choice', option: help.id });
+  assert.equal(f.p.snapshot.active.actorHeroId, 'hero-1');
+  assert.equal(f.p.snapshot.active.actorPlayerId, f.heroes[0].playerId);
+  assert.equal(f.p.snapshot.active.heroId, 'hero-2');
+  answer(f, { kind: 'physical-choice', option: 'use' });
+  assert.equal(f.p.snapshot.lastStand.test.heroId, 'hero-2');
+  assert.equal(f.p.snapshot.lastStand.test.successes, 5);
+  assert.equal(f.p.snapshot.lastStand.titles[0].removed, true);
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.lastStand.selections.at(-1).successes, 5);
 });
 
 test('a legacy last-stand gate continues explicitly once without changing its paid prefix or physical RNG', () => {
@@ -383,4 +439,88 @@ test('effective limit bonuses and final source discards precede the last-stand b
   assert.equal(f.p.snapshot.active, null);
   assert.equal(f.p.snapshot.areas[0].damage.length, 5);
   assert.equal(f.p.snapshot.lastStand.selections.length, 0);
+});
+
+test('a paid conversion Scout retains the parent cards and can remove the live forced-failure condition', () => {
+  const f = freshLastStand(({ catalog, ir }) => {
+    for (const c of catalog.skills) {
+      c.success = 0;
+      c.fate = 1;
+    }
+    for (const d of ir.definitions.filter((d) => d.cardId.includes('fear')))
+      d.body = [{ op: 'keep-faceup' }];
+    for (const [id, effects] of [
+      ['role-1-skill-1', [{ op: 'convert-all', noPrintedSuccess: false, scout: 1 }]],
+      ['basic-4', [{ op: 'after-prepare-flip-fear' }]],
+    ]) {
+      const d = catalog.skills.find((s) => s.id === id);
+      ir.policies.push({
+        id,
+        kind: 'skill',
+        definitionHash: hash(d),
+        source: { sourceId: 'invented', locator: 'Conversion!last-stand' },
+        effects,
+      });
+    }
+  });
+  physical.openPhysical(
+    f.p,
+    source,
+    f.program([suffer(0, 5, 0), { ...suffer(0, 0, 5), face: 'faceup' }]),
+    f.context,
+  );
+  answer(f, { kind: 'physical-choice', option: '0:damage' });
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  const parentCards = structuredClone(f.p.snapshot.resolution.revealed[0].cards);
+  assert.equal(f.p.snapshot.lastStand.test.forcedFailure, true);
+  answer(f, { kind: 'physical-choice', option: 'role-1-skill-1:1' });
+  assert.equal(f.p.snapshot.active.mode, 'scout');
+  const child = f.p.snapshot.active.options[0].id;
+  assert.equal(child, 'basic-4:1');
+  assert.ok(!parentCards.includes(child));
+  assert.deepEqual(f.p.snapshot.resolution.revealed[0].cards, parentCards);
+  assert.equal(f.p.snapshot.lastStand.test.successes, 3);
+  answer(f, { kind: 'physical-scout', prepare: child, discard: null, top: [], bottom: [] });
+  assert.equal(f.p.snapshot.active.mode, 'select');
+  answer(f, { kind: 'physical-select', ids: [f.p.snapshot.active.options[0].id] });
+  assert.equal(f.p.snapshot.lastStand.test.forcedFailure, false);
+  assert.deepEqual(f.p.snapshot.resolution.revealed[0].cards, parentCards);
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.lastStand.selections[0].outcome, 'pass');
+  assert.equal(f.p.snapshot.lastStand.selections[0].forcedFailure, false);
+  assert.equal(f.p.snapshot.lastStand.selections[1].difficulty, 2);
+  physical.validatePhysical(f.p);
+});
+
+test('negate-only bonuses cannot pass last stand, and a capped success still advances once', () => {
+  const failed = freshLastStand(({ catalog, context, ir }) => {
+    for (const c of catalog.skills) {
+      c.success = 0;
+      c.fate = 0;
+    }
+    context.preparation.heroes[0].inspiration = 0;
+    const d = catalog.skills.find((s) => s.id === 'role-1-skill-1');
+    ir.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Negate!only' },
+      effects: [{ op: 'negate-bonus', n: 1 }],
+    });
+  });
+  physical.openPhysical(failed.p, source, failed.program([suffer(0, 5, 0)]), failed.context);
+  answer(failed, { kind: 'physical-choice', option: 'reveal' });
+  answer(failed, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(failed.p.snapshot.lastStand.selections[0].successes, 0);
+  assert.equal(failed.p.snapshot.lastStand.selections[0].outcome, 'fail');
+  const capped = freshLastStand(({ context }) => {
+    context.preparation.heroes[0].inspiration = 4;
+  });
+  physical.openPhysical(capped.p, source, capped.program([suffer(0, 5, 0)]), capped.context);
+  answer(capped, { kind: 'physical-choice', option: 'reveal' });
+  answer(capped, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(capped.p.snapshot.lastStand.selections[0].inspiration, 0);
+  assert.equal(capped.p.snapshot.lastStand.heroes[0].difficulty, 2);
+  assert.equal(capped.p.snapshot.parents[0].returnCount, 1);
+  physical.validatePhysical(capped.p);
 });

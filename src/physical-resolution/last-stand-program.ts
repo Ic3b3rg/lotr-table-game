@@ -96,8 +96,14 @@ export function compileLastStand(raw: unknown, input: unknown): LastStandArtifac
         ir.sources.some((s) => s.id === m.source.sourceId),
       'Testo istruzione senza fonte/hash corrispondente.',
     );
+  for (const instruction of ir.instructions)
+    invariant(
+      ir.sources.some((s) => s.id === instruction.model.sourceId),
+      'Modello istruzione senza fonte congelata.',
+    );
   invariant(
     new Set(ir.titles.map((t) => t.cardId)).size === 2 &&
+      new Set(ir.awards.map((a) => a.titleId)).size === 2 &&
       new Set(ir.awards.map((a) => a.condition)).size === 2,
     'Titoli o condizioni duplicati.',
   );

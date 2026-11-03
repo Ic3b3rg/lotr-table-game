@@ -219,17 +219,23 @@ class FrontReplay {
     path: string,
     title: string,
     options: { id: string; label: string }[],
+    recipient = hero,
   ) {
     invariant(options.length > 0, 'Scelta senza alternative lecite.');
     if (options.length === 1) return options[0]!.id;
-    const input = this.ask(hero, path, {
-      mode: 'choose',
-      title,
-      options,
-      minimum: 1,
-      maximum: 1,
-      remaining: empty(),
-    });
+    const input = this.ask(
+      hero,
+      path,
+      {
+        mode: 'choose',
+        title,
+        options,
+        minimum: 1,
+        maximum: 1,
+        remaining: empty(),
+      },
+      recipient,
+    );
     invariant(
       input.kind === 'physical-choice' && options.some((o) => o.id === input.option),
       'Alternativa non disponibile.',
@@ -1271,6 +1277,7 @@ class FrontReplay {
                 { id: 'use', label: 'Rimuovi il titolo e aggiungi i successi' },
                 { id: 'keep', label: 'Conserva il titolo' },
               ],
+              hero,
             ) === 'keep'
           ) {
             declinedTitles.add(help.copy);
@@ -1507,6 +1514,7 @@ class FrontReplay {
               break;
             case 'rally-reset':
               for (const [n, h] of this.resources.preparation.heroes.entries()) {
+                if (!this.lastStand.active(n)) continue;
                 h.deck = this.random(
                   `${path}/rally-${n}`,
                   [...h.deck, ...h.discard],
@@ -1603,7 +1611,11 @@ class FrontReplay {
           }
         if (lastStandEnabled) {
           for (const [hero, limit] of run.program.limits.entries())
-            if (limit.kind === 'requires-capability' && limit.capability !== 'source-derived')
+            if (
+              limit.kind === 'requires-capability' &&
+              limit.capability !== 'source-derived' &&
+              (this.s.areas[hero]!.damage.length || this.s.areas[hero]!.fear.length)
+            )
               this.gate(hero, 'effective-limits-unavailable', empty(), null, limit.capability);
           this.lastStand.settle(
             run.lastStandRules
@@ -1617,7 +1629,11 @@ class FrontReplay {
                 },
             reactions,
           );
-          if (this.s.lastStand?.terminal) this.gate(0, 'adventure-loss-consumer-unavailable');
+          if (this.s.lastStand?.terminal)
+            this.gate(
+              this.p.heroes.findIndex((h) => h.heroId === this.s.lastStand!.terminal!.heroId),
+              'adventure-loss-consumer-unavailable',
+            );
         }
         parent.status = 'completed';
         parent.returnCount = 1;
