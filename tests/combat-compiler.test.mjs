@@ -132,3 +132,17 @@ test('bounded input rejects cycles, non JSON objects, sparse arrays and oversize
   rehashAsset(source.assets[0]);
   assert.throws(() => combat.compileCombatSource(source), /Salute/);
 });
+
+test('unknown equipment categories never silently lose mechanics', () => {
+  const unknown = combatFixture();
+  unknown.items[0].cells.C = 'Unrecognized';
+  assert.throws(() => combat.compileCombatSource(unknown), /Categoria/);
+});
+
+test('extra uncompiled enemy models are refused at the source boundary', () => {
+  const extra = combatFixture(),
+    model = structuredClone(extra.assets[0]);
+  model.source = 'invented.assets:999999';
+  extra.assets.push(model);
+  assert.throws(() => combat.compileCombatSource(extra), /EnemyModel/);
+});

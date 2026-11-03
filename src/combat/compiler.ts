@@ -256,6 +256,10 @@ export function compileCombatSource(raw: unknown) {
   }
   const native = asset(s.manifest.enemy, 'EnemyModel'),
     e = native.data;
+  check(
+    s.assets.filter((a) => a.cls === 'EnemyModel').length === 1,
+    'EnemyModel fuori dal singolo nucleo.',
+  );
   const maximum = integer(e.MaxUnitCount, 'Massimo gruppo', 1, 3),
     capacity = integer(e.MaxUnitsInPlay, 'Massimo in gioco', 1, 100);
   check(
@@ -370,6 +374,11 @@ export function compileCombatSource(raw: unknown) {
   const items = s.items.map((row) => {
     requireFile(row.file);
     const data = asset(row.model, 'ItemModel').data;
+    check(['Weapon', 'Armor', 'Support'].includes(row.cells.C), 'Categoria oggetto sconosciuta.');
+    check(
+      row.cells.C === 'Weapon' || row.cells.G === '-',
+      'Caratteristica oggetto non applicabile.',
+    );
     check(/^[1-9][0-9]*$/.test(row.cells.B), 'Quantità oggetto invalida.');
     const quantity = integer(Number(row.cells.B), 'Quantità oggetto', 1, 100);
     const weapon = row.cells.C === 'Weapon';
@@ -410,6 +419,10 @@ export function compileCombatSource(raw: unknown) {
       rowHash: digest(row),
     };
   });
+  check(
+    s.assets.filter((a) => a.cls === 'ItemModel').length === items.length,
+    'ItemModel estraneo alla compagnia.',
+  );
   const equipped = s.projection.context.heroes.flatMap((h) => h.items);
   for (const i of items)
     check(
