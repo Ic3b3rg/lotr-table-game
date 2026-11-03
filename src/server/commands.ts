@@ -8,11 +8,28 @@ import { applyScouting } from './scouting';
 import { applyRoundCommand } from './rounds';
 import { applyJourneyCommand } from './journey-map';
 import { applyGroup } from './group';
+import { generationReceipt } from './map-generation';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (command.type === 'GENERATE_ADVENTURE_MAP' || command.type === 'RESUME_ADVENTURE_MAP') {
+      store.generator.apply(state, playerId, command);
+      advance(state);
+      return generationReceipt(state, requestId, command.type);
+    }
+    if (
+      state.mapGeneration ||
+      (store.generator.gatesPlay(state) &&
+        command.type !== 'OPEN_DEMO' &&
+        command.type !== 'RESOLVE_DEMO')
+    )
+      throw new ApiError(
+        409,
+        'ADVENTURE_STARTUP_PENDING',
+        'La mappa dell’avventura va creata e il suo avvio deve essere completato prima di giocare.',
+      );
     if (command.type === 'SET_GROUP_SIZE') {
       const result = applyGroup(state, command);
       advance(state);

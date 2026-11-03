@@ -83,6 +83,7 @@ test('schema 6 conserva round, viaggio e prova attivi senza imporre una nuova co
   const before = await readSession(host);
   const backup = await readBackup(host);
   backup.payload.state.schemaVersion = 6;
+  delete backup.payload.state.mapGeneration;
   delete backup.payload.state.group;
   signBackup(backup);
   await host.stop();
@@ -92,7 +93,7 @@ test('schema 6 conserva round, viaggio e prova attivi senza imporre una nuova co
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 8);
+  assert.equal(migrated.schemaVersion, 9);
   assert.equal(migrated.group, null);
   for (const key of ['preparation', 'round', 'journey', 'skillTest', 'scout'])
     assert.deepEqual(migrated[key], before[key]);

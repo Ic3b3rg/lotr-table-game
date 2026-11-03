@@ -90,6 +90,8 @@ export const AttemptRecordSchema = z.strictObject({
 });
 export const NodePolicySchema = z.strictObject({
   policy: z.literal('node-clean-attempt-v1'),
+  workerWallMilliseconds: z.literal(60000),
+  workerHeapMiB: z.literal(512),
   clock: z.literal('logical-clock-v1'),
   stepMilliseconds: z.literal(0),
   selectionOperations: z.literal(1000000),
@@ -367,6 +369,7 @@ export const MapGenerationSchema = z.discriminatedUnion('status', [
     status: z.literal('paused'),
     job: GenerationJobSchema,
     requests: z.array(requestKey).min(1).max(65),
+    failure: AttemptRecordSchema.nullable(),
     reason: z.enum([
       'attempt-batch-limit',
       'source-operation-exception',
@@ -383,3 +386,14 @@ export const MapGenerationSchema = z.discriminatedUnion('status', [
   }),
 ]);
 export type MapGeneration = z.infer<typeof MapGenerationSchema>;
+export const GenerationOfferSchema = z.strictObject({
+  kind: z.enum(['legacy', 'unavailable', 'ready', 'pending', 'paused', 'frozen']),
+  packFingerprint: HashSchema.nullable(),
+  contextFingerprint: HashSchema.nullable(),
+  jobId: z.uuid().nullable(),
+  attempt: z.int().min(1).max(64).nullable(),
+  running: z.boolean(),
+  canResume: z.boolean(),
+  message: z.string().min(1).max(600),
+});
+export type GenerationOffer = z.infer<typeof GenerationOfferSchema>;

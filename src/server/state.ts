@@ -7,6 +7,7 @@ import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
 import { RoundSchema, roundProblem } from '../shared/rounds';
 import { journeyProblem } from '../shared/journey-map';
 import { groupProblem } from '../shared/group';
+import { generationStateProblem } from './generation-state';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -27,6 +28,8 @@ const BaseStateSchema = SessionSchema.omit({
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
+  const generationError = generationStateProblem(state);
+  if (generationError) ctx.addIssue({ code: 'custom', message: generationError });
   const groupError = groupProblem(state.group, state.players.length, state.preparation);
   if (groupError) ctx.addIssue({ code: 'custom', message: groupError });
   if (state.group && state.round && !state.journey)
@@ -85,7 +88,9 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
 });
 export type State = z.infer<typeof StateSchema>;
 
-const LegacyStateSchema = BaseStateSchema.omit({
+const PreviousStateSchema = BaseStateSchema.omit({ mapGeneration: true });
+const VersionEightStateSchema = PreviousStateSchema.extend({ schemaVersion: z.literal(8) });
+const LegacyStateSchema = PreviousStateSchema.omit({
   content: true,
   preparation: true,
   skillTest: true,
@@ -96,7 +101,7 @@ const LegacyStateSchema = BaseStateSchema.omit({
 }).extend({
   schemaVersion: z.literal(1),
 });
-const VersionTwoStateSchema = BaseStateSchema.omit({
+const VersionTwoStateSchema = PreviousStateSchema.omit({
   skillTest: true,
   scout: true,
   round: true,
@@ -110,7 +115,7 @@ const VersionTwoStateSchema = BaseStateSchema.omit({
     .nullable()
     .default(null),
 });
-const VersionThreeStateSchema = BaseStateSchema.omit({
+const VersionThreeStateSchema = PreviousStateSchema.omit({
   scout: true,
   round: true,
   journey: true,
@@ -119,7 +124,7 @@ const VersionThreeStateSchema = BaseStateSchema.omit({
   schemaVersion: z.literal(3),
   skillTest: SkillTestSchema.omit({ availableCount: true }).nullable(),
 });
-const VersionFourStateSchema = BaseStateSchema.omit({
+const VersionFourStateSchema = PreviousStateSchema.omit({
   round: true,
   journey: true,
   group: true,
@@ -127,34 +132,52 @@ const VersionFourStateSchema = BaseStateSchema.omit({
   schemaVersion: z.literal(4),
   scout: ScoutingSchema.omit({ roundId: true }).nullable(),
 });
-const VersionFiveStateSchema = BaseStateSchema.omit({ journey: true, group: true }).extend({
+const VersionFiveStateSchema = PreviousStateSchema.omit({ journey: true, group: true }).extend({
   schemaVersion: z.literal(5),
 });
-const VersionSixStateSchema = BaseStateSchema.omit({ group: true }).extend({
+const VersionSixStateSchema = PreviousStateSchema.omit({ group: true }).extend({
   schemaVersion: z.literal(6),
 });
-const VersionSevenStateSchema = BaseStateSchema.extend({ schemaVersion: z.literal(7) });
+const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.literal(7) });
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 8)
+      return StateSchema.parse({
+        ...VersionEightStateSchema.parse(raw),
+        schemaVersion: 9,
+        mapGeneration: null,
+      });
     if (version === 7)
-      return StateSchema.parse({ ...VersionSevenStateSchema.parse(raw), schemaVersion: 8 });
+      return StateSchema.parse({
+        ...VersionSevenStateSchema.parse(raw),
+        schemaVersion: 9,
+        mapGeneration: null,
+      });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 8,
+        schemaVersion: 9,
+        mapGeneration: null,
         group: null,
       });
     }
     if (version === 5) {
       const previous = VersionFiveStateSchema.parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 8, group: null, journey: null });
+      return StateSchema.parse({
+        ...previous,
+        schemaVersion: 9,
+        mapGeneration: null,
+        group: null,
+        journey: null,
+      });
     }
     if (version === 1) {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 8,
+        schemaVersion: 9,
+        mapGeneration: null,
         group: null,
         journey: null,
         content: null,
@@ -167,7 +190,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 8,
+        schemaVersion: 9,
+        mapGeneration: null,
         group: null,
         journey: null,
         skillTest: null,
@@ -185,7 +209,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 8,
+        schemaVersion: 9,
+        mapGeneration: null,
         group: null,
         journey: null,
         scout: null,
@@ -197,7 +222,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 8,
+        schemaVersion: 9,
+        mapGeneration: null,
         group: null,
         journey: null,
         round: null,

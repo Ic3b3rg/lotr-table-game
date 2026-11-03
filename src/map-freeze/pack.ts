@@ -14,6 +14,8 @@ import { digest } from './hash';
 
 export const GENERATION_POLICY = {
   policy: 'node-clean-attempt-v1',
+  workerWallMilliseconds: 60000,
+  workerHeapMiB: 512,
   clock: 'logical-clock-v1',
   stepMilliseconds: 0,
   selectionOperations: 1000000,
