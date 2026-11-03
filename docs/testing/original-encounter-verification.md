@@ -145,3 +145,64 @@ campo e avventura2; il problema delle quantità dei benefici dell'issue57 e i
 gate per mazzi fisici realmente vuoti restano invariati. Non sono certificati
 telefoni reali, LAN, Windows o Safari. Nessuna chiusura di issue33/57/65 né
 pubblicazione GitHub è inclusa nella consegna.
+
+
+## Integrazione e correzioni del root
+
+Revisione fissata su `082a86d...c8c2ec8`; correzioni nel commit
+`2dcdd2300bee23549ac1acbb47342993147e9ae4`.
+La [review separata](../reviews/2026-11-03-original-encounter.md) registra
+Standards1 P1 e Spec1 P1+1 P2, tutti corretti. Il P1 comune è lo stesso
+problema: la conferma dipendeva da WebCrypto non disponibile sul normale
+HTTP LAN. Ora i fingerprint sono calcolati dall’host nella vista derivata,
+esclusa dai salvataggi. La guida mantiene le decisioni fisiche pendenti e
+spiega il blocco di Ombra dopo tutti i turni, senza proporne altri impossibili.
+
+**526/526 test**, zero fallimenti, skip o todo; typecheck, formato e diff
+verdi. Tre nuove regressioni del componente reale con DOM inventato e
+WebCrypto assente sono RED→GREEN; il test HTTP verifica anche il digest
+pubblicato dall’host. Il primo giro completo aveva522/523 per SQLite
+«database or disk is full»: causa riprodotta dalla diagnostica, copie
+ridondanti del root sostituite con copie APFS a byte identici, caso isolato
+poi verde. Nessun retry del prodotto o controllo indebolito.
+
+Il root ha confrontato **712 file, 186.194.465 byte**, i dieci input primari
+bloccati e i257 file sorgente prima delle correzioni. Il checker indipendente
+ripete17 stati/18 azioni e gli altri conteggi fonte. Sul bundle finale sono
+nuovamente validi tutti i50 backup UI del child e43 backup P2 pubblicati,
+più il freeze originale; stato di gioco e ricevute invariati. Gli11 backup
+P2 inediti invalidati prima di PR70 rimangono esclusi. Le prove originali e
+i relativi sigilli sono conservati; gli helper del root scrivono soltanto
+nelle copie di lavoro ignorate.
+
+Le catture e i due percorsi UI del child documentano il codice precedente
+alle correzioni del root: i backup restano validi, ma quelle immagini non
+certificano il nuovo testo della guida o l’uso HTTP LAN. La verifica finale
+mirata del root sostituisce questi specifici riscontri; non ripete né
+attribuisce al browser prove P2 raggiunte soltanto negli automatici.
+
+QA finale mirata sul codice corretto: tre contesti e posti indipendenti su
+HTTP dell’IPv4 dello stesso Mac, tutti con `isSecureContext=false` e
+`crypto.subtle` assente. Conferma nativa accettata, fingerprint uguale alla
+vista e al digest host; prova, ramo Forza, conseguenza e ritorno alla mappa
+con un movimento residuo e Sapienza0. Lettore e un ciclo Escape verificati.
+
+La schermata a turni conclusi è controllata da un export UI autentico del
+child importato una volta come precondizione, non da un nuovo percorso
+completo: payload e ricevute identici salvo generation/revision/updatedAt.
+Guida corretta nelle tre viste, screenshot1024/320 ispezionati senza overflow.
+Due nuovi export UI passano parser/checksum, senza fingerprint derivato nello
+stato persistito. Tutti i26 asset configurati rispondono GET200; dodici
+immagini effettivamente richieste nella finestra browser risultano caricate.
+La precedenza su `physical.cycle.pending` è coperta dal test DOM del root,
+non da una fixture originale fabbricata nella QA UI. Non è una certificazione
+di telefono fisico o client LAN remoto.
+
+Nuovo sigillo privato: **140 file, 39.819.443 byte**,70 artefatti browser,
+8 screenshot e due export. SHA256 manifesto
+`f9b9fe78300ecace68c41cb34f9caa00d44ca2725a6eef978c19cf93252fef01`.
+I soli host, Chrome e tre contesti creati per questa prova sono chiusi.
+Il root ha verificato tutti gli hash e riletto gli export sul proprio bundle.
+Il [rapporto di review](../reviews/2026-11-03-original-encounter.md) registra
+le disposizioni; #71 è il solo perimetro completato. Nessuna partita33
+completa, Ombra o prosecuzione al campo è attestata.

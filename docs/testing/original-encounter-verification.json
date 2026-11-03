@@ -6,8 +6,8 @@
   "implementationCommit": "79948376dba55ee01ed4cf88e3d12a4033348edb",
   "fixCommit": "6c237f232fb1ef68ae3866b4fdb13fd57ed43797",
   "tests": {
-    "total": 523,
-    "passed": 523,
+    "total": 526,
+    "passed": 526,
     "failed": 0,
     "skipped": 0,
     "todo": 0
@@ -39,9 +39,17 @@
   "browser": {
     "independentIdentities": 3,
     "sourceActors": 3,
-    "widths": [320, 768, 1024, 1440],
+    "widths": [
+      320,
+      768,
+      1024,
+      1440
+    ],
     "finalBackupsValidated": 50,
-    "sharedContributions": [2, 1],
+    "sharedContributions": [
+      2,
+      1
+    ],
     "sourceTestNotRepeated": true,
     "physicalConsequencesConsumed": true,
     "mightFailureThenSuccessAcrossHeroes": true,
@@ -78,7 +86,66 @@
     "Complete outcomes, camp, adventure2 and issue33",
     "Unconfirmed benefit quantities issue57",
     "Real empty physical deck diagnostics",
-    "Phones/LAN/Windows/Safari certification",
-    "Root Standards/Spec review and integration"
-  ]
+    "Phones/LAN/Windows/Safari certification"
+  ],
+  "childTestsBeforeRootCorrections": {
+    "total": 523,
+    "passed": 523,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "rootIntegration": {
+    "codeHead": "2dcdd2300bee23549ac1acbb47342993147e9ae4",
+    "review": {
+      "standards": {
+        "findings": 1,
+        "worst": "P1",
+        "corrected": 1
+      },
+      "spec": {
+        "findings": 2,
+        "worst": "P1",
+        "corrected": 2
+      },
+      "uniqueDefects": 2
+    },
+    "proof": ".scratch/original-encounter-root-review/integration-verification.json",
+    "proofSha256": "d475d43ece306c4c9a0f14fe7d043146c24c9bf32ca360341409b056e58b5be7",
+    "originalEvidence": {
+      "files": 712,
+      "bytes": 186194465,
+      "sourceLocks": 10
+    },
+    "currentBundleRevalidation": {
+      "childUIBackups": 50,
+      "legacyP2Backups": 43,
+      "sourceFreeze": 1,
+      "gameplayAndReceiptsUnchanged": true
+    },
+    "nativeUIAfterCorrections": {
+      "manifestFiles": 140,
+      "manifestBytes": 39819443,
+      "manifestSha256": "f9b9fe78300ecace68c41cb34f9caa00d44ca2725a6eef978c19cf93252fef01",
+      "browserArtifacts": 70,
+      "screenshots": 8,
+      "closed": {
+        "ownContextsClosed": 3,
+        "hostRunning": false,
+        "chromeRunning": false,
+        "closedAt": "2026-11-03T19:54:06.680Z",
+        "onlyRecordedOwnProcesses": true,
+        "ownEphemeralProfileRemoved": true
+      },
+      "independentIdentities": 3,
+      "secureContext": false,
+      "subtleCryptoAvailable": false,
+      "hostFingerprintMatched": true,
+      "originalLiveMightAndReturn": true,
+      "uiExportsValid": 2,
+      "finalGuidePrecondition": "authentic child UI export imported via filepicker, not a new full playthrough",
+      "physicalCyclePending": "automatic DOM test, not fabricated original UI fixture",
+      "remotePhonesCertified": false
+    }
+  }
 }
