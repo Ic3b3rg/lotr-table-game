@@ -286,6 +286,18 @@ export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnap
       for (const [n, h] of p.heroes.entries()) {
         const limit = pr.limits[n]!,
           area = snapshot.areas[n]!;
+        const barrier = {
+          runId: run.id,
+          child: pr.children.length,
+          heroId: h.heroId,
+          actorHeroId: h.heroId,
+          actorPlayerId: h.playerId,
+          remaining: empty(),
+        };
+        if (limit.kind === 'requires-capability' && (area.damage.length || area.fear.length)) {
+          gate(barrier, 'effective-limits-unavailable', null, limit.capability);
+          break;
+        }
         if (limit.kind === 'synthetic-fixed') {
           const family =
             area.damage.length >= limit.damage
@@ -294,18 +306,7 @@ export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnap
                 ? 'fear'
                 : null;
           if (family) {
-            gate(
-              {
-                runId: run.id,
-                child: pr.children.length,
-                heroId: h.heroId,
-                actorHeroId: h.heroId,
-                actorPlayerId: h.playerId,
-                remaining: empty(),
-              },
-              'last-stand-unavailable',
-              family,
-            );
+            gate(barrier, 'last-stand-unavailable', family);
             break;
           }
         }

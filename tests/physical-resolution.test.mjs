@@ -292,3 +292,15 @@ test('the bounded parent limit rejects the next source without corrupting an acc
   assert.deepEqual(p, before);
   assert.doesNotThrow(() => validatePhysical(p));
 });
+
+test('an unimplemented effective limit still gates the source barrier for cards already owned', () => {
+  const p = fresh();
+  openPhysical(p, source, program([suffer(0, 2, 0)]));
+  const pr = program([discard(0, 0)]);
+  pr.limits[0] = { kind: 'requires-capability', capability: 'invented-limit-modifier' };
+  openPhysical(p, { ...source, effectId: 'principal:2:0', entry: 2, state: 2 }, pr);
+  assert.equal(p.snapshot.active?.reason, 'effective-limits-unavailable');
+  assert.equal(p.snapshot.parents[0].returnCount, 1);
+  assert.equal(p.snapshot.parents[1].returnCount, 0);
+  assert.equal(p.snapshot.areas[0].damage.length, 2);
+});
