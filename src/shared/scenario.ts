@@ -8,7 +8,10 @@ export const SourceTextSchema = z
     z.discriminatedUnion('kind', [
       z.strictObject({
         kind: z.literal('text'),
-        text: z.string().max(20000),
+        text: z
+          .string()
+          .max(20000)
+          .refine((text) => !/\p{Co}/u.test(text), 'Icona privata non risolta nel testo fonte.'),
         style: z.enum(['plain', 'bold', 'italic', 'boldItalic']),
       }),
       z.strictObject({

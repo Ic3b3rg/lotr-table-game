@@ -21,6 +21,8 @@ test('IR stretta: digest, transizioni, variabili, source e azioni sconosciute so
     (p) => (p.definitions[0].initial = 999),
     (p) => (p.definitions[0].states[0].actions[0].target = { scope: 'local', name: 'missing' }),
     (p) => (p.manifest.prefabs[0].fsmSource = 'example.assets:999'),
+    (p) => (p.definitions[0].states[1].actions[0].text[0].text = '\ueeee'),
+    (p) => (p.definitions[0].states[1].actions[0].text[0].text = '\u{f0000}'),
   ]) {
     const bad = structuredClone(raw);
     edit(bad);
