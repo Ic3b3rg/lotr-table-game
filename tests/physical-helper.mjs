@@ -7,35 +7,39 @@ import { program, suffer, grant, discard, diagnosticRaw } from './fixtures/physi
 import { hash } from './fixtures/map-freeze.mjs';
 import { readSession } from './skill-test-helper.mjs';
 
-export async function readyPhysical(t, edit = () => {}) {
-  const ready = await readyScenario(t, (pack) => {
-    const pr = program([suffer(0, 3, 2, [grant()]), suffer(1, 1, 1), discard()]);
-    pr.initialCredits = [1, 1];
-    pr.limits = pr.limits.slice(0, 2);
-    pack.name = 'Prova sintetica P0 — dati inventati';
-    pack.manifest.scope = 'synthetic-physical-p0';
-    pack.definitions[0].states.find((s) => s.index === 9).transitions.FINISHED = 12;
-    pack.definitions[0].states.push(
-      state(
-        12,
-        [
-          {
-            index: 0,
-            op: 'physical',
-            origin: {
-              type: 'Synthetic.PhysicalProgram',
-              parameterHash: hash(pr),
-              load: 'hash-match-positional',
+export async function readyPhysical(t, edit = () => {}, catalogEdit = () => {}) {
+  const ready = await readyScenario(
+    t,
+    (pack) => {
+      const pr = program([suffer(0, 3, 2, [grant()]), suffer(1, 1, 1), discard()]);
+      pr.initialCredits = [1, 1];
+      pr.limits = pr.limits.slice(0, 2);
+      pack.name = 'Prova sintetica P0 — dati inventati';
+      pack.manifest.scope = 'synthetic-physical-p0';
+      pack.definitions[0].states.find((s) => s.index === 9).transitions.FINISHED = 12;
+      pack.definitions[0].states.push(
+        state(
+          12,
+          [
+            {
+              index: 0,
+              op: 'physical',
+              origin: {
+                type: 'Synthetic.PhysicalProgram',
+                parameterHash: hash(pr),
+                load: 'hash-match-positional',
+              },
+              text: text('Prova sintetica: risolvete le conseguenze coperte inventate.'),
+              program: pr,
             },
-            text: text('Prova sintetica: risolvete le conseguenze coperte inventate.'),
-            program: pr,
-          },
-        ],
-        { FINISHED: 10 },
-      ),
-    );
-    edit(pack, pr);
-  });
+          ],
+          { FINISHED: 10 },
+        ),
+      );
+      edit(pack, pr);
+    },
+    catalogEdit,
+  );
   const physicalPath = join(ready.host.dataDir, 'physical-content.json');
   await writeFile(physicalPath, JSON.stringify(diagnosticRaw()));
   return { ...ready, physicalPath };

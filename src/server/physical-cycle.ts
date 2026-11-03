@@ -12,6 +12,8 @@ import { rallyScoutCount } from '../shared/rally-scout';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from './errors';
+import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
+import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
 
 const ordinary = new Set(CycleIntentSchema.options.map((o) => o.shape.type.value));
 import { cycleUUID as uuid, cycleRequest } from '../physical-resolution/cycle-request';
@@ -29,6 +31,8 @@ function fail(code: string, message: string): never {
 function owned(state: State, heroId: string, playerId: string) {
   const hero = state.preparation!.heroes.find((h) => h.heroId === heroId);
   if (!hero) fail('HERO_UNAVAILABLE', 'Questo eroe non è nella compagnia.');
+  if (defeatedHeroes(state).includes(heroId))
+    fail('HERO_DEFEATED', 'Questo eroe è sconfitto e non può effettuare azioni.');
   if (hero.playerId !== playerId)
     throw new ApiError(403, 'HERO_NOT_YOURS', 'Puoi gestire soltanto i tuoi eroi.');
   return hero;
@@ -38,6 +42,7 @@ function darknessHeroes(state: State) {
   const sc = state.scenario!,
     spaces = state.mapGeneration.projection.spaces;
   return state.preparation!.heroes.flatMap((h, n) => {
+    if (defeatedHeroes(state).includes(h.heroId)) return [];
     const position = state.journey!.heroes.find((p) => p.heroId === h.heroId)!;
     const source = sc.spaceBindings.find((b) => b.id === position.spaceId)?.sourceId;
     const space = spaces.find((s) => s.id === source);
@@ -114,6 +119,7 @@ function runSource(
       context,
       spatial,
       id,
+      !!record.lastStandRules,
     );
   } finally {
     if (ledger) p.cycle = ledger;
@@ -130,6 +136,11 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     type: c.type,
     appliedRevision: c.expectedRevision + 1,
   };
+  if (cycle.terminal || p.snapshot.lastStand?.terminal)
+    fail(
+      'ADVENTURE_LOSS_PENDING',
+      'La perdita dell’avventura è salvata. Il seguito originale non è ancora disponibile.',
+    );
   if (c.expectedRevision !== state.revision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
   if (c.type === 'CYCLE_INPUT') {
@@ -145,7 +156,13 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       fail('CYCLE_REQUEST_CHANGED', 'Questa conseguenza ordinaria è conclusa o è cambiata.');
     if (active!.actorPlayerId !== record.playerId)
       throw new ApiError(403, 'PHYSICAL_ACTOR', 'La decisione spetta al proprietario indicato.');
-    if (active!.kind === 'gate')
+    if (
+      active!.kind === 'gate' &&
+      !(
+        active!.reason === 'last-stand-unavailable' &&
+        c.input.kind === 'physical-continue-last-stand'
+      )
+    )
       fail('PHYSICAL_CAPABILITY', 'La fonte resta sospesa alla capacità indicata.');
     try {
       answerPhysical(p, c.runId, c.input, {
@@ -162,6 +179,7 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       );
     }
     state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
+    syncPhysicalDefeat(state);
     const completed = !p.snapshot.active;
     if (completed) {
       finish(state, cycle.pending!);
@@ -220,6 +238,14 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       fail('TURNS_PENDING', 'Tutti gli eroi devono concludere il turno.');
     round.phase = 'shadow';
     round.shadowStep = 'enemies';
+    const loss = p.snapshot.lastStand?.lossDue;
+    if (loss)
+      cycle.terminal = {
+        ...loss,
+        kind: 'adventure-loss',
+        timing: 'shadow-start',
+        consumer: 'original-adventure-loss-unavailable',
+      };
   } else if (c.type === 'CONFIRM_SHADOW_STEP') {
     if (round.phase !== 'shadow' || round.shadowStep !== c.step)
       fail('SHADOW_STEP_CHANGED', 'Questo passaggio è cambiato.');
@@ -264,6 +290,7 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       })),
     };
   }
+  syncPhysicalDefeat(state);
   if (runId) {
     invariant(
       c.type === 'END_TURN' || c.type === 'START_RALLY_SCOUT' || c.type === 'CONFIRM_SHADOW_STEP',
@@ -337,6 +364,7 @@ function replay(state: State, cycle: CycleState): Replay {
         'Risorse del confine ordinario non continue con la fonte precedente.',
       );
     p.cycle = { ...cycle, records: [], pending: null };
+    delete p.cycle.terminal;
     result = {
       work: {
         ...state,
@@ -367,12 +395,25 @@ function replay(state: State, cycle: CycleState): Replay {
   lastReplay = { context, records: digest(cycle.records), result: structuredClone(result) };
   return result;
 }
-export function applyPhysicalCycle(state: State, playerId: string, command: Command) {
+export function applyPhysicalCycle(
+  state: State,
+  playerId: string,
+  command: Command,
+  lastStand?: LastStandArtifact,
+) {
   const p = state.physical!,
     { generation: _, requestId, ...intent } = command;
   const c = CycleIntentSchema.parse(intent);
   if (state.revision !== c.expectedRevision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
+  if (lastStand) {
+    invariant(
+      c.type === 'CYCLE_INPUT' && c.input.kind === 'physical-continue-last-stand',
+      'Freeze P2 fuori dal pending storico.',
+    );
+    p.lastStand = structuredClone(lastStand);
+    p.lastStandActivation = { kind: 'legacy-continuation', runId: c.runId };
+  }
   const cycle: CycleState = p.cycle
     ? structuredClone(p.cycle)
     : {
@@ -386,7 +427,12 @@ export function applyPhysicalCycle(state: State, playerId: string, command: Comm
         records: [],
         pending: null,
       };
-  cycle.records.push({ playerId, requestId, intent: c });
+  cycle.records.push({
+    playerId,
+    requestId,
+    intent: c,
+    ...(p.lastStand ? { lastStandRules: p.lastStand.rules } : {}),
+  });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
   for (const key of ['physical', 'preparation', 'round', 'journey'] as const)

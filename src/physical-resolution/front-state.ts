@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema } from '../shared/preparation';
-import { PhysicalDecisionSchema } from '../shared/physical';
+import { PhysicalActiveSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
 export const FrontResourcesSchema = z.strictObject({
   preparation: PreparationSchema,
@@ -45,7 +45,7 @@ export const FrontSnapshotSchema = z.strictObject({
       z.strictObject({
         runId: z.uuid(),
         answer: z.int().nonnegative(),
-        active: PhysicalDecisionSchema,
+        active: PhysicalActiveSchema,
       }),
     )
     .max(100000),

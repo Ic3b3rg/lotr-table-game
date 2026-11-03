@@ -70,3 +70,27 @@ export const LastStandSnapshotSchema = z.strictObject({
 });
 export type LastStandSnapshot = z.infer<typeof LastStandSnapshotSchema>;
 export type AdventureLoss = z.infer<typeof AdventureLossSchema>;
+export const LastStandViewSchema = z.strictObject({
+  heroes: LastStandSnapshotSchema.shape.heroes,
+  selections: z
+    .array(
+      LastStandSelectionSchema.omit({
+        id: true,
+        sourceFingerprint: true,
+        instructionId: true,
+        instructionHash: true,
+      }).extend({ instruction: z.string().max(16000) }),
+    )
+    .max(100000),
+  titles: z
+    .array(
+      TitleOwnershipSchema.omit({ source: true }).extend({
+        name: z.string().max(1000),
+        text: z.string().max(16000),
+        prepared: z.boolean(),
+      }),
+    )
+    .max(21),
+  lossAtNextShadow: z.boolean(),
+  terminal: AdventureLossSchema.omit({ instructionHash: true }).nullable(),
+});

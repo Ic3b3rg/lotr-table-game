@@ -45,6 +45,8 @@ export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnap
   invariant(p.runs.length <= 32, 'Budget padri P0 superato.');
   invariant(
     !p.fronts &&
+      !p.lastStand &&
+      !p.lastStandActivation &&
       p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),
     'Dati fronti in un runtime P0.',
   );
@@ -332,7 +334,12 @@ export function freezePhysical(
   const base = {
     version: fronts ? (2 as const) : (1 as const),
     ...(fronts ? { fronts } : {}),
-    ...(lastStand ? { lastStand: structuredClone(lastStand) } : {}),
+    ...(lastStand
+      ? {
+          lastStand: structuredClone(lastStand),
+          lastStandActivation: { kind: 'initial-freeze' as const },
+        }
+      : {}),
     algorithm: 'sha256-counter-rejection-fisher-yates-v1' as const,
     raw: structuredClone(raw),
     rawSha256,
@@ -351,6 +358,7 @@ export function openPhysical(
   context?: FrontResources,
   spatial?: PhysicalState['runs'][number]['spatial'],
   runId: string = randomUUID(),
+  enableLastStand = true,
 ) {
   validatePhysical(p);
   validatePhysicalProgram(program, p.heroes.length);
@@ -363,7 +371,7 @@ export function openPhysical(
     // Unmarked, non-spatial version2 runs retain their published replay rules.
     // Ordinary spatial runs already identify the version3 continuation rules.
     ...(p.version === 2 ? { executionRules: 'retained-paid-effects-v1' as const } : {}),
-    ...(p.lastStand
+    ...(p.lastStand && enableLastStand
       ? {
           lastStandRules: {
             version: p.lastStand.rules,
@@ -384,17 +392,36 @@ export function answerPhysical(
   runId: string,
   input: unknown,
   evidence: PhysicalEvidence,
+  lastStand?: LastStandArtifact,
 ) {
   validatePhysical(p);
   const q = p.snapshot.active;
-  invariant(q && q.runId === runId && q.kind !== 'gate', 'Richiesta fisica non disponibile.');
+  const answer = PhysicalInputSchema.parse(input);
+  invariant(
+    q &&
+      q.runId === runId &&
+      (q.kind !== 'gate' ||
+        (p.version !== 1 &&
+          q.reason === 'last-stand-unavailable' &&
+          answer.kind === 'physical-continue-last-stand')),
+    'Richiesta fisica non disponibile.',
+  );
   const copy = structuredClone(p),
     run = copy.runs.find((r) => r.id === runId)!;
+  if (lastStand) {
+    invariant(
+      answer.kind === 'physical-continue-last-stand' && !copy.lastStand,
+      'Freeze Ultimo Sforzo fuori dalla continuazione.',
+    );
+    validateLastStandArtifact(copy.raw, lastStand);
+    copy.lastStand = structuredClone(lastStand);
+    copy.lastStandActivation = { kind: 'legacy-continuation', runId };
+  }
   run.answers.push({
     ...(q.kind === 'decision' ? { cursor: q.cursor } : {}),
     child: q.child,
     grant: q.kind === 'prevent' ? q.grant : null,
-    input: PhysicalInputSchema.parse(input),
+    input: answer,
     evidence: PhysicalEvidenceSchema.parse(evidence),
   });
   copy.snapshot = replayPhysical(copy);

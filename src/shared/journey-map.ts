@@ -71,7 +71,13 @@ export const JourneySchema = z.strictObject({
   id: z.uuid(),
   definition: JourneyDefinitionSchema,
   heroes: z
-    .array(z.strictObject({ heroId: ContentIdSchema, spaceId: SpaceIdSchema }))
+    .array(
+      z.strictObject({
+        heroId: ContentIdSchema,
+        spaceId: SpaceIdSchema,
+        removed: z.literal(true).optional(),
+      }),
+    )
     .min(2)
     .max(5),
   travel: z

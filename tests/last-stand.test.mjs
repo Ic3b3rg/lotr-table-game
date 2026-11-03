@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as physical from '../dist/physical-resolution-library.mjs';
 import { lastStandFixture } from './fixtures/last-stand.mjs';
-import { binding, evidence } from './fixtures/physical-fronts.mjs';
+import { binding, evidence, hash } from './fixtures/physical-fronts.mjs';
 import { source, suffer } from './fixtures/physical-resolution.mjs';
 
 export function freshLastStand(edit = () => {}) {
@@ -176,4 +176,211 @@ test('independent title conditions award and prepare both, retaining ownership w
   assert.equal(ls.titles[0].removed, false);
   assert.equal(f.p.snapshot.parents.at(-1).returnCount, 1);
   physical.validatePhysical(f.p);
+  // The independent acquisition works even while boon quantities stay unresolved.
+  physical.openPhysical(
+    f.p,
+    { ...source, effectId: 'title-rest-gate' },
+    f.program([{ kind: 'end-turn', hero: 0 }]),
+    structuredClone(f.p.snapshot.resolution.resources),
+  );
+  const rest = f.p.snapshot.active.options.find((o) => o.id.startsWith('title-rest:'));
+  assert.ok(rest);
+  const before = structuredClone(f.p.snapshot.resolution.resources);
+  answer(f, { kind: 'physical-choice', option: rest.id });
+  assert.equal(f.p.snapshot.active.reason, 'boon-quantity-unconfirmed');
+  assert.deepEqual(f.p.snapshot.resolution.resources, before);
+  assert.equal(f.p.snapshot.lastStand.titles[1].removed, false);
+});
+
+test('a newly acquired title helps only the next test, pays removal and keeps campaign ownership', () => {
+  const f = freshLastStand(({ catalog, ir }) => {
+    catalog.heroes[1].stats.fear = 1;
+    catalog.heroes[2].stats.fear = 1;
+    catalog.heroes[0].stats.spirit = 1;
+    for (const d of ir.definitions) d.body = [{ op: 'keep-faceup' }];
+  });
+  for (const hero of [1, 2]) {
+    physical.openPhysical(
+      f.p,
+      { ...source, effectId: `defeat-title-${hero}` },
+      f.program([{ ...suffer(hero, 0, 1), face: 'faceup' }]),
+      structuredClone(f.p.snapshot.resolution?.resources ?? f.context),
+    );
+    answer(f, { kind: 'physical-choice', option: 'reveal' });
+    answer(f, { kind: 'physical-choice', option: 'resolve' });
+  }
+  physical.openPhysical(
+    f.p,
+    { ...source, effectId: 'two-title-tests' },
+    f.program([suffer(0, 5, 5)]),
+    structuredClone(f.p.snapshot.resolution.resources),
+  );
+  answer(f, { kind: 'physical-choice', option: '0:damage' });
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.lastStand.selections.at(-2).successes, 3);
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  const help = f.p.snapshot.active.options.find((o) => o.id.startsWith('title-help:'));
+  assert.ok(help);
+  answer(f, { kind: 'physical-choice', option: help.id });
+  const ownership = f.p.snapshot.lastStand.titles[0];
+  assert.equal(ownership.removed, true);
+  const h = f.p.snapshot.resolution.resources.preparation.heroes[0];
+  assert.ok(![...h.prepared, ...h.deck, ...h.discard].includes(ownership.copy));
+  assert.ok(!f.p.snapshot.active.options.some((o) => o.id === help.id));
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.lastStand.selections.at(-1).successes, 3);
+  assert.equal(f.p.snapshot.lastStand.selections.at(-1).outcome, 'pass');
+  assert.equal(f.p.snapshot.lastStand.titles.length, 1);
+  assert.equal(f.p.snapshot.parents.at(-1).returnCount, 1);
+});
+
+test('the last active hero’s failure produces an immediate typed terminal boundary without returning the parent', () => {
+  const f = freshLastStand(({ ir }) => {
+    for (const d of ir.definitions) d.body = [{ op: 'keep-faceup' }];
+  });
+  physical.openPhysical(
+    f.p,
+    source,
+    f.program([0, 1, 2].map((h) => ({ ...suffer(h, 5, 0), face: 'faceup' }))),
+    f.context,
+  );
+  for (let hero = 0; hero < 3; hero++) {
+    if (hero < 2) answer(f, { kind: 'physical-choice', option: `${hero}:damage` });
+    answer(f, { kind: 'physical-choice', option: 'reveal' });
+    answer(f, { kind: 'physical-choice', option: 'resolve' });
+  }
+  assert.equal(f.p.snapshot.active.reason, 'adventure-loss-consumer-unavailable');
+  assert.equal(f.p.snapshot.lastStand.terminal.timing, 'no-active-heroes');
+  assert.equal(f.p.snapshot.parents[0].returnCount, 0);
+  assert.equal(
+    f.p.snapshot.lastStand.heroes.every((h) => h.defeated),
+    true,
+  );
+  assert.equal(
+    f.p.snapshot.areas.reduce((n, h) => n + h.damage.length, 0),
+    15,
+  );
+  const before = structuredClone(f.p);
+  assert.throws(() => answer(f, { kind: 'physical-choice', option: 'resolve' }));
+  assert.deepEqual(f.p, before);
+});
+
+test('a legacy last-stand gate continues explicitly once without changing its paid prefix or physical RNG', () => {
+  const f = freshLastStand();
+  const enabled = f.p.lastStand;
+  delete f.p.lastStand;
+  delete f.p.lastStandActivation;
+  physical.openPhysical(f.p, source, f.program([suffer(0, 5, 0)]), f.context);
+  assert.equal(f.p.snapshot.active.reason, 'last-stand-unavailable');
+  const legacy = structuredClone(f.p);
+  physical.validatePhysical(f.p);
+  assert.deepEqual(f.p, legacy);
+  const q = f.p.snapshot.active;
+  physical.answerPhysical(
+    f.p,
+    q.runId,
+    { kind: 'physical-continue-last-stand', rules: 'source-last-stand-v1' },
+    evidence(0, q.actorPlayerId),
+    enabled,
+  );
+  assert.equal(f.p.snapshot.active.options[0].id, 'reveal');
+  assert.deepEqual(f.p.snapshot.random, legacy.snapshot.random);
+  assert.equal(f.p.snapshot.rngCursor, legacy.snapshot.rngCursor);
+  assert.deepEqual(f.p.snapshot.decks, legacy.snapshot.decks);
+  assert.deepEqual(f.p.snapshot.areas, legacy.snapshot.areas);
+  assert.deepEqual(f.p.snapshot.resolution.resources, legacy.snapshot.resolution.resources);
+  const selected = structuredClone(f.p.snapshot.lastStand.selections);
+  physical.validatePhysical(f.p);
+  assert.deepEqual(f.p.snapshot.lastStand.selections, selected);
+  assert.equal(f.p.snapshot.resolution.history[0].active.kind, 'gate');
+  assert.equal(f.p.runs[0].lastStandRules, undefined);
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.parents[0].returnCount, 1);
+});
+
+test('the frozen activation boundary prevents stripping P2 rules from a new run', () => {
+  const f = freshLastStand();
+  physical.openPhysical(f.p, source, f.program([suffer(0, 1, 0)]), f.context);
+  delete f.p.runs[0].lastStandRules;
+  delete f.p.snapshot.lastStand;
+  assert.throws(() => physical.validatePhysical(f.p));
+});
+
+test('after-source reactions compete with last stands and live limits are rechecked after descendants', () => {
+  for (const reactionFirst of [true, false]) {
+    const f = freshLastStand(({ ir, catalog }) => {
+      catalog.heroes[0].stats.damage = 1;
+      for (const d of ir.definitions.filter((d) => d.cardId.includes('damage'))) {
+        d.body = [{ op: 'keep-faceup' }];
+        d.persistent = [
+          {
+            op: 'suffer',
+            window: 'after-darkness-suffering-batch',
+            hero: 'triggering-self-or-nearby',
+            family: 'fear',
+            n: 1,
+            face: 'normal',
+            condition: 'at-least-one-actually-suffered',
+            source: 'this-card-not-darkness',
+          },
+        ];
+      }
+    });
+    physical.openPhysical(
+      f.p,
+      source,
+      f.program([
+        { ...suffer(0, 1, 0), face: 'faceup' },
+        {
+          kind: 'event',
+          hero: 0,
+          event: 'after-darkness-suffering-batch',
+          threat: false,
+          sufferedFear: 1,
+        },
+      ]),
+      f.context,
+    );
+    assert.equal(f.p.snapshot.areas[0].fear.length, 0);
+    const options = f.p.snapshot.active.options;
+    const reaction = options.find((o) => o.id.startsWith('reaction:'));
+    assert.ok(reaction);
+    assert.ok(options.some((o) => o.id === '0:damage'));
+    answer(f, { kind: 'physical-choice', option: reactionFirst ? reaction.id : '0:damage' });
+    if (reactionFirst) assert.equal(f.p.snapshot.areas[0].fear.length, 1);
+    answer(f, { kind: 'physical-choice', option: 'reveal' });
+    answer(f, { kind: 'physical-choice', option: 'resolve' });
+    assert.equal(f.p.snapshot.lastStand.heroes[0].defeated, true);
+    assert.equal(f.p.snapshot.areas[0].fear.length, reactionFirst ? 1 : 0);
+    assert.equal(f.p.snapshot.parents[0].returnCount, 1);
+  }
+});
+
+test('effective limit bonuses and final source discards precede the last-stand barrier', () => {
+  const f = freshLastStand(({ ir, catalog }) => {
+    const d = catalog.skills.find((s) => s.id === 'role-1-skill-1');
+    ir.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Limits!1' },
+      effects: [{ op: 'limits', damage: 1, fear: 1 }],
+    });
+  });
+  physical.openPhysical(
+    f.p,
+    source,
+    f.program([
+      suffer(0, 6, 0),
+      { kind: 'discard', hero: 0, count: 1, mode: 'exact', families: ['damage'] },
+    ]),
+    f.context,
+  );
+  if (f.p.snapshot.active?.mode === 'select')
+    answer(f, { kind: 'physical-select', ids: ['down:damage:0'] });
+  assert.equal(f.p.snapshot.active, null);
+  assert.equal(f.p.snapshot.areas[0].damage.length, 5);
+  assert.equal(f.p.snapshot.lastStand.selections.length, 0);
 });

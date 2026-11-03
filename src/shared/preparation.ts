@@ -49,7 +49,10 @@ export function preparationProblem(
   preparation: Preparation,
   test: SkillTest | null = null,
   scout: Scouting | null = null,
-  physical?: { held: { heroId: string; cards: string[] }[] },
+  physical?: {
+    held: { heroId: string; cards: string[] }[];
+    titles?: { heroId: string; copy: string; removed: boolean; pending: boolean }[];
+  },
 ): string | null {
   const heroes = preparation.heroes;
   if (
@@ -116,17 +119,23 @@ export function preparationProblem(
       ];
       const expected = [...catalog.basicSkills, ...definition.skills, ...role.skills];
       const actual = [...hero.prepared, ...hero.deck, ...hero.discard, ...revealed];
+      const titles =
+        physical?.titles
+          ?.filter((t) => t.heroId === hero.heroId && !t.removed && !t.pending)
+          .map((t) => t.copy) ?? [];
       if (!physical && actual.length !== 15)
         return 'L’eroe deve conservare le sue quindici carte abilità.';
-      const definitions = actual.map(definitionId);
+      const definitions = actual.filter((c) => !titles.includes(c)).map(definitionId);
       if (
         expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
         definitions.filter((id) => catalog.weaknessCards.includes(id)).length < 1 ||
-        actual.length !== 14 + definitions.filter((id) => catalog.weaknessCards.includes(id)).length
+        titles.some((copy) => !actual.includes(copy)) ||
+        actual.length !==
+          14 + definitions.filter((id) => catalog.weaknessCards.includes(id)).length + titles.length
       )
         return 'Composizione del mazzo iniziale non valida.';
       for (const copy of actual) {
-        if (seen.has(copy) || !validCopy(copy, catalog.skills))
+        if (seen.has(copy) || (!titles.includes(copy) && !validCopy(copy, catalog.skills)))
           return 'Copie del mazzo duplicate o inesistenti.';
         seen.add(copy);
       }

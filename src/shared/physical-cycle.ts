@@ -4,6 +4,7 @@ import { RoundSchema } from './rounds';
 import { JourneySchema } from './journey-map';
 import { PhysicalInputSchema } from './physical';
 import { PreparationSchema } from './preparation';
+import { AdventureLossSchema } from './last-stand';
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const base = { expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const hero = { ...base, heroId: ContentIdSchema };
@@ -57,11 +58,13 @@ export const CycleStateSchema = z.strictObject({
         playerId: z.uuid(),
         requestId: z.string().min(24).max(80),
         intent: CycleIntentSchema,
+        lastStandRules: z.literal('source-last-stand-v1').optional(),
       }),
     )
     .min(1)
     .max(4000),
   pending: CyclePendingSchema.nullable(),
+  terminal: AdventureLossSchema.optional(),
 });
 export type CycleState = z.infer<typeof CycleStateSchema>;
 export type CycleIntent = z.infer<typeof CycleIntentSchema>;

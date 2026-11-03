@@ -29,6 +29,13 @@ type Host = {
   reward(hero: number): number;
   award(hero: number, titleId: string, source: string, path: string): void;
 };
+export type LastStandReaction = {
+  id: string;
+  hero: number;
+  label: string;
+  available(): boolean;
+  resolve(): void;
+};
 
 /** Owns selection, shared difficulty and outcome; the host owns real card zones. */
 export class LastStandRuntime {
@@ -56,7 +63,7 @@ export class LastStandRuntime {
       terminal: null,
     });
   }
-  settle(run: Run) {
+  settle(run: Run, reactions: LastStandReaction[] = []) {
     const artifact = this.p.lastStand;
     invariant(
       artifact && run.lastStandRules?.artifactFingerprint === artifact.fingerprint,
@@ -82,13 +89,20 @@ export class LastStandRuntime {
             )
           : [],
       );
-      if (!obligations.length) return;
+      const ready = reactions.filter((r) => !done.has(r.id) && r.available());
+      if (!obligations.length && !ready.length) return;
       const selected = this.host.choose(
-        obligations[0]!.hero,
+        obligations[0]?.hero ?? ready[0]!.hero,
         `${run.id}/last-stand/order-${done.size}`,
-        'Scegli quale Ultimo Sforzo risolvere prima.',
-        obligations.map(({ id, label }) => ({ id, label })),
+        'Scegli quale Ultimo Sforzo o reazione simultanea risolvere prima.',
+        [...obligations, ...ready].map(({ id, label }) => ({ id, label })),
       );
+      const reaction = ready.find((r) => r.id === selected);
+      if (reaction) {
+        done.add(selected);
+        reaction.resolve();
+        continue;
+      }
       const obligation = obligations.find((o) => o.id === selected)!;
       done.add(selected);
       const { hero, family } = obligation;

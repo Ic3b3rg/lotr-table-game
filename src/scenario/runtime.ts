@@ -532,6 +532,7 @@ export function resumeScenario(
   state: State,
   playerId: string,
   command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
+  physicalPath?: string,
 ) {
   const sc = state.scenario,
     q = sc?.pending;
@@ -571,7 +572,7 @@ export function resumeScenario(
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
   if (q.kind === 'physical') {
-    answerScenarioPhysical(state, playerId, command);
+    answerScenarioPhysical(state, playerId, command, physicalPath);
   } else if (q.kind === 'scout' || q.kind === 'test') {
     const hero = state.preparation!.heroes.find((h) => h.heroId === q.heroId)!;
     if (q.kind === 'scout') {

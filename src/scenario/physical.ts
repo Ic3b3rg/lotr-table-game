@@ -1,6 +1,11 @@
 import { dirname, join } from 'node:path';
 import { validatePhysicalCycle } from '../server/physical-cycle';
 import { FrontArtifactSchema } from '../physical-resolution/front-program';
+import {
+  LastStandArtifactSchema,
+  validateLastStandArtifact,
+} from '../physical-resolution/last-stand-program';
+import { syncPhysicalDefeat, validatePhysicalDefeat } from '../server/physical-defeat';
 import { preparationProblem } from '../shared/preparation';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -40,7 +45,27 @@ export function loadPhysicalSource(path: string) {
   const fronts = existsSync(frontPath)
     ? FrontArtifactSchema.parse(JSON.parse(readFileSync(frontPath, 'utf8')))
     : undefined;
-  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex'), fronts };
+  const lastStandPath = join(dirname(path), 'physical-last-stand.json');
+  const lastStand = existsSync(lastStandPath) ? loadLastStandSource(path, raw) : undefined;
+  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex'), fronts, lastStand };
+}
+export function loadLastStandSource(path: string, raw: unknown) {
+  const artifactPath = join(dirname(path), 'physical-last-stand.json');
+  try {
+    invariant(
+      statSync(artifactPath).size <= PHYSICAL_CONTENT_LIMITS.bytes,
+      'Artifact Ultimo Sforzo troppo grande.',
+    );
+    const artifact = LastStandArtifactSchema.parse(JSON.parse(readFileSync(artifactPath, 'utf8')));
+    validateLastStandArtifact(raw, artifact);
+    return artifact;
+  } catch {
+    throw new ApiError(
+      409,
+      'LAST_STAND_SOURCE_REQUIRED',
+      'Le istruzioni verificate di Ultimo Sforzo non sono disponibili o non corrispondono. La continuazione resta salvata.',
+    );
+  }
 }
 export function initializeScenarioPhysical(
   state: State,
@@ -70,6 +95,7 @@ export function initializeScenarioPhysical(
     sc.pack.manifest.scope === 'synthetic-physical-p1'
       ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
       : undefined,
+    source.lastStand,
   );
 }
 export function beginPhysicalAction(
@@ -152,6 +178,7 @@ export function answerScenarioPhysical(
   state: State,
   playerId: string,
   command: Extract<import('../shared/protocol').ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
+  physicalPath?: string,
 ) {
   const p = state.physical,
     q = state.scenario!.pending;
@@ -161,20 +188,33 @@ export function answerScenarioPhysical(
       'PHYSICAL_INPUT_REQUIRED',
       'Completa l’allocazione richiesta. Una conferma non risolve questa conseguenza.',
     );
-  if (p.snapshot.active?.kind === 'gate')
+  const continuing =
+    command.input.kind === 'physical-continue-last-stand' &&
+    p.version !== 1 &&
+    p.snapshot.active?.kind === 'gate' &&
+    p.snapshot.active.reason === 'last-stand-unavailable';
+  if (p.snapshot.active?.kind === 'gate' && !continuing)
     throw new ApiError(
       409,
       'PHYSICAL_CAPABILITY',
       'Questa conseguenza resta sospesa: la capacità richiesta non è ancora disponibile.',
     );
+  const lastStand =
+    continuing && !p.lastStand ? loadLastStandSource(physicalPath!, p.raw) : undefined;
   try {
-    answerPhysical(p, q.physical.parentId, command.input, {
-      playerId,
-      requestId: command.requestId,
-      pendingId: q.id,
-      sourceFingerprint: q.fingerprint,
-      revision: state.revision + 1,
-    });
+    answerPhysical(
+      p,
+      q.physical.parentId,
+      command.input,
+      {
+        playerId,
+        requestId: command.requestId,
+        pendingId: q.id,
+        sourceFingerprint: q.fingerprint,
+        revision: state.revision + 1,
+      },
+      lastStand,
+    );
   } catch {
     throw new ApiError(
       409,
@@ -189,6 +229,7 @@ export function answerScenarioPhysical(
 function syncPhysicalResources(state: State) {
   const resources = state.physical?.snapshot.resolution?.resources;
   if (resources) state.preparation = structuredClone(resources.preparation);
+  syncPhysicalDefeat(state);
 }
 
 /** Reconstruct physical effects before accepting state, task flags or paired receipts. */
@@ -209,6 +250,16 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  if (p.lastStandActivation?.kind === 'legacy-continuation') {
+    const id = p.lastStandActivation.runId;
+    invariant(
+      p.runs
+        .find((r) => r.id === id)
+        ?.answers.some((a) => a.input.kind === 'physical-continue-last-stand'),
+      'Attivazione P2 senza risposta alla richiesta storica.',
+    );
+  }
+  validatePhysicalDefeat(state);
   validatePhysicalCycle(state);
   invariant(
     (p.version !== 1) === (sc.pack.manifest.scope === 'synthetic-physical-p1'),

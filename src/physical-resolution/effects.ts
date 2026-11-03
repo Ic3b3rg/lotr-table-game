@@ -11,7 +11,11 @@ export function persistentEffects(p: PhysicalState, heroId?: string): Persistent
   ];
   const up = new Set(p.snapshot.resolution!.faceup);
   return p.snapshot.areas
-    .filter((h) => !heroId || h.heroId === heroId)
+    .filter(
+      (h) =>
+        (!heroId || h.heroId === heroId) &&
+        !p.snapshot.lastStand?.heroes.find((s) => s.heroId === h.heroId)?.defeated,
+    )
     .flatMap((h) =>
       [...h.damage, ...h.fear]
         .filter((c) => up.has(c))

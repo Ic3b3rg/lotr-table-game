@@ -69,6 +69,12 @@ export const PhysicalStateSchema = z.strictObject({
   cycle: CycleStateSchema.optional(),
   fronts: FrozenFrontsSchema.optional(),
   lastStand: LastStandArtifactSchema.optional(),
+  lastStandActivation: z
+    .discriminatedUnion('kind', [
+      z.strictObject({ kind: z.literal('initial-freeze') }),
+      z.strictObject({ kind: z.literal('legacy-continuation'), runId: z.uuid() }),
+    ])
+    .optional(),
   algorithm: z.literal('sha256-counter-rejection-fisher-yates-v1'),
   raw: z.unknown(),
   rawSha256: HashSchema,

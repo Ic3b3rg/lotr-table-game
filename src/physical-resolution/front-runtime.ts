@@ -16,7 +16,7 @@ import {
 } from './front-program';
 import { FrontResourcesSchema, type FrontResources } from './front-state';
 import { canResolveAlternative } from './front-feasibility';
-import { LastStandRuntime } from './last-stand-runtime';
+import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
 
 type Family = 'damage' | 'fear';
@@ -87,6 +87,10 @@ class FrontReplay {
       const population = families[family].cards.flatMap((c) => c.copies.map((c) => c.id));
       this.s.decks[family] = this.random(`initialize:${family}`, population, population.length);
     }
+    invariant(
+      !!p.lastStand === !!p.lastStandActivation,
+      'Attivazione Ultimo Sforzo senza freeze o viceversa.',
+    );
     if (p.lastStand) validateLastStandArtifact(p.raw, p.lastStand);
     this.lastStand = new LastStandRuntime(p, this.s, {
       choose: (...args) => this.choose(...args),
@@ -185,6 +189,9 @@ class FrontReplay {
       cursor: digest({ run: this.run.id, path, q }),
       ...q,
     };
+    return this.read(active);
+  }
+  private read(active: PhysicalActive): PhysicalInput {
     const answer = this.run.answers[this.answer];
     if (!answer) {
       this.s.active = active;
@@ -192,7 +199,7 @@ class FrontReplay {
     }
     const e = answer.evidence;
     invariant(
-      answer.cursor === active.cursor &&
+      answer.cursor === (active.kind === 'decision' ? active.cursor : undefined) &&
         answer.child === this.child &&
         answer.grant === null &&
         e.playerId === active.actorPlayerId &&
@@ -279,6 +286,7 @@ class FrontReplay {
     hero: number,
     resources = this.resources,
   ): { copy: string; effect: PolicyEffect; effectIndex: number }[] {
+    if (!this.lastStand.active(hero)) return [];
     const h = resources.preparation.heroes[hero]!,
       sources = [h.heroId, ...h.prepared, ...h.itemCopies];
     return sources.flatMap((copy) => {
@@ -294,6 +302,7 @@ class FrontReplay {
     });
   }
   private persist(hero: number): { copy: string; effect: PersistentOp }[] {
+    if (!this.lastStand.active(hero)) return [];
     const a = this.s.areas[hero]!;
     return [...a.damage, ...a.fear]
       .filter((c) => this.faceup.has(c))
@@ -317,6 +326,7 @@ class FrontReplay {
     return limits;
   }
   private nearby(a: number, b: number) {
+    if (!this.lastStand.active(a) || !this.lastStand.active(b)) return false;
     const heroes = this.run.spatial?.heroes ?? this.p.heroes;
     const from = heroes[a]!.spaceId,
       to = heroes[b]!.spaceId;
@@ -330,15 +340,14 @@ class FrontReplay {
   }
   private scope(hero: number, scope: string) {
     return this.p.heroes.flatMap((_, n) =>
-      (
-        scope === 'self'
-          ? n === hero
-          : scope === 'each-other-hero-any-distance'
-            ? n !== hero
-            : scope === 'self-and-each-nearby'
-              ? n === hero || this.nearby(hero, n)
-              : this.nearby(hero, n)
-      )
+      this.lastStand.active(n) &&
+      (scope === 'self'
+        ? n === hero
+        : scope === 'each-other-hero-any-distance'
+          ? n !== hero
+          : scope === 'self-and-each-nearby'
+            ? n === hero || this.nearby(hero, n)
+            : this.nearby(hero, n))
         ? [n]
         : [],
     );
@@ -398,7 +407,7 @@ class FrontReplay {
   }
   private eligibleTrinkets(hero: number, other = false, resources = this.resources) {
     return resources.preparation.heroes.flatMap((h, n) =>
-      (other ? n !== hero : n === hero)
+      this.lastStand.active(n) && (other ? n !== hero : n === hero)
         ? h.itemCopies
             .filter(
               (c) =>
@@ -628,6 +637,32 @@ class FrontReplay {
     ownership.pending = false;
     // These titles have no after-preparation ability. Their own windows apply later.
   }
+  private titleEffects(hero: number) {
+    const h = this.hero(hero);
+    return (this.s.lastStand?.titles ?? []).flatMap((t) =>
+      this.lastStand.active(hero) &&
+      t.heroId === h.heroId &&
+      !t.removed &&
+      !t.pending &&
+      h.prepared.includes(t.copy)
+        ? this.p
+            .lastStand!.titles.find((d) => d.cardId === t.cardId)!
+            .effects.map((effect, index) => ({ copy: t.copy, effect, index }))
+        : [],
+    );
+  }
+  private removeTitle(hero: number, copy: string) {
+    const t = this.s.lastStand!.titles.find(
+      (t) => t.copy === copy && t.heroId === this.hero(hero).heroId,
+    )!;
+    const h = this.hero(hero);
+    invariant(
+      t && !t.removed && !t.pending && h.prepared.includes(copy),
+      'Titolo non preparato o già rimosso.',
+    );
+    h.prepared.splice(h.prepared.indexOf(copy), 1);
+    t.removed = true;
+  }
   private flip(hero: number, family: Family, n: number, path: string) {
     const selected = this.random(
       `${path}/select`,
@@ -750,6 +785,9 @@ class FrontReplay {
         : this.policy(hero).filter(
             ({ copy, effect: e }) => e.op === 'rest' && this.hero(hero).prepared.includes(copy),
           );
+      const titleRests = closed
+        ? []
+        : this.titleEffects(hero).filter((t) => t.effect.op === 'rest');
       const options = [
         ...left
           .filter((n) => this.faceup.has(effects[n]!.copy))
@@ -761,7 +799,13 @@ class FrontReplay {
           id: `rest:${effectIndex}:${copy}`,
           label: `Riposo ${e.op === 'rest' ? e.n : 0} · scarta ${this.skillName(copy)}`,
         })),
-        ...(!closed && rests.length ? [{ id: 'close-rest', label: 'Non usare altro Riposo' }] : []),
+        ...titleRests.map(({ copy, effect: e, index }) => ({
+          id: `title-rest:${index}:${copy}`,
+          label: `Riposo ${e.op === 'rest' ? e.n : 0} · ${this.skillName(copy)} · seguito con beneficio da verificare`,
+        })),
+        ...(!closed && (rests.length || titleRests.length)
+          ? [{ id: 'close-rest', label: 'Non usare altro Riposo' }]
+          : []),
       ];
       if (!options.length) break;
       const selected = this.choose(
@@ -773,6 +817,11 @@ class FrontReplay {
       if (selected === 'close-rest') {
         closed = true;
         continue;
+      }
+      if (selected.startsWith('title-rest:')) {
+        // Acquisition is independent; this use needs the still-unconfirmed supply.
+        // Gate the whole activation before discarding its prepared cost or resting.
+        this.gate(hero, 'boon-quantity-unconfirmed', empty(), null, 'P4:title-rest-boon');
       }
       if (selected.startsWith('effect:')) {
         const n = Number(selected.slice(7));
@@ -1119,6 +1168,7 @@ class FrontReplay {
         fate = cards.reduce((n, c) => n + this.skillSymbols(c).fate, 0),
         n = 0,
         spentTrigger = false;
+      const declinedTitles = new Set<string>();
       const printed = successes;
       successes += this.persist(hero).reduce(
         (n, { effect: e }) => n + (e.op === 'add-success' && e.stats.includes(stat) ? e.n : 0),
@@ -1130,6 +1180,17 @@ class FrontReplay {
           0,
         );
       while (true) {
+        const titleHelp = lastStand
+          ? this.p.heroes.flatMap((_, owner) =>
+              owner === hero || this.nearby(owner, hero)
+                ? this.titleEffects(owner).flatMap((t) =>
+                    t.effect.op === 'last-stand-success' && !declinedTitles.has(t.copy)
+                      ? [{ ...t, owner, id: `title-help:${owner}:${t.index}:${t.copy}` }]
+                      : [],
+                  )
+                : [],
+            )
+          : [];
         const abilities = this.policy(hero).filter(
           ({ effect: e }) =>
             (e.op === 'convert-all' && fate > 0 && (!e.noPrintedSuccess || !printed)) ||
@@ -1153,6 +1214,10 @@ class FrontReplay {
                 ? `Scarta ${this.skillName(copy)}: ${e.op === 'convert-all' ? 'converti tutti i fati' : 'converti 1 fato'}${e.scout ? `, poi Scoperta ${e.scout}` : ''}`
                 : 'Spendi 2 fati per 1 successo',
           })),
+          ...titleHelp.map((t) => ({
+            id: t.id,
+            label: `${this.skillName(t.copy)} · rimuovi dall’avventura per aggiungere ${t.effect.op === 'last-stand-success' ? t.effect.n : 0} successi`,
+          })),
         ];
         const title = `Prova: ${cards.map((c) => this.skillName(c)).join(', ')}. ${successes} successi.`;
         const decisionPath = `${path}/convert-${n++}`;
@@ -1173,6 +1238,28 @@ class FrontReplay {
           selected = input.option;
         } else selected = this.choose(hero, decisionPath, title, options);
         if (selected === 'resolve') break;
+        const help = titleHelp.find((t) => t.id === selected);
+        if (help) {
+          if (
+            help.owner !== hero &&
+            this.choose(
+              help.owner,
+              `${path}/title-consent-${n}`,
+              `Puoi aiutare ${this.catalog.heroes.find((h) => h.id === this.hero(hero).heroId)!.name.text} rimuovendo ${this.skillName(help.copy)}.`,
+              [
+                { id: 'use', label: 'Rimuovi il titolo e aggiungi i successi' },
+                { id: 'keep', label: 'Conserva il titolo' },
+              ],
+            ) === 'keep'
+          ) {
+            declinedTitles.add(help.copy);
+            continue;
+          }
+          invariant(help.effect.op === 'last-stand-success', 'Aiuto senza capacità Ultimo Sforzo.');
+          this.removeTitle(help.owner, help.copy);
+          successes += help.effect.n;
+          continue;
+        }
         if (selected === 'inspiration') {
           h.inspiration--;
           fate--;
@@ -1223,8 +1310,8 @@ class FrontReplay {
       return successes;
     });
   }
-  private event(hero: number, event: string, path: string, threat: boolean, sufferedFear: number) {
-    const effects = this.p.heroes.flatMap((_, owner) =>
+  private eventEffects(hero: number, event: string, sufferedFear: number) {
+    return this.p.heroes.flatMap((_, owner) =>
       this.persist(owner)
         .filter(
           ({ effect: e }) =>
@@ -1235,6 +1322,9 @@ class FrontReplay {
         )
         .map((e) => ({ ...e, owner })),
     );
+  }
+  private event(hero: number, event: string, path: string, threat: boolean, sufferedFear: number) {
+    const effects = this.eventEffects(hero, event, sufferedFear);
     const left = effects.map((_, n) => n);
     while (left.length) {
       const n = Number(
@@ -1246,41 +1336,50 @@ class FrontReplay {
         ),
       );
       left.splice(left.indexOf(n), 1);
-      const { copy, effect: e, owner } = effects[n]!;
-      if (!this.faceup.has(copy)) continue;
-      if (e.op === 'self-flip-down') this.down(copy);
-      if (e.op === 'suffer')
-        this.suffer(
-          e.hero === 'self' ? owner : hero,
-          [{ family: e.family, amount: e.n }],
-          'faceup',
-          `${path}/trigger-${n}`,
-        );
-      if (e.op === 'mandatory-spend' && threat) {
-        if (!this.hero(hero).inspiration)
-          throw new Error('Interazione non pagabile: nessun costo o effetto è stato applicato.');
-        this.hero(hero).inspiration--;
-      }
-      if (
-        e.op === 'optional-self-discard' &&
-        this.resources.boons.some(
-          (b) => b.heroId === this.hero(owner).heroId && b.kind === 'emboldened',
-        )
-      )
-        if (
-          this.choose(owner, `${path}/optional-${n}`, 'Puoi scartare questa carta.', [
-            { id: 'keep', label: 'Conserva la carta' },
-            { id: 'discard', label: 'Scarta la carta' },
-          ]) === 'discard'
-        )
-          this.discard(copy, owner);
+      this.eventEffect(hero, effects[n]!, `${path}/trigger-${n}`, threat, `${path}/optional-${n}`);
     }
     if (event === 'rally-scout') this.scout(hero, 2, `${path}/rally`, true);
+  }
+  private eventEffect(
+    hero: number,
+    { copy, effect: e, owner }: { copy: string; effect: PersistentOp; owner: number },
+    path: string,
+    threat: boolean,
+    optionalPath = `${path}/optional`,
+  ) {
+    if (!this.faceup.has(copy) || !this.lastStand.active(owner) || !this.lastStand.active(hero))
+      return;
+    if (e.op === 'self-flip-down') this.down(copy);
+    if (e.op === 'suffer')
+      this.suffer(
+        e.hero === 'self' ? owner : hero,
+        [{ family: e.family, amount: e.n }],
+        'faceup',
+        path,
+      );
+    if (e.op === 'mandatory-spend' && threat) {
+      if (!this.hero(hero).inspiration)
+        throw new Error('Interazione non pagabile: nessun costo o effetto è stato applicato.');
+      this.hero(hero).inspiration--;
+    }
+    if (
+      e.op === 'optional-self-discard' &&
+      this.resources.boons.some(
+        (b) => b.heroId === this.hero(owner).heroId && b.kind === 'emboldened',
+      )
+    )
+      if (
+        this.choose(owner, optionalPath, 'Puoi scartare questa carta.', [
+          { id: 'keep', label: 'Conserva la carta' },
+          { id: 'discard', label: 'Scarta la carta' },
+        ]) === 'discard'
+      )
+        this.discard(copy, owner);
   }
   replay() {
     const sources = new Set<string>(),
       runIds = new Set<string>();
-    for (const run of this.p.runs) {
+    for (const [runIndex, run] of this.p.runs.entries()) {
       invariant(
         !this.s.active && !sources.has(run.source.effectId) && !runIds.has(run.id),
         'Padri fronti duplicati o concorrenti.',
@@ -1296,6 +1395,24 @@ class FrontReplay {
       runIds.add(run.id);
       this.run = run;
       this.answer = 0;
+      const activation = this.p.lastStandActivation;
+      const cutover =
+        activation?.kind === 'legacy-continuation'
+          ? this.p.runs.findIndex((r) => r.id === activation.runId)
+          : -1;
+      const required =
+        activation?.kind === 'initial-freeze' || (cutover >= 0 && runIndex > cutover);
+      invariant(
+        !!run.lastStandRules === required,
+        'Versione Ultimo Sforzo diversa dal confine di attivazione.',
+      );
+      if (run.lastStandRules)
+        invariant(
+          this.p.lastStand &&
+            run.lastStandRules.version === this.p.lastStand.rules &&
+            run.lastStandRules.artifactFingerprint === this.p.lastStand.fingerprint,
+          'Regole Ultimo Sforzo modificate.',
+        );
       if (run.spatial)
         invariant(
           this.p.version === 3 &&
@@ -1340,6 +1457,7 @@ class FrontReplay {
         results: [],
       };
       this.s.parents.push(parent);
+      const reactions: LastStandReaction[] = [];
       try {
         for (const [index, child] of run.program.children.entries()) {
           invariant(child.hero < this.p.heroes.length, 'Eroe fonte assente.');
@@ -1355,6 +1473,10 @@ class FrontReplay {
           };
           parent.results.push(this.result);
           const path = `${run.id}/${index}`;
+          if (!this.lastStand.active(child.hero)) {
+            parent.completedChildren++;
+            continue;
+          }
           switch (child.kind) {
             case 'end-turn':
               this.endTurn(child.hero, path);
@@ -1403,22 +1525,76 @@ class FrontReplay {
               this.scout(child.hero, child.count, path);
               break;
             case 'event':
-              this.event(child.hero, child.event, path, child.threat, child.sufferedFear);
+              if (run.lastStandRules && child.event === 'after-darkness-suffering-batch') {
+                const result = this.result;
+                for (const [n, effect] of this.eventEffects(
+                  child.hero,
+                  child.event,
+                  child.sufferedFear,
+                ).entries())
+                  reactions.push({
+                    id: `reaction:${index}:${n}`,
+                    hero: child.hero,
+                    label: `Risolvi ${this.cards.get(effect.copy)!.name.value}`,
+                    available: () =>
+                      this.faceup.has(effect.copy) &&
+                      this.lastStand.active(effect.owner) &&
+                      this.lastStand.active(child.hero),
+                    resolve: () => {
+                      this.result = result;
+                      this.eventEffect(child.hero, effect, `${path}/trigger-${n}`, child.threat);
+                    },
+                  });
+              } else this.event(child.hero, child.event, path, child.threat, child.sufferedFear);
               break;
           }
           parent.completedChildren++;
         }
         this.child = run.program.children.length;
-        if (run.lastStandRules) {
-          this.lastStand.settle(run);
-          if (this.s.lastStand?.terminal) this.gate(0, 'adventure-loss-consumer-unavailable');
-        } else
+        let lastStandEnabled = !!run.lastStandRules;
+        if (!lastStandEnabled)
           for (let hero = 0; hero < this.p.heroes.length; hero++) {
             const limits = this.limits(hero);
-            for (const family of ['damage', 'fear'] as const)
-              if (this.s.areas[hero]![family].length >= limits[family])
-                this.gate(hero, 'last-stand-unavailable', empty(), family, 'P2:last-stand');
+            const family = (['damage', 'fear'] as const).find(
+              (f) => this.s.areas[hero]![f].length >= limits[f],
+            );
+            if (!family) continue;
+            const active: PhysicalActive = {
+              ...this.base(hero),
+              kind: 'gate',
+              reason: 'last-stand-unavailable',
+              remaining: empty(),
+              family,
+              capability: 'P2:last-stand',
+            };
+            if (!run.answers[this.answer])
+              this.gate(hero, 'last-stand-unavailable', empty(), family, 'P2:last-stand');
+            const input = this.read(active);
+            invariant(
+              input.kind === 'physical-continue-last-stand' && this.p.lastStand,
+              'Il pending storico richiede una continuazione P2 esplicita e verificata.',
+            );
+            lastStandEnabled = true;
+            break;
           }
+        if (lastStandEnabled) {
+          for (const [hero, limit] of run.program.limits.entries())
+            if (limit.kind === 'requires-capability' && limit.capability !== 'source-derived')
+              this.gate(hero, 'effective-limits-unavailable', empty(), null, limit.capability);
+          this.lastStand.settle(
+            run.lastStandRules
+              ? run
+              : {
+                  ...run,
+                  lastStandRules: {
+                    version: 'source-last-stand-v1',
+                    artifactFingerprint: this.p.lastStand!.fingerprint,
+                  },
+                },
+            reactions,
+          );
+          if (this.s.lastStand?.terminal) this.gate(0, 'adventure-loss-consumer-unavailable');
+        }
         parent.status = 'completed';
         parent.returnCount = 1;
       } catch (e) {
