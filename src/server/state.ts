@@ -62,6 +62,7 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
     state.preparation,
     state.skillTest,
     state.scout,
+    state.physical?.snapshot.resolution?.revealed,
   );
   if (testProblem) ctx.addIssue({ code: 'custom', message: testProblem });
   const scoutProblem = scoutingProblem(state.content, state.preparation, state.scout);
@@ -160,7 +161,12 @@ const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.li
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
-    if (version === 11) return StateSchema.parse({ ...raw, schemaVersion: 12 });
+    if (version === 11) {
+      const legacy = BaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
+      if (legacy.physical && legacy.physical.version !== 1)
+        throw new Error('Runtime fronti non valido per schema11.');
+      return StateSchema.parse({ ...legacy, schemaVersion: 12 });
+    }
     if (version === 10)
       return StateSchema.parse({
         ...VersionTenStateSchema.parse(raw),

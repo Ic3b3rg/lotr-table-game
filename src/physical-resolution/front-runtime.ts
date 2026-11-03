@@ -1,3 +1,5 @@
+import { validatePhysicalProgram } from './program';
+import { preparationProblem } from '../shared/preparation';
 import { createHash } from 'node:crypto';
 import { requirePhysicalFamily, type PhysicalCard } from '../physical-content/catalog';
 import { digest } from '../map-freeze/hash';
@@ -1056,18 +1058,7 @@ class FrontReplay {
           run.program.children.every((c) => c.kind !== 'suffer' || !c.prevention.length),
         'I crediti sintetici non pagano capacità originali.',
       );
-      invariant(
-        run.program.limits.length === this.p.heroes.length &&
-          run.program.initialCredits.length === this.p.heroes.length &&
-          run.program.limits.every(
-            (l) => l.kind === 'requires-capability' && l.capability === 'source-derived',
-          ) &&
-          run.program.children.every(
-            (c) =>
-              c.kind !== 'suffer' || new Set(c.cards.map((x) => x.family)).size === c.cards.length,
-          ),
-        'Programma fonte non coerente con la compagnia.',
-      );
+      validatePhysicalProgram(run.program, this.p.heroes.length);
       sources.add(run.source.effectId);
       runIds.add(run.id);
       this.run = run;
@@ -1083,6 +1074,20 @@ class FrontReplay {
       );
       if (this.r.resources)
         invariant(digest(context) === digest(this.r.resources), 'Risorse non continue fra fonti.');
+      if (!this.r.resources) {
+        invariant(
+          !preparationProblem(
+            this.catalog,
+            [...new Set(this.p.heroes.map((h) => h.playerId))],
+            context.preparation,
+          ),
+          'Risorse iniziali senza conservazione della compagnia.',
+        );
+        invariant(
+          !context.depletion.length && !context.boons.length,
+          'Acquisizioni di accessori e benefici richiedono un consumer fonte dedicato.',
+        );
+      }
       this.r.resources = structuredClone(context);
       this.s.credits = [...run.program.initialCredits];
       const parent: PhysicalSnapshot['parents'][number] = {

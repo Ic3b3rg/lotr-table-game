@@ -22,13 +22,11 @@ export function frontFixture() {
   const raw = diagnosticRaw(),
     ir = inventedFrontInput(raw),
     catalog = catalogFixture();
-  const heroes = catalog.heroes
-    .slice(0, 3)
-    .map((h, i) => ({
-      heroId: h.id,
-      playerId: `00000000-0000-4000-8000-00000000001${i}`,
-      spaceId: 'invented-space',
-    }));
+  const heroes = catalog.heroes.slice(0, 3).map((h, i) => ({
+    heroId: h.id,
+    playerId: `00000000-0000-4000-8000-00000000001${i}`,
+    spaceId: 'invented-space',
+  }));
   const context = {
     preparation: {
       status: 'prepared',

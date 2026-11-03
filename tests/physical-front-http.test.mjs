@@ -8,6 +8,7 @@ import { scenarioInput } from './scenario-helper.mjs';
 import { readSession, readBackup } from './skill-test-helper.mjs';
 import { inventedFrontInput, diagnosticRaw, hash } from './fixtures/physical-fronts.mjs';
 import { suffer } from './fixtures/physical-resolution.mjs';
+import { catalogFixture } from './fixtures/catalog.mjs';
 import { compilePhysicalFronts } from '../dist/physical-resolution-library.mjs';
 test('P1 HTTP source resolves real resource choices and reconciles receipts through the normal scenario consumer', async (t) => {
   const ready = await readyFronts(t);
@@ -53,4 +54,45 @@ test('P1 HTTP source resolves real resource choices and reconciles receipts thro
     'invented-fear-',
   ])
     assert.ok(!JSON.stringify(done).includes(forbidden), forbidden);
+});
+
+test('P1 successive Scout children preserve their cards through the normal consumer', async (t) => {
+  const ready = await readyFronts(t, (_pack, pr) => {
+    pr.children = Array.from({ length: 6 }, () => ({ kind: 'scout', hero: 1, count: 5 }));
+  });
+  let s = await reachPhysical(ready);
+  const { host, other } = ready;
+  for (let n = 0; n < 6; n++) {
+    assert.equal(s.physical.active.mode, 'scout');
+    const r = await scenarioInput(host, other, {
+      kind: 'physical-scout',
+      prepare: null,
+      discard: null,
+      top: [],
+      bottom: s.physical.active.options.map((o) => o.id),
+    });
+    assert.equal(r.status, 200, await r.text());
+    s = await readSession(host);
+  }
+  assert.equal(s.physical.parents[0].returnCount, 1);
+});
+
+test('P1 tests reconcile a completed legacy reveal while a descendant holds those copies after refill', async (t) => {
+  const ready = await readyFronts(t, (pack, pr) => {
+    const card = catalogFixture().skills.find((c) => c.id === 'role-2-skill-1');
+    pack.preparedEffects = [
+      { skillId: card.id, cardHash: hash(card), effect: 'inspiration', amount: 1 },
+    ];
+    pr.children = Array.from({ length: 9 }, () => ({ ...suffer(1, 1, 0), negate: 'might' }));
+  });
+  const { host, other } = ready;
+  let s = await reachPhysical(ready);
+  for (let n = 0; n < 9; n++) {
+    assert.equal(s.physical.active.mode, 'choose');
+    const r = await scenarioInput(host, other, { kind: 'physical-choice', option: 'resolve' });
+    assert.equal(r.status, 200, await r.text());
+    s = await readSession(host);
+  }
+  assert.equal(s.physical.active.reason, 'last-stand-unavailable');
+  assert.equal(s.physical.parents[0].returnCount, 0);
 });

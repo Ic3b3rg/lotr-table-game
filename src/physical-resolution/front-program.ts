@@ -12,7 +12,6 @@ const scope = z.enum([
   'each-nearby-excluding-self',
   'each-other-hero-any-distance',
   'self-and-each-nearby',
-  'triggering-self-or-nearby',
 ]);
 const count = z.int().min(0).max(56);
 const reference = z.strictObject({

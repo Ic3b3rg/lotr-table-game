@@ -1,3 +1,5 @@
+import { validatePhysicalProgram } from './program';
+export { validatePhysicalProgram } from './program';
 import { replayFronts } from './front-runtime';
 import { validateFrontArtifact } from './front-program';
 import type { FrontResources } from './front-state';
@@ -36,44 +38,6 @@ export function physicalFamilies(raw: unknown) {
   const all = [...damage.cards, ...fear.cards].flatMap((c) => c.copies.map((copy) => copy.id));
   invariant(new Set(all).size === 56, 'Copie fisiche globali non uniche.');
   return { damage, fear };
-}
-export function validatePhysicalProgram(program: PhysicalProgram, count: number) {
-  PhysicalProgramSchema.parse(program);
-  invariant(
-    program.initialCredits.length === count && program.limits.length === count,
-    'Stati sintetici non legati alla compagnia.',
-  );
-  if (program.profile === 'source-fronts-v1') {
-    invariant(
-      program.initialCredits.every((n) => n === 0),
-      'Crediti sintetici su fonte P1.',
-    );
-    for (const c of program.children)
-      invariant(
-        c.hero < count &&
-          (c.kind !== 'suffer' ||
-            (!c.prevention.length &&
-              new Set(c.cards.map((x) => x.family)).size === c.cards.length)) &&
-          (c.kind !== 'discard' || new Set(c.families).size === c.families.length),
-        'Fonte P1 non valida.',
-      );
-    return;
-  }
-  for (const child of program.children) {
-    invariant(child.hero < count, 'Destinatario fonte assente.');
-    if (child.kind === 'suffer') {
-      invariant(
-        new Set(child.cards.map((c) => c.family)).size === child.cards.length,
-        'Tipi ripetuti nella fonte.',
-      );
-      invariant(
-        new Set(child.prevention.map((g) => g.id)).size === child.prevention.length &&
-          child.prevention.every((g) => g.actor < count),
-        'Concessioni fonte non valide.',
-      );
-    } else
-      invariant(new Set(child.families).size === child.families.length, 'Tipi scarto ripetuti.');
-  }
 }
 export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapshot {
   if (p.version === 2) return replayFronts(p);
