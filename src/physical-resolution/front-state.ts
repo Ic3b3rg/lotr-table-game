@@ -34,7 +34,7 @@ export const FrontSnapshotSchema = z.strictObject({
         remaining: z.int().min(0).max(56),
       }),
     )
-    .max(10000),
+    .max(100000),
   revealed: z
     .array(
       z.strictObject({ heroId: z.string().max(100), cards: z.array(z.string().max(120)).max(56) }),

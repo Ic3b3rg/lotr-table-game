@@ -40,6 +40,7 @@ export async function startHost(extraEnv = {}) {
     });
   });
   return {
+    diagnostics: () => diagnostics,
     url,
     dataDir,
     async stop(signal = 'SIGTERM') {

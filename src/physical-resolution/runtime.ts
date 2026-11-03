@@ -40,7 +40,7 @@ export function physicalFamilies(raw: unknown) {
   return { damage, fear };
 }
 export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapshot {
-  if (p.version === 2) return replayFronts(p);
+  if (p.version !== 1) return replayFronts(p);
   invariant(
     !p.fronts &&
       p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),
@@ -341,17 +341,20 @@ export function openPhysical(
   source: PhysicalSource,
   program: PhysicalProgram,
   context?: FrontResources,
+  spatial?: PhysicalState['runs'][number]['spatial'],
+  runId: string = randomUUID(),
 ) {
   validatePhysical(p);
   validatePhysicalProgram(program, p.heroes.length);
   const copy = structuredClone(p),
-    id = randomUUID();
+    id = runId;
   copy.runs.push({
     id,
     source: PhysicalSourceSchema.parse(source),
     program: PhysicalProgramSchema.parse(program),
     answers: [],
     ...(context ? { context } : {}),
+    ...(spatial ? { spatial } : {}),
   });
   copy.snapshot = replayPhysical(copy);
   Object.assign(p, PhysicalStateSchema.parse(copy));

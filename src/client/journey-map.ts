@@ -64,12 +64,17 @@ export function createJourneyMap(sync: () => Promise<void>) {
     if (!current || !catalog) return;
     const journey = current.journey;
     const round = current.round;
-    const pending = Boolean(current.scout || current.skillTest?.status === 'converting');
+    const pending = Boolean(
+      current.physical?.active || current.scout || current.skillTest?.status === 'converting',
+    );
     const active = current.preparation?.heroes.find((hero) => hero.heroId === round?.activeHeroId);
     const own = Boolean(active && active.playerId === player?.id && round?.phase === 'action');
     const progress = round?.heroes.find((hero) => hero.heroId === active?.heroId);
     const position = journey?.heroes.find((hero) => hero.heroId === active?.heroId);
     const remaining = journey?.travel?.remaining ?? 0;
+    const grant =
+      current.physical?.cycle?.heroes.find((h) => h.heroId === active?.heroId)?.travelMoves ?? 2;
+    start.textContent = `Inizia viaggio · 1 azione, ${grant} ${grant === 1 ? 'movimento' : 'movimenti'}`;
     element('#map-view').hidden = !journey;
     element('#map-open-form').hidden = Boolean(journey) || !plan || !player;
     const beforeTurns =

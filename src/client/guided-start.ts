@@ -244,6 +244,37 @@ export function createGuidedStart(sync: () => Promise<void>) {
             target = '#scenario';
             label = 'Controlla lo stato dell’avventura';
           }
+          if (session.physical?.cycle) {
+            if (round.phase === 'rally') {
+              heading = `Round ${round.number} · Riorganizzazione`;
+              message =
+                'Ogni eroe apre la propria Scoperta. Preparate e ordinate le carte nel pannello dell’avventura; il nuovo round attende tutti gli effetti.';
+              target = '#scouting';
+              label = 'Apri Scoperta';
+              topic = 'scout';
+            } else if (!active) {
+              heading =
+                round.phase === 'shadow'
+                  ? 'Ombra manuale della prova sintetica'
+                  : 'Scegliete il prossimo passo';
+              message =
+                round.phase === 'shadow'
+                  ? 'Questa conferma non esegue l’Ombra originale. Le capacità senza una vera fonte restano bloccate.'
+                  : 'Scegliete il turno oppure, quando tutti hanno concluso, il passaggio manuale della prova sintetica.';
+              target = '#rounds';
+              label = 'Apri il round';
+            }
+            if (session.physical.cycle.pending) {
+              heading =
+                session.physical.active?.kind === 'gate'
+                  ? 'Conseguenza sospesa'
+                  : 'Completa la capacità in corso';
+              message = `${session.players.find((p) => p.id === session.physical!.active?.actorPlayerId)?.name ?? 'Il proprietario indicato'} risolve la decisione. Carte, turno e movimenti residui restano salvati fino al ritorno.`;
+              target = '#scenario';
+              label = 'Apri la decisione';
+              topic = 'physical';
+            }
+          }
         }
       } else if (session.mapGeneration || generationOffer.kind !== 'legacy') {
         step = 5;

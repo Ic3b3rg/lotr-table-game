@@ -1,4 +1,5 @@
 import { dirname, join } from 'node:path';
+import { validatePhysicalCycle } from '../server/physical-cycle';
 import { FrontArtifactSchema } from '../physical-resolution/front-program';
 import { preparationProblem } from '../shared/preparation';
 import { createHash } from 'node:crypto';
@@ -208,11 +209,12 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  validatePhysicalCycle(state);
   invariant(
-    (p.version === 2) === (sc.pack.manifest.scope === 'synthetic-physical-p1'),
+    (p.version !== 1) === (sc.pack.manifest.scope === 'synthetic-physical-p1'),
     'Profilo fronti diverso dalla fonte.',
   );
-  if (p.version === 2) {
+  if (p.version !== 1) {
     invariant(
       digest(p.fronts!.catalog) === digest(state.content),
       'Catalogo delle policy modificato.',
@@ -257,7 +259,10 @@ export function validateScenarioPhysical(state: State) {
     'Proprietà/posizione iniziale fisica cambiata.',
   );
   const effects = sc.effects.filter((e) => e.op === 'physical');
-  invariant(p.runs.length === effects.length, 'Padri fisici non riconciliati con le entry fonte.');
+  invariant(
+    p.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle').length === effects.length,
+    'Padri fisici non riconciliati con le entry fonte.',
+  );
   effects.forEach((effect, n) => {
     const { action, completed } = sourceCursor(state, effect),
       run = p.runs[n]!,
@@ -295,7 +300,7 @@ export function validateScenarioPhysical(state: State) {
       );
     }
   });
-  if (p.snapshot.active) {
+  if (p.snapshot.active && !p.cycle?.pending) {
     const q = sc.pending,
       active = p.snapshot.active;
     const effect = effects.find(
@@ -313,7 +318,7 @@ export function validateScenarioPhysical(state: State) {
 export function physicalHistory(state: State, effect: SourceEffect) {
   const p = state.physical!,
     run = p.runs.find((r) => r.source.effectId === effect.id)!;
-  if (p.version === 2)
+  if (p.version !== 1)
     return p.snapshot
       .resolution!.history.filter((h) => h.runId === run.id)
       .map((h) => ({
@@ -361,6 +366,7 @@ export function validatePhysicalReceipts(
 ) {
   const sc = state.scenario!;
   for (const run of state.physical?.runs ?? []) {
+    if (run.source.instanceId === 'ordinary-cycle') continue;
     const effect = sc.effects.find((e) => e.id === run.source.effectId)!;
     for (const [n, history] of physicalHistory(state, effect).entries()) {
       const answer = run.answers[n]!,

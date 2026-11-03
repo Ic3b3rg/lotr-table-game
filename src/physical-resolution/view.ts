@@ -2,6 +2,8 @@ import type { PhysicalState } from './model';
 import type { PhysicalView } from '../shared/physical';
 import { requirePhysicalFamily } from '../physical-content/catalog';
 import { frontToken } from './front-runtime';
+import { cycleRequest } from './cycle-request';
+import { travelMoves } from './effects';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
 export function physicalView(p: PhysicalState | null): PhysicalView | null {
@@ -20,7 +22,11 @@ export function physicalView(p: PhysicalState | null): PhysicalView | null {
     active: structuredClone(p.snapshot.active),
     parents: structuredClone(p.snapshot.parents),
   };
-  if (p.version === 2) {
+  if (p.version !== 1) {
+    view.cycle = {
+      pending: cycleRequest(p),
+      heroes: p.heroes.map((h) => ({ heroId: h.heroId, travelMoves: travelMoves(p, h.heroId) })),
+    };
     const cards = [
       ...requirePhysicalFamily(p.raw, 'damage').cards,
       ...requirePhysicalFamily(p.raw, 'fear').cards,

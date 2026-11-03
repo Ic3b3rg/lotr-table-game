@@ -74,7 +74,7 @@ export function validatePreparedRewards(state: State) {
       values.get(state.skillTest.heroId)! - state.skillTest.converted,
     );
   const physical = state.physical;
-  if (physical?.version === 2 && physical.runs.length) {
+  if (physical && physical.version !== 1 && physical.runs.length) {
     const initial = physical.runs[0]!.context!.preparation;
     const resources = physical.snapshot.resolution!.resources!.preparation;
     for (const hero of heroes) {
@@ -108,7 +108,7 @@ export function validatePreparedRewards(state: State) {
     invariant(hero, 'Trigger senza eroe.');
     if (e.source === 'initial') {
       const initial =
-        physical?.version === 2 && physical.runs[0]?.context
+        physical && physical.version !== 1 && physical.runs[0]?.context
           ? physical.runs[0].context.preparation.heroes.find((h) => h.heroId === hero.heroId)!
           : hero;
       const first = state.content!.roles.find((r) => r.id === hero.roleId)!.skills[0]!;

@@ -14,7 +14,7 @@ test('P1 HTTP source resolves real resource choices and reconciles receipts thro
   const ready = await readyFronts(t);
   const { host, player, other } = ready;
   const s = await reachPhysical(ready);
-  assert.equal(s.schemaVersion, 12);
+  assert.equal(s.schemaVersion, 13);
   assert.equal(s.physical.active.kind, 'decision');
   assert.equal(s.physical.active.mode, 'choose');
   assert.equal(s.physical.fronts.length, 1);

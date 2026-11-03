@@ -103,7 +103,7 @@ export function decisionForm(
     const rows = q.options.map((o, n) => {
       const dest = select(`physical-scout-destination-${n}`, `${o.label} · destinazione`, [
         { id: 'bottom', label: 'Fondo del mazzo' },
-        { id: 'top', label: 'Cima del mazzo' },
+        ...(q.scoutTopAllowed === false ? [] : [{ id: 'top', label: 'Cima del mazzo' }]),
         { id: 'prepare', label: 'Prepara questa carta' },
       ]);
       const order = select(
@@ -133,6 +133,7 @@ export function decisionForm(
       const over = (hero?.prepared.length ?? 0) + prepared.length > 4;
       const valid =
         prepared.length <= 1 &&
+        (q.scoutTopAllowed !== false || !rows.some((r) => r.dest.value === 'top')) &&
         new Set(rows.map((r) => r.order.value)).size === rows.length &&
         Boolean(discard.value) === over &&
         (!discard.value ||

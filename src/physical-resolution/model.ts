@@ -1,5 +1,6 @@
 import { FrozenFrontsSchema, FrontResourcesSchema, FrontSnapshotSchema } from './front-state';
 import { z } from 'zod';
+import { CycleStateSchema } from '../shared/physical-cycle';
 import { ContentIdSchema } from '../shared/catalog';
 import { HashSchema } from '../shared/generated-map';
 import {
@@ -57,11 +58,12 @@ export const PhysicalSnapshotSchema = z.strictObject({
       }),
     )
     .max(maxRandomRecords),
-  parents: z.array(PhysicalParentSchema).max(32),
+  parents: z.array(PhysicalParentSchema).max(1000),
   active: PhysicalActiveSchema.nullable(),
 });
 export const PhysicalStateSchema = z.strictObject({
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  cycle: CycleStateSchema.optional(),
   fronts: FrozenFrontsSchema.optional(),
   algorithm: z.literal('sha256-counter-rejection-fisher-yates-v1'),
   raw: z.unknown(),
@@ -77,6 +79,12 @@ export const PhysicalStateSchema = z.strictObject({
         source: PhysicalSourceSchema,
         program: PhysicalProgramSchema,
         context: FrontResourcesSchema.optional(),
+        spatial: z
+          .strictObject({
+            heroes: z.array(PhysicalHeroSchema).min(1).max(5),
+            connections: z.array(z.tuple([z.string().max(200), z.string().max(200)])).max(1000),
+          })
+          .optional(),
         answers: z
           .array(
             z.strictObject({
@@ -90,10 +98,10 @@ export const PhysicalStateSchema = z.strictObject({
               evidence: PhysicalEvidenceSchema,
             }),
           )
-          .max(10000),
+          .max(100000),
       }),
     )
-    .max(32),
+    .max(1000),
   snapshot: PhysicalSnapshotSchema,
 });
 export type PhysicalState = z.infer<typeof PhysicalStateSchema>;

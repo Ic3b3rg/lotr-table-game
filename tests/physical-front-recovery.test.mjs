@@ -97,7 +97,7 @@ test('schema11 pending P0 imports as12 without changing its physical program, en
   signBackup(backup);
   assert.equal((await restore(ready.host, backup)).status, 200);
   const after = await readBackup(ready.host);
-  assert.equal(after.payload.state.schemaVersion, 12);
+  assert.equal(after.payload.state.schemaVersion, 13);
   assert.deepEqual(after.payload.state.physical, expected.payload.state.physical);
   assert.deepEqual(after.payload.state.scenario, expected.payload.state.scenario);
   assert.deepEqual(after.payload.commands, expected.payload.commands);

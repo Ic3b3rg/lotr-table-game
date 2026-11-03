@@ -88,10 +88,18 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
     if (current.scenario)
       element('#scout-phase-help').textContent =
         'Scoperta 2 iniziale richiesta dall’avventura: puoi preparare una carta e ordinare le altre. Ogni eroe completa la propria Scoperta una volta.';
-    form.hidden = !!current.scenario || Boolean(pending) || !mine;
+    form.hidden =
+      (!!current.scenario && !(current.physical?.cycle && inRally)) ||
+      Boolean(current.physical?.active) ||
+      Boolean(pending) ||
+      !mine;
     start.dataset.blocked = String(Boolean(pending) || activeTest || !mine);
     rally.dataset.blocked = String(
-      Boolean(pending) || activeTest || !mine || (unknown && !proximity.value),
+      Boolean(current.physical?.active) ||
+        Boolean(pending) ||
+        activeTest ||
+        !mine ||
+        (unknown && !proximity.value),
     );
     start.hidden = Boolean(inRally);
     rally.hidden = Boolean(round && !inRally);
@@ -102,7 +110,11 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
       : 'Ricomponi e scopri 2';
     element('#scout-count-field').hidden = Boolean(inRally);
     count.disabled = Boolean(inRally);
-    element('#scout-discard-controls').hidden = !mine || Boolean(pending) || Boolean(inRally);
+    element('#scout-discard-controls').hidden =
+      !!current.scenario || !mine || Boolean(pending) || Boolean(inRally);
+    if (current.physical?.cycle && inRally)
+      element('#scout-phase-help').textContent =
+        'La Scoperta ordinaria rivela le carte nel pannello dell’avventura. Il PC applica i vincoli di cima e i trigger della preparazione prima di concluderla.';
     const nextPrepared = `${current.generation}:${mine?.heroId}:${mine?.prepared.join(',')}`;
     if (preparedKey !== nextPrepared) {
       options(discardSelect, mine?.prepared ?? [], 'Scegli una carta preparata');

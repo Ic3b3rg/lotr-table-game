@@ -393,8 +393,8 @@ export function scenarioStateProblem(state: State): string | null {
         ? sc.handoffCount === 1 &&
             !q &&
             !!state.round &&
-            state.round.number === 1 &&
-            state.round.phase === 'action' &&
+            (state.physical?.cycle ||
+              (state.round.number === 1 && state.round.phase === 'action')) &&
             !!state.journey
         : sc.handoffCount === 0 && !state.round && !!q,
       'Fase scenario incoerente.',
