@@ -73,6 +73,19 @@ export function validatePreparedRewards(state: State) {
       state.skillTest.heroId,
       values.get(state.skillTest.heroId)! - state.skillTest.converted,
     );
+  const physical = state.physical;
+  if (physical?.version === 2 && physical.runs.length) {
+    const initial = physical.runs[0]!.context!.preparation;
+    const resources = physical.snapshot.resolution!.resources!.preparation;
+    for (const hero of heroes) {
+      invariant(
+        values.get(hero.heroId) ===
+          initial.heroes.find((h) => h.heroId === hero.heroId)!.inspiration,
+        'Ispirazione iniziale fisica non derivata dal setup fonte.',
+      );
+      values.set(hero.heroId, resources.heroes.find((h) => h.heroId === hero.heroId)!.inspiration);
+    }
+  }
   for (const hero of heroes)
     invariant(
       values.get(hero.heroId) === hero.inspiration,
@@ -93,9 +106,17 @@ export function validatePreparedRewards(state: State) {
     );
     const hero = state.preparation!.heroes.find((h) => h.heroId === e.heroId);
     invariant(hero, 'Trigger senza eroe.');
-    if (e.source === 'initial')
-      invariant(hero.prepared.includes(e.copy), 'Abilità iniziale non preparata.');
-    else
+    if (e.source === 'initial') {
+      const initial =
+        physical?.version === 2 && physical.runs[0]?.context
+          ? physical.runs[0].context.preparation.heroes.find((h) => h.heroId === hero.heroId)!
+          : hero;
+      const first = state.content!.roles.find((r) => r.id === hero.roleId)!.skills[0]!;
+      invariant(
+        definitionId(e.copy) === first && initial.prepared.includes(e.copy),
+        'Abilità iniziale non preparata.',
+      );
+    } else
       invariant(
         sc.completedSetup.some(
           (c) =>

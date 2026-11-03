@@ -52,6 +52,7 @@ export function skillTestProblem(
   preparation: Preparation | null,
   test: SkillTest | null,
   scout: Scouting | null = null,
+  physicalHeld: { heroId: string; cards: string[] }[] = [],
 ): string | null {
   if (!test) return null;
   const hero = preparation?.heroes.find((entry) => entry.heroId === test.heroId);
@@ -61,7 +62,12 @@ export function skillTestProblem(
   if (!definition) return 'L’eroe della prova non appartiene al catalogo.';
   const available = [...hero.deck, ...hero.discard];
   if (test.status === 'converting') available.push(...test.revealed);
-  else available.push(...hero.prepared, ...(scout?.heroId === hero.heroId ? scout.revealed : []));
+  else
+    available.push(
+      ...hero.prepared,
+      ...(scout?.heroId === hero.heroId ? scout.revealed : []),
+      ...physicalHeld.filter((h) => h.heroId === hero.heroId).flatMap((h) => h.cards),
+    );
   if (
     new Set(test.revealed).size !== test.revealed.length ||
     test.revealed.some((copy) => !available.includes(copy)) ||

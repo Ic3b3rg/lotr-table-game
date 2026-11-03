@@ -7,7 +7,7 @@ export function physicalAllocationProblem(
 ): string | null {
   if (![counts.damage, counts.fear].every((n) => Number.isInteger(n) && n >= 0))
     return 'Scegli quantità intere non negative.';
-  if (active.kind === 'gate') return 'La conseguenza resta sospesa.';
+  if (active.kind === 'gate' || active.kind === 'decision') return 'La conseguenza resta sospesa.';
   const total = counts.damage + counts.fear;
   const maximum = active.kind === 'prevent' ? active.budget : active.count;
   const minimum = active.kind === 'prevent' ? 0 : active.minimum;
@@ -49,5 +49,34 @@ export function bindPhysicalAnswer(
       damage: counts.damage,
       fear: counts.fear,
     },
+  };
+}
+
+export function bindPhysicalDecision(
+  session: Pick<Session, 'scenario' | 'physical'>,
+  input: import('./physical').PhysicalInput,
+) {
+  const sc = session.scenario,
+    q = sc?.pending,
+    active = session.physical?.active;
+  if (
+    !sc ||
+    q?.kind !== 'physical' ||
+    active?.kind !== 'decision' ||
+    q.physical?.parentId !== active.runId ||
+    q.physical.child !== active.child ||
+    q.physical.grant !== null ||
+    q.physical.cursor !== active.cursor
+  )
+    throw new Error('La decisione fisica è cambiata.');
+  return {
+    type: 'SCENARIO_INPUT' as const,
+    scenarioId: sc.id,
+    packFingerprint: sc.packFingerprint,
+    projectionFingerprint: sc.projectionFingerprint,
+    pendingId: q.id,
+    sourceFingerprint: q.fingerprint,
+    heroId: q.heroId,
+    input,
   };
 }

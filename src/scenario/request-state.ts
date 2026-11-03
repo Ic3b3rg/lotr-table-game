@@ -33,7 +33,8 @@ export function validateSourceRequest(state: State) {
         q.actorPlayerId === active.actorPlayerId &&
         q.physical?.parentId === active.runId &&
         q.physical.child === active.child &&
-        q.physical.grant === (active.kind === 'prevent' ? active.grant : null),
+        q.physical.grant === (active.kind === 'prevent' ? active.grant : null) &&
+        q.physical.cursor === (active.kind === 'decision' ? active.cursor : undefined),
       'Richiesta fisica diversa dalla finestra fonte.',
     );
     return;

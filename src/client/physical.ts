@@ -1,3 +1,5 @@
+import { decisionForm } from './physical-decisions';
+import { bindPhysicalDecision } from '../shared/physical-actions';
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import { bindPhysicalAnswer, physicalAllocationProblem } from '../shared/physical-actions';
@@ -6,6 +8,10 @@ import { element, text } from './dom';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
+  'weakness-deck-empty':
+    'La riserva comune delle debolezze è vuota. La continuazione resta salvata senza creare copie.',
+  'boon-quantity-unconfirmed':
+    'Le quantità dei benefici non sono confermate (#57). La conseguenza resta sospesa.',
   'required-deck-empty':
     'Il mazzo necessario è vuoto. La pesca resta sospesa esattamente qui: carte già ricevute e costi sono salvati. Non è disponibile una regola verificata di sostituzione.',
   'faceup-handler-unavailable':
@@ -17,7 +23,9 @@ const gateMessages = {
 };
 
 export function createPhysicalControls(
-  submit: (intent: ReturnType<typeof bindPhysicalAnswer>) => void,
+  submit: (
+    intent: ReturnType<typeof bindPhysicalAnswer> | ReturnType<typeof bindPhysicalDecision>,
+  ) => void,
 ) {
   const root = element('#physical-resolution');
   let key = '',
@@ -37,7 +45,9 @@ export function createPhysicalControls(
       root.append(
         text(
           'p',
-          'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
+          view.fronts
+            ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+            : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
           'physical-notice',
         ),
       );
@@ -58,6 +68,24 @@ export function createPhysicalControls(
         areas.append(row);
       }
       root.append(areas);
+      for (const front of view.fronts ?? []) {
+        const article = text('article', '', 'physical-front');
+        article.append(
+          text('h4', `${name(front.heroId)} · ${front.name}`),
+          text('p', front.text, 'physical-front-text'),
+        );
+        for (const effect of front.persistent) article.append(text('p', effect, 'company-help'));
+        root.append(article);
+      }
+      if (view.current)
+        root.append(
+          text(
+            'p',
+            `Carta in risoluzione: ${view.current.name}. ${view.current.step}`,
+            'company-help',
+          ),
+        );
+
       const active = view.active;
       if (active) {
         const actor = session.players.find((p) => p.id === active.actorPlayerId);
@@ -68,7 +96,9 @@ export function createPhysicalControls(
               ? `Prevenzione per ${name(active.heroId)}`
               : active.kind === 'discard'
                 ? `Scarto per ${name(active.heroId)}`
-                : `Conseguenza sospesa per ${name(active.heroId)}`,
+                : active.kind === 'decision'
+                  ? `Decisione per ${name(active.heroId)}`
+                  : `Conseguenza sospesa per ${name(active.heroId)}`,
           ),
         );
         root.append(
@@ -86,6 +116,30 @@ export function createPhysicalControls(
                 'p',
                 `Restano da subire ${quantities(active.remaining.damage, active.remaining.fear)}.`,
                 'company-help',
+              ),
+            );
+        } else if (active.kind === 'decision') {
+          root.append(text('p', active.title, 'company-help'));
+          if (player?.id === active.actorPlayerId && q?.kind === 'physical') {
+            const form = decisionForm(active, session, catalog, (input) => {
+              if (current) submit(bindPhysicalDecision(current, input));
+            });
+            root.append(form);
+            queueMicrotask(() => {
+              if (form.isConnected && !document.querySelector('dialog[open]')) {
+                const legend = form.querySelector('legend');
+                if (legend) {
+                  legend.tabIndex = -1;
+                  legend.focus({ preventScroll: true });
+                }
+              }
+            });
+          } else
+            root.append(
+              text(
+                'p',
+                `In attesa di ${actor?.name ?? 'chi controlla l’eroe'}. Carta, scelta e residui sono salvati.`,
+                'physical-waiting',
               ),
             );
         } else {
@@ -193,7 +247,7 @@ export function createPhysicalControls(
           list.append(
             text(
               'li',
-              `${name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti coperti; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
+              `${view.fronts ? `Fonte per ${name(r.heroId)} · totali tra gli eroi` : name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti${view.fronts ? '' : ' coperti'}; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
             ),
           );
         results.append(list);

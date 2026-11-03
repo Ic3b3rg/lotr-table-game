@@ -1878,3 +1878,38 @@ body[data-scenario='setup'] #scout-discard-controls {
 .scenario-node-dialog::backdrop {
   background: #191c22bb;
 }
+
+.physical-front {
+  border: 1px solid var(--line);
+  padding: 1rem;
+  margin-block: 1rem;
+  max-width: 46rem;
+}
+.physical-front-text {
+  white-space: pre-line;
+}
+#physical-decision-form fieldset {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+#physical-decision-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+#physical-decision-form label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+#physical-decision-form select,
+#physical-decision-form button {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#physical-decision-form legend:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}

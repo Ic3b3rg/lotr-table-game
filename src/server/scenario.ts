@@ -126,6 +126,12 @@ export function allowScenarioPlay(state: State, command: Command) {
       'PHYSICAL_PENDING',
       'Risolvi la conseguenza corrente sul posto indicato. Le altre azioni attendono il suo completamento.',
     );
+  if (state.physical?.version === 2 && state.physical.snapshot.resolution!.faceup.length)
+    throw new ApiError(
+      409,
+      'PHYSICAL_CYCLE_CAPABILITY',
+      'Gli effetti persistenti sono conservati. Il loro collegamento ai turni ordinari deve essere completato prima di proseguire; nessun effetto è ignorato.',
+    );
   const allowed =
     sc.phase === 'action' &&
     ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type);

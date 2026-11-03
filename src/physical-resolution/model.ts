@@ -1,3 +1,4 @@
+import { FrozenFrontsSchema, FrontResourcesSchema, FrontSnapshotSchema } from './front-state';
 import { z } from 'zod';
 import { ContentIdSchema } from '../shared/catalog';
 import { HashSchema } from '../shared/generated-map';
@@ -33,12 +34,13 @@ export const PhysicalEvidenceSchema = z.strictObject({
   sourceFingerprint: HashSchema,
   revision: z.int().nonnegative(),
 });
-const copies = z.array(z.string().min(1).max(100)).max(28);
+const copies = z.array(z.string().min(1).max(120)).max(56);
 // Two initial shuffles, then at most two family selections per child of 32 × 32.
-const maxRandomRecords = 2 + 32 * 32 * 2;
+const maxRandomRecords = 2 + 32 * 32 * 2 + 100000;
 // Each 28-copy shuffle needs 27 indices, with at most 128 words per index.
-const maxRandomWords = maxRandomRecords * 27 * 128;
+const maxRandomWords = maxRandomRecords * 55 * 128;
 export const PhysicalSnapshotSchema = z.strictObject({
+  resolution: FrontSnapshotSchema.optional(),
   decks: z.strictObject({ damage: copies, fear: copies }),
   areas: z
     .array(z.strictObject({ heroId: ContentIdSchema, damage: copies, fear: copies }))
@@ -51,7 +53,7 @@ export const PhysicalSnapshotSchema = z.strictObject({
       z.strictObject({
         id: z.string().max(300),
         population: copies,
-        indices: z.array(z.int().min(0).max(27)).max(28),
+        indices: z.array(z.int().min(0).max(55)).max(56),
       }),
     )
     .max(maxRandomRecords),
@@ -59,7 +61,8 @@ export const PhysicalSnapshotSchema = z.strictObject({
   active: PhysicalActiveSchema.nullable(),
 });
 export const PhysicalStateSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
+  fronts: FrozenFrontsSchema.optional(),
   algorithm: z.literal('sha256-counter-rejection-fisher-yates-v1'),
   raw: z.unknown(),
   rawSha256: HashSchema,
@@ -73,16 +76,21 @@ export const PhysicalStateSchema = z.strictObject({
         id: z.uuid(),
         source: PhysicalSourceSchema,
         program: PhysicalProgramSchema,
+        context: FrontResourcesSchema.optional(),
         answers: z
           .array(
             z.strictObject({
+              cursor: z
+                .string()
+                .regex(/^[a-f0-9]{64}$/)
+                .optional(),
               child: z.int().min(0).max(31),
               grant: z.int().min(0).max(4).nullable(),
               input: PhysicalInputSchema,
               evidence: PhysicalEvidenceSchema,
             }),
           )
-          .max(192),
+          .max(10000),
       }),
     )
     .max(32),

@@ -5,11 +5,12 @@ import { element, text } from './dom';
 const TOPICS = [
   {
     id: 'physical',
-    title: 'Carte coperte: prevenzione, scarto e prova sintetica',
+    title: 'Danni e paure: fronti, scelte e ripresa',
     target: '#scenario',
     action: 'Torna alla conseguenza',
     paragraphs: [
       'La prova sintetica P0 usa parametri, stati e crediti inventati. Verifica mazzi e recupero; non è un incontro originale e non rende completa l’avventura. La prevenzione concessa dalla prova non attiva Protezione o altre abilità originali.',
+      'La prova P1 usa una fonte inventata distinta dal contenuto delle carte. Risolve ogni fronte e i suoi figli prima della carta seguente. Le scoperte mostrano il testo; le coperte restano casuali. La negazione compare solo se la fonte concede una prova; Protezione richiede una preparata del proprietario nella stessa casella, scartata per un solo destinatario. I costi originali non usano i crediti di prova P0.',
       'La richiesta indica chi agisce e per quale eroe. Ripartisci il budget fra danni e paure prima della pesca: puoi lasciarne inutilizzato. Il costo in crediti di prova è pagato soltanto se usi la concessione. Dopo la conferma il PC trasferisce automaticamente le carte residue.',
       'Le carte coperte mostrano soltanto retro e conteggio, anche al proprietario. Per scartarle scegli il numero per tipo; il PC estrae casualmente le copie e le restituisce sotto il loro mazzo. Non esiste una pila scarti da rimescolare. Una conseguenza obbligatoria non può essere annullata.',
       'Ogni decisione salva carte, costo e passo successivo insieme. Reload, riavvio e ripristino conservano la stessa casualità e la stessa richiesta. Un mazzo realmente vuoto o una capacità ancora non eseguibile sospende la conseguenza con un motivo preciso.',
