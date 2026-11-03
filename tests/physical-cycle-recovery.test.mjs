@@ -3,10 +3,31 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { waitingCycle } from './physical-cycle-helper.mjs';
+import { waitingCycle, readyCycle, cycleCommand } from './physical-cycle-helper.mjs';
 import { readSession, readBackup, signBackup } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { startHost } from './host-helper.mjs';
+
+test('a consistently re-signed ordinary history cannot invent its initial round number', async (t) => {
+  const ready = await readyCycle(t);
+  const started = await cycleCommand(ready, 'START_TURN');
+  assert.equal(started.status, 200, await started.text());
+  const stable = await readSession(ready.host);
+  const backup = await readBackup(ready.host);
+  backup.payload.state.round.number = 999;
+  backup.payload.state.physical.cycle.seed.round.number = 999;
+  for (const command of backup.payload.commands)
+    if (typeof command.receipt.roundNumber === 'number') command.receipt.roundNumber = 999;
+  signBackup(backup);
+  const result = await ready.host.request('/api/restores', {
+    backup,
+    generation: stable.generation,
+    expectedRevision: stable.revision,
+    confirmed: true,
+  });
+  assert.equal(result.status, 422, 'The initial round must be derived from the source handoff.');
+  assert.deepEqual(await readSession(ready.host), stable);
+});
 
 test('ordinary child survives packless SIGKILL, concurrent retries, restore and re-signed history/spatial attacks', async (t) => {
   const ready = await waitingCycle(t);

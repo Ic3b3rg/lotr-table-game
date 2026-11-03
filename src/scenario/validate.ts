@@ -388,13 +388,14 @@ export function scenarioStateProblem(state: State): string | null {
         'Handoff prima del completamento setup.',
       );
     }
+    const handoffRound = state.physical?.cycle?.seed.round ?? state.round;
     invariant(
       sc.phase === 'action'
         ? sc.handoffCount === 1 &&
             !q &&
             !!state.round &&
-            (state.physical?.cycle ||
-              (state.round.number === 1 && state.round.phase === 'action')) &&
+            handoffRound?.number === 1 &&
+            handoffRound.phase === 'action' &&
             !!state.journey
         : sc.handoffCount === 0 && !state.round && !!q,
       'Fase scenario incoerente.',

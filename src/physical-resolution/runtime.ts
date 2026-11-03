@@ -353,6 +353,9 @@ export function openPhysical(
     id,
     source: PhysicalSourceSchema.parse(source),
     program: PhysicalProgramSchema.parse(program),
+    // Unmarked, non-spatial version2 runs retain their published replay rules.
+    // Ordinary spatial runs already identify the version3 continuation rules.
+    ...(p.version === 2 ? { executionRules: 'retained-paid-effects-v1' as const } : {}),
     answers: [],
     ...(context ? { context } : {}),
     ...(spatial ? { spatial } : {}),

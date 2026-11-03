@@ -78,6 +78,7 @@ export const PhysicalStateSchema = z.strictObject({
         id: z.uuid(),
         source: PhysicalSourceSchema,
         program: PhysicalProgramSchema,
+        executionRules: z.literal('retained-paid-effects-v1').optional(),
         context: FrontResourcesSchema.optional(),
         spatial: z
           .strictObject({

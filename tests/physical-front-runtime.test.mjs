@@ -641,3 +641,59 @@ test('an absolute prevention prohibition also constrains the owner contributing 
   assert.equal(f.p.snapshot.active.heroId, f.heroes[1].heroId);
   assert.deepEqual(f.p.snapshot.active.remaining, { damage: 0, fear: 1 });
 });
+
+test('legacy version2 Guard rewards survive replay and pending continuation unchanged', () => {
+  for (const pending of [false, true]) {
+    const f = fresh(({ ir, catalog }) => {
+      const d = catalog.skills.find((c) => c.id === 'role-1-skill-1');
+      ir.policies.push({
+        id: d.id,
+        kind: 'skill',
+        definitionHash: hash(d),
+        source: { sourceId: 'invented', locator: 'Migration!1' },
+        effects: [{ op: 'guard', n: 1 }, { op: 'after-guard-inspiration' }],
+      });
+    });
+    const children = [suffer(0, 1, 0)];
+    if (pending) children.push({ kind: 'scout', hero: 0, count: 1 });
+    const id = openPhysical(f.p, source, f.program(children), f.context);
+    // Published P1a runs have no executionRules field. Their paid copy's
+    // reaction was not retained; keep that historical result during migration.
+    delete f.p.runs[0].executionRules;
+    const offer = f.p.snapshot.active.options.find((o) => o.id.includes('role-1-skill-1')).id;
+    answerPhysical(
+      f.p,
+      id,
+      { kind: 'physical-choice', option: offer },
+      evidence(0, f.heroes[0].playerId),
+    );
+    answerPhysical(
+      f.p,
+      id,
+      { kind: 'physical-allocate', ability: offer, damage: 1, fear: 0 },
+      evidence(1, f.heroes[0].playerId),
+    );
+    assert.equal(f.p.version, 2);
+    assert.equal(f.p.snapshot.resolution.resources.preparation.heroes[0].inspiration, 2);
+    const restored = JSON.parse(JSON.stringify(f.p));
+    assert.doesNotThrow(() => validatePhysical(restored));
+    if (pending) {
+      const options = restored.snapshot.active.options;
+      answerPhysical(
+        restored,
+        id,
+        {
+          kind: 'physical-scout',
+          prepare: null,
+          discard: null,
+          top: [],
+          bottom: options.map((o) => o.id),
+        },
+        evidence(2, f.heroes[0].playerId),
+      );
+      assert.equal(restored.snapshot.resolution.resources.preparation.heroes[0].inspiration, 2);
+    }
+    assert.equal(restored.snapshot.parents[0].returnCount, 1);
+    assert.doesNotThrow(() => validatePhysical(restored));
+  }
+});

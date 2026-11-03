@@ -905,7 +905,10 @@ class FrontReplay {
               .map((p) => p.effect);
             h.prepared.splice(h.prepared.indexOf(offer.copy), 1);
             h.discard.push(offer.copy);
-            this.afterGuard(offer.actor, paidEffects);
+            this.afterGuard(
+              offer.actor,
+              this.run.executionRules || this.run.spatial ? paidEffects : [],
+            );
           } else if (offer.e.op === 'paid-prevent') this.hero(hero).inspiration--;
           else if (offer.e.op === 'fear-facedown') {
             this.resources.depletion.find((d) => d.copy === offer.copy)!.remaining--;
