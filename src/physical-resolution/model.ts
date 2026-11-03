@@ -34,6 +34,10 @@ export const PhysicalEvidenceSchema = z.strictObject({
   revision: z.int().nonnegative(),
 });
 const copies = z.array(z.string().min(1).max(100)).max(28);
+// Two initial shuffles, then at most two family selections per child of 32 × 32.
+const maxRandomRecords = 2 + 32 * 32 * 2;
+// Each 28-copy shuffle needs 27 indices, with at most 128 words per index.
+const maxRandomWords = maxRandomRecords * 27 * 128;
 export const PhysicalSnapshotSchema = z.strictObject({
   decks: z.strictObject({ damage: copies, fear: copies }),
   areas: z
@@ -41,7 +45,7 @@ export const PhysicalSnapshotSchema = z.strictObject({
     .min(1)
     .max(5),
   credits: z.array(z.int().min(0).max(32)).max(5),
-  rngCursor: z.int().min(0).max(100000),
+  rngCursor: z.int().min(0).max(maxRandomWords),
   random: z
     .array(
       z.strictObject({
@@ -50,7 +54,7 @@ export const PhysicalSnapshotSchema = z.strictObject({
         indices: z.array(z.int().min(0).max(27)).max(28),
       }),
     )
-    .max(256),
+    .max(maxRandomRecords),
   parents: z.array(PhysicalParentSchema).max(32),
   active: PhysicalActiveSchema.nullable(),
 });

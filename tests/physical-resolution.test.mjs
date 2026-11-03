@@ -51,6 +51,23 @@ test('freezes raw independent families, 56 copies and a private reproducible phy
     assert.ok(!view.includes(forbidden), forbidden);
 });
 
+test('all 32 parents can complete 32 children without exhausting the random journal', () => {
+  const p = fresh();
+  const pr = program(Array.from({ length: 16 }, () => [suffer(0, 1, 1), discard(0, 2)]).flat());
+  for (let n = 0; n < 32; n++) {
+    openPhysical(p, { ...source, effectId: `principal:${n}:0`, entry: n }, pr);
+    assert.equal(count(p), 56);
+    assert.equal(p.snapshot.parents[n].completedChildren, 32);
+    assert.equal(p.snapshot.parents[n].returnCount, 1);
+    assert.equal(p.snapshot.parents[n].status, 'completed');
+  }
+  assert.equal(p.snapshot.random.length, 1026);
+  assert.equal(p.snapshot.decks.damage.length, 28);
+  assert.equal(p.snapshot.decks.fear.length, 28);
+  assert.equal(p.snapshot.active, null);
+  assert.doesNotThrow(() => validatePhysical(JSON.parse(JSON.stringify(p))));
+});
+
 test('a source parent suspends for authorized cross-hero allocation then resolves children and returns once', () => {
   const p = fresh(),
     initial = structuredClone(p.snapshot.decks);
