@@ -131,6 +131,7 @@ test('schema 5 con turno e prova aperti migra senza perdere azioni, rivelate o r
   backup.payload.state.schemaVersion = 5;
   delete backup.payload.state.mapGeneration;
   delete backup.payload.state.scenario;
+  delete backup.payload.state.physical;
   delete backup.payload.state.group;
   delete backup.payload.state.journey;
   signBackup(backup);
@@ -141,7 +142,7 @@ test('schema 5 con turno e prova aperti migra senza perdere azioni, rivelate o r
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 10);
+  assert.equal(migrated.schemaVersion, 11);
   assert.equal(migrated.journey, null);
   for (const key of ['round', 'preparation', 'skillTest', 'scout'])
     assert.deepEqual(migrated[key], before[key]);

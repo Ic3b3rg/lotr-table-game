@@ -20,6 +20,13 @@ import { applySkillTest } from '../server/skill-tests';
 import { skillTestView } from '../shared/skill-tests';
 import { newRound } from '../server/rounds';
 import { ApiError } from '../server/errors';
+import {
+  initializeScenarioPhysical,
+  beginPhysicalAction,
+  physicalRequestData,
+  answerScenarioPhysical,
+  type loadPhysicalSource,
+} from './physical';
 
 const projection = (state: State) => {
   invariant(state.mapGeneration?.status === 'frozen', 'Realizzazione non disponibile.');
@@ -155,6 +162,9 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
   const sc = state.scenario!,
     p = projection(state);
   switch (a.op) {
+    case 'physical':
+      beginPhysicalAction(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+      return;
     case 'getStart':
       setValue(sc, i, a.target, p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId);
       break;
@@ -313,6 +323,23 @@ function advanceTask(state: State) {
   if (!task) return false;
   const owner = sc.instances.find((i) => i.id === task.instanceId)!;
   invariant(owner.entry === task.entry, 'Continuazione fonte scaduta.');
+  if (task.kind === 'physical') {
+    const p = state.physical!,
+      parent = p.snapshot.parents.find((r) => r.id === task.parentId)!;
+    if (parent.status === 'completed') {
+      complete(owner, task.action);
+      sc.tasks.pop();
+      return true;
+    }
+    const active = p.snapshot.active;
+    invariant(
+      active && active.runId === task.parentId,
+      'Continuazione fisica senza figlio attivo.',
+    );
+    const effect = sc.effects.find((e) => e.id === parent.source)!;
+    request(state, physicalRequestData(state, effect, active));
+    return true;
+  }
   if (task.kind === 'section') {
     const tiles = projection(state).sections.find((s) => s.id === task.sectionId)!.tiles;
     while (task.tileIndex < tiles.length) {
@@ -406,13 +433,21 @@ function pump(state: State) {
   }
   throw new Error('Limite executor startup superato.');
 }
-export function beginScenario(state: State, parsed: ReturnType<typeof parseScenarioPack>) {
+export function beginScenario(
+  state: State,
+  parsed: ReturnType<typeof parseScenarioPack>,
+  physical?: ReturnType<typeof loadPhysicalSource>,
+) {
   const p = projection(state);
   validateScenarioBinding(parsed.pack, p);
   const start = p.sections.find((s) => s.id === 0)!.tiles[0]!,
     space = cells(state, start.source).find((s) => s.index === 1);
   invariant(space, 'Start Spaces[1] assente.');
-  const { bindings } = projectionToJourney(p, space.id, parsed.pack.name);
+  const { bindings, definition: journeyDefinition } = projectionToJourney(
+    p,
+    space.id,
+    parsed.pack.name,
+  );
   const sc: Scenario = {
     id: randomUUID(),
     pack: structuredClone(parsed.pack),
@@ -441,6 +476,7 @@ export function beginScenario(state: State, parsed: ReturnType<typeof parseScena
     handoffCount: 0,
   };
   state.scenario = sc;
+  initializeScenarioPhysical(state, journeyDefinition.startSpaceId, physical);
   const add = (
     id: string,
     kind: ScenarioInstance['kind'],
@@ -534,7 +570,9 @@ export function resumeScenario(
       'SCENARIO_INPUT_REQUIRED',
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
-  if (q.kind === 'scout' || q.kind === 'test') {
+  if (q.kind === 'physical') {
+    answerScenarioPhysical(state, playerId, command);
+  } else if (q.kind === 'scout' || q.kind === 'test') {
     const hero = state.preparation!.heroes.find((h) => h.heroId === q.heroId)!;
     if (q.kind === 'scout') {
       if (q.stage === 'ready') {

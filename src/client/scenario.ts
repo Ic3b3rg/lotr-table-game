@@ -8,6 +8,7 @@ import { sourceText } from './source-text';
 import { createGameActions } from './game-actions';
 import { cardButton, type CardReader } from './cards';
 import { refreshActions } from './actions';
+import { createPhysicalControls } from './physical';
 export function createScenario(sync: () => Promise<void>, reader: CardReader) {
   const root = element('#scenario'),
     status = element('#scenario-status'),
@@ -29,6 +30,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     element('#scenario-error'),
     controls,
   );
+  const physical = createPhysicalControls((intent) => {
+    void commands.submit(intent, true);
+  });
   function controls() {
     if (!current) return;
     const sc = current.scenario,
@@ -40,7 +44,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     );
     const own = !!player && (!q?.actorPlayerId || q.actorPlayerId === player.id);
     const openCards = !!q && (q.kind === 'scout' || q.kind === 'test') && q.stage === 'revealed';
-    next.hidden = !q || !own || openCards;
+    next.hidden = !q || !own || openCards || q.kind === 'physical';
     next.textContent =
       q?.kind === 'scout'
         ? 'Rivela Scoperta 2'
@@ -59,13 +63,17 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     const activeHero = catalog?.heroes.find((h) => h.id === active);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
-      : q?.heroId
-        ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-        : q
-          ? 'Un partecipante conferma per il gruppo.'
-          : activeHero
-            ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-            : 'Avvio completato · scegliete il prossimo eroe di turno.';
+      : q?.kind === 'physical'
+        ? current.physical?.active?.kind === 'gate'
+          ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
+          : `${actor?.name ?? 'Il proprietario indicato'} risolve l’allocazione qui sotto. La fonte riprende dopo le conseguenze.`
+        : q?.heroId
+          ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+          : q
+            ? 'Un partecipante conferma per il gruppo.'
+            : activeHero
+              ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+              : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -127,6 +135,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       player = identity;
       catalog = content;
       offer = plan;
+      physical.update(session, identity, content);
       const sc = session.scenario,
         q = sc?.pending,
         nextKey = `${session.generation}:${sc?.id}:${q?.id}:${identity?.id}`;

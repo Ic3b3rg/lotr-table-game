@@ -1,4 +1,5 @@
 import { ScenarioSchema } from './scenario';
+import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
@@ -42,7 +43,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(10),
+  schemaVersion: z.literal(11),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -58,6 +59,7 @@ export const SessionSchema = z.strictObject({
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
   scenario: ScenarioSchema.nullable().default(null),
+  physical: PhysicalViewSchema.nullable().default(null),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -65,6 +67,7 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('scout-reveal') }),
   z.strictObject({

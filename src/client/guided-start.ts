@@ -191,17 +191,25 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : 'Vai alla scelta degli eroi';
       } else if (session.scenario) {
         step = 6;
-        topic = 'startup';
         const q = session.scenario.pending;
+        const synthetic = session.scenario.pack.manifest.scope === 'synthetic-physical-p0';
+        topic = q?.kind === 'physical' ? 'physical' : 'startup';
         heading =
           session.scenario.phase === 'action'
-            ? 'L’avventura è iniziata'
+            ? synthetic
+              ? 'Prova sintetica completata'
+              : 'L’avventura è iniziata'
             : session.scenario.pack.name;
-        message = q?.heroId
-          ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} completa ${q.kind === 'scout' ? 'Scoperta 2' : 'Spirito 1'} con il proprio eroe. Le carte e le scelte sono salvate a ogni conferma.`
-          : q
-            ? 'Leggete insieme le istruzioni dell’avventura e confermate il passo indicato.'
-            : 'Obiettivo iniziale salvato. Scegliete insieme il primo eroe di turno; il proprietario apre il turno dalla vista personale.';
+        message =
+          q?.kind === 'physical'
+            ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} risolve la conseguenza coperta. Controlla destinatario, quantità e allocazione qui sotto. Carte e scelte sono già salvate.`
+            : q?.heroId
+              ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} completa ${q.kind === 'scout' ? 'Scoperta 2' : 'Spirito 1'} con il proprio eroe. Le carte e le scelte sono salvate a ogni conferma.`
+              : q
+                ? 'Leggete insieme le istruzioni dell’avventura e confermate il passo indicato.'
+                : synthetic
+                  ? 'La prova P0 è conclusa e la fonte ha ripreso. Gli incontri originali e l’avventura completa richiedono ancora i loro effetti.'
+                  : 'Obiettivo iniziale salvato. Scegliete insieme il primo eroe di turno; il proprietario apre il turno dalla vista personale.';
         target =
           q?.stage === 'revealed'
             ? q.kind === 'scout'
@@ -211,11 +219,13 @@ export function createGuidedStart(sync: () => Promise<void>) {
               ? '#rounds'
               : '#scenario';
         label =
-          q?.stage === 'revealed'
-            ? 'Completa le carte rivelate'
-            : session.scenario.phase === 'action'
-              ? 'Scegli il turno'
-              : 'Continua l’avventura';
+          q?.kind === 'physical'
+            ? 'Risolvi la conseguenza'
+            : q?.stage === 'revealed'
+              ? 'Completa le carte rivelate'
+              : session.scenario.phase === 'action'
+                ? 'Scegli il turno'
+                : 'Continua l’avventura';
         if (session.scenario.phase === 'action' && session.round) {
           const round = session.round,
             active = heroes.find((h) => h.heroId === round.activeHeroId),

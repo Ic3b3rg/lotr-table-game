@@ -1,4 +1,5 @@
 import { scenarioReceiptProblem } from '../scenario/validate';
+import { physicalView } from '../physical-resolution/view';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -32,9 +33,12 @@ export class Store {
   readonly journeyPlan: JourneyPlan | null;
   readonly generator: MapGenerationService;
   readonly scenarioPackPath: string;
+  readonly physicalPackPath: string;
 
   constructor(readonly directory = dataDirectory()) {
     this.scenarioPackPath = process.env.LOTR_SCENARIO_PACK ?? join(directory, 'scenario.json');
+    this.physicalPackPath =
+      process.env.LOTR_PHYSICAL_PACK ?? join(directory, 'physical-content.json');
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     // FULL commits are acknowledged before an action returns success.
     // https://nodejs.org/download/release/v24.11.1/docs/api/sqlite.html#class-databasesync
@@ -46,7 +50,8 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 10,
+      schemaVersion: 11,
+      physical: null,
       scenario: null,
       mapGeneration: null,
       id: randomUUID(),
@@ -122,18 +127,20 @@ export class Store {
     const state = StateSchema.parse(JSON.parse(row.data));
     if (state.mapGeneration) {
       const commands = this.db
-        .prepare('SELECT player_id,request_id,result FROM commands')
+        .prepare('SELECT player_id,request_id,fingerprint,result FROM commands')
         .all()
         .map((row) => {
           if (
             typeof row.player_id !== 'string' ||
             typeof row.request_id !== 'string' ||
-            typeof row.result !== 'string'
+            typeof row.result !== 'string' ||
+            typeof row.fingerprint !== 'string'
           )
             throw new Error('Ricevuta non disponibile.');
           return {
             playerId: row.player_id,
             requestId: row.request_id,
+            fingerprint: row.fingerprint,
             receipt: ReceiptSchema.parse(JSON.parse(row.result)),
           };
         });
@@ -362,6 +369,7 @@ export function publicSession(state: State) {
     group: state.group,
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
+    physical: physicalView(state.physical),
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

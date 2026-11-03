@@ -1,0 +1,69 @@
+{
+  "formatVersion": 1,
+  "issue": 63,
+  "scope": "synthetic-physical-p0",
+  "base": "cb60ea4f9917cdd878ac8728d3025e7267870819",
+  "codeCommit": "476e313a8317a6f2b022b391a2edbc49e819ba29",
+  "schemaVersion": 11,
+  "baselineTests": 419,
+  "tests": 444,
+  "skipped": 0,
+  "families": 2,
+  "definitions": 36,
+  "copies": 56,
+  "commonDecks": 2,
+  "parents": 1,
+  "children": 4,
+  "returns": 1,
+  "physicalInputs": 4,
+  "activePlayers": 3,
+  "restartsVerified": 8,
+  "physicalRestoresVerified": 4,
+  "randomDecisions": 6,
+  "randomAlgorithm": "sha256-counter-rejection-fisher-yates-v1",
+  "finalDeckCounts": {
+    "damage": 27,
+    "fear": 27
+  },
+  "privateBackupBytes": 2258120,
+  "viewports": [320, 768, 1024, 1440],
+  "normalRuntimeExceptions": 0,
+  "knownFavicon404Counts": [4, 2],
+  "sourceHashes": {
+    "raw": "3d06fbbf8f767b3e5e78e859c7187986041ed77d7af173917c4c72f2126b0c52",
+    "authenticFreeze": "9c7ecb7110b6b6af3bbaf54ebddc3e8332e032f6e46c82fb6a9c4e05b0c7ba2a",
+    "syntheticPack": "f15146569e00ca5b2fce78c33712ec003685bd174506d817316da63ad2f76c45",
+    "syntheticProgram": "a6256565d10b961822ea2f95e6a2d7fe76a3c18df173ddf604f89aeb5b5ad56e"
+  },
+  "mapUnchanged": true,
+  "packsAbsent": true,
+  "sourceFilesUnchanged": true,
+  "synthetic": true,
+  "privateManifest": {
+    "path": ".scratch/physical-p0/manifest.json",
+    "files": 151,
+    "sha256": "e94ab4a1d98b0557b1f100fe976572054208f315683def2ef5a9999fd0067ba1"
+  },
+  "cleanup": {
+    "hostStopped": true,
+    "browserStopped": true,
+    "port4353Free": true
+  },
+  "originalImplementationTests": 443,
+  "integrationCodeCommit": "b252100136ee1afd71b57b794bd9ebc792e78a28",
+  "integrationVerification": {
+    "privatePath": ".scratch/physical-p0-root-review/integration-verification.json",
+    "sha256": "87d843843254fce5bb32eb5095cea7c749340c04f1e8570d0fc745e27fdf4ed5",
+    "randomBudgetRegression": {
+      "parents": 32,
+      "childrenPerParent": 32,
+      "decisions": 1026,
+      "copies": 56,
+      "journalLimit": 2050,
+      "rngWordLimit": 7084800
+    },
+    "originalManifestUnchanged": true,
+    "privateArtifactsVerified": 151,
+    "extraHostLogVerified": true
+  }
+}

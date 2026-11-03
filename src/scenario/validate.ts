@@ -12,11 +12,12 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { parseScenarioPack, validateScenarioBinding } from './pack';
 import { projectionToJourney } from './geometry';
+import { validateScenarioPhysical, validatePhysicalReceipts } from './physical';
 
 export function scenarioStateProblem(state: State): string | null {
   try {
     const sc = state.scenario;
-    if (!sc) return null;
+    if (!sc) return state.physical ? 'Consumer fisico senza scenario fonte.' : null;
     invariant(
       state.mapGeneration?.status === 'frozen' &&
         state.preparation?.status === 'prepared' &&
@@ -316,6 +317,7 @@ export function scenarioStateProblem(state: State): string | null {
     }
     validateInstanceFlags(sc);
     validateSourceTasks(state);
+    validateScenarioPhysical(state);
     validatePreparedRewards(state);
     validateSourceRequest(state);
     validateMessageLog(state);
@@ -334,12 +336,17 @@ export function scenarioStateProblem(state: State): string | null {
       if (q.heroId) {
         const h = state.preparation.heroes.find((h) => h.heroId === q.heroId);
         invariant(
-          h && h.playerId === q.actorPlayerId && (q.kind === 'scout' || q.kind === 'test'),
+          h &&
+            h.playerId === q.actorPlayerId &&
+            (q.kind === 'scout' || q.kind === 'test' || q.kind === 'physical'),
           'Actor/hero richiesta incoerente.',
         );
       } else
         invariant(
-          q.actorPlayerId === null && q.kind !== 'scout' && q.kind !== 'test',
+          q.actorPlayerId === null &&
+            q.kind !== 'scout' &&
+            q.kind !== 'test' &&
+            q.kind !== 'physical',
           'Richiesta per eroe senza binding.',
         );
       if (q.kind !== 'handoff')
@@ -417,7 +424,7 @@ export function scenarioStateProblem(state: State): string | null {
 }
 export function scenarioReceiptProblem(
   state: State,
-  commands: { playerId: string; requestId: string; receipt: Receipt }[],
+  commands: { playerId: string; requestId: string; fingerprint?: string; receipt: Receipt }[],
 ): string | null {
   const records = commands.filter(
       (c) => c.receipt.type === 'START_SCENARIO' || c.receipt.type === 'SCENARIO_INPUT',
@@ -443,6 +450,7 @@ export function scenarioReceiptProblem(
   }
   try {
     validateSourcePlayReceipts(state, commands);
+    validatePhysicalReceipts(state, commands);
   } catch (e) {
     return e instanceof Error ? e.message : 'Ricevute consumer non valide.';
   }

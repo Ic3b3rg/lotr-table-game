@@ -1,4 +1,5 @@
 import { scenarioStateProblem } from '../scenario/validate';
+import { PhysicalStateSchema } from '../physical-resolution/model';
 import { z } from 'zod';
 import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol';
 import { CatalogSchema } from '../shared/catalog';
@@ -27,6 +28,7 @@ const BaseStateSchema = SessionSchema.omit({
   scout: ScoutingSchema.nullable(),
   round: RoundSchema.nullable(),
   players: z.array(PrivatePlayerSchema).max(5),
+  physical: PhysicalStateSchema.nullable().default(null),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
   const scenarioError = scenarioStateProblem(state);
@@ -91,10 +93,17 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
 });
 export type State = z.infer<typeof StateSchema>;
 
-const VersionNineStateSchema = BaseStateSchema.omit({ scenario: true }).extend({
+const VersionTenStateSchema = BaseStateSchema.omit({ physical: true }).extend({
+  schemaVersion: z.literal(10),
+});
+const VersionNineStateSchema = BaseStateSchema.omit({ scenario: true, physical: true }).extend({
   schemaVersion: z.literal(9),
 });
-const PreviousStateSchema = BaseStateSchema.omit({ mapGeneration: true, scenario: true });
+const PreviousStateSchema = BaseStateSchema.omit({
+  mapGeneration: true,
+  scenario: true,
+  physical: true,
+});
 const VersionEightStateSchema = PreviousStateSchema.extend({ schemaVersion: z.literal(8) });
 const LegacyStateSchema = PreviousStateSchema.omit({
   content: true,
@@ -148,30 +157,36 @@ const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.li
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 10)
+      return StateSchema.parse({
+        ...VersionTenStateSchema.parse(raw),
+        schemaVersion: 11,
+        physical: null,
+      });
     if (version === 9)
       return StateSchema.parse({
         ...VersionNineStateSchema.parse(raw),
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
       });
     if (version === 8)
       return StateSchema.parse({
         ...VersionEightStateSchema.parse(raw),
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 7)
       return StateSchema.parse({
         ...VersionSevenStateSchema.parse(raw),
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -181,7 +196,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFiveStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -192,7 +207,7 @@ export function parseState(raw: unknown): State {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -207,7 +222,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -227,7 +242,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -241,7 +256,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 10,
+        schemaVersion: 11,
         scenario: null,
         mapGeneration: null,
         group: null,

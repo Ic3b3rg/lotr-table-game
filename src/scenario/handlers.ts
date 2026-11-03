@@ -3,6 +3,7 @@ import { invariant } from '../map-freeze/validate';
 
 /** Source types whose bounded semantics have an explicit IR handler. */
 const sourceHandlers: Record<string, ScenarioAction['op']> = {
+  'Synthetic.PhysicalProgram': 'physical',
   'FFG.JIME.Actions.DisplayMessage': 'message',
   'FFG.JIME.Actions.GetStartTileId': 'getStart',
   'FFG.JIME.Actions.RevealTile': 'revealTile',

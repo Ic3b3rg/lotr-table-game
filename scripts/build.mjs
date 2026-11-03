@@ -42,6 +42,7 @@ for (const [entry, outfile] of [
   ['src/map-freeze/worker.ts', 'dist/map-generation-worker.mjs'],
   ['src/physical-content/catalog.ts', 'dist/physical-content-library.mjs'],
   ['src/physical-content/main.ts', 'dist/physical-content.mjs'],
+  ['src/physical-resolution/index.ts', 'dist/physical-resolution-library.mjs'],
 ]) {
   await build({
     entryPoints: [entry],
