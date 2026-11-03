@@ -44,6 +44,7 @@ for (const [entry, outfile] of [
   ['src/physical-content/main.ts', 'dist/physical-content.mjs'],
   ['src/physical-resolution/index.ts', 'dist/physical-resolution-library.mjs'],
   ['src/combat/index.ts', 'dist/combat-library.mjs'],
+  ['src/combat/main.ts', 'dist/combat.mjs'],
 ]) {
   await build({
     entryPoints: [entry],
