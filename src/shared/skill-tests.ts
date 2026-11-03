@@ -17,8 +17,8 @@ export const SkillTestSchema = z.strictObject({
   heroId: ContentIdSchema,
   stat: StatSchema,
   modifier: z.int().min(-20).max(20),
-  // Fifteen initial cards plus the two campaign-unique titles enabled by P2.
-  availableCount: z.int().min(1).max(17),
+  // Keep the existing zone/reveal budget; live conservation also counts added cards.
+  availableCount: z.int().min(1).max(30),
   target: z.int().min(1).max(99).nullable(),
   revealed: z.array(CopyIdSchema).min(1).max(30),
   converted: z.int().min(0).max(60),

@@ -10,7 +10,8 @@ import { pathToFileURL } from 'node:url';
 const { outputFiles } = await build({
   stdin: {
     contents: `export * from './src/shared/skill-tests.ts';
-      export * from './src/shared/scouting.ts';`,
+      export * from './src/shared/scouting.ts';
+      export * from './src/shared/preparation.ts';`,
     resolveDir: process.cwd(),
   },
   bundle: true,
@@ -40,6 +41,7 @@ test('ordinary test symbols and card counts include genuine owned title copies w
     number: 1,
   };
   const revealed = [title.id + ':1', ...hero.deck.splice(0, 2)];
+  hero.deck.push(...f.context.preparation.weaknessDeck.splice(0, 3));
   const test = {
     id: '00000000-0000-4000-8000-000000000019',
     heroId: hero.heroId,
@@ -60,8 +62,23 @@ test('ordinary test symbols and card counts include genuine owned title copies w
   );
   assert.equal(f.catalog.skills.length, 74);
   assert.ok(!f.catalog.skills.some((s) => s.id === title.id));
-  assert.ok(lib.SkillTestSchema.safeParse({ ...test, availableCount: 17 }).success);
-  assert.ok(!lib.SkillTestSchema.safeParse({ ...test, availableCount: 18 }).success);
+  assert.equal(test.availableCount, 18);
+  assert.ok(lib.SkillTestSchema.safeParse(test).success);
+  assert.ok(!lib.SkillTestSchema.safeParse({ ...test, availableCount: 31 }).success);
+  assert.equal(
+    lib.preparationProblem(
+      f.catalog,
+      f.heroes.map((h) => h.playerId),
+      f.context.preparation,
+      test,
+      null,
+      {
+        held: [],
+        titles: [{ heroId: hero.heroId, copy: title.id + ':1', removed: false, pending: false }],
+      },
+    ),
+    null,
+  );
   assert.ok(
     lib.skillTestProblem(
       f.catalog,
