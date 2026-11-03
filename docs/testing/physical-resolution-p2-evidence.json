@@ -7,12 +7,14 @@
   "lastStandRules": "source-last-stand-v1",
   "tests": {
     "baseline": 482,
-    "passed": 507,
+    "passed": 510,
     "failed": 0,
     "skipped": 0,
-    "fullLogSha256": "7235b7f39d0cd42aaff5b6827ea36d0dea67a51b10559a651ee6d2013d606a73",
+    "fullLogSha256": "d6f1fc0508b40d4ba9b00da239d461830153595bd969918351d31a478451f26f",
     "typecheckLogSha256": "b343d968874bf2a240b225143e981e7e6375695b2737b1f8c4465d13a1d3b9d0",
-    "formatLogSha256": "ccf15f133e92f0f955b6caab8c8c01c6cf5b5ff5eb9f0aab14c2bf34bd79b686"
+    "formatLogSha256": "ccf15f133e92f0f955b6caab8c8c01c6cf5b5ff5eb9f0aab14c2bf34bd79b686",
+    "childImplementationPassed": 507,
+    "childFullLogSha256": "7235b7f39d0cd42aaff5b6827ea36d0dea67a51b10559a651ee6d2013d606a73"
   },
   "evidence": {
     "directory": ".scratch/physical-p2",
@@ -77,7 +79,33 @@
     "ownPortsClosed": [4359, 52493],
     "protectedRootHostAndBrowserUsed": false
   },
-  "integrationReview": "root pending; no GitHub writes, push or PR",
+  "integrationReview": "root Standards/Spec complete; three findings corrected, fresh UI QA complete",
   "unfinishedIssues": [65, 33, 57],
-  "unverifiedPlatforms": ["phones", "LAN", "Windows", "Safari"]
+  "unverifiedPlatforms": ["phones", "LAN", "Windows", "Safari"],
+  "integration": {
+    "codeHead": "2642a88daefde7a9a3997340c62c033a519acf16",
+    "privateVerificationPath": ".scratch/physical-p2-root-review/integration-verification.json",
+    "privateVerificationSha256": "39f94e791a60c5e5c8be9e15b624a6ccdcf8de0efc4fb77958c5b7f95c22bfcc",
+    "standardsP2Corrected": 1,
+    "specP1Corrected": 1,
+    "specP2Corrected": 1,
+    "regressionsRedThenGreen": 3,
+    "originalBackupsAccepted": 53,
+    "originalBackupsInvalidatedByPrepublicationCorrections": 11,
+    "freshUi": {
+      "path": ".scratch/physical-p2-root-ui",
+      "manifestSha256": "8849e4ff5df6bffda73083e68ac0a9b557ddb19de1a126f5515a526b071342fd",
+      "files": 406,
+      "bytes": 91242863,
+      "backupsRevalidatedByRootBundle": 43,
+      "identities": 3,
+      "restartExact": true,
+      "restoreAllGameplayAndReceiptsEqual": true,
+      "privacyArtifacts": 163,
+      "receiptComparisons": 2235,
+      "captureFocusIntermittent": true,
+      "focusProductDefectAttributed": false
+    },
+    "originalEvidenceUnchanged": true
+  }
 }

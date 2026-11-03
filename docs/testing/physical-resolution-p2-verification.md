@@ -93,7 +93,7 @@ nel confronto, output e ricevute non hanno nuove esenzioni.
 
 ## Verifica automatica
 
-**507/507 test, zero skip**, baseline482 più25. `npm test`,
+**Test della consegna prima della review:507/507, zero skip**, baseline482 più25. `npm test`,
 `npm run typecheck`, `npm run format:check` e `git diff --check` verdi.
 Nessuna suppression, test cancellato o saltato, dipendenza aggiunta o
 soglia di qualità abbassata. I log e gli hash sono nei
@@ -124,7 +124,12 @@ Il test SIGKILL prima del commit intercetta l'UPDATE nello Store di prova
 dopo la mutazione in memoria e prima della scrittura SQLite: nessun hook
 di crash o bypass entra nel prodotto.
 
-## Browser effettivo
+## Browser della consegna prima delle correzioni root
+
+La sequenza sotto descrive la QA precedente alla review. La nuova QA sul
+codice corretto e la classificazione dei vecchi backup sono distinte nella
+sezione di integrazione root; non tutti questi snapshot sono ancora validi
+dopo la correzione dell'attore che sceglie il tipo.
 
 Preview è stato aperto prima. Due verifiche della stessa operazione hanno
 riprodotto condivisione dell'identità tra nuove schede dichiarate incognito:
@@ -237,3 +242,59 @@ tipizzata P2 non simula quei consumer. Nessuna regola di sostituzione del
 mazzo fisico vuoto è stata inventata. Telefoni, LAN, Windows e Safari non
 certificati. Il root può eseguire le review e l'integrazione dai commit
 locali e dalle evidenze private, senza che69 venga confusa con la chiusura33.
+
+## Integrazione root e nuova QA
+
+Le [review indipendenti](../reviews/2026-11-03-physical-resolution-p2.md)
+riscontrano Standards1 P2, Spec1 P1 e1 P2, tutti corretti con tre
+regressioni RED→GREEN. Le risposte alla barriera ammettono anche il cursore32
+dopo tutti i32 figli. Il gruppo può scegliere l'eroe successivo; se un altro
+eroe ha entrambi i limiti, soltanto il suo proprietario sceglie il tipo,
+prima di selezionare l'istruzione. Una reazione che fa raggiungere di nuovo
+lo stesso limite apre un nuovo obbligo, con identità di selezione distinta:
+il padre non riprende prima della sua risoluzione.
+
+**510/510 test**, baseline482 più28, zero skipped; typecheck, formato e
+diff verdi. Le nuove regressioni comprendono serializzazione nel pending,
+attore estraneo rifiutato e seconda prova forzata dopo la reazione. La
+compatibilità P0/P1a/P1b già pubblicata resta verificata dalle regressioni
+storiche; le regole P2 non erano ancora state pubblicate.
+
+624 hash/155.193.170byte originali ricontrollati e checker indipendente
+ripetuto in una copia separata. I64 vecchi backup sono classificati:
+53 accettati dal codice corretto,11 rifiutati perché registrano le scelte
+precedenti alla correzione dell'attore/cursore. Tutte le sei precondizioni
+restano valide. Non sono salvataggi pubblicati da migrare e non vengono
+riscritti per farli passare. La precedente QA rimane evidenza storica;
+il checker strutturale non equivale alla riconciliazione del nuovo replay.
+
+Per questo il root esegue una **nuova QA a tre identità** sul commit2642a88,
+senza altri cambiamenti al prodotto. Il primo proprietario sceglie l'altro
+eroe47→48; il proprietario corretto sceglie il tipo48→49, con zero istruzioni
+selezionate prima della scelta. Seguono prove vere, costo51, export UI,
+SIGKILL/restart packless identico e restore52 con tutti i campi di gameplay
+e tutte le ricevute invariati. Quattro successi, un ritorno e handoff65.
+Una seconda sequenza raggiunge il pending del titolo77 e ne verifica
+testo/simboli nel lettore. La sconfitta naturale con superstiti conserva
+carte/risorse, salta la seconda prova, rimuove la figura e termina alla
+corretta perdita `shadow-start`58 dopo i turni dei superstiti.
+
+43 nuovi backup validati,163 artefatti privacy e2.235 confronti ricevute,
+nessun leak. Il root ricontrolla il nuovo sigillo406 file/91.242.863byte e
+ripete la validazione con il proprio bundle del codice corrente. I builder
+offline e le precondizioni sono dichiarati: non è il percorso originale33.
+Avanzamenti, export/import e recupero avvengono solo da controlli UI nativi;
+le letture Node sono GET-only. Processi propri chiusi, porta4363 libera e
+nessun accesso al tavolo4339/PID12892 o ai suoi dati. Evidenze nuove in
+`.scratch/physical-p2-root-ui/`, riproduzione e limiti nel suo README privato.
+
+Focus/Escape nativi sono verdi nel controllo di base e in tre cicli;
+durante alcune catture AX/screenshot il focus torna alla guida e il driver
+non chiude il lettore. Il diagnostico strumentato non riproduce il problema
+e non attribuisce un difetto al prodotto; nessun fix introdotto. Non viene
+dichiarata una certificazione del focus durante cattura. La finestra
+osservata titoli/superstiti ha zero eccezioni JS non catturate,130 richieste
+ritratto404 nell'ambiente di prova e un rifiuto stale409 del driver,
+correttamente ripetuto dopo il poll. Non si dichiara console totalmente verde.
+I fallimenti forzati e il nuovo obbligo da reazione sono prove automatiche;
+i fallimenti browser restano quelli naturali dichiarati. #33/#65/#57 aperte.
