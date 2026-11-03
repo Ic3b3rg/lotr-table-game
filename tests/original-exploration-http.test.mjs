@@ -63,9 +63,27 @@ test('exploration checks ownership, pose, adjacency, source, turn, visibility, b
     s = await startTravel(r),
     to = destinations(s)[0],
     before = await readBackup(r.host);
+  const visible = s.mapGeneration.projection.spaces
+    .filter((x) => x.sectionId === 1)
+    .map((x) => ({ ...x, id: s.scenario.spaceBindings.find((b) => b.sourceId === x.id).id }));
+  const origin = s.journey.heroes.find((h) => h.heroId === s.round.activeHeroId).spaceId;
+  const far = visible.find(
+    (x) =>
+      !s.journey.definition.connections.some(
+        ([a, b]) => (a === origin && b === x.id) || (b === origin && a === x.id),
+      ),
+  );
+  const otherTile = visible.find((x) => x.tileSource !== to.tileSource);
+  assert.ok(far && otherTile);
   for (const [actor, extra, status] of [
     [r.other, {}, 403],
     [r.player, { fromSpaceId: 'invented-wrong-origin' }, 409],
+    [
+      r.player,
+      { destinationSpaceId: far.id, sourceFingerprint: s.explorationFingerprints[far.id] },
+      409,
+    ],
+    [r.player, { sourceFingerprint: s.explorationFingerprints[otherTile.id] }, 409],
     [r.player, { destinationSpaceId: 'invented-foreign-space' }, 409],
     [r.player, { sourceFingerprint: 'b'.repeat(64) }, 409],
     [r.player, { packFingerprint: 'b'.repeat(64) }, 409],
