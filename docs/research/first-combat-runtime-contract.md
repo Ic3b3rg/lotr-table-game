@@ -49,7 +49,7 @@ GLOSSARY, istruzioni in `docs/agents` e ADR1–3 restano vincolanti.
 **E — Impegno:** R27649.s2→6 apre le opzioni e l'annullamento gratuito.
 Ogni opzione d'interazione impegna il suo eroe, nella stessa casella del
 segnalino, pagando una sola azione; le prove e i messaggi successivi
-proseguono quel tentativo. Sono tre opzioni e cinque esiti effettivi.
+proseguono quel tentativo. Sono tre opzioni e sei rami terminali effettivi.
 L'host deve applicare anche il beneficio del ramo senza prova: leggerne il
 testo non sposta risorse. Gli esiti con conseguenze fisiche o benefici
 richiedono il rispettivo consumer prima dell'abilitazione. Le associazioni
