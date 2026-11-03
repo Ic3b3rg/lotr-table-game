@@ -85,7 +85,10 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
           ? 'Scoperta 2 di base + 1 per la capacità di Aragorn: riveli 3 carte. La vicinanza segue le caselle della mappa.'
           : 'Scoperta 2 di base. Nessun bonus di Aragorn applicabile a questo eroe.'
         : '';
-    form.hidden = Boolean(pending) || !mine;
+    if (current.scenario)
+      element('#scout-phase-help').textContent =
+        'Scoperta 2 iniziale richiesta dall’avventura: puoi preparare una carta e ordinare le altre. Ogni eroe completa la propria Scoperta una volta.';
+    form.hidden = !!current.scenario || Boolean(pending) || !mine;
     start.dataset.blocked = String(Boolean(pending) || activeTest || !mine);
     rally.dataset.blocked = String(
       Boolean(pending) || activeTest || !mine || (unknown && !proximity.value),

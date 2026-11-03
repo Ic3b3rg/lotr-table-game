@@ -189,11 +189,55 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : ready
               ? 'Controlla e prepara i mazzi'
               : 'Vai alla scelta degli eroi';
+      } else if (session.scenario) {
+        step = 6;
+        topic = 'startup';
+        const q = session.scenario.pending;
+        heading =
+          session.scenario.phase === 'action'
+            ? 'L’avventura è iniziata'
+            : session.scenario.pack.name;
+        message = q?.heroId
+          ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} completa ${q.kind === 'scout' ? 'Scoperta 2' : 'Spirito 1'} con il proprio eroe. Le carte e le scelte sono salvate a ogni conferma.`
+          : q
+            ? 'Leggete insieme le istruzioni dell’avventura e confermate il passo indicato.'
+            : 'Obiettivo iniziale salvato. Scegliete insieme il primo eroe di turno; il proprietario apre il turno dalla vista personale.';
+        target =
+          q?.stage === 'revealed'
+            ? q.kind === 'scout'
+              ? '#scouting'
+              : '#skill-tests'
+            : session.scenario.phase === 'action'
+              ? '#rounds'
+              : '#scenario';
+        label =
+          q?.stage === 'revealed'
+            ? 'Completa le carte rivelate'
+            : session.scenario.phase === 'action'
+              ? 'Scegli il turno'
+              : 'Continua l’avventura';
+        if (session.scenario.phase === 'action' && session.round) {
+          const round = session.round,
+            active = heroes.find((h) => h.heroId === round.activeHeroId),
+            progress = round.heroes.find((h) => h.heroId === round.activeHeroId);
+          if (active && progress) {
+            heading = `Round ${round.number} · È il turno di ${session.players.find((p) => p.id === active.playerId)?.name}`;
+            message = `${2 - progress.actionsUsed} azioni disponibili. Il proprietario può viaggiare nelle tessere esplorate e concludere il turno. Le altre capacità dell’avventura restano bloccate finché i loro effetti non sono completi.`;
+            target = '#journey-map';
+            label = 'Apri la mappa del turno';
+          } else if (round.heroes.every((h) => h.turnEnded)) {
+            heading = 'I turni sono conclusi';
+            message =
+              'La Fase di Ombra richiede ancora gli effetti dell’avventura. Le conferme dei tavoli precedenti non li sostituiscono.';
+            target = '#scenario';
+            label = 'Controlla lo stato dell’avventura';
+          }
+        }
       } else if (session.mapGeneration || generationOffer.kind !== 'legacy') {
         step = 5;
         topic = 'map';
-        target = '#adventure-generation';
-        label = 'Vai alla mappa';
+        target = session.mapGeneration?.status === 'frozen' ? '#scenario' : '#adventure-generation';
+        label = session.mapGeneration?.status === 'frozen' ? 'Avvia l’avventura' : 'Vai alla mappa';
         const frozen = session.mapGeneration?.status === 'frozen';
         heading = frozen
           ? 'La mappa è salvata'
@@ -201,7 +245,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
             ? 'Create la mappa · richiesta salvata'
             : 'Create la mappa della compagnia';
         message = frozen
-          ? 'Il PC conserva questa mappa e i suoi incontri. L’avvio dell’avventura è ancora da completare; i turni restano in attesa.'
+          ? 'Il PC conserva questa mappa e i suoi incontri. Un partecipante avvia l’avventura: seguiranno le istruzioni e le richieste per ogni eroe.'
           : generationOffer.message;
       } else if (
         !session.journey &&
@@ -276,6 +320,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
       element('#start-progress').lastElementChild!.textContent =
         session.mapGeneration || generationOffer.kind !== 'legacy' ? 'Avventura' : 'Gioca';
       document.body.dataset.step = String(step);
+      document.body.dataset.scenario = session.scenario?.phase ?? '';
       document.body.dataset.phase = session.round?.phase ?? '';
       document.body.dataset.active = String(Boolean(session.round?.activeHeroId));
       document.body.dataset.scout = String(Boolean(session.scout));

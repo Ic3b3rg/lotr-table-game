@@ -80,30 +80,31 @@ export function backupView(sync: () => Promise<void>) {
     if (!current || !selected) return;
     const { generation, revision } = current;
     const backup = selected;
-    if (
-      !confirm(
-        'Ripristinare questa copia? Il tavolo attuale sarà sostituito. I giocatori dovranno recuperare il proprio posto con il codice personale.',
-      )
-    )
-      return;
-    void action(async () => {
-      error.hidden = true;
-      try {
-        await request('/api/restores', {
-          backup,
-          generation,
-          expectedRevision: revision,
-          confirmed: true,
-        });
-        reset();
-        element('#backup-status').textContent =
-          'Copia ripristinata. Riprendi il tuo posto con il codice personale.';
-        await sync();
-      } catch (cause) {
-        showError(cause);
-        await sync();
-      }
-    });
+    const dialog = element<HTMLDialogElement>('#restore-confirmation');
+    element('#restore-confirm-summary').textContent = element('#restore-summary').textContent;
+    element('#cancel-restore').onclick = () => dialog.close();
+    element('#confirm-restore').onclick = () => {
+      dialog.close();
+      void action(async () => {
+        error.hidden = true;
+        try {
+          await request('/api/restores', {
+            backup,
+            generation,
+            expectedRevision: revision,
+            confirmed: true,
+          });
+          reset();
+          element('#backup-status').textContent =
+            'Copia ripristinata. Riprendi il tuo posto con il codice personale.';
+          await sync();
+        } catch (cause) {
+          showError(cause);
+          await sync();
+        }
+      });
+    };
+    dialog.showModal();
   });
   return {
     update(session: Session, allowed: boolean) {

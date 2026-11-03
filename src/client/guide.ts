@@ -4,6 +4,18 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'startup',
+    title: 'Avventura: istruzioni, carte e ripresa',
+    target: '#scenario',
+    action: 'Torna all’avventura',
+    paragraphs: [
+      'L’avventura usa la mappa salvata della compagnia. Leggete l’introduzione e seguite i piazzamenti: tessere, segnalini e posizioni compaiono soltanto quando richiesti dal copione.',
+      'Ogni eroe effettua la propria Scoperta 2 iniziale e poi una prova di Spirito 1. Il proprietario rivela e risolve le carte dalla vista personale. Questo setup non spende azioni e non applica il bonus di Aragorn della Riorganizzazione. La ricompensa di ispirazione rispetta il limite dell’eroe.',
+      'Ogni conferma, pesca e conversione è salvata sul PC. Ricaricare o ripristinare una copia riprende la stessa richiesta. Nel riepilogo dell’avventura puoi rileggere carte, risultati e ricompense completati.',
+      'Dopo l’obiettivo scegliete il primo turno. Potete ispezionare i segnalini e annullare gratuitamente. Interazioni successive, nuova esplorazione, combattimento e Ombra rimangono indisponibili finché i rispettivi effetti non saranno completi.',
+    ],
+  },
+  {
     id: 'start',
     title: 'Cominciare: PC, telefoni e primi passi',
     target: '#start',
@@ -42,7 +54,7 @@ const TOPICS = [
     target: '#journey-map',
     action: 'Vai alla mappa',
     paragraphs: [
-      'Dopo i mazzi, un partecipante conferma la collocazione iniziale sulla mappa. Questa versione contiene un tratto iniziale verificato, non la generazione dell’intera avventura. Le caselle e i collegamenti indicano dove si può andare.',
+      'Dopo i mazzi, create e salvate la mappa della compagnia. Avviate poi l’avventura e seguite i suoi piazzamenti: le tessere compaiono quando richiesto, con le posizioni degli eroi salvate. I tavoli precedenti possono ancora usare il tratto iniziale separato.',
       'Durante il tuo turno, “Inizia viaggio” spende un’azione e assegna fino a due movimenti. Scegli una casella adiacente e conferma il movimento. Puoi interrompere il viaggio per interagire e usare poi il movimento rimasto nello stesso turno. Un secondo viaggio aggiunge altri due movimenti: con due azioni viaggio puoi muoverti fino a quattro volte. Concludere il turno rinuncia ai movimenti rimasti.',
       'Trascina la visuale o usa i comandi sotto la mappa. Con la tastiera: frecce, +, − e Home. La lista delle posizioni e il menu Destinazione permettono di giocare anche senza usare l’immagine. “Movimento ridotto” evita gli spostamenti animati.',
     ],
@@ -89,7 +101,7 @@ const TOPICS = [
     action: 'Vai alla Fase di Ombra',
     paragraphs: [
       'L’ordine è attivazione dei nemici, oscurità, minaccia. Prima di ogni conferma il gruppo deve risolvere il passaggio o verificare con le regole che non si applichi. Dopo la minaccia rendete pronti i nemici esauriti; la conferma finale ricompone i mazzi e apre Riorganizzazione.',
-      'Il tavolo attuale non genera o calcola nemici, oscurità, minaccia ed eventi. I pulsanti registrano l’accordo del gruppo, non risolvono questi effetti. Per una partita completa queste parti devono ancora essere implementate.',
+      'Nella nuova avventura la Fase di Ombra rimane indisponibile finché nemici, oscurità, minaccia ed eventi non saranno eseguibili. Le vecchie conferme manuali restano soltanto nei tavoli precedenti senza scenario: non sostituiscono gli effetti della nuova avventura.',
     ],
   },
   {
@@ -110,7 +122,7 @@ const TOPICS = [
     action: 'Torna al percorso guidato',
     paragraphs: [
       'Sono disponibili ingresso e recupero, compagnia e mazzi, tratto di mappa e viaggio, turni e azioni, prove standard, Scoperta, salvataggio e backup. Carte e immagini originali sono consultabili se installate sul PC.',
-      'La prima avventura completa non è ancora giocabile. Mancano generazione ed esplorazione della mappa completa, nemici e combattimento, danni e paure, automatismi delle capacità, minaccia, obiettivi, esito dell’avventura e passaggio al campo. Un round nel tratto iniziale non equivale a una partita completata.',
+      'La mappa A1 e il suo avvio fino all’obiettivo iniziale sono disponibili con materiale verificato. La prima avventura completa richiede ancora interazioni ed esplorazioni successive, nemici e combattimento, effetti fisici e capacità, minaccia, progressione degli obiettivi, esiti e campo. Le capacità ancora mancanti restano bloccate nella nuova avventura.',
       'Questa guida riassume il flusso; per i dettagli fate riferimento al manuale, al Compendio e agli errata originali installati qui sotto. Non inventate tiri di dadi o regole per superare un comando mancante.',
     ],
   },
