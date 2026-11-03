@@ -102,13 +102,19 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
 });
 export type State = z.infer<typeof StateSchema>;
 
-const VersionTenStateSchema = BaseStateSchema.omit({ physical: true }).extend({
+const HistoricalBaseStateSchema = BaseStateSchema.extend({
+  skillTest: SkillTestSchema.extend({ availableCount: z.int().min(1).max(15) }).nullable(),
+});
+const VersionTenStateSchema = HistoricalBaseStateSchema.omit({ physical: true }).extend({
   schemaVersion: z.literal(10),
 });
-const VersionNineStateSchema = BaseStateSchema.omit({ scenario: true, physical: true }).extend({
+const VersionNineStateSchema = HistoricalBaseStateSchema.omit({
+  scenario: true,
+  physical: true,
+}).extend({
   schemaVersion: z.literal(9),
 });
-const PreviousStateSchema = BaseStateSchema.omit({
+const PreviousStateSchema = HistoricalBaseStateSchema.omit({
   mapGeneration: true,
   scenario: true,
   physical: true,
@@ -180,17 +186,21 @@ export function parseState(raw: unknown): State {
         throw new Error('Regole Ultimo Sforzo non valide per uno schema storico.');
     }
     if (version === 13) {
-      const previous = BaseStateSchema.extend({ schemaVersion: z.literal(13) }).parse(raw);
+      const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(13) }).parse(
+        raw,
+      );
       return StateSchema.parse({ ...previous, schemaVersion: 14 });
     }
     if (version === 12) {
-      const previous = BaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(raw);
+      const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(
+        raw,
+      );
       if (previous.physical?.version === 3 || previous.physical?.cycle)
         throw new Error('Ledger ordinario non valido per schema12.');
       return StateSchema.parse({ ...previous, schemaVersion: 14 });
     }
     if (version === 11) {
-      const legacy = BaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
+      const legacy = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
       if (legacy.physical && legacy.physical.version !== 1)
         throw new Error('Runtime fronti non valido per schema11.');
       return StateSchema.parse({ ...legacy, schemaVersion: 14 });
