@@ -144,6 +144,7 @@ export function combatFixture() {
       }),
     ),
   ];
+  assets.push(asset(fsm, 'PlayMakerFSM', { m_GameObject: { m_FileID: 0, m_PathID: 0 } }));
   return {
     format: 'combat-source-v1',
     manifest: {
@@ -171,7 +172,7 @@ export function combatFixture() {
     fsms: [
       {
         source: fsm,
-        objectHash: hash('fsm raw'),
+        objectHash: assets.find((a) => a.source === fsm).objectHash,
         start: 'invented-start',
         variables: [],
         handlers: {},
@@ -196,7 +197,7 @@ export function combatFixture() {
       },
       {
         source: logicFSM,
-        objectHash: hash('logic raw'),
+        objectHash: assets.find((a) => a.source === logicFSM).objectHash,
         start: 'idle',
         variables: [],
         handlers: { DEFEATED: 1 },

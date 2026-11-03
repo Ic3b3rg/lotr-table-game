@@ -159,3 +159,41 @@ test('required hooks gate before adapter or slot spending, and late result hooks
   assert.deepEqual(late.k.planAttack(attack(late.a)).gates, ['attack-windows']);
   assert.equal(late.k.view().pendingPlan, null);
 });
+
+test('whole-group attack outcome is singular, preserves unused hits and does not grant resources', () => {
+  const { a, k } = setup(technicalPort(6));
+  const plan = k.planAttack(attack(a, [0, 1, 2, 3]));
+  const r = apply(k, plan);
+  assert.equal(r.continuation.kind, 'scenario-callback');
+  assert.equal(r.continuation.cause, 'attack');
+  assert.equal(r.unusedHits, 2);
+  assert.equal(r.removed.length, 2);
+  assert.equal(k.view().callbacks.length, 1);
+  assert.equal(k.view().availability.available, 6);
+  assert.equal('lore' in k.view(), false);
+  assert.equal('inspiration' in k.view(), false);
+  assert.deepEqual(apply(k, plan), r);
+});
+
+test('after-test defeat retains paid hits, and a completed result cannot fund a second attack', () => {
+  const defeated = setup(
+    technicalPort(2, (r) => ({ ...r, afterTest: { ...r.afterTest, defeated: true } })),
+  );
+  const r = apply(defeated.k, defeated.k.planAttack(attack(defeated.a)));
+  assert.equal(r.continuation.reason, 'attacker-defeated');
+  assert.deepEqual(
+    defeated.k.view().group.figures.map((f) => f.health),
+    [2, 4],
+  );
+  assert.equal(defeated.k.view().selections.length, 0);
+  assert.throws(() => defeated.k.planAttack(attack(defeated.a, [], 'dead')));
+  const reused = setup(technicalPort(2, (r) => ({ ...r, id: 'fixed-completed-result' })));
+  const first = reused.k.planAttack(attack(reused.a, [3]));
+  apply(reused.k, first);
+  const before = reused.k.checkpoint();
+  assert.throws(() => reused.k.planAttack(attack(reused.a, [0], 'again')), /già speso/);
+  assert.throws(() =>
+    reused.k.applyPlan({ id: 'again-apply', planFingerprint: first.plan.fingerprint }),
+  );
+  assert.deepEqual(reused.k.checkpoint(), before);
+});

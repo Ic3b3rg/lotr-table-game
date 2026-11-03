@@ -187,12 +187,17 @@ class CombatKernel {
       replayProof,
     );
     if ('status' in result) return structuredClone(result);
-    this.#state = result.state;
-    this.#journal.push({
+    const entry = {
       command: structuredClone(command),
       proof: structuredClone(result.proof),
       receipt: structuredClone(result.receipt),
+    };
+    bounded({
+      ...this.#checkpointData(result.state, [...this.#journal, entry]),
+      fingerprint: '0'.repeat(64),
     });
+    this.#state = result.state;
+    this.#journal.push(entry);
     return structuredClone(result.receipt);
   }
   spawn(raw: unknown) {
@@ -224,17 +229,20 @@ class CombatKernel {
   view(): KernelState {
     return structuredClone(this.#state);
   }
-  checkpoint() {
-    const data = {
+  #checkpointData(state = this.#state, journal = this.#journal) {
+    return {
       format: 'combat-checkpoint-v1' as const,
       artifact: this.#artifact,
       artifactFingerprint: this.#artifact.fingerprint,
       projectionFingerprint: this.#artifact.projectionFingerprint,
       seed: this.#seed,
       seedFingerprint: digest(this.#seed),
-      journal: this.#journal,
-      state: this.#state,
+      journal,
+      state,
     };
+  }
+  checkpoint() {
+    const data = this.#checkpointData();
     return structuredClone({ ...data, fingerprint: digest(data) });
   }
 }

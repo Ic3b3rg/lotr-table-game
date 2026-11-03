@@ -105,3 +105,38 @@ test('checkpoint replays receipts and rejects altered or cross-source state even
     ),
   );
 });
+
+test('checkpoint size is preflighted before committing another result', () => {
+  const source = combatFixture();
+  source.assets[0].data.inertPadding = Array(70000).fill(0);
+  source.assets[0].dataHash = hash(source.assets[0].data);
+  const a = combat.compileCombatSource(source);
+  const k = combat.createCombatKernel(a, seedFor(a), {
+    externalEffect(query) {
+      return {
+        id: query.id,
+        contextFingerprint: hash(query),
+        artifactFingerprint: query.artifactFingerprint,
+        projectionFingerprint: query.projectionFingerprint,
+        hits: 0,
+        modifiers: [],
+        evidence: {
+          file: 'invented.assets',
+          locator: 'invented bounded effect',
+          sha256: hash('source'),
+        },
+      };
+    },
+  });
+  k.spawn(spawn(a));
+  let last;
+  assert.throws(() => {
+    for (let n = 0; n < 1000; n++) {
+      last = k.view();
+      k.applyExternal({ id: `effect-${n}`, effectId: 'bounded' });
+    }
+  }, /Limite nodi|Limite byte/);
+  assert.deepEqual(k.view(), last);
+  const c = k.checkpoint();
+  assert.deepEqual(combat.restoreCombatKernel(c).checkpoint(), c);
+});

@@ -114,3 +114,21 @@ test('compiler refuses getters before reading them and validates live variable b
   bound.fsms[0].variables[0].value = 3;
   assert.throws(() => combat.compileCombatSource(bound), /binding/i);
 });
+
+test('FSM evidence must identify the same native object as the linked component', () => {
+  const source = combatFixture();
+  source.fsms[1].objectHash = '0'.repeat(64);
+  assert.throws(() => combat.compileCombatSource(source), /FSM.*oggetto/i);
+});
+
+test('bounded input rejects cycles, non JSON objects, sparse arrays and oversized strings', () => {
+  for (const value of [new Date(), 3n, undefined, Array(2), 'x'.repeat(16385)])
+    assert.throws(() => combat.compileCombatSource(value));
+  const cycle = {};
+  cycle.self = cycle;
+  assert.throws(() => combat.compileCombatSource(cycle), /Ciclo/);
+  const source = combatFixture();
+  source.assets[0].data.Health = -1;
+  rehashAsset(source.assets[0]);
+  assert.throws(() => combat.compileCombatSource(source), /Salute/);
+});

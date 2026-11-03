@@ -209,6 +209,10 @@ export function compileCombatSource(raw: unknown) {
   }[] = [];
   for (const f of s.fsms) {
     requireFile(fileOf(f.source));
+    check(
+      asset(f.source, 'PlayMakerFSM').objectHash === f.objectHash,
+      'FSM e oggetto fonte discordanti.',
+    );
     validateVariables(f.variables);
     unique(
       [...f.states, ...f.deferredStates].map((v) => v.index),
@@ -575,7 +579,9 @@ export function compileCombatSource(raw: unknown) {
     source: s,
     compiled,
   };
-  return { ...data, fingerprint: digest(data) };
+  const artifact = { ...data, fingerprint: digest(data) };
+  bounded(artifact);
+  return artifact;
 }
 export type CombatArtifact = ReturnType<typeof compileCombatSource>;
 
