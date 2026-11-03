@@ -563,6 +563,33 @@ export function validateProjection(raw: unknown): Projection {
     p.successfulSeed === ((p.requestedSeed + p.attempts.length) | 0),
     'Seed riuscito incoerente.',
   );
+  for (const [i, a] of p.attempts.entries()) {
+    invariant(a.historyFingerprint === digest(a.history), 'Storia retry incoerente.');
+    if (i)
+      invariant(
+        a.incomingFingerprint === p.attempts[i - 1]!.retainedFingerprint,
+        'Catena pool retry incoerente.',
+      );
+    const previous = i ? p.attempts[i - 1]!.history : p.context;
+    for (const field of ['usedEncounterIds', 'usedGroupIds', 'unlockedChainIds'] as const) {
+      unique(a.history[field], 'Storia retry');
+      invariant(
+        same(a.history[field].slice(0, previous[field].length), previous[field]),
+        'Storia retry non conservata.',
+      );
+    }
+  }
+  if (p.attempts.length)
+    invariant(
+      p.attempts.at(-1)!.retainedFingerprint === digest(p.retryState.incoming),
+      'Pool successful attempt incoerente.',
+    );
+  else
+    invariant(
+      !p.retryState.incoming.randomEncounterPool.length &&
+        !p.retryState.incoming.itemEncounterPool.length,
+      'Pool iniziale non vuoto.',
+    );
   validateGeometry(p);
   validateEncounters(p);
   return p;

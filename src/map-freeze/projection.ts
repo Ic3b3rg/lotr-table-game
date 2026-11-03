@@ -46,6 +46,15 @@ export function projectRealization(
       encounters: digest(encounters.trace),
       clock: digest([assembly.clock, encounters.clock]),
     },
+    retryState: {
+      incoming: input.assembly.selection.incoming,
+      retainedFingerprint: digest({
+        randomEncounterPool: assembly.selection.pools.randomEncounterPool,
+        itemEncounterPool: assembly.selection.pools.itemEncounterPool,
+        percentNormal: assembly.selection.pools.percentNormal,
+      }),
+      eligibleItemCount: assembly.selection.pools.itemEligible.length,
+    },
     rng: {
       initial: new SourceRandom(input.assembly.selection.context.seed).snapshot(),
       geometry: assembly.rng,

@@ -101,3 +101,31 @@ export function generationStateProblem(state: GenerationState): string | null {
     return error instanceof Error ? error.message : 'Generazione non valida.';
   }
 }
+
+import type { Receipt } from '../shared/protocol';
+export function generationReceiptProblem(
+  state: GenerationState,
+  commands: { playerId: string; requestId: string; receipt: Receipt }[],
+): string | null {
+  const g = state.mapGeneration;
+  const records = commands.filter(
+    (c) => c.receipt.type === 'GENERATE_ADVENTURE_MAP' || c.receipt.type === 'RESUME_ADVENTURE_MAP',
+  );
+  if (!g) return records.length ? 'Ricevuta senza generazione.' : null;
+  if (records.length !== g.requests.length) return 'Registro generazione incompleto.';
+  for (const request of g.requests) {
+    const r = records.find(
+      (c) => c.playerId === request.playerId && c.requestId === request.requestId,
+    )?.receipt;
+    if (
+      !r ||
+      (r.type !== 'GENERATE_ADVENTURE_MAP' && r.type !== 'RESUME_ADVENTURE_MAP') ||
+      r.type !== request.type ||
+      r.jobId !== (g.status === 'frozen' ? g.id : g.job.id) ||
+      r.status !== g.status ||
+      r.projectionFingerprint !== (g.status === 'frozen' ? g.projection.fingerprint : null)
+    )
+      return 'Ricevuta generazione incoerente.';
+  }
+  return null;
+}

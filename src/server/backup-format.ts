@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { IntentIdSchema, ReceiptSchema } from '../shared/protocol';
 import { StateSchema, parseState } from './state';
 import { journeyBudgetProblem } from './journey-map';
+import { generationReceiptProblem } from './generation-state';
 
 const HashSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const BackupCommandSchema = z.strictObject({
@@ -14,6 +14,8 @@ export const BackupCommandSchema = z.strictObject({
 export const BackupPayloadSchema = z
   .strictObject({ state: StateSchema, commands: z.array(BackupCommandSchema).max(5000) })
   .superRefine((payload, ctx) => {
+    const generationProblem = generationReceiptProblem(payload.state, payload.commands);
+    if (generationProblem) ctx.addIssue({ code: 'custom', message: generationProblem });
     const budgetProblem = journeyBudgetProblem(
       payload.state,
       payload.commands.map((command) => command.receipt),
@@ -36,17 +38,9 @@ export const BackupPayloadSchema = z
   });
 export type BackupPayload = z.infer<typeof BackupPayloadSchema>;
 
-export function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
-      .join(',')}}`;
-  return JSON.stringify(value) ?? 'null';
-}
-export const checksum = (payload: unknown) =>
-  createHash('sha256').update(canonical(payload)).digest('hex');
+export { canonical } from '../map-freeze/hash';
+import { digest } from '../map-freeze/hash';
+export const checksum = digest;
 export const BackupSchema = z
   .strictObject({
     format: z.literal('lotr-offline-session'),

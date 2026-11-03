@@ -8,6 +8,7 @@ import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
 import { MapGenerationService, generationReceipt } from './map-generation';
+import { generationReceiptProblem } from './generation-state';
 import { journeyBudgetProblem, loadJourneyPlan } from './journey-map';
 import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
@@ -115,6 +116,26 @@ export class Store {
     const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
     if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
     const state = StateSchema.parse(JSON.parse(row.data));
+    if (state.mapGeneration) {
+      const commands = this.db
+        .prepare('SELECT player_id,request_id,result FROM commands')
+        .all()
+        .map((row) => {
+          if (
+            typeof row.player_id !== 'string' ||
+            typeof row.request_id !== 'string' ||
+            typeof row.result !== 'string'
+          )
+            throw new Error('Ricevuta non disponibile.');
+          return {
+            playerId: row.player_id,
+            requestId: row.request_id,
+            receipt: ReceiptSchema.parse(JSON.parse(row.result)),
+          };
+        });
+      const problem = generationReceiptProblem(state, commands);
+      if (problem) throw new Error(problem);
+    }
     if (state.journey?.travel) {
       const receipts = this.db
         .prepare('SELECT result FROM commands WHERE result IS NOT NULL')
@@ -291,7 +312,17 @@ export class Store {
           'È stato raggiunto il limite di prove per questa sessione.',
         );
       const result = apply(state);
-      if (state.mapGeneration) StateSchema.parse(state);
+      if (state.mapGeneration) {
+        StateSchema.parse(state);
+        for (const request of state.mapGeneration.requests)
+          this.db
+            .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
+            .run(
+              JSON.stringify(generationReceipt(state, request.requestId, request.type)),
+              request.playerId,
+              request.requestId,
+            );
+      }
       this.db.prepare('UPDATE session SET data = ? WHERE id = 1').run(JSON.stringify(state));
       this.db
         .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')

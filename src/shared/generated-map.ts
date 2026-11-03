@@ -180,6 +180,11 @@ export const ProjectionDataSchema = z.strictObject({
     encounters: HashSchema,
     clock: HashSchema,
   }),
+  retryState: z.strictObject({
+    incoming: IncomingPoolsSchema,
+    retainedFingerprint: HashSchema,
+    eligibleItemCount: z.int().min(0).max(10000),
+  }),
   rng: z.strictObject({
     initial: SourceRandomStateSchema,
     geometry: SourceRandomStateSchema,
