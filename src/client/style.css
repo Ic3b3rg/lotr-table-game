@@ -1747,6 +1747,58 @@ body.reduce-motion .draw-arrival {
 .scenario {
   max-width: 58rem;
 }
+.physical-notice {
+  border-left: 3px solid var(--gold, #b3a06d);
+  padding: 0.75rem;
+  line-height: 1.5;
+}
+.physical-areas {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.physical-area {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.physical-area strong {
+  flex-basis: 100%;
+}
+.physical-back {
+  display: inline-block;
+  border: 1px solid currentColor;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+}
+#physical-form fieldset {
+  border: 1px solid var(--gold, #b3a06d);
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+#physical-form label {
+  display: grid;
+  gap: 0.5rem;
+}
+#physical-form select {
+  min-height: 44px;
+  width: 100%;
+}
+.physical-results {
+  margin-top: 1rem;
+  line-height: 1.5;
+}
+.physical-results summary {
+  cursor: pointer;
+  padding: 0.75rem 0;
+}
+#physical-resolution {
+  overflow-wrap: anywhere;
+}
 .source-message,
 .scenario-objective {
   white-space: pre-wrap;
