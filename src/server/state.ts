@@ -23,6 +23,7 @@ const BaseStateSchema = SessionSchema.omit({
   scout: true,
   round: true,
   encounterFingerprints: true,
+  explorationFingerprints: true,
 }).extend({
   content: CatalogSchema.nullable(),
   preparation: PreparationSchema.nullable().default(null),

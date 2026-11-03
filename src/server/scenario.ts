@@ -157,7 +157,7 @@ export function allowScenarioPlay(state: State, command: Command) {
   const allowed =
     sc.phase === 'action' &&
     (['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type) ||
-      (original && command.type === 'INTERACT_SCENARIO'));
+      (original && (command.type === 'INTERACT_SCENARIO' || command.type === 'EXPLORE_SCENARIO')));
   if (!allowed)
     throw new ApiError(
       409,

@@ -1,4 +1,5 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
+import { prepareExploration, rewardExploration } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
@@ -104,8 +105,13 @@ function broadcast(sc: Scenario, event: string) {
   const receivers = sc.instances.filter(
     (i) => !i.stopped && definition(sc, i).handlers[event] !== undefined,
   );
-  sc.events.push({ id: randomUUID(), event, receivers: receivers.map((i) => i.id) });
+  sc.events.push({ id: eventId(sc, event), event, receivers: receivers.map((i) => i.id) });
   for (const i of receivers) send(sc, i, event);
+}
+function eventId(sc: Scenario, event: string) {
+  return sc.phase === 'action'
+    ? cycleUUID({ scenario: sc.id, ordinal: sc.events.length, event })
+    : randomUUID();
 }
 function request(state: State, data: Omit<ScenarioRequest, 'id' | 'fingerprint'>) {
   const sc = state.scenario!;
@@ -151,6 +157,7 @@ function messageRequest(
       : null;
   invariant((kind !== 'scout' && kind !== 'test') || hero, 'Completamenti setup incoerenti.');
   const visible = sc.tiles.filter((t) => t.visible);
+  const explorer = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
   request(state, {
     instanceId: i.id,
     state: i.state,
@@ -158,8 +165,8 @@ function messageRequest(
     action: a.index,
     kind,
     text: a.text,
-    heroId: hero?.heroId ?? null,
-    actorPlayerId: hero?.playerId ?? null,
+    heroId: hero?.heroId ?? explorer?.heroId ?? null,
+    actorPlayerId: hero?.playerId ?? explorer?.playerId ?? null,
     stage: 'ready',
     tileSource: a.mode === 'tile' ? visible.at(-1)!.source : null,
   });
@@ -180,6 +187,13 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
     p = projection(state);
   switch (a.op) {
     case 'confirm':
+      if (i.kind === 'exploration') {
+        complete(i, a.index);
+        invariant(send(sc, i, a.confirmEvent), 'Conferma esplorazione senza seguito fonte.');
+        return;
+      }
+      beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+      return;
     case 'sourceTest':
     case 'challenge':
       beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
@@ -308,6 +322,15 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         view = sc.tiles.find((t) => t.source === tile.source)!;
       invariant(view.visible, 'Esplorazione di tessera nascosta.');
       view.explored = true;
+      const ordinary = i.kind === 'exploration';
+      if (ordinary) i.visible = false;
+      const adjacent: number[] = [];
+      if (ordinary && !a.skipAdjacentSectionEvent)
+        for (const s of cells(state, tile.source))
+          for (const id of s.connected) {
+            const section = p.spaces.find((s) => s.id === id)!.sectionId;
+            if (section !== s.sectionId && !adjacent.includes(section)) adjacent.push(section);
+          }
       sc.tasks.push({
         kind: 'explore',
         instanceId: i.id,
@@ -315,8 +338,9 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         action: a.index,
         tileSource: tile.source,
         spaceIndex: 0,
-        stage: 'pre',
+        stage: ordinary ? 'intro' : 'pre',
         waiting: null,
+        ...(ordinary ? { adjacent, adjacentIndex: 0 } : {}),
       });
       return;
     }
@@ -475,8 +499,52 @@ function advanceTask(state: State) {
       return true;
     }
   } else {
+    const frame = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
+    if (task.stage === 'intro' || task.stage === 'outro') {
+      invariant(frame && frame.instanceId === owner.id, 'Presentazione senza esploratore.');
+      const cap = sc.pack.manifest.exploration!;
+      request(state, {
+        instanceId: owner.id,
+        state: owner.state,
+        entry: owner.entry,
+        action: task.action,
+        kind: task.stage === 'intro' ? 'exploration-intro' : 'exploration-outro',
+        text:
+          task.stage === 'intro'
+            ? cap.tiles.find((t) => t.source === task.tileSource)!.intros[frame.intro]!
+            : cap.outro,
+        heroId: frame.heroId,
+        actorPlayerId: frame.playerId,
+        stage: 'ready',
+        tileSource: task.tileSource,
+      });
+      return true;
+    }
+    if (task.stage === 'adjacent') {
+      const cap = sc.pack.manifest.exploration!,
+        principal = sc.instances.find((i) => i.kind === 'principal')!;
+      if (task.waiting) {
+        if (!principal.stopped && principal.processing !== 0) return false;
+        task.waiting = null;
+      }
+      if (cap.adjacent.variable && task.adjacentIndex! < task.adjacent!.length) {
+        setValue(sc, principal, cap.adjacent.variable, task.adjacent![task.adjacentIndex!]!);
+        task.adjacentIndex!++;
+        principal.processing = 1;
+        sc.events.push({
+          id: eventId(sc, cap.adjacent.event),
+          event: cap.adjacent.event,
+          receivers: [principal.id],
+        });
+        invariant(send(sc, principal, cap.adjacent.event), 'Evento adiacente senza handler.');
+        task.waiting = principal.id;
+        return true;
+      }
+      task.stage = 'outro';
+      return true;
+    }
     const spaces = cells(state, task.tileSource);
-    while (task.spaceIndex < spaces.length) {
+    while (task.stage !== 'done' && task.spaceIndex < spaces.length) {
       const node = sc.instances.find(
         (i) => i.kind === 'encounter' && i.spaceId === spaces[task.spaceIndex]!.id,
       );
@@ -499,11 +567,15 @@ function advanceTask(state: State) {
       if (!node.stopped && definition(sc, node).handlers[event] !== undefined) {
         node.processing = 1;
         if (event === 'REVEALED') node.visible = true;
-        sc.events.push({ id: randomUUID(), event, receivers: [node.id] });
+        sc.events.push({ id: eventId(sc, event), event, receivers: [node.id] });
         send(sc, node, event);
         task.waiting = node.id;
         return true;
       }
+    }
+    if (frame && owner.kind === 'exploration' && task.stage !== 'done') {
+      task.stage = 'adjacent';
+      return true;
     }
   }
   complete(owner, task.action);
@@ -518,6 +590,13 @@ function pump(state: State) {
     if (sc.pending) return;
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
+      const exploration = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
+      if (exploration) {
+        const node = sc.instances.find((i) => i.id === exploration.instanceId)!;
+        invariant(!sc.tasks.length && node.stopped, 'Esplorazione senza ritorno fonte.');
+        exploration.returned = true;
+        sc.explorations!.active = null;
+      }
       const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active);
       if (attempt) {
         const node = sc.instances.find((i) => i.id === attempt.instanceId)!;
@@ -686,7 +765,21 @@ export function resumeScenario(
       'SCENARIO_INPUT_REQUIRED',
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
-  if (q.kind === 'physical') {
+  if (q.kind === 'exploration-intro' || q.kind === 'exploration-outro') {
+    if (input.kind !== 'ack') throw wrong();
+    const task = sc.tasks.at(-1);
+    invariant(
+      task?.kind === 'explore' && task.instanceId === i.id && task.action === q.action,
+      'Callback esplorazione scaduto.',
+    );
+    if (q.kind === 'exploration-intro') rewardExploration(state);
+    sc.messageLog.push({
+      id: `${actionKey(i, q.action)}:${task.stage}`,
+      text: structuredClone(q.text),
+    });
+    task.stage = q.kind === 'exploration-intro' ? 'pre' : 'done';
+    sc.pending = null;
+  } else if (q.kind === 'physical') {
     answerScenarioPhysical(state, playerId, command, physicalPath);
   } else if (q.kind === 'choice') {
     const a = current(sc, i).actions.find((a) => a.index === q.action)!;
@@ -815,6 +908,8 @@ export function resumeScenario(
       sc.handoffCount = 1;
       if (sc.pack.manifest.scope === 'original-encounter-v1')
         sc.play = { active: null, lore: 0, attempts: [], tests: [] };
+      if (sc.pack.manifest.exploration)
+        sc.explorations = { version: 'source-exploration-v1', active: null, attempts: [] };
       return;
     }
     const task = sc.tasks.at(-1);
@@ -825,6 +920,20 @@ export function resumeScenario(
       complete(i, q.action);
     }
   }
+  pump(state);
+}
+
+export function exploreScenario(
+  state: State,
+  playerId: string,
+  c: Extract<Command, { type: 'EXPLORE_SCENARIO' }>,
+  entropy: string,
+) {
+  const i = prepareExploration(state, playerId, c, entropy),
+    sc = state.scenario!;
+  runInstance(state, i);
+  sc.events.push({ id: eventId(sc, 'NODE CLICKED'), event: 'NODE CLICKED', receivers: [i.id] });
+  invariant(send(sc, i, 'NODE CLICKED'), 'Template senza ingresso.');
   pump(state);
 }
 

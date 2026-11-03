@@ -66,6 +66,7 @@ export const CycleStateSchema = z.strictObject({
           ...EncounterIntentSchema.options,
         ]),
         lastStandRules: z.literal('source-last-stand-v1').optional(),
+        explorationEntropy: hash.optional(),
       }),
     )
     .min(0)

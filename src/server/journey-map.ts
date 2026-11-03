@@ -13,7 +13,9 @@ export function journeyBudgetProblem(state: State, receipts: Receipt[]): string 
   let moved = 0;
   for (const receipt of receipts) {
     if (
-      (receipt.type === 'START_TRAVEL' || receipt.type === 'MOVE_HERO') &&
+      (receipt.type === 'START_TRAVEL' ||
+        receipt.type === 'MOVE_HERO' ||
+        receipt.type === 'EXPLORE_SCENARIO') &&
       receipt.mapId === journey.id &&
       receipt.roundId === travel.roundId &&
       receipt.turnId === travel.turnId &&

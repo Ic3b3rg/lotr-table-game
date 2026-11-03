@@ -83,6 +83,7 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('inspiration'), hero: slot, amount: z.literal(1) }),
   z.strictObject({
     kind: z.literal('test'),
     hero: slot,
@@ -218,6 +219,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
 export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
   kind: z.enum([
+    'inspiration',
     'test',
     'suffer',
     'discard',

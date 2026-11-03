@@ -1526,6 +1526,13 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'inspiration':
+              invariant(
+                run.spatial && run.lastStandRules && this.p.version === 3,
+                'Ricompensa fuori dal consumer fonte corrente.',
+              );
+              this.inspiration(child.hero);
+              break;
             case 'test': {
               this.r.sourceTest = null;
               const input = this.ask(child.hero, `${path}/reveal`, {
