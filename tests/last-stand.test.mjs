@@ -88,6 +88,35 @@ test('last stand crosses the entire source, persists its instruction and returns
   assert.ok(!encoded.includes('rngCursor'));
 });
 
+test('last stand remains answerable after all 32 allowed source children complete', () => {
+  for (const count of [31, 32]) {
+    const f = freshLastStand();
+    const children = [
+      suffer(0, 5, 0),
+      ...Array.from({ length: count - 1 }, () => ({
+        kind: 'event',
+        hero: 0,
+        event: 'before-interact',
+        threat: false,
+        sufferedFear: 0,
+      })),
+    ];
+    physical.openPhysical(f.p, source, f.program(children), f.context);
+    assert.equal(f.p.snapshot.parents[0].completedChildren, count);
+    assert.equal(f.p.snapshot.active.child, count);
+    answer(f, { kind: 'physical-choice', option: 'reveal' });
+    const restored = JSON.parse(JSON.stringify(f.p));
+    physical.validatePhysical(restored);
+    f.p = restored;
+    answer(f, { kind: 'physical-choice', option: 'resolve' });
+    assert.equal(f.p.snapshot.parents[0].returnCount, 1);
+    assert.equal(f.p.snapshot.lastStand.selections[0].outcome, 'pass');
+    assert.equal(f.p.snapshot.areas[0].damage.length, 0);
+    assert.equal(f.p.snapshot.lastStand.heroes[0].difficulty, 2);
+    physical.validatePhysical(f.p);
+  }
+});
+
 test('both limits allow either order and share one difficulty per hero', () => {
   for (const first of ['damage', 'fear']) {
     const f = freshLastStand();
@@ -119,6 +148,95 @@ test('both limits allow either order and share one difficulty per hero', () => {
     assert.equal(f.p.snapshot.parents[0].returnCount, 1);
     physical.validatePhysical(f.p);
   }
+});
+
+test('the group can choose the next hero but only that owner chooses between both limits', () => {
+  const f = freshLastStand();
+  physical.openPhysical(f.p, source, f.program([suffer(0, 5, 0), suffer(1, 5, 5)]), f.context);
+  const before = structuredClone(f.p);
+  assert.equal(f.p.snapshot.active.actorPlayerId, f.heroes[0].playerId);
+  assert.throws(() => answer(f, { kind: 'physical-choice', option: '1:fear' }));
+  assert.deepEqual(f.p, before);
+  answer(f, { kind: 'physical-choice', option: '1:choose-family' });
+  assert.equal(f.p.snapshot.lastStand.selections.length, 0);
+  assert.equal(f.p.snapshot.active.actorPlayerId, f.heroes[1].playerId);
+  assert.deepEqual(
+    f.p.snapshot.active.options.map((o) => o.id),
+    ['1:damage', '1:fear'],
+  );
+  const q = f.p.snapshot.active;
+  assert.throws(() =>
+    physical.answerPhysical(
+      f.p,
+      q.runId,
+      { kind: 'physical-choice', option: '1:fear' },
+      evidence(1, f.heroes[0].playerId),
+    ),
+  );
+  answer(f, { kind: 'physical-choice', option: '1:fear' });
+  assert.equal(f.p.snapshot.lastStand.selections[0].heroId, f.heroes[1].heroId);
+  assert.equal(f.p.snapshot.lastStand.selections[0].family, 'fear');
+  assert.equal(f.p.snapshot.active.actorPlayerId, f.heroes[1].playerId);
+  physical.validatePhysical(JSON.parse(JSON.stringify(f.p)));
+});
+
+test('a reaction that reaches the same limit again creates a new last stand before returning', () => {
+  const f = freshLastStand(({ ir }) => {
+    for (const d of ir.definitions) {
+      d.body = [{ op: 'keep-faceup' }];
+      if (d.cardId.includes('damage'))
+        d.persistent = [
+          {
+            op: 'suffer',
+            window: 'after-darkness-suffering-batch',
+            hero: 'triggering-self-or-nearby',
+            family: 'fear',
+            n: 1,
+            face: 'normal',
+            condition: 'at-least-one-actually-suffered',
+            source: 'this-card-not-darkness',
+          },
+        ];
+    }
+  });
+  physical.openPhysical(
+    f.p,
+    source,
+    f.program([
+      { ...suffer(0, 1, 0), face: 'faceup' },
+      { ...suffer(0, 0, 4), face: 'faceup' },
+      suffer(0, 0, 1),
+      {
+        kind: 'event',
+        hero: 0,
+        event: 'after-darkness-suffering-batch',
+        threat: false,
+        sufferedFear: 1,
+      },
+    ]),
+    f.context,
+  );
+  answer(f, { kind: 'physical-choice', option: '0:fear' });
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  const checks = f.p.snapshot.lastStand.selections;
+  assert.equal(checks.length, 2);
+  assert.notEqual(checks[0].id, checks[1].id);
+  assert.equal(checks[0].outcome, 'pass');
+  assert.equal(checks[0].returned, 1);
+  assert.equal(checks[1].difficulty, 2);
+  assert.equal(checks[1].outcome, null);
+  assert.equal(f.p.snapshot.active.options[0].id, 'reveal');
+  assert.equal(f.p.snapshot.parents[0].returnCount, 0);
+  physical.validatePhysical(JSON.parse(JSON.stringify(f.p)));
+  answer(f, { kind: 'physical-choice', option: 'reveal' });
+  answer(f, { kind: 'physical-choice', option: 'resolve' });
+  assert.equal(f.p.snapshot.lastStand.selections[1].forcedFailure, true);
+  assert.equal(f.p.snapshot.lastStand.selections[1].outcome, 'fail');
+  assert.equal(f.p.snapshot.lastStand.heroes[0].defeated, true);
+  assert.equal(f.p.snapshot.parents[0].returnCount, 1);
+  assert.equal(f.p.snapshot.lastStand.random.length, 2);
+  physical.validatePhysical(f.p);
 });
 
 test('faceup limit of the other type forces failure and cancels the defeated hero’s second test', () => {

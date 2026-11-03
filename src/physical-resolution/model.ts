@@ -109,7 +109,7 @@ export const PhysicalStateSchema = z.strictObject({
                 .string()
                 .regex(/^[a-f0-9]{64}$/)
                 .optional(),
-              child: z.int().min(0).max(31),
+              child: z.int().min(0).max(32),
               grant: z.int().min(0).max(4).nullable(),
               input: PhysicalInputSchema,
               evidence: PhysicalEvidenceSchema,

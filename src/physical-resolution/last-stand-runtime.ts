@@ -72,12 +72,12 @@ export class LastStandRuntime {
       'Regole Ultimo Sforzo senza istruzioni congelate corrispondenti.',
     );
     const state = this.state(),
-      done = new Set<string>();
+      doneReactions = new Set<string>();
+    let completed = 0;
     while (true) {
       const obligations = this.p.heroes.flatMap((h, hero) =>
         this.active(hero)
           ? (['damage', 'fear'] as const).flatMap((family) =>
-              !done.has(`${hero}:${family}`) &&
               this.s.areas[hero]![family].length >= this.host.limits(hero)[family]
                 ? [
                     {
@@ -91,30 +91,55 @@ export class LastStandRuntime {
             )
           : [],
       );
-      const ready = reactions.filter((r) => !done.has(r.id) && r.available());
+      const ready = reactions.filter((r) => !doneReactions.has(r.id) && r.available());
       if (!obligations.length && !ready.length) return;
-      const selected = this.host.choose(
-        obligations[0]?.hero ?? ready[0]!.hero,
-        `${run.id}/last-stand/order-${done.size}`,
+      const actor = obligations[0]?.hero ?? ready[0]!.hero;
+      const choices = this.p.heroes.flatMap((h, hero) => {
+        const owned = obligations.filter((o) => o.hero === hero);
+        return hero !== actor && owned.length > 1
+          ? [
+              {
+                id: `${hero}:choose-family`,
+                label: `${h.heroId} · scegli questo eroe; il suo proprietario sceglierà il tipo`,
+              },
+            ]
+          : owned.map(({ id, label }) => ({ id, label }));
+      });
+      let selected = this.host.choose(
+        actor,
+        `${run.id}/last-stand/order-${completed}`,
         'Scegli quale Ultimo Sforzo o reazione simultanea risolvere prima.',
-        [...obligations, ...ready].map(({ id, label }) => ({ id, label })),
+        [...choices, ...ready].map(({ id, label }) => ({ id, label })),
       );
+      const owner = obligations.find((o) => selected === `${o.hero}:choose-family`)?.hero;
+      if (owner !== undefined)
+        selected = this.host.choose(
+          owner,
+          `${run.id}/last-stand/type-${completed}`,
+          'Scegli quale tipo di Ultimo Sforzo affrontare per il tuo eroe.',
+          obligations.filter((o) => o.hero === owner).map(({ id, label }) => ({ id, label })),
+        );
       const reaction = ready.find((r) => r.id === selected);
       if (reaction) {
-        done.add(selected);
+        doneReactions.add(selected);
+        completed++;
         reaction.resolve();
         continue;
       }
       const obligation = obligations.find((o) => o.id === selected)!;
-      done.add(selected);
+      completed++;
       const { hero, family } = obligation;
       const population = artifact.instructions.filter((i) => i.family === family);
       const index = this.rng.index(population.length),
         instruction = population[index]!;
-      const id = `${run.id}/last-stand/${hero}/${family}`;
+      const h = state.heroes[hero]!;
+      const previous = state.selections.filter(
+        (s) => s.runId === run.id && s.heroId === h.heroId && s.family === family,
+      ).length;
+      const baseId = `${run.id}/last-stand/${hero}/${family}`;
+      const id = previous ? `${baseId}/${previous}` : baseId;
       state.random.push({ id, population: population.map((i) => i.id), index });
       state.rngCursor = this.rng.cursor;
-      const h = state.heroes[hero]!;
       const record: LastStandSnapshot['selections'][number] = {
         id,
         runId: run.id,
