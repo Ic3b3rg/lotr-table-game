@@ -281,3 +281,14 @@ test('unaffordable or distant synthetic contributions never grant original Prote
     assert.equal(p.snapshot.parents[0].results[0].costs.length, 0);
   }
 });
+
+test('the bounded parent limit rejects the next source without corrupting an accepted save', () => {
+  const p = fresh(),
+    pr = program([suffer(0, 0, 0)]);
+  for (let n = 0; n < 32; n++)
+    openPhysical(p, { ...source, effectId: `invented:${n}:0`, entry: n }, pr);
+  const before = structuredClone(p);
+  assert.throws(() => openPhysical(p, { ...source, effectId: 'invented:32:0', entry: 32 }, pr));
+  assert.deepEqual(p, before);
+  assert.doesNotThrow(() => validatePhysical(p));
+});

@@ -351,7 +351,7 @@ export function openPhysical(p: PhysicalState, source: PhysicalSource, program: 
     answers: [],
   });
   copy.snapshot = replayPhysical(copy);
-  Object.assign(p, copy);
+  Object.assign(p, PhysicalStateSchema.parse(copy));
   return id;
 }
 export function answerPhysical(
@@ -372,7 +372,7 @@ export function answerPhysical(
     evidence: PhysicalEvidenceSchema.parse(evidence),
   });
   copy.snapshot = replayPhysical(copy);
-  Object.assign(p, copy);
+  Object.assign(p, PhysicalStateSchema.parse(copy));
 }
 export function validatePhysical(raw: unknown): asserts raw is PhysicalState {
   const p = PhysicalStateSchema.parse(raw);
