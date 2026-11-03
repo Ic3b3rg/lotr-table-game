@@ -50,8 +50,30 @@ test('travel exploration consumes one move, suspends for source and returns with
       .length,
     1,
   );
-  const again = await explore(ready, to);
+  const again = await explore(ready, to, ready.player, {
+    sourceFingerprint: s.explorationFingerprints[to.id],
+  });
   assert.equal(again.status, 409);
+  const { command } = await import('./preparation-helper.mjs');
+  assert.ok(next.journey.travel.remaining > 0);
+  const moved = await command(
+    ready.host,
+    ready.player,
+    {
+      type: 'MOVE_HERO',
+      mapId: next.journey.id,
+      roundId: next.round.id,
+      turnId: next.round.turnId,
+      heroId: next.round.activeHeroId,
+      fromSpaceId: to.id,
+      destinationSpaceId: s.journey.heroes.find((h) => h.heroId === s.round.activeHeroId).spaceId,
+    },
+    next,
+  );
+  assert.equal(moved.status, 200, await moved.text());
+  const resumed = await readSession(ready.host);
+  assert.equal(resumed.journey.travel.remaining, next.journey.travel.remaining - 1);
+  assert.equal(resumed.round.heroes.find((h) => h.heroId === s.round.activeHeroId).actionsUsed, 1);
 });
 
 test('exploration checks ownership, pose, adjacency, source, turn, visibility, budget and pending before changing anything', async (t) => {
@@ -131,6 +153,7 @@ test('exploration checks ownership, pose, adjacency, source, turn, visibility, b
 });
 
 test('two tiles reveal only their source-space nodes, cap reward for the explorer and preserve movement through returns', async (t) => {
+  const { hash } = await import('./fixtures/map-freeze.mjs');
   const { finishExploration } = await import('./original-exploration-helper.mjs');
   const { sourceCatalog } = await import('./original-encounter-helper.mjs');
   const { command } = await import('./preparation-helper.mjs');
@@ -218,11 +241,12 @@ test('two tiles reveal only their source-space nodes, cap reward for the explore
       heroId: s.round.activeHeroId,
       roundId: s.round.id,
       turnId: s.round.turnId,
-      sourceFingerprint: s.encounterFingerprints[nonplayable.id] ?? 'a'.repeat(64),
+      sourceFingerprint: hash(nonplayable),
     },
     s,
   );
   assert.equal(bad.status, 409);
+  assert.equal((await bad.json()).error.code, 'SCENARIO_CAPABILITY');
 });
 
 test('a genuine adjacent-section handler runs and releases before exploration returns; a declared event alone does nothing', async (t) => {
