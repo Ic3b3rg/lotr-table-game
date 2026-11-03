@@ -36,10 +36,10 @@ runtime,validate,view}.ts`, build, `tests/physical-resolution.test.mjs` e fixtur
 Consuma: raw con requirePhysicalFamily. Produce: freezePhysical, openPhysical,
 answerPhysical, validatePhysical, physicalView con stato/programma tipizzati.
 
-- [ ] Test RED per raw/famiglie,56 copie, inizializzazione e proiezione privata.
-- [ ] Implementare freeze e casualità versionata; verificare GREEN e tipi.
-- [ ] Test RED per prevenzione/costo, subire, scartare/fondo, figli, zero/gate/vuoto.
-- [ ] Implementare replay deterministico, scelte e invarianti; GREEN e commit.
+- [x] Test RED per raw/famiglie,56 copie, inizializzazione e proiezione privata.
+- [x] Implementare freeze e casualità versionata; verificare GREEN e tipi.
+- [x] Test RED per prevenzione/costo, subire, scartare/fondo, figli, zero/gate/vuoto.
+- [x] Implementare replay deterministico, scelte e invarianti; GREEN e commit.
 
 ## Task2 — consumer autorevole e persistenza
 
@@ -48,10 +48,10 @@ scenario runtime/handlers/pack e validatori, tests physical HTTP/recovery/migrat
 Consuma Task1; produce azione physical, task/request fonte, SCENARIO_INPUT
 tipizzati e schema11 con vista pubblica distinta.
 
-- [ ] RED pack rigoroso, source mismatch, actor/cursor/revision e ACK respinto.
-- [ ] Implementare fonte sintetica esplicita e inizializzazione source-bound.
-- [ ] RED migrazioni1–10/pending e privacy sessione/receipt/eventi; GREEN.
-- [ ] RED retry/concorrenza/crash/restore/alterazioni risignate, inclusa doppia
+- [x] RED pack rigoroso, source mismatch, actor/cursor/revision e ACK respinto.
+- [x] Implementare fonte sintetica esplicita e inizializzazione source-bound.
+- [x] RED migrazioni1–10/pending e privacy sessione/receipt/eventi; GREEN.
+- [x] RED retry/concorrenza/crash/restore/alterazioni risignate, inclusa doppia
       rimozione ricevute e completamento figlio saltato; GREEN e commit.
 
 ## Task3 — UI integrata
@@ -60,20 +60,20 @@ Files: client physical/scenario/guide/style, tests renderer e browser helper.
 Consuma solo physicalView e richiesta fonte. Produce controlli di allocazione
 e scarto per actor autorizzato, conteggi e prossimo passo per tutti.
 
-- [ ] RED renderer/input/accessibilità e assenza identità nascoste.
-- [ ] Implementare nello stile corrente, guida/focus/status e attesa altrui.
-- [ ] Verificare GREEN suite e tipi; commit UI integrata.
+- [x] RED renderer/input/accessibilità e assenza identità nascoste.
+- [x] Implementare nello stile corrente, guida/focus/status e attesa altrui.
+- [x] Verificare GREEN suite e tipi; commit UI integrata.
 
 ## Task4 — accettazione e consegna
 
 Files: soli report tecnici pubblici e scratch privata del task.
 
-- [ ] Ricontrollare hash raw/contesto/fonti prima e dopo senza rigenerare freeze.
-- [ ] Preparare programma sintetico e host isolato4353; tre identità indipendenti.
-- [ ] Solo UI: inizializzazione/richieste/allocazioni, trasferimenti/scarti e
+- [x] Ricontrollare hash raw/contesto/fonti prima e dopo senza rigenerare freeze.
+- [x] Preparare programma sintetico e host isolato4353; tre identità indipendenti.
+- [x] Solo UI: inizializzazione/richieste/allocazioni, trasferimenti/scarti e
       ritorno padre/conclusione; zero conferme per operazioni automatiche.
-- [ ] UI backup/import, recovery, riavvii a ogni richiesta, pack assente dopo
+- [x] UI backup/import, recovery, riavvii a ogni richiesta, pack assente dopo
       freeze; confronti readonly integrali di gameplay/ricevute.
-- [ ] Tastiera/focus/guida/status e320/768/1024/1440, evidenze PNG private ispezionate.
-- [ ] npm test, typecheck, format:check, diffcheck; report con comandi/hash/limiti.
-- [ ] Commit finali, chiusura soli processi/schede propri, HEAD/branch/checkout pulito.
+- [x] Tastiera/focus/guida/status e320/768/1024/1440, evidenze PNG private ispezionate.
+- [x] npm test, typecheck, format:check, diffcheck; report con comandi/hash/limiti.
+- [x] Commit finali, chiusura soli processi/schede propri, HEAD/branch/checkout pulito.

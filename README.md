@@ -86,7 +86,7 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 9 vengono migrati allo schema 10, conservando compagnia, ordine dei mazzi, prove, Scoperta, generazione della mappa e ricevute. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 10. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento. Le vecchie mappe e le richieste aperte restano nel percorso precedente; non vengono trasformate in un avvio A1 completato.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 10 vengono migrati allo schema 11, conservando compagnia, ordine dei mazzi, prove, Scoperta, generazione della mappa, scenario e ricevute. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 11. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento. Le vecchie mappe e le richieste aperte restano nel percorso precedente; non vengono trasformate in un avvio A1 o fisico completato.
 
 ## Creazione della mappa A1
 
@@ -134,6 +134,26 @@ originali o il pacchetto su disco. Le immagini opzionali si reinstallano
 separatamente. Questo incremento arriva al primo turno; l'intera avventura
 resta nel perimetro di #33. Le sessioni precedenti conservano il percorso
 dimostrativo descritto sotto, comprese le sue conferme manuali dell'Ombra.
+
+## Carte coperte: prova P0
+
+Il consumer fisico gestisce due mazzi comuni da28 copie, conseguenze coperte,
+prevenzione concessa dalla fonte e scarti casuali sotto i mazzi, con recupero
+e ricevute atomici. È verificato con un **programma sintetico dichiarato**:
+parametri, stati, testi e crediti inventati, nello stesso consumer scenario.
+Non abilita danni liberi, pulsanti debug o nuovi incontri originali.
+
+Solo quella fonte richiede il raw privato `physical-content.json` nella cartella
+dati, oppure `LOTR_PHYSICAL_PACK`: deve essere il raw verificabile dal catalogo,
+non un export di famiglia o un certificato. Danni e paure vengono validati
+separatamente; i benefici irrisolti non bloccano queste famiglie. Una volta
+congelato, il salvataggio non richiede più quel file. I tavoli precedenti
+mantengono il consumer fisico assente, senza inizializzazione retroattiva.
+
+Le viste di gioco espongono soltanto retro e conteggi. Il backup completo e il
+database del PC conservano invece anche identità e ordine delle carte nascoste:
+sono materiale privato di recupero. Fronti, capacità originali e Ultimo Sforzo
+mantengono i rispettivi gate. [Contratto e prove P0](docs/testing/physical-resolution-p0-verification.md).
 
 ## Turni e fasi del round
 
