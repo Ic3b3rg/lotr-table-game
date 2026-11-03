@@ -1,6 +1,25 @@
 import { z } from 'zod';
 import { ContentIdSchema } from './catalog';
 import { LastStandViewSchema } from './last-stand';
+import { StatSchema } from './skill-tests';
+
+export const SourceTestViewSchema = z.strictObject({
+  heroId: ContentIdSchema,
+  stat: StatSchema,
+  target: z.int().min(1).max(99).nullable(),
+  successes: z.int().nonnegative(),
+  fateRemaining: z.int().nonnegative(),
+  cards: z
+    .array(
+      z.strictObject({
+        skillId: ContentIdSchema,
+        name: z.string().max(1000),
+        success: z.int().nonnegative(),
+        fate: z.int().nonnegative(),
+      }),
+    )
+    .max(30),
+});
 
 export const PhysicalFamilySchema = z.enum(['damage', 'fear']);
 export const PhysicalCountsSchema = z.strictObject({
@@ -64,6 +83,12 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('test'),
+    hero: slot,
+    stat: StatSchema,
+    target: z.int().min(1).max(99).nullable(),
+  }),
   LegacyPhysicalProgramSchema.shape.children.element.options[0].extend({
     negate: z.enum(['might', 'wisdom', 'agility', 'spirit', 'wit']).optional(),
   }),
@@ -193,6 +218,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
 export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
   kind: z.enum([
+    'test',
     'suffer',
     'discard',
     'flip',
@@ -204,6 +230,7 @@ export const PhysicalResultSchema = z.strictObject({
     'rally-scout',
   ]),
   heroId: ContentIdSchema,
+  successes: z.int().min(0).max(999).optional(),
   prevented: PhysicalCountsSchema,
   transferred: PhysicalCountsSchema,
   returned: PhysicalCountsSchema,
@@ -227,6 +254,7 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  sourceTest: SourceTestViewSchema.nullable().optional(),
   lastStand: LastStandViewSchema.optional(),
   cycle: z
     .strictObject({
@@ -239,11 +267,17 @@ export const PhysicalViewSchema = z.strictObject({
         })
         .nullable(),
       heroes: z
-        .array(z.strictObject({ heroId: ContentIdSchema, travelMoves: z.int().min(0).max(2) }))
+        .array(
+          z.strictObject({
+            heroId: ContentIdSchema,
+            travelMoves: z.int().min(0).max(2),
+            interactInspiration: z.int().nonnegative().optional(),
+          }),
+        )
         .max(5),
     })
     .optional(),
-  synthetic: z.literal(true),
+  synthetic: z.boolean(),
   decks: PhysicalCountsSchema,
   heroes: z
     .array(z.strictObject({ heroId: ContentIdSchema, facedown: PhysicalCountsSchema }))

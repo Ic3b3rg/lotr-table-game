@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
-import { PhysicalProgramSchema } from './physical';
+import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
+import { StatSchema } from './skill-tests';
 
 export const SourceTextSchema = z
   .array(
@@ -73,11 +74,53 @@ const action = <O extends string, T extends z.ZodRawShape>(op: O, shape: T) =>
   z.strictObject({ ...actionBase, op: z.literal(op), ...shape });
 // No executable strings, catch-all action or unknown-action fallback.
 export const ScenarioActionSchema = z.discriminatedUnion('op', [
+  action('confirm', {
+    text: SourceTextSchema,
+    label: SourceTextSchema,
+    cancelLabel: SourceTextSchema,
+    confirmEvent: z.string().min(1).max(100),
+    cancelEvent: z.string().min(1).max(100),
+  }),
+  action('sourceTest', {
+    text: SourceTextSchema,
+    stat: StatSchema,
+    target: z.int().min(1).max(99),
+    passEvent: z.string().min(1).max(100),
+    failEvent: z.string().min(1).max(100),
+  }),
+  action('challenge', {
+    text: SourceTextSchema,
+    stat: StatSchema,
+    sum: VariableRefSchema,
+    bounds: z
+      .array(z.strictObject({ maximum: z.int().min(0).max(99), event: z.string().min(1).max(100) }))
+      .min(1)
+      .max(20),
+  }),
+  action('choice', {
+    text: SourceTextSchema,
+    options: z
+      .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
+      .min(1)
+      .max(20),
+    cancel: z
+      .strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema })
+      .nullable(),
+  }),
+  action('nullProduct', { products: z.tuple([z.null()]), falseEvent: z.string().min(1).max(100) }),
+  action('lore', { amount: z.int().min(1).max(99) }),
   action('physical', { text: SourceTextSchema, program: PhysicalProgramSchema }),
   action('message', {
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
+    consequence: z
+      .strictObject({
+        family: z.enum(['damage', 'fear']),
+        amount: z.int().min(1).max(56),
+        face: z.enum(['faceup', 'facedown']),
+      })
+      .optional(),
   }),
   action('getStart', { target: VariableRefSchema }),
   action('revealTile', { tile }),
@@ -162,7 +205,13 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
-    scope: z.enum(['startup-only', 'synthetic-physical-p0', 'synthetic-physical-p1']),
+    scope: z.enum([
+      'startup-only',
+      'synthetic-physical-p0',
+      'synthetic-physical-p1',
+      'original-encounter-v1',
+    ]),
+    playablePrefabs: z.array(SourceSchema).length(1).optional(),
     evidenceHash: HashSchema,
     prefabs: z
       .array(
@@ -179,6 +228,9 @@ export const ScenarioPackSchema = z.strictObject({
           closureHash: HashSchema,
           inspection: SourceTextSchema,
           capabilities: z.array(z.string().min(1).max(100)).min(1).max(20),
+          progress: z
+            .strictObject({ firstPass: VariableRefSchema, total: VariableRefSchema })
+            .optional(),
         }),
       )
       .min(1)
@@ -188,6 +240,36 @@ export const ScenarioPackSchema = z.strictObject({
 export type ScenarioPack = z.infer<typeof ScenarioPackSchema>;
 export type ScenarioDefinition = z.infer<typeof ScenarioDefinitionSchema>;
 export type VariableRef = z.infer<typeof VariableRefSchema>;
+export const EncounterInputSchema = z.discriminatedUnion('kind', [
+  ...PhysicalInputSchema.options,
+  z.strictObject({ kind: z.literal('ack') }),
+  z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
+]);
+const playBinding = {
+  expectedRevision: z.int().nonnegative(),
+  scenarioId: z.uuid(),
+  packFingerprint: HashSchema,
+  projectionFingerprint: HashSchema,
+};
+export const EncounterIntentSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...playBinding,
+    type: z.literal('INTERACT_SCENARIO'),
+    instanceId: z.string().min(1).max(200),
+    heroId: ContentIdSchema,
+    roundId: z.uuid(),
+    turnId: z.uuid(),
+    sourceFingerprint: HashSchema,
+  }),
+  z.strictObject({
+    ...playBinding,
+    type: z.literal('SCENARIO_INPUT'),
+    pendingId: z.uuid(),
+    sourceFingerprint: HashSchema,
+    heroId: ContentIdSchema.nullable(),
+    input: EncounterInputSchema,
+  }),
+]);
 export const ScenarioInstanceSchema = z.strictObject({
   id: z.string().min(1).max(200),
   kind: z.enum(['principal', 'timer', 'encounter']),
@@ -210,7 +292,21 @@ export const ScenarioRequestSchema = z.strictObject({
   state: z.int().nonnegative(),
   entry: z.int().nonnegative(),
   action: z.int().min(-1),
-  kind: z.enum(['message', 'placement', 'scout', 'test', 'objective', 'handoff', 'physical']),
+  kind: z.enum([
+    'message',
+    'placement',
+    'scout',
+    'test',
+    'objective',
+    'handoff',
+    'physical',
+    'choice',
+  ]),
+  options: z
+    .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
+    .min(1)
+    .max(21)
+    .optional(),
   text: SourceTextSchema,
   heroId: ContentIdSchema.nullable(),
   actorPlayerId: z.uuid().nullable(),
@@ -232,6 +328,42 @@ const taskBase = {
   action: z.int().nonnegative(),
 };
 export const ScenarioSchema = z.strictObject({
+  play: z
+    .strictObject({
+      active: z.uuid().nullable(),
+      lore: z.int().nonnegative(),
+      attempts: z
+        .array(
+          z.strictObject({
+            id: z.uuid(),
+            instanceId: z.string().max(200),
+            heroId: ContentIdSchema,
+            playerId: z.uuid(),
+            roundId: z.uuid(),
+            turnId: z.uuid(),
+            requestId: z.string().min(24).max(80),
+            cost: z.literal(1),
+            returned: z.boolean(),
+            interrupted: z.literal('hero-defeated').optional(),
+          }),
+        )
+        .max(1000),
+      tests: z
+        .array(
+          z.strictObject({
+            attemptId: z.uuid(),
+            source: z.string().max(300),
+            runId: z.uuid(),
+            heroId: ContentIdSchema,
+            stat: StatSchema,
+            target: z.int().min(1).max(99).nullable(),
+            successes: z.int().nonnegative(),
+            total: z.int().min(0).max(99).nullable(),
+          }),
+        )
+        .max(1000),
+    })
+    .optional(),
   id: z.uuid(),
   pack: ScenarioPackSchema,
   packFingerprint: HashSchema,

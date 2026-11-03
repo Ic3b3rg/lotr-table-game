@@ -22,6 +22,7 @@ const BaseStateSchema = SessionSchema.omit({
   skillTest: true,
   scout: true,
   round: true,
+  encounterFingerprints: true,
 }).extend({
   content: CatalogSchema.nullable(),
   preparation: PreparationSchema.nullable().default(null),
@@ -185,11 +186,29 @@ export function parseState(raw: unknown): State {
       )
         throw new Error('Regole Ultimo Sforzo non valide per uno schema storico.');
     }
+    if (typeof version === 'number' && version <= 14) {
+      const old = raw as Record<string, unknown>;
+      const sc = old.scenario as {
+        pack?: { manifest?: { scope?: string } };
+        play?: unknown;
+      } | null;
+      const physical = old.physical as { cycle?: { version?: number } } | null;
+      if (
+        sc?.pack?.manifest?.scope === 'original-encounter-v1' ||
+        sc?.play ||
+        physical?.cycle?.version === 2
+      )
+        throw new Error('Consumer originale non valido per uno schema storico.');
+    }
+    if (version === 14) {
+      const previous = BaseStateSchema.extend({ schemaVersion: z.literal(14) }).parse(raw);
+      return StateSchema.parse({ ...previous, schemaVersion: 15 });
+    }
     if (version === 13) {
       const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(13) }).parse(
         raw,
       );
-      return StateSchema.parse({ ...previous, schemaVersion: 14 });
+      return StateSchema.parse({ ...previous, schemaVersion: 15 });
     }
     if (version === 12) {
       const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(
@@ -197,44 +216,44 @@ export function parseState(raw: unknown): State {
       );
       if (previous.physical?.version === 3 || previous.physical?.cycle)
         throw new Error('Ledger ordinario non valido per schema12.');
-      return StateSchema.parse({ ...previous, schemaVersion: 14 });
+      return StateSchema.parse({ ...previous, schemaVersion: 15 });
     }
     if (version === 11) {
       const legacy = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
       if (legacy.physical && legacy.physical.version !== 1)
         throw new Error('Runtime fronti non valido per schema11.');
-      return StateSchema.parse({ ...legacy, schemaVersion: 14 });
+      return StateSchema.parse({ ...legacy, schemaVersion: 15 });
     }
     if (version === 10)
       return StateSchema.parse({
         ...VersionTenStateSchema.parse(raw),
-        schemaVersion: 14,
+        schemaVersion: 15,
         physical: null,
       });
     if (version === 9)
       return StateSchema.parse({
         ...VersionNineStateSchema.parse(raw),
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
       });
     if (version === 8)
       return StateSchema.parse({
         ...VersionEightStateSchema.parse(raw),
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 7)
       return StateSchema.parse({
         ...VersionSevenStateSchema.parse(raw),
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -244,7 +263,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFiveStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -255,7 +274,7 @@ export function parseState(raw: unknown): State {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -270,7 +289,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -290,7 +309,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -304,7 +323,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 14,
+        schemaVersion: 15,
         scenario: null,
         mapGeneration: null,
         group: null,

@@ -24,6 +24,7 @@ const certificate = z.strictObject({
               type: z.string().min(1).max(200),
               parameterHash: HashSchema,
               enabled: z.literal(true),
+              instructionHash: HashSchema.optional(),
             }),
           )
           .max(100),
@@ -84,7 +85,7 @@ export function compileScenarioPack(raw: unknown) {
       const source = c.states.find((v) => v.index === s.index);
       invariant(source, 'Stato senza fonte.');
       invariant(
-        digest(source.actions) ===
+        digest(source.actions.map(({ instructionHash: _, ...a }) => a)) ===
           digest(
             s.actions.map((a) => ({
               index: a.index,
@@ -95,6 +96,13 @@ export function compileScenarioPack(raw: unknown) {
           ),
         'Azioni omesse/alterate rispetto alla fonte.',
       );
+      if (pack.manifest.scope === 'original-encounter-v1')
+        invariant(
+          s.actions.every(
+            (a) => source.actions.find((x) => x.index === a.index)?.instructionHash === digest(a),
+          ),
+          'Istruzione non attestata dai campi fonte.',
+        );
       invariant(
         Object.entries(s.transitions).every(([e, to]) => source.transitions[e] === to),
         'Transizione non certificata.',

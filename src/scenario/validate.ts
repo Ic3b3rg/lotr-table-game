@@ -14,11 +14,16 @@ import { invariant } from '../map-freeze/validate';
 import { parseScenarioPack, validateScenarioBinding } from './pack';
 import { projectionToJourney } from './geometry';
 import { validateScenarioPhysical, validatePhysicalReceipts } from './physical';
+import { validatePhysicalCycle, validateCycleReceipts } from '../server/physical-cycle';
 
 export function scenarioStateProblem(state: State): string | null {
   try {
     const sc = state.scenario;
     if (!sc) return state.physical ? 'Consumer fisico senza scenario fonte.' : null;
+    if (state.physical?.cycle?.version === 2) {
+      validatePhysicalCycle(state);
+      return null;
+    }
     invariant(
       state.mapGeneration?.status === 'frozen' &&
         state.preparation?.status === 'prepared' &&
@@ -438,6 +443,14 @@ export function scenarioReceiptProblem(
       (c) => c.receipt.type === 'START_SCENARIO' || c.receipt.type === 'SCENARIO_INPUT',
     ),
     sc = state.scenario;
+  if (state.physical?.cycle?.version === 2) {
+    try {
+      validateCycleReceipts(state, commands);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Ledger originale non valido.';
+    }
+  }
   if (!sc) return records.length ? 'Ricevuta scenario senza consumer.' : null;
   if (records.length !== sc.commands.length) return 'Registro scenario incompleto.';
   for (const c of sc.commands) {

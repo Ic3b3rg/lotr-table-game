@@ -4,6 +4,18 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'encounter',
+    title: 'Incontro: ispezione, azione e progressi condivisi',
+    target: '#scenario',
+    action: 'Torna all’incontro',
+    paragraphs: [
+      'Nel turno dell’eroe, raggiungi la casella del segnalino e apri l’ispezione dalla mappa. Leggere e annullare è gratuito. Conferma la ricerca per spendere una sola azione. Le prove e le scelte successive continuano quell’interazione.',
+      'Il primo controllo superato appartiene alla Compagnia e rimane valido anche se un ramo fallisce o agisce un altro eroe. I successi del conteggio si accumulano nel segnalino. I progressi e la Sapienza ottenuta sono visibili nell’avventura.',
+      'Rivela le carte della prova indicata e usa soltanto le conversioni disponibili, pagando il costo. Una Scoperta o un’altra conseguenza figlia si completa prima della prova padre. La scelta obbligatoria rimane aperta fino alla decisione del proprietario.',
+      'Danni e paure risolvono le carte, le prevenzioni e l’eventuale Ultimo Sforzo prima di restituire il turno. I movimenti residui del viaggio rimangono disponibili nello stesso turno. Reload e ripristino ritrovano la stessa istruzione e gli stessi costi.',
+    ],
+  },
+  {
     id: 'physical',
     title: 'Danni, paure e Ultimo Sforzo: scelte e ripresa',
     target: '#scenario',
@@ -84,7 +96,7 @@ const TOPICS = [
     action: 'Vai al round',
     paragraphs: [
       'Un round comprende Azione, Ombra e Riorganizzazione. Nella Fase di Azione concordate l’ordine. Il proprietario seleziona il proprio eroe e inizia il turno; quell’eroe lo completa prima che ne inizi un altro.',
-      'Ogni eroe può svolgere fino a due azioni, anche uguali. Il tavolo gestisce viaggio e interazione con prova. Un’interazione consuma l’azione quando riveli le carte, anche se fallisci. Gli attacchi richiedono il combattimento, ancora in sviluppo.',
+      'Ogni eroe può svolgere fino a due azioni, anche uguali. Il tavolo gestisce viaggio e interazione con prova. Negli incontri originali l’interazione consuma l’azione alla conferma della ricerca, anche se la prova successiva fallisce. Gli attacchi richiedono il combattimento, ancora in sviluppo.',
       '“Concludi il turno” è disponibile anche con azioni non usate. Prima concludi ogni prova o Scoperta in corso. Quando tutti gli eroi hanno terminato, un partecipante conferma il passaggio all’Ombra.',
     ],
   },

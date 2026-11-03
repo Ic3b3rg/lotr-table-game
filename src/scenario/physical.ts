@@ -27,8 +27,9 @@ import { ApiError } from '../server/errors';
 import { sourceCursor, type SourceEffect } from './source-cursor';
 
 export function needsPhysical(pack: ScenarioPack) {
-  return pack.definitions.some((d) =>
-    d.states.some((s) => s.actions.some((a) => a.op === 'physical')),
+  return (
+    pack.manifest.scope === 'original-encounter-v1' ||
+    pack.definitions.some((d) => d.states.some((s) => s.actions.some((a) => a.op === 'physical')))
   );
 }
 export function loadPhysicalSource(path: string) {
@@ -92,7 +93,7 @@ export function initializeScenarioPhysical(
     })),
     undefined,
     source.rawSha256,
-    sc.pack.manifest.scope === 'synthetic-physical-p1'
+    ['synthetic-physical-p1', 'original-encounter-v1'].includes(sc.pack.manifest.scope)
       ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
       : undefined,
     source.lastStand,
@@ -154,7 +155,14 @@ export function physicalRequestData(
   active: PhysicalActive,
 ): Omit<ScenarioRequest, 'id' | 'fingerprint'> {
   const { action } = sourceCursor(state, effect);
-  invariant(action.op === 'physical', 'Richiesta fisica senza programma.');
+  invariant(
+    action.op === 'physical' ||
+      action.op === 'confirm' ||
+      action.op === 'sourceTest' ||
+      action.op === 'challenge' ||
+      (action.op === 'message' && action.consequence),
+    'Richiesta fisica senza programma fonte.',
+  );
   return {
     instanceId: effect.instanceId,
     state: effect.state,
@@ -262,7 +270,8 @@ export function validateScenarioPhysical(state: State) {
   validatePhysicalDefeat(state);
   validatePhysicalCycle(state);
   invariant(
-    (p.version !== 1) === (sc.pack.manifest.scope === 'synthetic-physical-p1'),
+    (p.version !== 1) ===
+      ['synthetic-physical-p1', 'original-encounter-v1'].includes(sc.pack.manifest.scope),
     'Profilo fronti diverso dalla fonte.',
   );
   if (p.version !== 1) {

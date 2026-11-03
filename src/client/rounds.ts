@@ -40,12 +40,14 @@ export function createRounds(sync: () => Promise<void>) {
         ),
     );
     const pending = Boolean(
-      current.physical?.active ||
+      current.scenario?.pending ||
+        current.physical?.active ||
         current.physical?.lastStand?.terminal ||
         current.scout ||
         current.skillTest?.status === 'converting',
     );
     const cycle = !!current.physical?.cycle;
+    const original = current.scenario?.pack.manifest.scope === 'original-encounter-v1';
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
     const allScouted = round?.heroes.every((hero) => hero.rallyDone);
     const active = round?.heroes.find((hero) => hero.heroId === round.activeHeroId);
@@ -79,7 +81,9 @@ export function createRounds(sync: () => Promise<void>) {
           ? 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
           : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
     form.hidden =
-      !player || Boolean(round?.activeHeroId) || (!!current.scenario && !!allEnded && !cycle);
+      !player ||
+      Boolean(round?.activeHeroId) ||
+      (!!current.scenario && !!allEnded && (!cycle || original));
     const choosing = Boolean(round?.phase === 'action' && !allEnded);
     element('#round-hero-field').hidden = !choosing;
     select.disabled = !choosing;
@@ -135,6 +139,13 @@ export function createRounds(sync: () => Promise<void>) {
       if (current.physical?.cycle?.pending)
         status.textContent =
           'Una capacità è in corso. Il turno e i suoi residui sono conservati: completa la decisione indicata nell’avventura.';
+    }
+    if (original) {
+      element('#round-phase-help').textContent =
+        'Ogni eroe può usare fino a due azioni. Apri la mappa per viaggiare e interagire con il segnalino disponibile. Il viaggio conserva i movimenti durante l’interazione. Fine turno risolve gli effetti delle carte prima di concludere.';
+      if (allEnded)
+        status.textContent =
+          'I turni sono conclusi. La Fase di Ombra originale richiede ancora i suoi effetti.';
     }
     end.dataset.blocked = String(!ownActive || pending);
     element('#round-observer').hidden = Boolean(player);

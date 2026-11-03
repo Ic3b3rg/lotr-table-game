@@ -2,7 +2,12 @@ import type { ScenarioAction } from '../shared/scenario';
 import { invariant } from '../map-freeze/validate';
 
 /** Source types whose bounded semantics have an explicit IR handler. */
-const sourceHandlers: Record<string, ScenarioAction['op']> = {
+const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op'][]> = {
+  'FFG.JIME.Actions.DisplayMessageCancelConfirm': ['confirm', 'sourceTest'],
+  'FFG.JIME.Actions.DisplayMessageChallenge': 'challenge',
+  'FFG.JIME.Actions.DisplayMessageMultipleChoice': 'choice',
+  'FFG.JIME.OwnsProducts': 'nullProduct',
+  'FFG.JIME.Actions.AddLore': 'lore',
   'Synthetic.PhysicalProgram': 'physical',
   'FFG.JIME.Actions.DisplayMessage': 'message',
   'FFG.JIME.Actions.GetStartTileId': 'getStart',
@@ -30,7 +35,7 @@ const sourceHandlers: Record<string, ScenarioAction['op']> = {
 export function validateSourceHandler(action: ScenarioAction) {
   invariant(
     Object.hasOwn(sourceHandlers, action.origin.type) &&
-      sourceHandlers[action.origin.type] === action.op,
+      [sourceHandlers[action.origin.type]].flat().includes(action.op),
     'Tipo fonte senza handler certificato corrispondente.',
   );
   if (action.op === 'set')

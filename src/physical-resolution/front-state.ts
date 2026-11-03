@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema } from '../shared/preparation';
-import { PhysicalActiveSchema } from '../shared/physical';
+import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
 export const FrontResourcesSchema = z.strictObject({
   preparation: PreparationSchema,
@@ -22,6 +22,7 @@ export const FrozenFrontsSchema = z.strictObject({
   catalog: CatalogSchema,
 });
 export const FrontSnapshotSchema = z.strictObject({
+  sourceTest: SourceTestViewSchema.nullable().optional(),
   resources: FrontResourcesSchema.nullable(),
   faceup: z.array(z.string().max(100)).max(56),
   frames: z

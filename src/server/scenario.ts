@@ -6,6 +6,7 @@ import { loadScenarioPack, validateScenarioBinding } from '../scenario/pack';
 import { beginScenario, resumeScenario } from '../scenario/runtime';
 import { ApiError } from './errors';
 import { needsPhysical, loadPhysicalSource } from '../scenario/physical';
+import { initializeOriginalCycle } from './physical-cycle';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -94,6 +95,11 @@ export function applyScenario(
     if (needsPhysical(parsed.pack)) {
       try {
         physical = loadPhysicalSource(physicalPath);
+        if (
+          parsed.pack.manifest.scope === 'original-encounter-v1' &&
+          (!physical.fronts || !physical.lastStand)
+        )
+          throw new Error('Closure fisica originale incompleta.');
       } catch {
         throw new ApiError(
           409,
@@ -116,10 +122,26 @@ export function applyScenario(
     kind,
     revision: state.revision + 1,
   });
+  if (
+    sc.phase === 'action' &&
+    sc.pack.manifest.scope === 'original-encounter-v1' &&
+    !state.physical!.cycle
+  )
+    initializeOriginalCycle(state);
   return { scenarioId: sc.id, pendingId, source, kind, phase: sc.phase };
 }
 export function allowScenarioPlay(state: State, command: Command) {
   const sc = state.scenario!;
+  const original =
+    sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;
+  if (original && command.type === 'SCENARIO_INPUT' && sc.pending) return;
+  if (original && command.type === 'CYCLE_INPUT' && state.physical!.cycle!.pending) return;
+  if (sc.pending)
+    throw new ApiError(
+      409,
+      'SCENARIO_PENDING',
+      'Concludi la richiesta dell’avventura prima delle altre azioni.',
+    );
   if (state.physical?.snapshot.active)
     throw new ApiError(
       409,
@@ -134,7 +156,8 @@ export function allowScenarioPlay(state: State, command: Command) {
     );
   const allowed =
     sc.phase === 'action' &&
-    ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type);
+    (['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type) ||
+      (original && command.type === 'INTERACT_SCENARIO'));
   if (!allowed)
     throw new ApiError(
       409,

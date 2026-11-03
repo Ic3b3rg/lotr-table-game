@@ -14,6 +14,16 @@ import { invariant } from '../map-freeze/validate';
 import { ApiError } from './errors';
 import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
+import { EncounterIntentSchema } from '../shared/scenario';
+import { z } from 'zod';
+import { interactScenario } from '../scenario/runtime';
+import { applyScenario, allowScenarioPlay } from './scenario';
+import { scenarioStateProblem, scenarioReceiptProblem } from '../scenario/validate';
+
+const originalIntents = z.discriminatedUnion('type', [
+  ...CycleIntentSchema.options,
+  ...EncounterIntentSchema.options,
+]);
 
 const ordinary = new Set(CycleIntentSchema.options.map((o) => o.shape.type.value));
 import { cycleUUID as uuid, cycleRequest } from '../physical-resolution/cycle-request';
@@ -143,6 +153,35 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     );
   if (c.expectedRevision !== state.revision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
+  if (cycle.version === 2)
+    allowScenarioPlay(state, { ...c, requestId: record.requestId, generation: state.generation });
+  if (c.type === 'INTERACT_SCENARIO' || c.type === 'SCENARIO_INPUT') {
+    invariant(cycle.version === 2, 'Comando fonte in un ledger storico.');
+    const command = { ...c, requestId: record.requestId, generation: state.generation };
+    if (command.type === 'SCENARIO_INPUT') {
+      const result = applyScenario(state, record.playerId, command, '', '');
+      return { ...base, type: command.type, ...result };
+    }
+    interactScenario(state, record.playerId, command);
+    const sc = state.scenario!;
+    sc.commands.push({
+      playerId: record.playerId,
+      requestId: record.requestId,
+      pendingId: null,
+      source: c.sourceFingerprint,
+      kind: 'interact',
+      revision: base.appliedRevision,
+    });
+    return {
+      ...base,
+      type: 'INTERACT_SCENARIO',
+      scenarioId: sc.id,
+      pendingId: null,
+      source: c.sourceFingerprint,
+      kind: 'interact',
+      phase: sc.phase,
+    };
+  }
   if (c.type === 'CYCLE_INPUT') {
     p.cycle = cycle;
     const q = cycleRequest(p),
@@ -189,6 +228,13 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   }
   if (cycle.pending || p.snapshot.active)
     fail('PHYSICAL_PENDING', 'Concludi la conseguenza corrente prima di proseguire nel round.');
+  if (cycle.version === 2 && (state.scenario!.pending || state.scenario!.play!.active))
+    fail('SCENARIO_PENDING', 'Concludi l’incontro prima di proseguire nel turno.');
+  if (
+    cycle.version === 2 &&
+    ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'END_RALLY', 'START_RALLY_SCOUT'].includes(c.type)
+  )
+    fail('SCENARIO_CAPABILITY', 'La fonte originale della Fase di Ombra non è ancora disponibile.');
   if (round.id !== c.roundId) fail('ROUND_CHANGED', 'Questo round è concluso o è cambiato.');
   if (state.scout || state.skillTest?.status === 'converting')
     fail('REVEAL_PENDING', 'Concludi le carte rivelate.');
@@ -338,8 +384,23 @@ function replay(state: State, cycle: CycleState): Replay {
     ...environment
   } = state;
   const { snapshot: _snapshot, cycle: _cycle, ...origin } = original;
-  const prefix = original.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
-  const context = digest({ environment, origin: { ...origin, runs: prefix }, seed: cycle.seed });
+  const prefix =
+    cycle.version === 2
+      ? []
+      : original.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
+  const context = digest({
+    environment:
+      cycle.version === 2
+        ? {
+            ...environment,
+            scenario: cycle.seed.scenario,
+            skillTest: cycle.seed.skillTest,
+            scout: null,
+          }
+        : environment,
+    origin: { ...origin, runs: prefix },
+    seed: cycle.seed,
+  });
   // Only a byte-equivalent canonical input prefix can reuse proof. Persisted
   // snapshots/runs/pending are outputs, still compared by the validators. Keep
   // one bounded entry and clone both ways so callers cannot change that proof.
@@ -373,6 +434,13 @@ function replay(state: State, cycle: CycleState): Replay {
         journey: structuredClone(cycle.seed.journey),
         physical: p,
         preparation: structuredClone(preparation),
+        ...(cycle.version === 2
+          ? {
+              scenario: structuredClone(cycle.seed.scenario!),
+              skillTest: structuredClone(cycle.seed.skillTest!),
+              scout: null,
+            }
+          : {}),
       },
       receipts: [],
     };
@@ -403,7 +471,8 @@ export function applyPhysicalCycle(
 ) {
   const p = state.physical!,
     { generation: _, requestId, ...intent } = command;
-  const c = CycleIntentSchema.parse(intent);
+  const c =
+    p.cycle?.version === 2 ? originalIntents.parse(intent) : CycleIntentSchema.parse(intent);
   if (state.revision !== c.expectedRevision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
   if (lastStand) {
@@ -435,7 +504,9 @@ export function applyPhysicalCycle(
   });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
-  for (const key of ['physical', 'preparation', 'round', 'journey'] as const)
+  for (const key of cycle.version === 2
+    ? (['physical', 'preparation', 'round', 'journey', 'scenario', 'skillTest', 'scout'] as const)
+    : (['physical', 'preparation', 'round', 'journey'] as const))
     Object.assign(state, { [key]: work[key] });
   return receipts.at(-1)!;
 }
@@ -448,11 +519,22 @@ export function validatePhysicalCycle(state: State) {
   invariant(
     p.version === 3 &&
       state.scenario?.phase === 'action' &&
-      state.scenario.pack.manifest.scope === 'synthetic-physical-p1',
+      state.scenario.pack.manifest.scope ===
+        (p.cycle.version === 2 ? 'original-encounter-v1' : 'synthetic-physical-p1'),
     'Ledger ordinario fuori dal consumer supportato.',
   );
+  if (p.cycle.version === 2) {
+    const seed = originalSeedState(state);
+    invariant(!scenarioStateProblem(seed), 'Origine originale non riconciliata con lo startup.');
+  } else
+    invariant(
+      p.cycle.records.length > 0 && !p.cycle.seed.scenario && p.cycle.seed.skillTest === undefined,
+      'Ledger storico reinterpretato.',
+    );
   const { work } = replay(state, p.cycle);
-  for (const key of ['physical', 'preparation', 'round', 'journey'] as const)
+  for (const key of p.cycle.version === 2
+    ? (['physical', 'preparation', 'round', 'journey', 'scenario', 'skillTest', 'scout'] as const)
+    : (['physical', 'preparation', 'round', 'journey'] as const))
     invariant(
       digest(work[key]) === digest(state[key]),
       `Ledger ordinario non riconciliato: ${key}.`,
@@ -467,9 +549,18 @@ export function validateCycleReceipts(
   const { receipts } = replay(state, cycle);
   const relevant = commands.filter(
     (c) =>
-      ordinary.has(c.receipt.type as CycleIntent['type']) &&
+      (ordinary.has(c.receipt.type as CycleIntent['type']) ||
+        (cycle.version === 2 &&
+          ['INTERACT_SCENARIO', 'SCENARIO_INPUT'].includes(c.receipt.type))) &&
       c.receipt.appliedRevision > cycle.seed.revision,
   );
+  if (cycle.version === 2) {
+    const error = scenarioReceiptProblem(
+      originalSeedState(state),
+      commands.filter((c) => c.receipt.appliedRevision <= cycle.seed.revision),
+    );
+    invariant(!error, error ?? 'Ricevute startup mancanti.');
+  }
   invariant(relevant.length === cycle.records.length, 'Ricevute del ciclo ordinario incomplete.');
   cycle.records.forEach((record, n) => {
     const stored = relevant.find(
@@ -491,4 +582,84 @@ export function validateCycleReceipts(
       'Intento/ricevuta del ciclo ordinario incoerenti.',
     );
   });
+}
+
+export function initializeOriginalCycle(state: State) {
+  const p = state.physical!,
+    sc = state.scenario!;
+  invariant(
+    sc.pack.manifest.scope === 'original-encounter-v1' &&
+      sc.phase === 'action' &&
+      !p.cycle &&
+      !p.runs.length,
+    'Confine originale duplicato o non iniziale.',
+  );
+  p.version = 3;
+  p.cycle = {
+    version: 2,
+    seed: {
+      revision: state.revision + 1,
+      round: structuredClone(state.round!),
+      journey: structuredClone(state.journey!),
+      preparation: structuredClone(state.preparation!),
+      scenario: structuredClone(sc),
+      skillTest: structuredClone(state.skillTest),
+    },
+    records: [],
+    pending: null,
+  };
+}
+function originalSeedState(state: State): State {
+  const p = structuredClone(state.physical!),
+    cycle = p.cycle!,
+    seed = cycle.seed,
+    sc = seed.scenario;
+  invariant(
+    cycle.version === 2 && sc && seed.preparation && seed.skillTest !== undefined,
+    'Ledger originale senza confine completo.',
+  );
+  invariant(
+    sc.pack.manifest.scope === 'original-encounter-v1' &&
+      digest(sc.pack) === digest(state.scenario!.pack) &&
+      sc.id === state.scenario!.id &&
+      sc.play &&
+      sc.play.active === null &&
+      !sc.play.attempts.length &&
+      !sc.play.tests.length &&
+      sc.play.lore === 0 &&
+      !sc.pending &&
+      !sc.tasks.length,
+    'Seed originale riscritto dopo lo startup.',
+  );
+  invariant(
+    seed.round.number === 1 &&
+      seed.round.phase === 'action' &&
+      !seed.round.activeHeroId &&
+      !seed.round.turnId &&
+      seed.round.heroes.every((h) => !h.actionsUsed && !h.turnEnded && !h.rallyDone) &&
+      !seed.journey.travel &&
+      seed.journey.heroes.every(
+        (h) => h.spaceId === seed.journey.definition.startSpaceId && !h.removed,
+      ),
+    'Il seed originale deve essere il primo confine round1/Azione.',
+  );
+  invariant(
+    seed.revision === sc.commands.at(-1)?.revision && sc.commands.at(-1)?.kind === 'ack',
+    'Confine originale senza handoff fonte.',
+  );
+  delete p.cycle;
+  p.version = 2;
+  p.runs = [];
+  p.snapshot = replayPhysical(p);
+  return {
+    ...state,
+    revision: seed.revision,
+    physical: p,
+    scenario: structuredClone(sc),
+    preparation: structuredClone(seed.preparation),
+    round: structuredClone(seed.round),
+    journey: structuredClone(seed.journey),
+    skillTest: structuredClone(seed.skillTest),
+    scout: null,
+  };
 }

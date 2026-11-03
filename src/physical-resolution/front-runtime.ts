@@ -18,6 +18,7 @@ import { FrontResourcesSchema, type FrontResources } from './front-state';
 import { canResolveAlternative } from './front-feasibility';
 import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
+import { STAT_LABELS } from '../shared/skill-tests';
 
 type Family = 'damage' | 'fear';
 type Decision = Extract<PhysicalActive, { kind: 'decision' }>;
@@ -1155,6 +1156,7 @@ class FrontReplay {
     path: string,
     negate = false,
     lastStand = false,
+    sourceTarget?: number | null,
   ): number {
     return this.frame(path, hero, null, 'test', 0, () => {
       const h = this.hero(hero),
@@ -1186,6 +1188,20 @@ class FrontReplay {
           0,
         );
       const updateTest = () => {
+        if (sourceTarget !== undefined)
+          this.r.sourceTest = {
+            heroId: h.heroId,
+            stat,
+            target: sourceTarget,
+            successes,
+            fateRemaining: fate,
+            cards: cards.map((c) => ({
+              skillId: definitionId(c),
+              name: this.skillName(c),
+              success: this.skillSymbols(c).success,
+              fate: this.skillSymbols(c).fate,
+            })),
+          };
         if (!lastStand) return;
         this.s.lastStand!.test = {
           heroId: h.heroId,
@@ -1249,7 +1265,7 @@ class FrontReplay {
         const title = `Prova: ${cards.map((c) => this.skillName(c)).join(', ')}. ${successes} successi.`;
         const decisionPath = `${path}/convert-${n++}`;
         let selected: string;
-        if (lastStand) {
+        if (lastStand || sourceTarget !== undefined) {
           const input = this.ask(hero, decisionPath, {
             mode: 'choose',
             title,
@@ -1338,6 +1354,7 @@ class FrontReplay {
       this.r.revealed.pop();
       h.discard.push(...cards);
       if (lastStand) this.s.lastStand!.test = null;
+      if (sourceTarget !== undefined) this.r.sourceTest = null;
       return successes;
     });
   }
@@ -1509,6 +1526,30 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'test': {
+              this.r.sourceTest = null;
+              const input = this.ask(child.hero, `${path}/reveal`, {
+                mode: 'choose',
+                title: `${STAT_LABELS[child.stat]}${child.target === null ? ' · conta i successi' : ` · difficoltà ${child.target}`}`,
+                options: [{ id: 'reveal', label: 'Rivela le carte della prova' }],
+                minimum: 1,
+                maximum: 1,
+                remaining: empty(),
+              });
+              invariant(
+                input.kind === 'physical-choice' && input.option === 'reveal',
+                'La prova fonte richiede il reveal.',
+              );
+              this.result.successes = this.test(
+                child.hero,
+                child.stat,
+                `${path}/source-test`,
+                false,
+                false,
+                child.target,
+              );
+              break;
+            }
             case 'end-turn':
               this.endTurn(child.hero, path);
               break;

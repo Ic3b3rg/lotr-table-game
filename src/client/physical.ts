@@ -8,6 +8,7 @@ import { element, text } from './dom';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { compileSourceText } from '../scenario/text';
 import { sourceText } from './source-text';
+import { cardButton, type CardReader } from './cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
@@ -31,6 +32,7 @@ export function createPhysicalControls(
   submit: (
     intent: ReturnType<typeof bindPhysicalAnswer> | ReturnType<typeof bindPhysicalDecision>,
   ) => void,
+  reader?: CardReader,
 ) {
   const root = element('#physical-resolution');
   let key = '',
@@ -50,11 +52,13 @@ export function createPhysicalControls(
       root.append(
         text(
           'p',
-          view.lastStand
-            ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
-            : view.fronts
-              ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
-              : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
+          !view.synthetic
+            ? 'Le conseguenze e le prove dell’incontro usano le carte della Compagnia. Completa l’istruzione indicata; il turno conserva azioni e movimenti residui.'
+            : view.lastStand
+              ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+              : view.fronts
+                ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+                : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
           'physical-notice',
         ),
       );
@@ -86,6 +90,33 @@ export function createPhysicalControls(
         areas.append(row);
       }
       root.append(areas);
+      if (view.sourceTest) {
+        const t = view.sourceTest;
+        root.append(
+          text(
+            'h4',
+            `Prova dell’incontro · ${name(t.heroId)} · ${STAT_LABELS[t.stat]}${t.target === null ? ' · conta i successi' : ` ${t.target}`}`,
+          ),
+        );
+        const cards = text('ul', '', 'physical-test-cards');
+        for (const c of t.cards) {
+          const row = text('li', `${c.success} successi · ${c.fate} fati`),
+            card =
+              catalog?.skills.find((skill) => skill.id === c.skillId) ??
+              session.physical?.lastStand?.titles.find((title) => title.skill.id === c.skillId)
+                ?.skill;
+          if (card && reader) row.prepend(cardButton(card, (caller) => reader.card(card, caller)));
+          else row.prepend(text('span', c.name));
+          cards.append(row);
+        }
+        const status = text(
+          'p',
+          `${t.successes} successi · ${t.fateRemaining} fati disponibili.`,
+          'physical-test-total',
+        );
+        status.setAttribute('role', 'status');
+        root.append(cards, status);
+      }
       if (view.lastStand) {
         const lastStand = view.lastStand;
         if (lastStand.terminal) {

@@ -9,6 +9,7 @@ import { createGameActions } from './game-actions';
 import { cardButton, type CardReader } from './cards';
 import { refreshActions } from './actions';
 import { createPhysicalControls } from './physical';
+import { STAT_LABELS } from '../shared/skill-tests';
 export function createScenario(sync: () => Promise<void>, reader: CardReader) {
   const root = element('#scenario'),
     status = element('#scenario-status'),
@@ -21,7 +22,8 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     catalog: Catalog | null = null,
     offer: z.infer<typeof ScenarioOfferSchema> | null = null,
     key = '',
-    resultsKey = '';
+    resultsKey = '',
+    progressKey = '';
   const commands = createGameActions(
     () => current,
     sync,
@@ -32,7 +34,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
   );
   const physical = createPhysicalControls((intent) => {
     void commands.submit(intent, true);
-  });
+  }, reader);
   function controls() {
     if (!current) return;
     const sc = current.scenario,
@@ -44,7 +46,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     );
     const own = !!player && (!q?.actorPlayerId || q.actorPlayerId === player.id);
     const openCards = !!q && (q.kind === 'scout' || q.kind === 'test') && q.stage === 'revealed';
-    next.hidden = !q || !own || openCards || q.kind === 'physical';
+    next.hidden = !q || !own || openCards || q.kind === 'physical' || q.kind === 'choice';
     next.textContent =
       q?.kind === 'scout'
         ? 'Rivela Scoperta 2'
@@ -61,6 +63,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       actor = current.players.find((p) => p.id === q?.actorPlayerId);
     const active = current.round?.activeHeroId;
     const activeHero = catalog?.heroes.find((h) => h.id === active);
+    const turnsEnded =
+      sc?.pack.manifest.scope === 'original-encounter-v1' &&
+      current.round?.heroes.every((h) => h.turnEnded);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
       : current.physical?.cycle?.pending
@@ -69,13 +74,17 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           ? current.physical?.active?.kind === 'gate'
             ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
             : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
-          : q?.heroId
-            ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-            : q
-              ? 'Un partecipante conferma per il gruppo.'
-              : activeHero
-                ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                : 'Avvio completato · scegliete il prossimo eroe di turno.';
+          : q?.kind === 'choice'
+            ? `${actor?.name ?? 'Il proprietario indicato'} sceglie come proseguire. L’azione è già pagata; la scelta è obbligatoria.`
+            : q?.heroId
+              ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+              : q
+                ? 'Un partecipante conferma per il gruppo.'
+                : activeHero
+                  ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+                  : turnsEnded
+                    ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                    : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -84,12 +93,16 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       q?.kind === 'scout' ? '#scouting' : '#skill-tests';
     element('#scenario-turn-link').hidden = sc?.phase !== 'action';
     const turnLink = element<HTMLAnchorElement>('#scenario-turn-link');
+    turnLink.hidden ||= !!turnsEnded;
     turnLink.textContent = active ? 'Apri la mappa del turno' : 'Scegli il prossimo turno';
     turnLink.href = active ? '#journey-map' : '#rounds';
     element('#scenario-limit').hidden = sc?.phase !== 'action';
     if (current.physical?.cycle)
       element('#scenario-limit').textContent =
         'Turni, viaggio e Riorganizzazione usano gli effetti attivi. Gli incontri originali, il combattimento e l’Ombra originale restano da implementare; le conferme Ombra della fonte sintetica sono manuali.';
+    if (sc?.pack.manifest.scope === 'original-encounter-v1')
+      element('#scenario-limit').textContent =
+        'Il segnalino iniziale certificato è giocabile. Ulteriori incontri ed esplorazioni, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.';
     refreshActions();
   }
   agreed.oninput = () => {
@@ -150,6 +163,35 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         commands.clear();
         element('#scenario-error').hidden = true;
         body.replaceChildren(...(q ? [sourceText(q.text)] : []));
+        if (q?.kind === 'choice' && (!q.actorPlayerId || q.actorPlayerId === identity?.id)) {
+          const fields = document.createElement('fieldset'),
+            legend = text('legend', 'Scegli come proseguire');
+          fields.append(legend);
+          for (const o of q.options ?? []) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'company-action';
+            b.dataset.write = '';
+            b.dataset.event = o.event;
+            b.append(sourceText(o.label));
+            b.onclick = () =>
+              void commands.submit(
+                {
+                  type: 'SCENARIO_INPUT',
+                  scenarioId: sc!.id,
+                  packFingerprint: sc!.packFingerprint,
+                  projectionFingerprint: sc!.projectionFingerprint,
+                  pendingId: q.id,
+                  sourceFingerprint: q.fingerprint,
+                  heroId: q.heroId,
+                  input: { kind: 'choice', event: o.event },
+                },
+                true,
+              );
+            fields.append(b);
+          }
+          body.append(fields);
+        }
         const objective = element('#scenario-objective');
         objective.replaceChildren(...(sc?.objective ? [sourceText(sc.objective.text)] : []));
         objective.hidden = !sc?.objective;
@@ -185,6 +227,53 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           row.append(details);
           results.append(row);
         }
+      }
+      const progress = element('#scenario-play-progress');
+      progress.hidden = !sc?.play;
+      const nextProgress = JSON.stringify([
+        session.generation,
+        content?.id,
+        sc?.play,
+        sc?.instances.map((i) => [i.id, i.variables, i.stopped]),
+        session.round?.heroes,
+        session.journey?.travel,
+      ]);
+      if (sc?.play && progressKey !== nextProgress) {
+        progressKey = nextProgress;
+        const summary = [];
+        for (const source of sc.pack.manifest.playablePrefabs ?? []) {
+          const m = sc.pack.manifest.prefabs.find((p) => p.source === source)!,
+            i = sc.instances.find((i) => i.prefab === source);
+          if (i && m.progress)
+            summary.push(
+              text(
+                'p',
+                `${i.stopped ? 'Segnalino concluso' : 'Ricerca disponibile'} · ${i.variables[m.progress.firstPass.name] ? 'Primo controllo superato per la Compagnia' : 'Primo controllo da superare'} · Successi accumulati: ${i.variables[m.progress.total.name]}.`,
+                'company-help',
+              ),
+            );
+        }
+        const attempt = sc.play.attempts.find((a) => a.id === sc.play!.active);
+        if (attempt)
+          summary.push(
+            text(
+              'p',
+              `Interazione di ${content?.heroes.find((h) => h.id === attempt.heroId)?.name.text ?? 'un eroe'} · 1 azione pagata · ${2 - (session.round?.heroes.find((h) => h.heroId === attempt.heroId)?.actionsUsed ?? 0)} azioni disponibili · ${session.journey?.travel?.remaining ?? 0} movimenti residui.`,
+              'company-help',
+            ),
+          );
+        else if (sc.play.attempts.at(-1)?.interrupted === 'hero-defeated')
+          summary.push(text('p', 'Interazione terminata: l’eroe è sconfitto.', 'company-help'));
+        summary.push(text('p', `Sapienza ottenuta: ${sc.play.lore}.`, 'company-help'));
+        for (const t of sc.play.tests.slice(-5))
+          summary.push(
+            text(
+              'p',
+              `${content?.heroes.find((h) => h.id === t.heroId)?.name.text ?? t.heroId} · ${STAT_LABELS[t.stat]}${t.target === null ? '' : ` ${t.target}`} · ${t.successes} successi${t.total === null ? '' : ` · totale condiviso ${t.total}`}.`,
+              'company-help',
+            ),
+          );
+        progress.replaceChildren(...summary);
       }
       element('#scenario-results-details').hidden = !sc?.completedSetup.length;
       controls();

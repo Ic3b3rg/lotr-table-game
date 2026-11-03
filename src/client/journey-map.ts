@@ -1,5 +1,5 @@
 import { scenarioMapView } from '../shared/scenario-map';
-import { sourceText } from './source-text';
+import { createEncounterInspection } from './encounter-inspection';
 import type { Catalog } from '../shared/catalog';
 import { adjacent, JourneyPlanSchema, type JourneyPlan } from '../shared/journey-map';
 import type { Player, Session } from '../shared/protocol';
@@ -33,26 +33,11 @@ export function createJourneyMap(sync: () => Promise<void>) {
     element('#map-error'),
     controls,
   );
-  const nodeDialog = document.createElement('dialog');
-  nodeDialog.className = 'scenario-node-dialog';
-  nodeDialog.setAttribute('aria-label', 'Ispeziona il segnalino');
-  const nodeText = document.createElement('div'),
-    nodeInfo = text(
-      'p',
-      'Le interazioni di questo segnalino richiedono effetti ancora in sviluppo. Ispezionare e annullare non spende azioni.',
-      'company-help',
-    );
-  const commit = text(
-    'button',
-    'Interagisci · non disponibile',
-    'company-action',
-  ) as HTMLButtonElement;
-  commit.disabled = true;
-  const close = text('button', 'Chiudi ispezione', 'company-action') as HTMLButtonElement;
-  close.type = 'button';
-  close.onclick = () => nodeDialog.close();
-  nodeDialog.append(nodeText, nodeInfo, commit, close);
-  root.append(nodeDialog);
+  const inspection = createEncounterInspection(root, async (intent) => {
+    const done = await commands.submit(intent);
+    if (done) element('#scenario-status').focus();
+    return done;
+  });
   const tokens = element('#map-nodes');
   const board = createMapBoard((id) => {
     select.value = id;
@@ -65,7 +50,8 @@ export function createJourneyMap(sync: () => Promise<void>) {
     const journey = current.journey;
     const round = current.round;
     const pending = Boolean(
-      current.physical?.active ||
+      current.scenario?.pending ||
+        current.physical?.active ||
         current.physical?.lastStand?.terminal ||
         current.scout ||
         current.skillTest?.status === 'converting',
@@ -212,6 +198,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
     update(session: Session, identity: Player | null, content: Catalog | null) {
       current = session;
       player = identity;
+      inspection.update(session, identity);
       catalog = content;
       root.hidden = !content || session.preparation?.status !== 'prepared';
       if (root.hidden || !catalog) return;
@@ -246,8 +233,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
               ) as HTMLButtonElement;
               b.type = 'button';
               b.onclick = () => {
-                nodeText.replaceChildren(sourceText(n.content.inspection));
-                nodeDialog.showModal();
+                inspection.open(n.instanceId);
               };
               return b;
             }),
