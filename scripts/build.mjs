@@ -40,6 +40,7 @@ for (const [entry, outfile] of [
   ['src/map-freeze/index.ts', 'dist/map-freeze-library.mjs'],
   ['src/map-freeze/worker.ts', 'dist/map-generation-worker.mjs'],
   ['src/physical-content/catalog.ts', 'dist/physical-content-library.mjs'],
+  ['src/physical-content/main.ts', 'dist/physical-content.mjs'],
 ]) {
   await build({
     entryPoints: [entry],
