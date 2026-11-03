@@ -1,3 +1,4 @@
+import type { Receipt } from '../shared/protocol';
 import type { Catalog } from '../shared/catalog';
 import type { Preparation } from '../shared/preparation';
 import type { MapGeneration } from '../shared/generated-map';
@@ -20,7 +21,7 @@ export function generationStateProblem(state: GenerationState): string | null {
     if (!g) return null;
     invariant(state.preparation?.status === 'prepared' && state.content, 'Compagnia non pronta.');
     invariant(
-      !state.journey && !state.round && !state.scout && state.skillTest?.status !== 'converting',
+      !state.journey && !state.round && !state.scout && !state.skillTest,
       'Realizzazione e consumer legacy non possono coesistere.',
     );
     const c = g.status === 'frozen' ? g.projection.context : g.job.context;
@@ -102,7 +103,6 @@ export function generationStateProblem(state: GenerationState): string | null {
   }
 }
 
-import type { Receipt } from '../shared/protocol';
 export function generationReceiptProblem(
   state: GenerationState,
   commands: { playerId: string; requestId: string; receipt: Receipt }[],

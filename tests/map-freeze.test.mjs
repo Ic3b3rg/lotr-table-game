@@ -191,16 +191,53 @@ test('la proiezione conserva e controlla requisiti fissi e origine delle assegna
   assert.throws(() => validateProjection(rehash(x)));
 });
 
-test('la ripresa ricostruisce dal seed richiesto i confini puliti e rifiuta pool alterati anche se rehashed',async()=>{
-  const {runGenerationAttempt,verifyPendingReplay,GENERATION_POLICY}=await import('../dist/map-freeze-library.mjs');
-  const {addEncounter,synchronize}=await import('./fixtures/map-encounters.mjs');
-  const state=company(),raw=generatorFixture(state.content),holder={assembly:{selection:raw.template.selection},placement:raw.template.placement};
-  const section=raw.template.placement.sections[0];section.tileEncounters.push(structuredClone(section.tileEncounters[0]));addEncounter(holder,{type:0});synchronize(holder);
-  const pack=parseGeneratorPack(raw),context=deriveContext(pack,state),failed=runGenerationAttempt(pack,context,{requestedSeed:3,seed:3,attempt:0,incoming:pack.template.selection.incoming,attempts:[]});
-  assert.equal(failed.status,'failed');assert.equal(failed.retry,true);
-  const job={id:randomUUID(),packFingerprint:hash(pack),contextFingerprint:hash(context),context,requestedSeed:3,seed:4,attempt:1,incoming:failed.incoming,attempts:[failed.record],policy:GENERATION_POLICY};
-  assert.equal(verifyPendingReplay(pack,job),true);
-  const forged=structuredClone(job);forged.incoming.randomEncounterPool.push(raw.template.placement.models[0].source);forged.attempts[0].retainedFingerprint=hash(forged.incoming);
-  assert.throws(()=>verifyPendingReplay(pack,forged));
-  const wrong=structuredClone(job);wrong.attempts[0].rng.seedArray[1]++;assert.throws(()=>verifyPendingReplay(pack,wrong));
+test('la ripresa ricostruisce dal seed richiesto i confini puliti e rifiuta pool alterati anche se rehashed', async () => {
+  const { runGenerationAttempt, verifyPendingReplay, GENERATION_POLICY } = await import(
+    '../dist/map-freeze-library.mjs'
+  );
+  const { addEncounter, synchronize } = await import('./fixtures/map-encounters.mjs');
+  const state = company(),
+    raw = generatorFixture(state.content),
+    holder = { assembly: { selection: raw.template.selection }, placement: raw.template.placement };
+  const section = raw.template.placement.sections[0];
+  section.tileEncounters.push(structuredClone(section.tileEncounters[0]));
+  addEncounter(holder, { type: 0 });
+  synchronize(holder);
+  const pack = parseGeneratorPack(raw),
+    context = deriveContext(pack, state),
+    failed = runGenerationAttempt(pack, context, {
+      requestedSeed: 3,
+      seed: 3,
+      attempt: 0,
+      incoming: pack.template.selection.incoming,
+      attempts: [],
+    });
+  assert.equal(failed.status, 'failed');
+  assert.equal(failed.retry, true);
+  const job = {
+    id: randomUUID(),
+    packFingerprint: hash(pack),
+    contextFingerprint: hash(context),
+    context,
+    requestedSeed: 3,
+    seed: 4,
+    attempt: 1,
+    incoming: failed.incoming,
+    attempts: [failed.record],
+    policy: GENERATION_POLICY,
+  };
+  assert.equal(verifyPendingReplay(pack, job), true);
+  const forged = structuredClone(job);
+  forged.incoming.randomEncounterPool.push(raw.template.placement.models[0].source);
+  forged.attempts[0].retainedFingerprint = hash(forged.incoming);
+  assert.throws(() => verifyPendingReplay(pack, forged));
+  const wrong = structuredClone(job);
+  wrong.attempts[0].rng.seedArray[1]++;
+  assert.throws(() => verifyPendingReplay(pack, wrong));
+});
+
+test('una realizzazione di nuova A1 non può importare una storia iniziale inventata con rehash',async()=>{
+  const {validateProjection}=await import('../dist/map-freeze-library.mjs');const p=await realization();
+  p.context.usedEncounterIds.push(1234567);p.contextFingerprint=hash(p.context);p.history.usedEncounterIds.unshift(1234567);
+  assert.throws(()=>validateProjection(rehash(p)));
 });

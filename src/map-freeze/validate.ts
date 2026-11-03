@@ -23,6 +23,10 @@ function unique(values: unknown[], label: string) {
 }
 export function validateContext(c: GenerationContext) {
   invariant(
+    !c.usedEncounterIds.length && !c.usedGroupIds.length && !c.unlockedChainIds.length,
+    'La storia iniziale di una nuova A1 deve essere vuota.',
+  );
+  invariant(
     c.heroCount === c.heroes.length && same(c.ownedProductIds, [0]),
     'Contesto H/prodotti incoerente.',
   );

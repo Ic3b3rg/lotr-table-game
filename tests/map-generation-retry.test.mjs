@@ -107,3 +107,21 @@ test('concorrenza e requestId riusato per altro seed non avviano una seconda pip
   assert.equal((await changed.json()).error.code, 'INTENT_CHANGED');
   assert.deepEqual(await readSession(host), after);
 });
+
+test('un errore unchecked fonte resta fermo prima di startup e non offre una ripresa deterministica senza esito', async (t) => {
+  const { host, player } = await readyGenerator(t, (raw) =>
+    raw.template.geometry.tiles[1].edges.forEach((e) => (e.traits = 700)),
+  );
+  assert.equal((await generate(host, player)).status, 200);
+  const s = await waitGeneration(host, 'paused'),
+    g = s.mapGeneration;
+  assert.equal(g.reason, 'source-operation-exception');
+  assert.equal(g.job.seed, 1);
+  assert.equal(g.job.attempt, 0);
+  assert.equal(g.failure.sourceErrorCode, null);
+  assert.equal(g.failure.reason, 'empty-tile-placement-index');
+  assert.equal(g.failure.stage, 'intra-section');
+  assert.equal(s.journey, null);
+  assert.equal(s.round, null);
+  assert.equal((await offer(host)).canResume, false);
+});

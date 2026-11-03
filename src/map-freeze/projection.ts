@@ -124,10 +124,10 @@ export function projectRealization(
       status: 'pending-startup',
       pending: [
         'selected-prefab-closure',
-        'initial-nodes',
-        'objective-0',
         'scout-2-each-hero',
+        'initial-nodes',
         'spirit-1',
+        'objective-0',
       ],
       gameplayRng: null,
     },

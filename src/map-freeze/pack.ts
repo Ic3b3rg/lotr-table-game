@@ -184,7 +184,7 @@ export function deriveContext(
     throw new Error('Mapping catalogo incompleto.');
   const quantities = new Map<string, number>();
   for (const product of pack.template.selection.products.filter((v) =>
-    pack.campaign.ownedProductIds.includes(v.id as 0),
+    pack.campaign.ownedProductIds.some((id) => id === v.id),
   ))
     for (const q of product.itemQuantities)
       quantities.set(q.itemSource, (quantities.get(q.itemSource) ?? 0) + q.quantity);

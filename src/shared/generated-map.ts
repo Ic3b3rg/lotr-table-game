@@ -1,3 +1,7 @@
+import { GeometryPackSchema } from '../map-assembly/model';
+import { PlacementPackSchema } from '../map-encounters/model';
+import { StoredFloatSchema } from '../map-selection/model';
+import { SourceRandomStateSchema } from '../map-generation/primitives';
 import { z } from 'zod';
 import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
@@ -48,10 +52,6 @@ export const GenerationContextSchema = HistorySchema.extend({
 export type GenerationContext = z.infer<typeof GenerationContextSchema>;
 
 // Only selected shapes cross this boundary; the unused pack and search state do not.
-import { GeometryPackSchema } from '../map-assembly/model';
-import { PlacementPackSchema } from '../map-encounters/model';
-import { StoredFloatSchema } from '../map-selection/model';
-import { SourceRandomStateSchema } from '../map-generation/primitives';
 
 export const VectorSchema = z.tuple([
   z.number().finite().min(-1e8).max(1e8),
@@ -329,13 +329,19 @@ export const ProjectionDataSchema = z.strictObject({
   continuation: z.strictObject({
     boundary: z.literal('before-BeginAdventure(false)'),
     status: z.literal('pending-startup'),
-    pending: z.tuple([
-      z.literal('selected-prefab-closure'),
-      z.literal('initial-nodes'),
-      z.literal('objective-0'),
-      z.literal('scout-2-each-hero'),
-      z.literal('spirit-1'),
-    ]),
+    // Obligations only. The source FSM, owned by #38, determines execution order.
+    pending: z
+      .array(
+        z.enum([
+          'selected-prefab-closure',
+          'initial-nodes',
+          'objective-0',
+          'scout-2-each-hero',
+          'spirit-1',
+        ]),
+      )
+      .length(5)
+      .refine((values) => new Set(values).size === 5),
     gameplayRng: z.null(),
   }),
 });

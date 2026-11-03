@@ -31,7 +31,8 @@ const failed = z.strictObject({
   retry: z.boolean(),
 });
 export class MapGenerationService {
-  private cancelled = new WeakSet<Worker>();
+  private readonly cancelled = new WeakSet<Worker>();
+  private closed = false;
   private cached: { stamp: string; pack: GeneratorPack } | null = null;
   private active: { id: string; generation: string; worker: Worker; timer: NodeJS.Timeout } | null =
     null;
@@ -78,6 +79,10 @@ export class MapGenerationService {
       });
     if (g) {
       const running = this.active?.id === g.job.id && this.active.generation === state.generation;
+      const terminal =
+        g.requests.length >= 65 ||
+        (g.status === 'paused' &&
+          (g.reason === 'attempt-limit' || g.reason === 'source-operation-exception'));
       let matches = false;
       try {
         matches =
@@ -94,6 +99,7 @@ export class MapGenerationService {
         running,
         canResume:
           !running &&
+          !terminal &&
           matches &&
           g.job.attempt < GENERATION_POLICY.maxAttempts &&
           g.requests.length < 65,
@@ -101,11 +107,13 @@ export class MapGenerationService {
           ? 'Il PC sta creando la mappa. Potete tenere aperti i vostri schermi.'
           : !matches
             ? 'La creazione è salvata. Sul PC serve lo stesso materiale usato per iniziarla.'
-            : g.status === 'pending'
-              ? 'La creazione è stata interrotta. Un partecipante può riprenderla.'
-              : g.reason === 'attempt-batch-limit'
-                ? 'La ricerca richiede altro tempo. Potete riprenderla dal punto salvato.'
-                : 'Il PC non ha completato la creazione. Potete riprovare; nessuna mappa parziale è stata aperta.',
+            : terminal
+              ? 'La creazione si è fermata. Nessuna mappa è stata aperta. Conservate una copia e fate controllare il materiale sul PC.'
+              : g.status === 'pending'
+                ? 'La creazione è stata interrotta. Un partecipante può riprenderla.'
+                : g.reason === 'attempt-batch-limit'
+                  ? 'La ricerca richiede altro tempo. Potete riprenderla dal punto salvato.'
+                  : 'Il PC non ha completato la creazione. Potete riprovare; nessuna mappa parziale è stata aperta.',
       });
     }
     if (!this.configured || this.isLegacy(state))
@@ -196,7 +204,10 @@ export class MapGenerationService {
           'GENERATION_CHANGED',
           'Questa creazione è già ripresa o è cambiata. Guarda lo stato aggiornato.',
         );
-      if (g.status === 'paused' && g.reason === 'attempt-limit')
+      if (
+        g.status === 'paused' &&
+        (g.reason === 'attempt-limit' || g.reason === 'source-operation-exception')
+      )
         throw new ApiError(
           409,
           'GENERATION_LIMIT',
@@ -204,7 +215,6 @@ export class MapGenerationService {
         );
       state.mapGeneration = { status: 'pending', job: g.job, requests: [...g.requests, request] };
     }
-    return generationReceipt(state, command.requestId, command.type);
   }
   activate() {
     const state = this.store.read(),
@@ -214,9 +224,9 @@ export class MapGenerationService {
       if (this.active.id === g.job.id && this.active.generation === state.generation) return;
       this.cancel();
     }
-    this.run(state.generation, g.job, 0,true);
+    this.run(state.generation, g.job, 0, true);
   }
-  private run(generation: string, job: GenerationJob, batch: number,verifyPending:boolean) {
+  private run(generation: string, job: GenerationJob, batch: number, verifyPending: boolean) {
     let pack: GeneratorPack;
     try {
       pack = this.pack(true);
@@ -226,7 +236,7 @@ export class MapGenerationService {
       return;
     }
     const worker = new Worker(new URL('./map-generation-worker.mjs', import.meta.url), {
-      workerData: { pack, job,verifyPending },
+      workerData: { pack, job, verifyPending },
       resourceLimits: { maxOldGenerationSizeMb: GENERATION_POLICY.workerHeapMiB },
     });
     const timer = setTimeout(() => {
@@ -243,7 +253,7 @@ export class MapGenerationService {
     worker.once('message', (raw: unknown) => {
       delivered = true;
       clear();
-      if (this.cancelled.has(worker)) return;
+      if (this.closed || this.cancelled.has(worker)) return;
       try {
         if (
           raw &&
@@ -314,7 +324,7 @@ export class MapGenerationService {
               }
             : { status: 'pending', job: next, requests };
         });
-        if (saved && !paused) this.run(generation, next, batch + 1,false);
+        if (saved && !paused) this.run(generation, next, batch + 1, false);
       } catch (error) {
         console.error(
           'Generazione non completata:',
@@ -325,12 +335,12 @@ export class MapGenerationService {
     });
     worker.once('error', () => {
       clear();
-      if (this.cancelled.has(worker)) return;
+      if (this.closed || this.cancelled.has(worker)) return;
       this.pause(generation, job.id, 'worker-failed');
     });
     worker.once('exit', () => {
       clear();
-      if (!delivered && !this.cancelled.has(worker))
+      if (!this.closed && !delivered && !this.cancelled.has(worker))
         this.pause(generation, job.id, 'worker-failed');
     });
   }
@@ -355,6 +365,10 @@ export class MapGenerationService {
           failure,
         };
     });
+  }
+  close() {
+    this.closed = true;
+    this.cancel();
   }
   cancel() {
     if (this.active) {

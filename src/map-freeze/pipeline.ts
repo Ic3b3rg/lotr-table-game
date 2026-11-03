@@ -71,7 +71,9 @@ export function runGenerationAttempt(pack: GeneratorPack, context: GenerationCon
       ),
     };
   }
-  const failure = encounters.failure!;
+  const failure = (
+    assembly.status === 'geometry-complete' ? encounters.failure : assembly.failure
+  )!;
   const record = AttemptRecordSchema.parse({
     index: run.attempt,
     seed: run.seed,

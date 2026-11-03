@@ -1,3 +1,4 @@
+import { digest } from '../map-freeze/hash';
 import { z } from 'zod';
 import { IntentIdSchema, ReceiptSchema } from '../shared/protocol';
 import { StateSchema, parseState } from './state';
@@ -39,7 +40,6 @@ export const BackupPayloadSchema = z
 export type BackupPayload = z.infer<typeof BackupPayloadSchema>;
 
 export { canonical } from '../map-freeze/hash';
-import { digest } from '../map-freeze/hash';
 export const checksum = digest;
 export const BackupSchema = z
   .strictObject({

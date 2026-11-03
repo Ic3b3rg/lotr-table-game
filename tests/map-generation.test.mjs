@@ -72,3 +72,34 @@ test('fingerprint, identità e revisioni errati non reclamano o iniziano una gen
   assert.equal((await host.request('/api/commands', body)).status, 401);
   assert.deepEqual(await readSession(host), before);
 });
+
+test('il client non può inviare una realizzazione, un checkpoint o runtimeReady e il pack è ricontrollato al comando', async (t) => {
+  const { writeFile } = await import('node:fs/promises');
+  const { host, player, packPath, raw } = await readyGenerator(t),
+    before = await readSession(host),
+    plan = await offer(host);
+  for (const field of ['projection', 'checkpoint', 'runtimeReady']) {
+    const response = await generate(host, player, {
+      [field]: field === 'runtimeReady' ? true : { status: 'encounters-complete' },
+    });
+    assert.equal(response.status, 422);
+    assert.deepEqual(await readSession(host), before);
+  }
+  const changed = structuredClone(raw);
+  changed.mapping.heroes.reverse();
+  await writeFile(packPath, JSON.stringify(changed));
+  const response = await command(
+    host,
+    player,
+    {
+      type: 'GENERATE_ADVENTURE_MAP',
+      packFingerprint: plan.packFingerprint,
+      contextFingerprint: plan.contextFingerprint,
+      requestedSeed: 1,
+      agreed: true,
+    },
+    before,
+  );
+  assert.equal(response.status, 409);
+  assert.deepEqual(await readSession(host), before);
+});

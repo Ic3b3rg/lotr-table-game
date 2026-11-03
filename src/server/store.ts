@@ -165,7 +165,7 @@ export class Store {
   }
 
   close() {
-    this.generator.cancel();
+    this.generator.close();
     this.db.close();
   }
 
