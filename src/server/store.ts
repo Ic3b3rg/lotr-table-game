@@ -43,7 +43,8 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 9,
+      schemaVersion: 10,
+      scenario: null,
       mapGeneration: null,
       id: randomUUID(),
       generation: randomUUID(),
@@ -356,6 +357,7 @@ export function publicSession(state: State) {
     journey: state.journey,
     group: state.group,
     mapGeneration: state.mapGeneration,
+    scenario: state.scenario,
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

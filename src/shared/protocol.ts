@@ -1,3 +1,4 @@
+import { ScenarioSchema } from './scenario';
 import { z } from 'zod';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
@@ -41,7 +42,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(9),
+  schemaVersion: z.literal(10),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -56,6 +57,7 @@ export const SessionSchema = z.strictObject({
   journey: JourneySchema.nullable(),
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
+  scenario: ScenarioSchema.nullable().default(null),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
