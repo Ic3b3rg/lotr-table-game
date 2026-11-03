@@ -276,6 +276,29 @@ export function createGuidedStart(sync: () => Promise<void>) {
             }
           }
         }
+        if (session.scenario.pack.manifest.scope === 'original-encounter-v1') {
+          if (q) {
+            heading =
+              q.kind === 'choice'
+                ? 'Scegli come proseguire'
+                : q.kind === 'physical'
+                  ? 'Completa la prova o la conseguenza dell’incontro'
+                  : 'Segui l’istruzione dell’avventura';
+            message = `${q.actorPlayerId ? (session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario indicato') : 'Il gruppo'} completa il passo corrente. L’interazione conserva costo e movimenti residui.`;
+            target = '#scenario';
+            label = 'Apri l’istruzione';
+            topic = q.kind === 'physical' ? 'physical' : 'encounter';
+          } else if (session.scenario.phase === 'action') {
+            topic = 'encounter';
+            if (session.round?.activeHeroId) {
+              message =
+                'Apri la mappa per viaggiare e raggiungere il segnalino disponibile. L’ispezione è gratuita; confermare l’interazione spende una sola azione.';
+            } else {
+              message =
+                'Scegliete il prossimo turno. Il segnalino iniziale certificato è disponibile; la Fase di Ombra originale richiede ancora i suoi effetti.';
+            }
+          }
+        }
       } else if (session.mapGeneration || generationOffer.kind !== 'legacy') {
         step = 5;
         topic = 'map';

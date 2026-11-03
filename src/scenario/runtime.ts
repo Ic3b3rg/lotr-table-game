@@ -21,6 +21,11 @@ import { skillTestView } from '../shared/skill-tests';
 import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { newRound } from '../server/rounds';
 import { ApiError } from '../server/errors';
+import { cycleUUID } from '../physical-resolution/cycle-request';
+import { beginEncounterPhysical } from './encounter-physical';
+import { defeatedHeroes } from '../server/physical-defeat';
+import type { Command } from '../shared/protocol';
+import { persistentEffects } from '../physical-resolution/effects';
 import {
   initializeScenarioPhysical,
   beginPhysicalAction,
@@ -105,7 +110,18 @@ function broadcast(sc: Scenario, event: string) {
 function request(state: State, data: Omit<ScenarioRequest, 'id' | 'fingerprint'>) {
   const sc = state.scenario!;
   invariant(!sc.pending, 'Popup concorrente non certificato.');
-  const q = { ...data, id: randomUUID() };
+  const q = {
+    ...data,
+    id:
+      sc.phase === 'action'
+        ? cycleUUID({
+            scenario: sc.id,
+            data,
+            command: sc.commands.length,
+            active: state.physical?.snapshot.active,
+          })
+        : randomUUID(),
+  };
   sc.pending = { ...q, fingerprint: digest({ scenarioId: sc.id, ...q }) };
 }
 function messageRequest(
@@ -163,6 +179,36 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
   const sc = state.scenario!,
     p = projection(state);
   switch (a.op) {
+    case 'confirm':
+    case 'sourceTest':
+    case 'challenge':
+      beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+      return;
+    case 'choice': {
+      const actor = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
+      invariant(actor, 'Scelta senza padre incontro.');
+      request(state, {
+        instanceId: i.id,
+        state: i.state,
+        entry: i.entry,
+        action: a.index,
+        kind: 'choice',
+        text: a.text,
+        options: [...a.options, ...(a.cancel ? [a.cancel] : [])],
+        heroId: actor.heroId,
+        actorPlayerId: actor.playerId,
+        stage: 'ready',
+        tileSource: null,
+      });
+      return;
+    }
+    case 'nullProduct':
+      invariant(send(sc, i, a.falseEvent), 'Guardia nulla senza ramo fonte.');
+      return;
+    case 'lore':
+      invariant(sc.play && sc.phase === 'action', 'Premio fuori incontro.');
+      sc.play.lore += a.amount;
+      break;
     case 'physical':
       beginPhysicalAction(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
       return;
@@ -251,6 +297,10 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       break;
     }
     case 'message':
+      if (a.consequence) {
+        beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+        return;
+      }
       messageRequest(state, i, a);
       return;
     case 'explore': {
@@ -330,6 +380,38 @@ function advanceTask(state: State) {
     if (parent.status === 'completed') {
       complete(owner, task.action);
       sc.tasks.pop();
+      const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      if (a.op === 'confirm')
+        invariant(send(sc, owner, a.confirmEvent), 'Conferma senza seguito fonte.');
+      else if (a.op === 'sourceTest' || a.op === 'challenge') {
+        const successes = parent.results.find((r) => r.kind === 'test')?.successes;
+        invariant(successes !== undefined, 'Prova padre senza risultato.');
+        let total: number | null = null;
+        if (a.op === 'challenge') {
+          const prior = variable(sc, owner, a.sum)[a.sum.name];
+          invariant(typeof prior === 'number', 'Somma non numerica.');
+          total = Math.min(99, Math.max(0, prior + successes));
+          setValue(sc, owner, a.sum, total);
+        }
+        const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
+        sc.play!.tests.push({
+          attemptId: attempt.id,
+          source: parent.source,
+          runId: parent.id,
+          heroId: attempt.heroId,
+          stat: a.stat,
+          target: a.op === 'sourceTest' ? a.target : null,
+          successes,
+          total,
+        });
+        const event =
+          a.op === 'sourceTest'
+            ? successes >= a.target
+              ? a.passEvent
+              : a.failEvent
+            : (a.bounds.find((b) => b.maximum >= total!) ?? a.bounds.at(-1)!).event;
+        invariant(send(sc, owner, event), 'Prova senza ramo compilato.');
+      } else if (a.op === 'message') logMessage(sc, owner, a.index);
       return true;
     }
     const active = p.snapshot.active;
@@ -413,6 +495,16 @@ function pump(state: State) {
     for (const i of sc.instances) progress = runInstance(state, i) || progress;
     if (sc.pending) return;
     if (advanceTask(state)) continue;
+    if (sc.phase === 'action') {
+      const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active);
+      if (attempt) {
+        const node = sc.instances.find((i) => i.id === attempt.instanceId)!;
+        invariant(node.settled || node.stopped, 'Incontro fermo senza richiesta.');
+        attempt.returned = true;
+        sc.play!.active = null;
+      }
+      return;
+    }
     const principal = sc.instances.find((i) => i.kind === 'principal')!;
     if (!sc.tasks.length && principal.processing === 0) {
       invariant(sc.objective?.id === 0, 'Setup rilasciato senza obiettivo0.');
@@ -539,7 +631,7 @@ export function resumeScenario(
     q = sc?.pending;
   if (
     !sc ||
-    sc.phase !== 'setup' ||
+    (sc.phase !== 'setup' && sc.pack.manifest.scope !== 'original-encounter-v1') ||
     sc.id !== command.scenarioId ||
     sc.packFingerprint !== command.packFingerprint ||
     sc.projectionFingerprint !== command.projectionFingerprint ||
@@ -574,6 +666,17 @@ export function resumeScenario(
     );
   if (q.kind === 'physical') {
     answerScenarioPhysical(state, playerId, command, physicalPath);
+  } else if (q.kind === 'choice') {
+    const a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    if (
+      a.op !== 'choice' ||
+      input.kind !== 'choice' ||
+      !q.options?.some((o) => o.event === input.event)
+    )
+      throw wrong();
+    sc.pending = null;
+    complete(i, q.action);
+    invariant(send(sc, i, input.event), 'Scelta senza transizione fonte.');
   } else if (q.kind === 'scout' || q.kind === 'test') {
     const hero = state.preparation!.heroes.find((h) => h.heroId === q.heroId)!;
     if (q.kind === 'scout') {
@@ -688,6 +791,8 @@ export function resumeScenario(
       state.round = newRound(state, 1);
       sc.phase = 'action';
       sc.handoffCount = 1;
+      if (sc.pack.manifest.scope === 'original-encounter-v1')
+        sc.play = { active: null, lore: 0, attempts: [], tests: [] };
       return;
     }
     const task = sc.tasks.at(-1);
@@ -698,5 +803,95 @@ export function resumeScenario(
       complete(i, q.action);
     }
   }
+  pump(state);
+}
+
+/** Commit the source confirmation and its one interact action together. Inspection is read-only. */
+export function interactScenario(
+  state: State,
+  playerId: string,
+  c: Extract<Command, { type: 'INTERACT_SCENARIO' }>,
+) {
+  const sc = state.scenario!,
+    i = sc.instances.find((i) => i.id === c.instanceId),
+    round = state.round!,
+    j = state.journey!;
+  const fail = (code: string, message: string): never => {
+    throw new ApiError(409, code, message);
+  };
+  if (
+    sc.pack.manifest.scope !== 'original-encounter-v1' ||
+    sc.phase !== 'action' ||
+    !sc.play ||
+    !state.physical?.lastStand
+  )
+    fail('SCENARIO_CAPABILITY', 'Il segnalino richiede capacità fonte non disponibili.');
+  if (
+    c.scenarioId !== sc.id ||
+    c.packFingerprint !== sc.packFingerprint ||
+    c.projectionFingerprint !== sc.projectionFingerprint ||
+    !i ||
+    digest(i) !== c.sourceFingerprint
+  )
+    fail('SCENARIO_SOURCE_CHANGED', 'Il segnalino o la fonte sono cambiati.');
+  if (
+    !sc.pack.manifest.playablePrefabs?.includes(i!.prefab!) ||
+    !i!.visible ||
+    i!.stopped ||
+    !i!.settled
+  )
+    fail('SCENARIO_CAPABILITY', 'Questo segnalino non ha una continuazione disponibile.');
+  if (sc.pending || sc.play!.active || state.physical!.snapshot.active)
+    fail('SCENARIO_PENDING', 'Concludi la richiesta corrente.');
+  const hero = state.preparation!.heroes.find((h) => h.heroId === c.heroId);
+  if (!hero || hero.playerId !== playerId)
+    throw new ApiError(403, 'HERO_NOT_YOURS', 'Puoi interagire soltanto con i tuoi eroi.');
+  if (defeatedHeroes(state).includes(c.heroId)) fail('HERO_DEFEATED', 'Questo eroe è sconfitto.');
+  if (
+    round.phase !== 'action' ||
+    round.id !== c.roundId ||
+    round.turnId !== c.turnId ||
+    round.activeHeroId !== c.heroId
+  )
+    fail('TURN_CHANGED', 'L’eroe non è di turno o il turno è cambiato.');
+  const position = j.heroes.find((h) => h.heroId === c.heroId)!,
+    space = sc.spaceBindings.find((b) => b.sourceId === i!.spaceId)?.id;
+  if (position.spaceId !== space)
+    fail('INTERACTION_SPACE', 'Raggiungi la casella del segnalino prima di interagire.');
+  const progress = round.heroes.find((h) => h.heroId === c.heroId)!;
+  if (progress.actionsUsed >= 2) fail('NO_ACTIONS', 'Questo eroe ha già usato le sue due azioni.');
+  const prefab = sc.pack.manifest.prefabs.find((m) => m.source === i!.prefab)!;
+  const inspiration =
+    prefab.nodeType === 'threat'
+      ? persistentEffects(state.physical!, c.heroId).reduce(
+          (n, e) => n + (e.op === 'mandatory-spend' && e.window === 'before-interact' ? e.n : 0),
+          0,
+        )
+      : 0;
+  if (hero!.inspiration < inspiration)
+    fail(
+      'INTERACTION_RESOURCE',
+      `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
+    );
+  progress.actionsUsed++;
+  const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
+  sc.play!.attempts.push({
+    id,
+    instanceId: i!.id,
+    heroId: c.heroId,
+    playerId,
+    roundId: round.id,
+    turnId: round.turnId!,
+    requestId: c.requestId,
+    cost: 1,
+    returned: false,
+  });
+  sc.play!.active = id;
+  sc.events.push({
+    id: cycleUUID({ attempt: id, event: 'NODE CLICKED' }),
+    event: 'NODE CLICKED',
+    receivers: [i!.id],
+  });
+  invariant(send(sc, i!, 'NODE CLICKED'), 'Handler incontro non compilato.');
   pump(state);
 }

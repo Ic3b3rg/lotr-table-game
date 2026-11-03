@@ -100,3 +100,12 @@ test('i controlli carte inviano richiesta/source/hero correnti anziché comandi 
     'CONVERT_FATE',
   );
 });
+test('physical instructions retain accessible damage and fear symbols from their packets', () => {
+  assert.deepEqual(
+    lib
+      .compileSourceText('\uf469 \uf468')
+      .filter((x) => x.kind === 'icon')
+      .map((x) => x.name),
+    ['damage', 'fear'],
+  );
+});

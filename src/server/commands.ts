@@ -34,6 +34,23 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return generationReceipt(state, requestId, command.type);
     }
+    if (state.physical?.cycle?.version === 2) {
+      if (
+        !isPhysicalCycle(state, command) &&
+        command.type !== 'INTERACT_SCENARIO' &&
+        command.type !== 'SCENARIO_INPUT'
+      )
+        allowScenarioPlay(state, command);
+      const result = applyPhysicalCycle(state, playerId, command);
+      advance(state);
+      return result;
+    }
+    if (command.type === 'INTERACT_SCENARIO')
+      throw new ApiError(
+        409,
+        'SCENARIO_CAPABILITY',
+        'Questo segnalino non ha una continuazione originale certificata.',
+      );
     if (command.type === 'START_SCENARIO' || command.type === 'SCENARIO_INPUT') {
       const result = applyScenario(
         state,

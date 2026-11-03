@@ -3,15 +3,15 @@ import type { PhysicalView } from '../shared/physical';
 import { requirePhysicalFamily } from '../physical-content/catalog';
 import { frontToken } from './front-runtime';
 import { cycleRequest } from './cycle-request';
-import { travelMoves } from './effects';
+import { travelMoves, persistentEffects } from './effects';
 import { physicalTitleSkills } from './title-skills';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
-export function physicalView(p: PhysicalState | null): PhysicalView | null {
+export function physicalView(p: PhysicalState | null, original = false): PhysicalView | null {
   if (!p) return null;
   const up = new Set(p.snapshot.resolution?.faceup ?? []);
   const view: PhysicalView = {
-    synthetic: true,
+    synthetic: !original && p.cycle?.version !== 2,
     decks: { damage: p.snapshot.decks.damage.length, fear: p.snapshot.decks.fear.length },
     heroes: p.snapshot.areas.map((h) => ({
       heroId: h.heroId,
@@ -53,9 +53,23 @@ export function physicalView(p: PhysicalState | null): PhysicalView | null {
     };
   }
   if (p.version !== 1) {
+    if (p.snapshot.resolution!.sourceTest !== undefined)
+      view.sourceTest = structuredClone(p.snapshot.resolution!.sourceTest);
     view.cycle = {
       pending: cycleRequest(p),
-      heroes: p.heroes.map((h) => ({ heroId: h.heroId, travelMoves: travelMoves(p, h.heroId) })),
+      heroes: p.heroes.map((h) => ({
+        heroId: h.heroId,
+        travelMoves: travelMoves(p, h.heroId),
+        ...(!view.synthetic
+          ? {
+              interactInspiration: persistentEffects(p, h.heroId).reduce(
+                (n, e) =>
+                  n + (e.op === 'mandatory-spend' && e.window === 'before-interact' ? e.n : 0),
+                0,
+              ),
+            }
+          : {}),
+      })),
     };
     const cards = [
       ...requirePhysicalFamily(p.raw, 'damage').cards,

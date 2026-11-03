@@ -52,7 +52,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 14,
+      schemaVersion: 15,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -383,7 +383,10 @@ export function publicSession(state: State) {
     group: state.group,
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
-    physical: physicalView(state.physical),
+    physical: physicalView(
+      state.physical,
+      state.scenario?.pack.manifest.scope === 'original-encounter-v1',
+    ),
     skillTest: skillTestView(state.content, state.skillTest, physicalTitleSkills(state.physical)),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

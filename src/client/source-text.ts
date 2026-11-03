@@ -42,7 +42,7 @@ export function sourceText(tokens: SourceText): DocumentFragment {
             ? 'em'
             : 'span',
       );
-      node.textContent = token.text;
+      node.textContent = token.text.replaceAll('\\n', '\n');
       if (token.style === 'boldItalic') node.className = 'source-italic';
       fragment.append(node);
     }

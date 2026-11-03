@@ -1,4 +1,4 @@
-import { ScenarioSchema } from './scenario';
+import { ScenarioSchema, EncounterIntentSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
@@ -44,7 +44,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(14),
+  schemaVersion: z.literal(15),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -68,6 +68,7 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('scout-reveal') }),
@@ -86,6 +87,7 @@ const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  EncounterIntentSchema.options[0].extend(CommandBase),
   CycleAnswerSchema.extend(CommandBase),
   z.strictObject({
     ...CommandBase,
@@ -292,7 +294,7 @@ export const ReceiptSchema = z.union([
   }),
   z.strictObject({
     requestId: IntentIdSchema,
-    type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT']),
+    type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
     appliedRevision: z.int().nonnegative(),
     scenarioId: z.uuid(),
     pendingId: z.uuid().nullable(),

@@ -6,6 +6,11 @@ import { invariant } from '../map-freeze/validate';
 import { validateSourceHandler } from './handlers';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
+  const original = pack.manifest.scope === 'original-encounter-v1';
+  invariant(
+    original === !!pack.manifest.playablePrefabs,
+    'Manifest originale incompleto o estraneo.',
+  );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
   invariant(definitions.size === pack.definitions.length, 'FSM duplicate.');
   invariant(
@@ -56,6 +61,34 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (
+          ['confirm', 'sourceTest', 'challenge', 'choice', 'nullProduct', 'lore'].includes(a.op) ||
+          (a.op === 'message' && a.consequence)
+        )
+          invariant(
+            original &&
+              pack.manifest.prefabs.some(
+                (p) =>
+                  pack.manifest.playablePrefabs!.includes(p.source) && p.fsmSource === d.source,
+              ),
+            'Istruzione incontro fuori dal manifest chiuso.',
+          );
+        const events =
+          a.op === 'confirm'
+            ? [a.confirmEvent, a.cancelEvent]
+            : a.op === 'sourceTest'
+              ? [a.passEvent, a.failEvent]
+              : a.op === 'challenge'
+                ? a.bounds.map((b) => b.event)
+                : a.op === 'choice'
+                  ? [...a.options, ...(a.cancel ? [a.cancel] : [])].map((o) => o.event)
+                  : a.op === 'nullProduct'
+                    ? [a.falseEvent]
+                    : [];
+        invariant(
+          events.every((e) => s.transitions[e] !== undefined),
+          'Ramo incontro senza transizione fonte.',
+        );
         if (a.op === 'physical')
           invariant(
             pack.manifest.scope ===
@@ -69,8 +102,9 @@ export function parseScenarioPack(raw: unknown) {
             'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti.',
           );
         const refs = [
-          ...('target' in a ? [a.target] : []),
+          ...('target' in a && typeof a.target === 'object' ? [a.target] : []),
           ...('ref' in a ? [a.ref] : []),
+          ...(a.op === 'challenge' ? [a.sum] : []),
           ...('tile' in a && a.tile.kind === 'variable' ? [a.tile.ref] : []),
           ...(a.op === 'addInt' && a.value.kind === 'variable' ? [a.value.ref] : []),
         ];
@@ -88,6 +122,42 @@ export function parseScenarioPack(raw: unknown) {
   );
   for (const p of pack.manifest.prefabs)
     invariant(definitions.has(p.fsmSource), 'Closure prefab mancante.');
+  for (const p of pack.manifest.prefabs.filter((p) => p.progress)) {
+    const d = definitions.get(p.fsmSource)!;
+    invariant(
+      original && pack.manifest.playablePrefabs!.includes(p.source),
+      'Progressi fuori dalla closure giocabile.',
+    );
+    const progress = p.progress!;
+    invariant(
+      progress.firstPass.scope === 'local' &&
+        progress.total.scope === 'local' &&
+        d.variables.some((v) => v.name === progress.firstPass.name && v.type === 'bool') &&
+        d.variables.some((v) => v.name === progress.total.name && v.type === 'int') &&
+        d.states.some((s) =>
+          s.actions.some(
+            (a) =>
+              a.op === 'challenge' && a.sum.name === progress.total.name && a.sum.scope === 'local',
+          ),
+        ),
+      'Progressi non legati alle variabili fonte.',
+    );
+  }
+  for (const source of pack.manifest.playablePrefabs ?? []) {
+    const p = pack.manifest.prefabs.find((p) => p.source === source);
+    invariant(p, 'Prefab giocabile assente.');
+    const d = definitions.get(p.fsmSource)!;
+    const clickTarget =
+      d.handlers['NODE CLICKED'] ??
+      d.states.find((s) => s.transitions['NODE CLICKED'] !== undefined)?.transitions[
+        'NODE CLICKED'
+      ];
+    const click = d.states.find((s) => s.index === clickTarget);
+    invariant(
+      click?.actions.length === 1 && click.actions[0]?.op === 'confirm',
+      'Ingresso incontro senza conferma fonte esclusiva.',
+    );
+  }
   return { pack, fingerprint: digest(pack) };
 }
 export function loadScenarioPack(path: string) {

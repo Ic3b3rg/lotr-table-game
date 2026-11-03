@@ -5,6 +5,8 @@ import { JourneySchema } from './journey-map';
 import { PhysicalInputSchema } from './physical';
 import { PreparationSchema } from './preparation';
 import { AdventureLossSchema } from './last-stand';
+import { EncounterIntentSchema, ScenarioSchema } from './scenario';
+import { SkillTestSchema } from './skill-tests';
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const base = { expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const hero = { ...base, heroId: ContentIdSchema };
@@ -45,23 +47,28 @@ export const CyclePendingSchema = z.strictObject({
   heroId: ContentIdSchema,
 });
 export const CycleStateSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   seed: z.strictObject({
     revision: z.int().nonnegative(),
     round: RoundSchema,
     journey: JourneySchema,
     preparation: PreparationSchema.optional(),
+    scenario: ScenarioSchema.optional(),
+    skillTest: SkillTestSchema.nullable().optional(),
   }),
   records: z
     .array(
       z.strictObject({
         playerId: z.uuid(),
         requestId: z.string().min(24).max(80),
-        intent: CycleIntentSchema,
+        intent: z.discriminatedUnion('type', [
+          ...CycleIntentSchema.options,
+          ...EncounterIntentSchema.options,
+        ]),
         lastStandRules: z.literal('source-last-stand-v1').optional(),
       }),
     )
-    .min(1)
+    .min(0)
     .max(4000),
   pending: CyclePendingSchema.nullable(),
   terminal: AdventureLossSchema.optional(),
