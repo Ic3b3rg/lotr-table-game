@@ -35,9 +35,9 @@ Files: `src/shared/scenario.ts`, `src/scenario/{pack,geometry}.ts`,
 Interfacce: parseScenarioPack/validateScenarioBinding; ScenarioSchema;
 projectionToJourney(projection,startSpace) senza RNG.
 
-- [ ] Test rosso: pack strict, unknown, closure/source mismatch, geometria e migrazione9.
-- [ ] Eseguire test e osservare fallimenti; implementare schema/parser/adattatore.
-- [ ] Suite/tipi verdi, commit del contratto e della migrazione.
+- [x] Test rosso: pack strict, unknown, closure/source mismatch, geometria e migrazione9.
+- [x] Eseguire test e osservare fallimenti; implementare schema/parser/adattatore.
+- [x] Suite/tipi verdi, commit del contratto e della migrazione.
 
 ## Task2: executor e autorità HTTP
 
@@ -47,11 +47,11 @@ Interfacce: startScenario(state,pack), scenarioInput(state,actor,command),
 scenarioStateProblem e scenarioReceiptProblem. Richieste source-bound;
 carte risolte tramite applyScouting/applySkillTest, reward once-only.
 
-- [ ] Test rossi in incrementi: intro/init; reveal/nested; Scout/Spirit;
-  obiettivo/handoff e capability gates; attori/stale/duplicati.
-- [ ] Implementare ogni incremento fino a verde, mantenendo build/freeze invariati.
-- [ ] Test rossi recovery/backup midway e receipt mismatch, poi verdi.
-- [ ] Suite/tipi verdi e commit separati delle parti verificabili.
+- [x] Test rossi in incrementi: intro/init; reveal/nested; Scout/Spirit;
+      obiettivo/handoff e capability gates; attori/stale/duplicati.
+- [x] Implementare ogni incremento fino a verde, mantenendo build/freeze invariati.
+- [x] Test rossi recovery/backup midway e receipt mismatch, poi verdi.
+- [x] Suite/tipi verdi e commit separati delle parti verificabili.
 
 ## Task3: compiler e prove fonte bounded
 
@@ -60,10 +60,10 @@ script/output originali soltanto `.scratch/runtime/`.
 Interfacce: compiler valida IR/provenienza/action manifest/closure; pacchetto
 indipendente dal seed e legabile soltanto a prefab auditati effettivi.
 
-- [ ] Test rosso di compiler con manifest incompleto/azione sconosciuta.
-- [ ] Implementare e compilare principal/timer + union prefab H3/UI con
-  loading posizionale, binding, callback/init/receiver e nuovi nodi verificati.
-- [ ] Confrontare trace/checkpoint reali H3 e UI distinti; commit codice/metadata.
+- [x] Test rosso di compiler con manifest incompleto/azione sconosciuta.
+- [x] Implementare e compilare principal/timer + union prefab H3/UI con
+      loading posizionale, binding, callback/init/receiver e nuovi nodi verificati.
+- [x] Confrontare trace/checkpoint reali H3 e UI distinti; commit codice/metadata.
 
 ## Task4: percorso UI e verifica runtime
 
@@ -72,12 +72,12 @@ game-actions,app,guide}.ts`, style; test renderer inventati e browser script.
 Interfacce: offer scenario, source requests e servizi UI carte; mappa filtrata
 per visibilità runtime, ispezione gratuita e gate espliciti dei commit.
 
-- [ ] Test rosso di testo sicuro/icone/markup e binding dei controlli.
-- [ ] Implementare UI con nome/istruzioni/actor/next action/guida/backup.
-- [ ] Import UI autentico53 con tre identità, avvio fino a primo turno,
-  crash/reload/backup/restore alle richieste; nessuna scrittura API/SQLite.
-- [ ] Verificare focus/tastiera,320/768/1024/1440, console e stato autorevole.
-- [ ] Suite/tipi/formato/diff verdi; report/manifest e commit puliti.
+- [x] Test rosso di testo sicuro/icone/markup e binding dei controlli.
+- [x] Implementare UI con nome/istruzioni/actor/next action/guida/backup.
+- [x] Preparazione/freeze UI38 e import autentico Cacciatore con tre identità, avvio fino a primo turno,
+      crash/reload/backup/restore alle richieste; nessuna scrittura API/SQLite.
+- [x] Verificare focus/tastiera,320/768/1024/1440, console e stato autorevole (limiti AX nel rapporto).
+- [x] Suite/tipi/formato/diff verdi; report/manifest e commit puliti.
 
 ## Handoff
 

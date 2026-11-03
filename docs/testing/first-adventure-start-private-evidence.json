@@ -1,0 +1,82 @@
+{
+  "codeCommit": "865866f08f2a20e7c605b4ef110f5c090eacabd7",
+  "base": "bc83b16fae75609472241e916c0a05d066be3f79",
+  "scope": "bounded-source-startup; no Unity/JIT parity",
+  "pack": {
+    "fingerprint": "819fabcc03bb9645731599f411b4aa7e58e5d57b88536894bfe50d64ed49bb10",
+    "sha256": "6f3529cbf20cf979a8ffb01413b726158986ae865eede9feb90ed32cd68a4055",
+    "bytes": 78761,
+    "definitions": 30,
+    "states": 66,
+    "actions": 38,
+    "deferredEdges": 63
+  },
+  "source": {
+    "prefabs": 28,
+    "objects": 463,
+    "bytes": 2154210,
+    "hierarchyRecords": 94,
+    "normalizedFsms": 38,
+    "parameterHashes": 484,
+    "positionalRelabels": 178,
+    "bindings": 119,
+    "lifecycleMethods": 57,
+    "localizationKeys": 20,
+    "packets": 13,
+    "consumedInserts": 10,
+    "preparedPolicies": 2
+  },
+  "cases": [
+    {
+      "seed": 1,
+      "spaces": 22,
+      "edges": 43,
+      "encounters": 15,
+      "fingerprint": "6dda6d5d4f3fc2fe6e62e2e7d11acbcd5d883a94142979ef50042125859e2435"
+    },
+    {
+      "seed": -1065703788,
+      "spaces": 21,
+      "edges": 36,
+      "encounters": 14,
+      "fingerprint": "5230c7db6c08129f631ad55705bc0cfa05d296b7aca03bf0e029c6ef5c8253c8"
+    },
+    {
+      "seed": 898554765,
+      "spaces": 22,
+      "edges": 36,
+      "encounters": 15,
+      "fingerprint": "c0ec54303b285f80d865d9df3076cc622613b8f45bb028a36d4a0b8743297403"
+    },
+    {
+      "seed": 1,
+      "spaces": 22,
+      "edges": 43,
+      "encounters": 15,
+      "fingerprint": "e4fc8095cc93a23d4fa60457f7570df7d91c780d6e640da102b7ab44a60d7859"
+    }
+  ],
+  "validatedBackups": 29,
+  "restartComparisons": 7,
+  "restoreComparisons": 2,
+  "browser": {
+    "independentIdentities": 3,
+    "uiFirstTurns": 2,
+    "positiveConversion": 1,
+    "screenWidths": [
+      320,
+      768,
+      1024,
+      1440
+    ],
+    "pixelInspected": true,
+    "knownConsole404": "favicon.ico only"
+  },
+  "checks": {
+    "tests": 416,
+    "failed": 0,
+    "typecheck": true,
+    "format": true,
+    "diff": true
+  }
+}

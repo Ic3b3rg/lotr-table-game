@@ -82,8 +82,8 @@ effettive. Gli ACK Ombra legacy non eseguono la nuova avventura.
 
 Fixture pubbliche inventate; test HTTP di ordine/eventi/actor, carte per eroe,
 conversioni/cap, popup/binding/flip, idempotenza, backup/ripresa a ogni richiesta,
-migrazioni e mismatch fonte. Tre identità browser indipendenti, import del
-backup UI autentico53, poi soli controlli UI fino al primo turno. Interruzioni
+migrazioni e mismatch fonte. Tre identità browser indipendenti dalla preparazione/freeze UI oppure import
+di un backup autentico, poi soli controlli UI fino al primo turno. Interruzioni
 in intro/Scoperta/prova/conversione/placement/obiettivo/handoff confrontano
 runtime, map/RNG, mazzi e ricevute. Host/dati isolati,4339 intoccabile.
 

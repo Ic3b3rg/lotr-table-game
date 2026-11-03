@@ -24,7 +24,7 @@ Le [prove abilità e ispirazione #25](https://github.com/Ic3b3rg/lotr-table-game
 
 Integrata in `main` (`b3088ba`) con PR #28: [Scoperta e carte preparate #27](https://github.com/Ic3b3rg/lotr-table-game/issues/27), [contratto e piano](scouting-spec.md), [verifiche](../testing/scouting-verification.md). Si preparano e riordinano le carte, con limite, ricomposizione e ripresa; le capacità delle carte rimangono nel motore successivo.
 
-Per completare il gioco restano: capacità e finestre degli effetti, risoluzione automatica dell’Ombra, composizione e rivelazione delle mappe, combattimento e nemici, prima avventura fino al campo e passaggio alla seconda, poi tutti i percorsi della campagna base. Restano anche riconciliazione completa delle 343 copie, contenuti italiani e confronto runtime degli scenari. La prova fisica LAN #5 procede separatamente con i dispositivi del proprietario. Non è ancora possibile attribuire una percentuale affidabile di completamento alla campagna.
+Per completare il gioco restano: capacità e finestre degli effetti, effetti fisici e combattimento, nemici e Ombra, esplorazioni/interazioni successive allo startup, progressione della prima avventura fino al campo e passaggio alla seconda, poi tutti i percorsi della campagna base. Il catalogo fisico revisionato di PR59 precede i suoi executor; le quantità dei tre benefici attendono il proprietario in #57. La prova fisica LAN #5 procede separatamente con i dispositivi del proprietario. Non è ancora possibile attribuire una percentuale affidabile di completamento alla campagna.
 
 Integrato in `main` (`1687ecc`) con PR #30, incremento #29: [turni, azioni e fasi persistenti](rounds-spec.md), con
 [verifiche](../testing/rounds-verification.md). Ordine concordato, turni da zero
@@ -37,3 +37,11 @@ Incremento #31: [mappa e viaggio persistenti](travel-spec.md), con
 certifica una mappa completa o una campagna giocabile. Le prossime capacità
 sono composizione/rivelazione delle mappe, combattimento e nemici, poi
 collegamento agli eventi della prima avventura.
+
+Incremento #38 implementato nel checkout di lavoro, in attesa della review e
+integrazione del root sulla base `bc83b16`: [spec e confine dello startup](first-adventure-start-spec.md),
+[piano](first-adventure-start-plan.md), [compiler fonte](../research/first-adventure-startup-compiler.md)
+e [verifiche fino al primo turno](../testing/first-adventure-start-verification.md).
+Consuma il freeze di #53/PR58 senza rigenerarlo. I successivi incrementi
+indispensabili a #33 sono inventariati nel rapporto; non sono dichiarati
+implementati dallo startup e non usano le vecchie conferme Ombra come executor.

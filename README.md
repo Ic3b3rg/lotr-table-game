@@ -86,7 +86,7 @@ Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** as
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 8 vengono migrati allo schema 9, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 9. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento. Le vecchie mappe e le richieste aperte restano nel percorso precedente; non vengono trasformate in un avvio A1 completato.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 9 vengono migrati allo schema 10, conservando compagnia, ordine dei mazzi, prove, Scoperta, generazione della mappa e ricevute. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 10. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento. Le vecchie mappe e le richieste aperte restano nel percorso precedente; non vengono trasformate in un avvio A1 completato.
 
 ## Creazione della mappa A1
 
@@ -101,11 +101,39 @@ interrotta può essere ripresa dalla vista personale: prima del risultato serve
 lo stesso materiale iniziale. Dopo il salvataggio, reload, riavvio e backup
 riusano la stessa mappa anche senza il pacchetto, conservando incontri e storia.
 
-Il risultato resta prima dell'avvio dell'avventura: posizioni iniziali,
-rivelazioni, Scoperta 2 e prove Spirito 1 saranno governate dallo startup #38.
-I turni e i comandi liberi restano in attesa. Il freeze non costituisce
-un'avventura giocabile completa; il percorso dimostrativo seguente rimane
-separato per le sessioni precedenti.
+Il risultato conserva la realizzazione completa. Il passo successivo avvia il
+copione usando questa mappa e conserva il generatore e il suo RNG invariati.
+
+## Avvio della prima avventura
+
+Installare il pacchetto privato `scenario.json` nella cartella dati o indicarlo
+con `LOTR_SCENARIO_PACK`. Il materiale deve certificare i prefab effettivi della
+mappa: un prefab o un effetto non supportato impedisce l'avvio. Il compiler di
+sviluppo è esportato da `dist/scenario-library.mjs`; [contratto, provenienza e
+prove riproducibili](docs/testing/first-adventure-start-verification.md).
+
+Da **La mappa è salvata**, il gruppo concorda **Avvia l’avventura**. Seguite
+l'introduzione e i piazzamenti italiani. Ogni proprietario conclude Scoperta 2
+e Spirito 1 per il proprio eroe, con carte, conversioni ed esiti salvati.
+L'avvio non usa azioni del turno. Dopo l'obiettivo iniziale, una sola conferma
+apre la Fase di Azione; il proprietario dell'eroe scelto avvia il primo turno.
+Guida e copie della sessione restano disponibili durante ogni richiesta.
+
+La mappa mostra le tessere rivelate dal copione e distingue quelle ancora da
+esplorare. Potete viaggiare fra caselle adiacenti già esplorate. Ispezionare un
+segnalino e chiudere l'ispezione è gratuito; interazioni successive, nuove
+esplorazioni, combattimento e Ombra attendono i loro effetti completi.
+Il guadagno obbligatorio della carta iniziale Cacciatore è registrato una sola
+volta; le altre capacità delle carte richiedono i rispettivi incrementi.
+Una preparazione che richiede un effetto fisico non disponibile viene rifiutata
+prima di cambiare le carte.
+
+Dopo l'avvio il salvataggio e il backup includono il pacchetto scenario e la
+richiesta corrente: reload, riavvio e ripristino funzionano anche senza i file
+originali o il pacchetto su disco. Le immagini opzionali si reinstallano
+separatamente. Questo incremento arriva al primo turno; l'intera avventura
+resta nel perimetro di #33. Le sessioni precedenti conservano il percorso
+dimostrativo descritto sotto, comprese le sue conferme manuali dell'Ombra.
 
 ## Turni e fasi del round
 
@@ -179,8 +207,8 @@ su stdout. Il risultato `scope: geometry-only` conserva pacchetto, impronta,
 pose e grafo; non viene caricato dall'host. La verifica originale copre la
 prima sezione 302A/custom100A. La pipeline completa di selezione, geometria,
 movimento e incontri è ora collegata al freeze di sessione descritto sopra.
-L’avvio dello scenario resta a [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38);
-[#41](https://github.com/Ic3b3rg/lotr-table-game/issues/41) non viene chiusa dal solo freeze.
+L'avvio [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38) consuma quella
+realizzazione con il pacchetto scenario descritto sopra.
 
 La build produce anche `dist/map-primitives.mjs`: `SourceRandom` con stato
 snapshot/ripristino, `sourceShuffle` e `comparisonSort` conservano le scelte
