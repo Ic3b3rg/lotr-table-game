@@ -82,6 +82,25 @@ test('una famiglia mancante non riceve definizioni o copie inventate', () => {
 
 const invalidCases = [
   [
+    'localizzatore di prova vuoto',
+    (p) => {
+      p.cards[0].name.evidence[0].locator = '   ';
+      p.cards[0].name.original.reference.locator = '   ';
+    },
+  ],
+  [
+    'URI fonte bianco',
+    (p) => {
+      p.sources[0].uri = ' ';
+    },
+  ],
+  [
+    'edizione bianca invece di ignota esplicita',
+    (p) => {
+      p.sources[0].edition = ' ';
+    },
+  ],
+  [
     'versione sconosciuta',
     (p) => {
       p.formatVersion = 2;
@@ -410,6 +429,38 @@ test('simbolo accessorio e segnalino consumo restano distinti nelle annotazioni'
   p.cards[0].mechanics.symbols.value = ['trinket', 'depletion'];
   const r = requirePhysicalCatalog(p);
   assert.deepEqual(r.cards[0].mechanics.symbols.value, ['trinket', 'depletion']);
+});
+
+for (const field of ['timing', 'targets', 'duration', 'operations'])
+  test(`rifiuta ${field} meccanico vuoto dichiarato verificato`, () => {
+    const p = physicalPack();
+    p.cards[0].mechanics[field].value = [];
+    assert.throws(() => requirePhysicalCatalog(p));
+  });
+
+test('conserva separatamente istruzioni di acquisizione e capacità del titolo', () => {
+  const p = physicalPack();
+  p.cards
+    .at(-1)
+    .usage.value.acquisitionNotes.push('Dopo una prova immaginaria di difficoltà almeno 4.');
+  const r = requirePhysicalCatalog(p);
+  assert.equal(
+    r.cards.at(-1).usage.value.acquisitionNotes[1],
+    'Dopo una prova immaginaria di difficoltà almeno 4.',
+  );
+  assert.equal(r.cards.at(-1).text.value, 'Scarta questa carta immaginaria.');
+  p.cards.at(-1).usage.value.acquisitionNotes = [];
+  assert.throws(() => requirePhysicalCatalog(p));
+});
+
+test('accetta i limiti esatti di testo e fonti preservando spazi e ordine', () => {
+  const p = physicalPack();
+  p.cards[0].text.value = ` ${'a'.repeat(16382)} `;
+  for (let i = 3; i < 128; i++) p.sources.push({ ...p.sources[0], id: `invented-source-${i}` });
+  const r = requirePhysicalCatalog(p);
+  assert.equal(r.cards[0].text.value.length, 16384);
+  assert.equal(r.cards[0].text.value[0], ' ');
+  assert.equal(r.sources.length, 128);
 });
 
 test('export della singola famiglia verificata rimane consumabile in presenza di una famiglia irrisolta', () => {

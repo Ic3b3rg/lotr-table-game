@@ -78,6 +78,7 @@ export function physicalPack() {
           prepareOnGain: family === 'title' ? 'unless-instructed-otherwise' : 'not-applicable',
           ownership: family === 'title' ? 'campaign' : 'adventure',
           removedUntil: family === 'title' ? 'next-adventure' : 'not-applicable',
+          acquisitionNotes: family === 'title' ? ['Istruzione dello scenario immaginario.'] : [],
         }),
         binding: fact(
           family === 'title'

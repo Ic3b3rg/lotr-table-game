@@ -113,6 +113,11 @@ export function validatePhysicalPack(p: PhysicalPack): void {
       `${c.id} icone`,
     );
     unique(c.mechanics.symbols.value, `${c.id} simboli`);
+    for (const field of ['timing', 'targets', 'duration', 'operations'] as const) {
+      const f = c.mechanics[field];
+      if (f.status === 'verified' && !f.value.length)
+        fail(`${c.id}: ${field} meccanico verificato ma vuoto.`);
+    }
     const title = c.family === 'title';
     if (title) {
       if (c.printing.status === 'verified' && c.printing.value.number === null)
@@ -168,6 +173,8 @@ export function validatePhysicalPack(p: PhysicalPack): void {
     }
 
     const u = c.usage.value;
+    if (title && c.usage.status === 'verified' && !u.acquisitionNotes.length)
+      fail(`${c.id}: mancano istruzioni di acquisizione.`);
     if (
       u.requiresPrepared !== title ||
       u.ownership !== (title ? 'campaign' : 'adventure') ||

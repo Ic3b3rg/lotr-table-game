@@ -33,7 +33,12 @@ const text = z
   .min(1)
   .max(PHYSICAL_CONTENT_LIMITS.string)
   .refine((s) => s.trim().length > 0);
-const reference = z.strictObject({ sourceId: id, locator: z.string().min(1).max(300) });
+const locator = z
+  .string()
+  .min(1)
+  .max(300)
+  .refine((s) => s.trim().length > 0);
+const reference = z.strictObject({ sourceId: id, locator });
 const symbol = z.enum([
   'damage',
   'fear',
@@ -76,7 +81,7 @@ const localized = fact(text).extend({
 });
 const model = z.strictObject({
   sourceId: id,
-  locator: z.string().min(1).max(300),
+  locator,
   modelId: z.int().min(1).max(10000),
 });
 const orientation = z.enum(['portrait', 'landscape', 'unknown']);
@@ -120,8 +125,17 @@ const PackSchema = z.strictObject({
           'derived-evidence',
         ]),
         language: z.enum(['it', 'en', 'mul', 'none']),
-        edition: z.string().min(1).max(200).nullable(),
-        uri: z.string().min(1).max(2048),
+        edition: z
+          .string()
+          .min(1)
+          .max(200)
+          .refine((s) => s.trim().length > 0)
+          .nullable(),
+        uri: z
+          .string()
+          .min(1)
+          .max(2048)
+          .refine((s) => s.trim().length > 0),
         sha256: z.string().regex(/^[a-f0-9]{64}$/),
       }),
     )
@@ -182,6 +196,7 @@ const PackSchema = z.strictObject({
             prepareOnGain: z.enum(['unless-instructed-otherwise', 'not-applicable']),
             ownership: z.enum(['adventure', 'campaign']),
             removedUntil: z.enum(['next-adventure', 'not-applicable']),
+            acquisitionNotes: strings,
           }),
         ),
         binding: fact(
