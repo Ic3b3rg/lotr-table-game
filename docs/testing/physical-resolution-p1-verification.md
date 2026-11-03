@@ -51,7 +51,7 @@ P1 dichiarato. Nessun skip, suppression, soglia abbassata o dipendenza nuova.
 
 ## Test automatici e casi privati
 
-**463/463 test**, baseline444 più19, zero skipped; npm test, typecheck,
+**467/467 test**, baseline444 più23, zero skipped; npm test, typecheck,
 format:check e diffcheck verdi sul codice finale. HTTP, SQLite e processi
 reali. I cicli RED→GREEN includono compiler, cascata, scelta/costo, consumer,
 UI, proprietà solo, validazione della fonte, riconciliazione dei reveal
@@ -187,3 +187,28 @@ Riferimenti tecnici consultati: [Zod4](https://zod.dev/api#unions) per gli
 schemi e [fieldset/legend](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/fieldset)
 per i controlli nativi. Node24.11.1, TypeScript5.9.3 e dipendenze esistenti;
 nessuna nuova libreria introdotta.
+
+## Integrazione root
+
+Le [review indipendenti](../reviews/2026-11-03-physical-resolution-p1a.md)
+riscontrano Standards1 P1 e1 P2, Spec2 P2. Tutti corretti dal root con quattro
+regressioni RED→GREEN. La ricompensa iniziale viene verificata sulla prima
+preparazione fonte conservata, anche dopo lo scarto legittimo della sua
+copia; il test HTTP verifica commit e ripristino con cronologia invariata.
+Le alternative composte riservano le risorse condivise durante un controllo
+di fattibilità senza effetti o letture di nuove carte nascoste. Le prevenzioni
+usano un'identità stabile della capacità, indipendente dalle altre preparate
+ancora presenti. Il divieto di negare viene ricalcolato dopo la prova figlia
+e nelle successive finestre, spegnendosi quando la carta torna coperta.
+
+Il root ricontrolla209 hash/119.238.844byte e25 input bloccati/190.142.075byte,
+senza modificare le evidenze originali. In una scratch distinta ricompila
+l'artifact, identico byte per byte, riesegue36 corpi e il checker Python,
+quindi riconvalida27 backup con il codice corretto. Quattro coppie di
+riavvio e quattro ripristini concordano; il controllo aggiuntivo confronta
+tutti i campi di gameplay e le ricevute, esclusi solo generation/revision/
+updatedAt previsti dal restore. Freeze invariato in tutti i backup.
+Questi sono replay e controlli degli artefatti della QA effettiva già
+descritta, non una nuova sessione browser. Suite root finale467/467,
+typecheck, formato e diff verdi. Il tavolo4339/PID12892 resta intatto.
+P1a è integrabile separatamente; #65 e #33 restano aperte per il seguito.

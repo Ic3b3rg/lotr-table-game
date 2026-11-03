@@ -6,13 +6,14 @@
   "preservedPhysicalVersion": 1,
   "newPhysicalVersion": 2,
   "tests": {
-    "total": 463,
+    "total": 467,
     "baseline": 444,
-    "added": 19,
+    "added": 23,
     "skipped": 0,
     "typecheck": true,
     "formatCheck": true,
-    "diffCheck": true
+    "diffCheck": true,
+    "childImplementationTotal": 463
   },
   "privateEvidence": {
     "directory": ".scratch/physical-p1",
@@ -96,5 +97,22 @@
     "trackedPrivateArtifacts": 0
   },
   "fullGameCertified": false,
-  "phonesLanWindowsSafariCertified": false
+  "phonesLanWindowsSafariCertified": false,
+  "integration": {
+    "codeHead": "4dc30d3c8cd0184613a295e35563f7a0db301c12",
+    "privateVerificationPath": ".scratch/physical-p1-root-review/integration-verification.json",
+    "privateVerificationSha256": "943f55c60d0fd37109230c8302f4eca3c3045b271765deb793733368d9cfea38",
+    "standardsFindingsCorrected": {
+      "P1": 1,
+      "P2": 1
+    },
+    "specFindingsCorrected": {
+      "P2": 2
+    },
+    "regressionsRedThenGreen": 4,
+    "allRestoreGameplayFieldsCompared": true,
+    "originalManifestUnchanged": true,
+    "newBrowserRun": false,
+    "issue65Complete": false
+  }
 }
