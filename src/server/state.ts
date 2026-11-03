@@ -161,11 +161,12 @@ const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.li
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
-    if (version === 12)
-      return StateSchema.parse({
-        ...BaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(raw),
-        schemaVersion: 13,
-      });
+    if (version === 12) {
+      const previous = BaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(raw);
+      if (previous.physical?.version === 3 || previous.physical?.cycle)
+        throw new Error('Ledger ordinario non valido per schema12.');
+      return StateSchema.parse({ ...previous, schemaVersion: 13 });
+    }
     if (version === 11) {
       const legacy = BaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
       if (legacy.physical && legacy.physical.version !== 1)

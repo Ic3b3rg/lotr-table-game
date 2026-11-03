@@ -111,7 +111,8 @@ export function createCompany(sync: () => Promise<void>) {
       if (session.scenario) {
         element('#rounds').hidden = session.scenario.phase !== 'action';
         element('#journey-map').hidden = !session.journey;
-        element('#scouting').hidden = !session.scout;
+        element('#scouting').hidden =
+          !session.scout && !(session.physical?.cycle && session.round?.phase === 'rally');
         element('#skill-tests').hidden =
           session.scenario.pending?.kind !== 'test' ||
           session.scenario.pending.stage !== 'revealed';

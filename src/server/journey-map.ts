@@ -20,11 +20,7 @@ export function journeyBudgetProblem(state: State, receipts: Receipt[]): string 
       receipt.heroId === travel.heroId
     ) {
       if (receipt.type === 'START_TRAVEL') {
-        const record = state.physical?.cycle?.records.find(
-          (c) => c.requestId === receipt.requestId,
-        );
-        // Complete cycle replay independently verifies the grant at this revision.
-        granted += record ? receipt.movesRemaining - (granted - moved) : 2;
+        granted += receipt.movesGranted ?? 2;
       } else moved++;
     }
   }
@@ -158,6 +154,9 @@ export function applyJourneyCommand(
     heroId: command.heroId,
     spaceId: position.spaceId,
     movesRemaining: journey.travel.remaining,
+    ...(command.type === 'START_TRAVEL' && state.physical?.cycle
+      ? { movesGranted: grantedMoves }
+      : {}),
     roundId: round.id,
     turnId: round.turnId,
   };

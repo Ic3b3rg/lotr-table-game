@@ -47,6 +47,29 @@ test('ordinary END_TURN resolves its live persistent front before completing onc
   assert.equal(restored.status, 200, await restored.text());
 });
 
+test('the same hash-bound prepare policy rewards startup and Rally without a second resource account', async (t) => {
+  const ready = await readyCycle(t, (input) =>
+    policy(input, 'role-1-skill-1', [{ op: 'after-prepare-inspiration' }]),
+  );
+  const s = await readSession(ready.host);
+  assert.equal(
+    s.scenario.cardEffects.filter(
+      (e) => e.source === 'initial' && e.heroId === s.preparation.heroes[0].heroId,
+    ).length,
+    1,
+  );
+  assert.equal((await cycleCommand(ready, 'START_TURN')).status, 200);
+  assert.equal((await cycleCommand(ready, 'END_TURN')).status, 200);
+  const backup = await readBackup(ready.host);
+  const r = await ready.host.request('/api/restores', {
+    backup,
+    generation: s.generation,
+    expectedRevision: (await readSession(ready.host)).revision,
+    confirmed: true,
+  });
+  assert.equal(r.status, 200, await r.text());
+});
+
 test('END_TURN keeps travel and actor until a real prevention child on another phone returns', async (t) => {
   const ready = await readyCycle(t, (input) => {
     for (const d of input.definitions.filter((d) => d.cardId.includes('damage')))
@@ -193,4 +216,37 @@ test('ordinary Rally recomposes and Scouts with live top restrictions and prepar
   s = await readSession(ready.host);
   assert.equal(s.round.heroes[0].rallyDone, true);
   assert.equal(s.preparation.heroes[0].inspiration, Math.min(4, inspiration + 1));
+});
+
+test('a Last Stand barrier suspends ordinary END_TURN without losing actions or movement', async (t) => {
+  const ready = await readyCycle(
+    t,
+    (input) => {
+      for (const d of input.definitions.filter((d) => d.cardId.includes('damage')))
+        d.persistent = [
+          {
+            op: 'suffer',
+            window: 'end-own-turn',
+            hero: 'self',
+            family: 'fear',
+            n: 1,
+            face: 'normal',
+          },
+        ];
+    },
+    (_pack, pr) => pr.children.push(suffer(0, 0, 4)),
+  );
+  for (const type of ['START_TURN', 'START_TRAVEL', 'END_TURN']) {
+    const r = await cycleCommand(ready, type);
+    assert.equal(r.status, 200, await r.text());
+  }
+  const s = await readSession(ready.host);
+  assert.equal(s.physical.active.reason, 'last-stand-unavailable');
+  assert.equal(s.physical.active.capability, 'P2:last-stand');
+  assert.equal(s.round.heroes[0].turnEnded, false);
+  assert.equal(s.round.heroes[0].actionsUsed, 1);
+  assert.equal(s.journey.travel.remaining, 2);
+  assert.equal(s.physical.parents.at(-1).returnCount, 0);
+  assert.equal((await cycleCommand(ready, 'END_TURN')).status, 409);
+  assert.equal((await cycleCommand(ready, 'BEGIN_SHADOW')).status, 409);
 });

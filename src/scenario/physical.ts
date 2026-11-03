@@ -269,6 +269,7 @@ export function validateScenarioPhysical(state: State) {
       parent = p.snapshot.parents[n]!;
     invariant(
       action.op === 'physical' &&
+        !run.spatial &&
         digest(run.source) === digest(physicalOrigin(effect, action)) &&
         digest(run.program) === digest(action.program),
       'Origine/programma fisico estranei alla fonte.',

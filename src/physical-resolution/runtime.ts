@@ -41,6 +41,7 @@ export function physicalFamilies(raw: unknown) {
 }
 export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnapshot {
   if (p.version !== 1) return replayFronts(p);
+  invariant(p.runs.length <= 32, 'Budget padri P0 superato.');
   invariant(
     !p.fronts &&
       p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),

@@ -3,6 +3,7 @@ import { ContentIdSchema } from './catalog';
 import { RoundSchema } from './rounds';
 import { JourneySchema } from './journey-map';
 import { PhysicalInputSchema } from './physical';
+import { PreparationSchema } from './preparation';
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const base = { expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const hero = { ...base, heroId: ContentIdSchema };
@@ -48,6 +49,7 @@ export const CycleStateSchema = z.strictObject({
     revision: z.int().nonnegative(),
     round: RoundSchema,
     journey: JourneySchema,
+    preparation: PreparationSchema.optional(),
   }),
   records: z
     .array(

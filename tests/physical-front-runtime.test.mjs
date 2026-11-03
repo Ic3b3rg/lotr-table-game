@@ -296,6 +296,87 @@ test('real Guard uses the prepared owner in the same space and pays once without
   assert.doesNotThrow(() => validatePhysical(f.p));
 });
 
+test('a paid Guard preserves the continuation printed on its discarded copy', () => {
+  const f = fresh(({ ir, catalog }) => {
+    const d = catalog.skills.find((s) => s.id === 'role-1-skill-1');
+    ir.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Policy!followup' },
+      effects: [{ op: 'guard', n: 1 }, { op: 'after-guard-inspiration' }],
+    });
+  });
+  const id = openPhysical(f.p, source, f.program([suffer(0, 1, 0)]), f.context);
+  const offer = f.p.snapshot.active.options.find((o) => o.id.includes('role-1-skill-1')).id;
+  answerPhysical(
+    f.p,
+    id,
+    { kind: 'physical-choice', option: offer },
+    evidence(0, f.heroes[0].playerId),
+  );
+  answerPhysical(
+    f.p,
+    id,
+    { kind: 'physical-allocate', ability: offer, damage: 1, fear: 0 },
+    evidence(1, f.heroes[0].playerId),
+  );
+  assert.equal(f.p.snapshot.resolution.resources.preparation.heroes[0].inspiration, 3);
+  assert.equal(f.p.snapshot.resolution.resources.preparation.heroes[0].prepared.length, 0);
+});
+
+test('a source freezes current movement adjacency without widening same-space Guard', () => {
+  const f = fresh(({ ir, catalog }) => {
+    for (const d of ir.definitions.filter((d) => d.cardId.includes('damage')))
+      d.body = [
+        { op: 'suffer', hero: 'each-nearby-excluding-self', family: 'fear', n: 1, face: 'down' },
+        { op: 'self-flip-down' },
+      ];
+    const d = catalog.skills.find((s) => s.id === 'role-2-skill-1');
+    ir.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Policy!space' },
+      effects: [{ op: 'guard', n: 1 }],
+    });
+  });
+  f.p.version = 3;
+  const spatial = {
+    heroes: f.heroes.map((h, n) => ({ ...h, spaceId: ['a', 'b', 'c'][n] })),
+    connections: [
+      ['a', 'b'],
+      ['b', 'c'],
+    ],
+  };
+  const id = openPhysical(
+    f.p,
+    source,
+    f.program([{ ...suffer(0, 1, 0), face: 'faceup' }]),
+    f.context,
+    spatial,
+  );
+  assert.equal(
+    f.p.snapshot.active.heroId,
+    'hero-2',
+    'adjacent Guard cannot protect the original hero in another space',
+  );
+  answerPhysical(
+    f.p,
+    id,
+    { kind: 'physical-choice', option: 'close' },
+    evidence(0, f.heroes[1].playerId),
+  );
+  assert.equal(f.p.snapshot.active, null);
+  assert.deepEqual(
+    f.p.snapshot.areas.map((h) => h.fear.length),
+    [0, 1, 0],
+  );
+  assert.equal(f.p.heroes[0].spaceId, 'invented-space');
+  assert.deepEqual(f.p.runs[0].spatial, spatial);
+  assert.doesNotThrow(() => validatePhysical(f.p));
+});
+
 test('source-granted negate test can suspend for a conversion Scout without recycling parent reveal', () => {
   const f = fresh(({ ir, catalog }) => {
     const d = catalog.skills.find((c) => c.id === 'role-1-skill-1');

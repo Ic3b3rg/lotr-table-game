@@ -8,11 +8,13 @@ import type {
   ScoutingCommand,
   Session,
   SkillTestCommand,
+  Command,
 } from '../shared/protocol';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
 type GameCommand =
+  | Extract<Command, { type: 'CYCLE_INPUT' }>
   | ScenarioCommand
   | MapGenerationCommand
   | GroupCommand

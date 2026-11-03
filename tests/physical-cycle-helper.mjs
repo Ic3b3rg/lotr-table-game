@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readyFronts } from './physical-front-helper.mjs';
-import { inventedFrontInput, diagnosticRaw } from './fixtures/physical-fronts.mjs';
+import { hash, inventedFrontInput, diagnosticRaw } from './fixtures/physical-fronts.mjs';
 import { compilePhysicalFronts } from '../dist/physical-resolution-library.mjs';
 import { startScenario, scenarioInput } from './scenario-helper.mjs';
 import { readSession } from './skill-test-helper.mjs';
@@ -82,4 +82,42 @@ export async function cycleCommand(ready, type, extra = {}, actor = ready.player
     },
     s,
   );
+}
+
+export async function waitingCycle(t) {
+  const ready = await readyCycle(t, (input) => {
+    for (const d of input.definitions.filter((d) => d.cardId.includes('damage')))
+      d.persistent = [
+        {
+          op: 'suffer',
+          window: 'end-own-turn',
+          hero: 'self',
+          family: 'fear',
+          n: 1,
+          face: 'normal',
+        },
+      ];
+    const d = catalogFixture().skills.find((c) => c.id === 'role-2-skill-1');
+    input.policies.push({
+      id: d.id,
+      kind: 'skill',
+      definitionHash: hash(d),
+      source: { sourceId: 'invented', locator: 'Cycle!recovery' },
+      effects: [{ op: 'guard', n: 1 }],
+    });
+  });
+  for (const type of ['START_TURN', 'START_TRAVEL', 'END_TURN']) {
+    const r = await cycleCommand(ready, type);
+    assert.equal(r.status, 200, (await r.text()) + ready.host.diagnostics());
+  }
+  const s = await readSession(ready.host);
+  const offer = s.physical.active.options.find((o) => o.id.includes('role-2-skill-1')).id;
+  const { type: _, ...q } = s.physical.cycle.pending;
+  const r = await command(ready.host, ready.player, {
+    type: 'CYCLE_INPUT',
+    ...q,
+    input: { kind: 'physical-choice', option: offer },
+  });
+  assert.equal(r.status, 200, (await r.text()) + ready.host.diagnostics());
+  return { ...ready, offer };
 }

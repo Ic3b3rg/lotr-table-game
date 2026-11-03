@@ -33,6 +33,18 @@ function owned(state: State, heroId: string, playerId: string) {
     throw new ApiError(403, 'HERO_NOT_YOURS', 'Puoi gestire soltanto i tuoi eroi.');
   return hero;
 }
+function darknessHeroes(state: State) {
+  invariant(state.mapGeneration?.status === 'frozen', 'Contesto fisico senza mappa congelata.');
+  const sc = state.scenario!,
+    spaces = state.mapGeneration.projection.spaces;
+  return state.preparation!.heroes.flatMap((h, n) => {
+    const position = state.journey!.heroes.find((p) => p.heroId === h.heroId)!;
+    const source = sc.spaceBindings.find((b) => b.id === position.spaceId)?.sourceId;
+    const space = spaces.find((s) => s.id === source);
+    invariant(space, 'Posizione senza contesto fonte.');
+    return space.hasDarkness ? [n] : [];
+  });
+}
 function finish(state: State, task: NonNullable<CycleState['pending']>) {
   const round = state.round!,
     progress = round.heroes.find((h) => h.heroId === task.heroId)!;
@@ -76,7 +88,7 @@ function runSource(
     profile: 'source-fronts-v1',
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
-    darknessHeroes: [],
+    darknessHeroes: darknessHeroes(state),
     children,
   };
   const id = uuid({
@@ -84,21 +96,28 @@ function runSource(
     player: record.playerId,
     request: record.requestId,
   });
-  openPhysical(
-    p,
-    {
-      effectId: `ordinary:${record.requestId}`,
-      instanceId: 'ordinary-cycle',
-      state: round.number,
-      entry: state.physical!.cycle?.records.length ?? 0,
-      action: 0,
-      parameterHash: digest({ intent, round, spatial }),
-    },
-    program,
-    context,
-    spatial,
-    id,
-  );
+  const ledger = p.cycle,
+    entry = ledger?.records.length ?? 0;
+  delete p.cycle;
+  try {
+    openPhysical(
+      p,
+      {
+        effectId: `ordinary:${record.requestId}`,
+        instanceId: 'ordinary-cycle',
+        state: round.number,
+        entry,
+        action: 0,
+        parameterHash: digest({ intent, round, spatial }),
+      },
+      program,
+      context,
+      spatial,
+      id,
+    );
+  } finally {
+    if (ledger) p.cycle = ledger;
+  }
   state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
   return id;
 }
@@ -206,7 +225,8 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       fail('SHADOW_STEP_CHANGED', 'Questo passaggio è cambiato.');
     if (
       c.step === 'darkness' &&
-      persistentEffects(p).some((e) => e.window === 'after-darkness-suffering-batch')
+      (darknessHeroes(state).length ||
+        persistentEffects(p).some((e) => e.window === 'after-darkness-suffering-batch'))
     )
       fail(
         'PHYSICAL_DARKNESS_CAPABILITY',
@@ -282,15 +302,20 @@ function replay(state: State, cycle: CycleState) {
   delete p.cycle;
   p.runs = p.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
   p.snapshot = replayPhysical(p);
+  const preparation = p.snapshot.resolution!.resources?.preparation ?? cycle.seed.preparation;
+  invariant(preparation, 'Ledger ordinario senza origine delle risorse.');
+  if (cycle.seed.preparation)
+    invariant(
+      digest(cycle.seed.preparation) === digest(preparation),
+      'Risorse del confine ordinario non continue con la fonte precedente.',
+    );
   const work = {
     ...state,
     revision: cycle.seed.revision,
     round: structuredClone(cycle.seed.round),
     journey: structuredClone(cycle.seed.journey),
     physical: p,
-    preparation: structuredClone(
-      p.snapshot.resolution!.resources?.preparation ?? state.preparation,
-    ),
+    preparation: structuredClone(preparation),
   };
   const ledger: CycleState = { ...cycle, records: [], pending: null };
   const receipts: Receipt[] = [];
@@ -322,6 +347,7 @@ export function applyPhysicalCycle(state: State, playerId: string, command: Comm
           revision: state.revision,
           round: structuredClone(state.round!),
           journey: structuredClone(state.journey!),
+          preparation: structuredClone(state.preparation!),
         },
         records: [],
         pending: null,

@@ -34,7 +34,7 @@ export const FrontSnapshotSchema = z.strictObject({
         remaining: z.int().min(0).max(56),
       }),
     )
-    .max(100000),
+    .max(10000),
   revealed: z
     .array(
       z.strictObject({ heroId: z.string().max(100), cards: z.array(z.string().max(120)).max(56) }),
@@ -48,7 +48,7 @@ export const FrontSnapshotSchema = z.strictObject({
         active: PhysicalDecisionSchema,
       }),
     )
-    .max(10000),
+    .max(100000),
   operations: z.int().min(0).max(100000),
 });
 export type FrontResources = z.infer<typeof FrontResourcesSchema>;

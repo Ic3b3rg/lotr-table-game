@@ -322,6 +322,7 @@ export const ReceiptSchema = z.union([
     heroId: ContentIdSchema.nullable(),
     spaceId: SpaceIdSchema.nullable(),
     movesRemaining: z.int().min(0).max(4),
+    movesGranted: z.int().min(0).max(2).optional(),
     roundId: z.uuid().nullable(),
     turnId: z.uuid().nullable(),
   }),

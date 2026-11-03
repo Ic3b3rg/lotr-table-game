@@ -624,12 +624,14 @@ class FrontReplay {
       cap = this.catalog.heroes.find((x) => x.id === h.heroId)!.stats.inspiration;
     h.inspiration = Math.min(cap, h.inspiration + 1);
   }
-  private afterGuard(actor: number) {
+  private afterGuard(actor: number, paidEffects: PolicyEffect[] = []) {
     this.p.heroes.forEach((_, owner) => {
       if (owner === actor || this.nearby(owner, actor))
         for (const { effect } of this.policy(owner))
           if (effect.op === 'after-guard-inspiration') this.inspiration(actor);
     });
+    for (const effect of paidEffects)
+      if (effect.op === 'after-guard-inspiration') this.inspiration(actor);
   }
   private afterPrepare(hero: number, copy: string, path: string) {
     const effects =
@@ -898,9 +900,12 @@ class FrontReplay {
           }
           if (offer.e.op === 'guard') {
             const h = this.hero(offer.actor);
+            const paidEffects = this.policy(offer.actor)
+              .filter((p) => p.copy === offer.copy)
+              .map((p) => p.effect);
             h.prepared.splice(h.prepared.indexOf(offer.copy), 1);
             h.discard.push(offer.copy);
-            this.afterGuard(offer.actor);
+            this.afterGuard(offer.actor, paidEffects);
           } else if (offer.e.op === 'paid-prevent') this.hero(hero).inspiration--;
           else if (offer.e.op === 'fear-facedown') {
             this.resources.depletion.find((d) => d.copy === offer.copy)!.remaining--;
@@ -1195,6 +1200,13 @@ class FrontReplay {
       runIds.add(run.id);
       this.run = run;
       this.answer = 0;
+      if (run.spatial)
+        invariant(
+          this.p.version === 3 &&
+            digest(run.spatial.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))) ===
+              digest(this.p.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))),
+          'Contesto spaziale di un’altra compagnia o versione.',
+        );
       const context = FrontResourcesSchema.parse(run.context);
       invariant(
         context.preparation.heroes.length === this.p.heroes.length &&
