@@ -68,6 +68,16 @@ export function validateInstanceFlags(sc: Scenario) {
   });
   for (const i of sc.instances) {
     const f = flags.get(i.id)!;
+    const d = defs.get(i.definition)!;
+    const s = d.states.find((s) => s.index === i.state)!;
+    invariant(
+      i.settled ===
+        (i.stopped ||
+          (s.actions.every((a) => i.completed.includes(a.index)) &&
+            s.transitions.FINISHED === undefined &&
+            d.handlers.FINISHED === undefined)),
+      'Settled non coerente con il completamento della fonte.',
+    );
     invariant(
       i.visible === f.visible && i.processing === f.processing && i.stopped === f.stopped,
       'Visibilità/ProcessingState/stopped non coerenti con eventi ed effetti.',

@@ -168,3 +168,44 @@ Pack su disco: SHA256
 Le quantità dei tre benefici restano la domanda già pending in #57; non sono
 inventate né richieste di nuovo e non bloccano questo startup. #38 consegna
 l'avvio verificato; non dichiara completa l'avventura #33 o la campagna.
+
+## Integrazione e verifica root
+
+Base main `bc83b16fae75609472241e916c0a05d066be3f79`; review indipendenti sul
+diff fino a `ef313c69a1fddcd1067977e946beeae7788884c7`. Tutti i tre P2 trovati
+sono riprodotti tramite backup sintetici risignati e corretti prima del merge:
+
+- La continuazione di esplorazione è riconciliata con entry/azione proprietaria,
+  tessera, casella, stage, waiting e sequenza PRE_REVEAL/REVEALED. Anche un
+  indice ancora entro i limiti non può saltare il callback di una casella.
+- La cronologia attesa deriva dalle azioni fonte, dai completamenti per eroe
+  e dalla richiesta aperta. Ordine, actor, fingerprint della richiesta,
+  conversioni, pending ID e revisioni vengono verificati prima di confrontare
+  le ricevute. Eliminare entrambe le copie non certifica più completamenti
+  senza richieste; quattro mutazioni indipendenti sono rifiutate.
+- Il flag settled corrisponde al completamento delle azioni, all'assenza di
+  ulteriori transizioni FINISHED e allo stato stopped; non può sospendere
+  artificialmente una FSM che deve ancora completare il proprio messaggio.
+
+Tre nuove regressioni HTTP osservate RED→GREEN, rifiuto422 e stato originario
+invariato. **419/419 test**, zero skipped; **30/30** scenario, typecheck,
+format:check e diff check passano. Nessun campo aggiunto allo schema10 dalle
+correzioni. [Disposizione delle review](../reviews/2026-11-03-first-adventure-start.md).
+
+Root ricalcola tutti i 76 hash/byte del manifest (55.180.463 byte) e i cinque
+hash delle fonti originali; manifest fonte SHA256
+`6e9771eae9ebbb079ff8873168834c9b9531d3082b2988447ba7184f846d6936`.
+In scratch distinta ricompila il pack con lo stesso fingerprint, verifica
+quattro binding e tutti i 29 backup con i validatori finali, sette confronti
+integrali di riavvio e due ripristini. Pack, proiezione e fonti mantengono le
+impronte originarie. Ispezionate le schermate desktop del primo turno e mappa
+a 320px; la prova UI originale rimane quella documentata sopra.
+
+Tre replay root nuovi in memoria, esclusivamente backend su copie di backup
+autentici UI53/UI38/Cacciatore, validano stato e ricevute a ogni comando.
+Tutti raggiungono obiettivo0/round1, sei completamenti e handoff1, conservando
+l'intero mapGeneration; Cacciatore converte1 Fato con un solo trigger di carta.
+Sono verifiche aggiuntive del motore e dei nuovi controlli, non avanzamenti
+della prova browser. Evidenze private `.scratch/startup-root-review/`: log,
+artefatti, helper, confronti e `fresh-replay-summary.json`. Il tavolo4339 e le
+evidenze del checkout delegato restano intatti.

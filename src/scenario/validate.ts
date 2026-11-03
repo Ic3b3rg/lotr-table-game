@@ -2,6 +2,8 @@ import { validateSourcePlayReceipts } from './play-receipts';
 import { validateSourceRequest, validateMessageLog } from './request-state';
 import { validatePreparedRewards } from './prepared-effects';
 import { validateInstanceFlags } from './instance-state';
+import { validateSourceHistory } from './source-history';
+import { validateSourceTasks } from './task-state';
 import type { State } from '../server/state';
 import type { Receipt } from '../shared/protocol';
 import type { ScenarioInstance, VariableRef } from '../shared/scenario';
@@ -313,6 +315,7 @@ export function scenarioStateProblem(state: State): string | null {
       }
     }
     validateInstanceFlags(sc);
+    validateSourceTasks(state);
     validatePreparedRewards(state);
     validateSourceRequest(state);
     validateMessageLog(state);
@@ -406,6 +409,7 @@ export function scenarioStateProblem(state: State): string | null {
       ),
       'Autore/revisione scenario incoerenti.',
     );
+    validateSourceHistory(state);
     return null;
   } catch (e) {
     return e instanceof Error ? e.message : 'Scenario non valido.';

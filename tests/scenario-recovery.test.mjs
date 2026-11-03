@@ -23,6 +23,102 @@ export async function restore(host, backup) {
     confirmed: true,
   });
 }
+async function advanceUntil(host, player, other, reached) {
+  for (let n = 0; n < 45; n++) {
+    const s = await readSession(host);
+    if (reached(s)) return s;
+    const q = s.scenario.pending;
+    const actor = q.heroId === 'hero-2' ? other : player;
+    const input =
+      q.kind === 'scout'
+        ? q.stage === 'ready'
+          ? { kind: 'scout-reveal' }
+          : {
+              kind: 'scout-resolve',
+              prepareCopy: null,
+              top: s.scout.revealed,
+              bottom: [],
+              discardPreparedCopy: null,
+            }
+        : q.kind === 'test'
+          ? q.stage === 'ready'
+            ? { kind: 'test-reveal' }
+            : { kind: 'test-resolve' }
+          : { kind: 'ack' };
+    const response = await scenarioInput(host, actor, input);
+    assert.equal(response.status, 200, await response.text());
+  }
+  assert.fail('La fixture non ha raggiunto il checkpoint richiesto.');
+}
+test('backup: un’istanza con messaggio pendente non può risultare settled', async (t) => {
+  const { host, player } = await readyScenario(t);
+  assert.equal((await startScenario(host, player)).status, 200);
+  const before = await readSession(host);
+  const bad = await readBackup(host);
+  bad.payload.state.scenario.instances[0].settled = true;
+  signBackup(bad);
+  assert.equal((await restore(host, bad)).status, 422);
+  assert.deepEqual(await readSession(host), before);
+});
+test('backup: il cursore di esplorazione non può saltare un callback fonte', async (t) => {
+  const { host, player, other } = await readyScenario(t);
+  assert.equal((await startScenario(host, player)).status, 200);
+  const before = await advanceUntil(host, player, other, (s) =>
+    s.scenario.pending?.instanceId.startsWith('node:'),
+  );
+  const bad = await readBackup(host);
+  const task = bad.payload.state.scenario.tasks.at(-1);
+  const spaces = before.mapGeneration.projection.spaces.filter(
+    (space) => space.tileSource === task.tileSource,
+  );
+  assert.equal(task.kind, 'explore');
+  assert.ok(spaces.length > 1);
+  task.spaceIndex = spaces.length - 1;
+  task.stage = 'next';
+  task.waiting = null;
+  signBackup(bad);
+  assert.equal((await restore(host, bad)).status, 422);
+  assert.deepEqual(await readSession(host), before);
+});
+test('backup: cronologia e ricevute restano legate a richieste ed eroi completati', async (t) => {
+  const { host, player, other } = await readyScenario(t);
+  assert.equal((await startScenario(host, player)).status, 200);
+  const before = await advanceUntil(host, player, other, (s) => s.scenario.phase === 'action');
+  const backup = await readBackup(host);
+  const edits = [
+    (b) => {
+      b.payload.state.scenario.commands = b.payload.state.scenario.commands.filter(
+        (c) => c.kind === 'start',
+      );
+      b.payload.commands = b.payload.commands.filter((c) => c.receipt.type !== 'SCENARIO_INPUT');
+    },
+    (b) => {
+      const c = b.payload.state.scenario.commands.find((c) => c.kind === 'scout-resolve');
+      const r = b.payload.commands.find((r) => r.requestId === c.requestId);
+      c.playerId = b.payload.state.players.find((p) => p.id !== c.playerId).id;
+      r.playerId = c.playerId;
+    },
+    (b) => {
+      const c = b.payload.state.scenario.commands.find((c) => c.kind === 'scout-resolve');
+      const r = b.payload.commands.find((r) => r.requestId === c.requestId);
+      c.source = 'forged-cursor';
+      r.receipt.source = c.source;
+    },
+    (b) => {
+      const c = b.payload.state.scenario.commands.find((c) => c.kind === 'scout-resolve');
+      const r = b.payload.commands.find((r) => r.requestId === c.requestId);
+      c.pendingId = b.payload.state.scenario.completedSetup.at(-1).requestId;
+      r.receipt.pendingId = c.pendingId;
+    },
+  ];
+  for (const edit of edits) {
+    const bad = structuredClone(backup);
+    edit(bad);
+    signBackup(bad);
+    assert.equal((await restore(host, bad)).status, 422);
+    assert.deepEqual(await readSession(host), before);
+  }
+});
 test('backup: source/cursor/binding/effetti/ricevute incoerenti non sostituiscono il tavolo', async (t) => {
   const { host, player } = await readyScenario(t);
   assert.equal((await startScenario(host, player)).status, 200);
