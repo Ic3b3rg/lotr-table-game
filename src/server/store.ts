@@ -1,4 +1,5 @@
 import { scenarioReceiptProblem } from '../scenario/validate';
+import { digest } from '../map-freeze/hash';
 import { physicalView } from '../physical-resolution/view';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -383,6 +384,11 @@ export function publicSession(state: State) {
     group: state.group,
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
+    encounterFingerprints: Object.fromEntries(
+      (state.scenario?.instances ?? [])
+        .filter((i) => state.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!))
+        .map((i) => [i.id, digest(i)]),
+    ),
     physical: physicalView(
       state.physical,
       state.scenario?.pack.manifest.scope === 'original-encounter-v1',

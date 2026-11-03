@@ -60,6 +60,7 @@ export const SessionSchema = z.strictObject({
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
   scenario: ScenarioSchema.nullable().default(null),
+  encounterFingerprints: z.record(z.string().max(200), HashSchema).default({}),
   physical: PhysicalViewSchema.nullable().default(null),
 });
 export const IdentitySchema = z.object({

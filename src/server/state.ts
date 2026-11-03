@@ -22,6 +22,7 @@ const BaseStateSchema = SessionSchema.omit({
   skillTest: true,
   scout: true,
   round: true,
+  encounterFingerprints: true,
 }).extend({
   content: CatalogSchema.nullable(),
   preparation: PreparationSchema.nullable().default(null),

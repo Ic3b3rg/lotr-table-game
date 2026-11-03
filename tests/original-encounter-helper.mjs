@@ -238,7 +238,7 @@ export async function readyOriginal(
           ? { kind: q.stage === 'ready' ? 'test-reveal' : 'test-resolve' }
           : { kind: 'ack' };
     const r = await scenarioInput(ready.host, actor, input);
-    assert.equal(r.status, 200, await r.text());
+    assert.equal(r.status, 200, `${await r.text()}\n${ready.host.diagnostics()}`);
   }
   assert.fail('startup did not complete');
 }

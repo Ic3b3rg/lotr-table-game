@@ -63,6 +63,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       actor = current.players.find((p) => p.id === q?.actorPlayerId);
     const active = current.round?.activeHeroId;
     const activeHero = catalog?.heroes.find((h) => h.id === active);
+    const turnsEnded =
+      sc?.pack.manifest.scope === 'original-encounter-v1' &&
+      current.round?.heroes.every((h) => h.turnEnded);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
       : current.physical?.cycle?.pending
@@ -79,7 +82,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                 ? 'Un partecipante conferma per il gruppo.'
                 : activeHero
                   ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                  : 'Avvio completato · scegliete il prossimo eroe di turno.';
+                  : turnsEnded
+                    ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                    : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -88,6 +93,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       q?.kind === 'scout' ? '#scouting' : '#skill-tests';
     element('#scenario-turn-link').hidden = sc?.phase !== 'action';
     const turnLink = element<HTMLAnchorElement>('#scenario-turn-link');
+    turnLink.hidden ||= !!turnsEnded;
     turnLink.textContent = active ? 'Apri la mappa del turno' : 'Scegli il prossimo turno';
     turnLink.href = active ? '#journey-map' : '#rounds';
     element('#scenario-limit').hidden = sc?.phase !== 'action';

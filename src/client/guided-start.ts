@@ -288,14 +288,28 @@ export function createGuidedStart(sync: () => Promise<void>) {
             target = '#scenario';
             label = 'Apri l’istruzione';
             topic = q.kind === 'physical' ? 'physical' : 'encounter';
-          } else if (session.scenario.phase === 'action') {
+          } else if (session.scenario.phase === 'action' && !session.physical?.cycle?.pending) {
             topic = 'encounter';
-            if (session.round?.activeHeroId) {
+            const available = session.scenario.instances.some(
+              (i) =>
+                i.visible &&
+                !i.stopped &&
+                session.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!),
+            );
+            if (session.round?.heroes.every((h) => h.turnEnded)) {
+              heading = 'I turni sono conclusi';
               message =
-                'Apri la mappa per viaggiare e raggiungere il segnalino disponibile. L’ispezione è gratuita; confermare l’interazione spende una sola azione.';
+                'La Fase di Ombra originale non è ancora disponibile. I progressi sono salvati; puoi consultarli o esportare un backup.';
+              target = '#scenario';
+              label = 'Controlla lo stato dell’avventura';
+            } else if (session.round?.activeHeroId) {
+              message = available
+                ? 'Apri la mappa per viaggiare e raggiungere il segnalino disponibile. L’ispezione è gratuita; confermare l’interazione spende una sola azione.'
+                : 'L’incontro disponibile è concluso. Puoi usare i movimenti residui o concludere il turno; i successivi incontri richiedono ancora i loro effetti.';
             } else {
-              message =
-                'Scegliete il prossimo turno. Il segnalino iniziale certificato è disponibile; la Fase di Ombra originale richiede ancora i suoi effetti.';
+              message = available
+                ? 'Scegliete il prossimo turno. Il segnalino iniziale è disponibile; la Fase di Ombra originale richiede ancora i suoi effetti.'
+                : 'L’incontro disponibile è concluso. Gli eroi che devono ancora agire possono completare il turno; la Fase di Ombra originale richiede ancora i suoi effetti.';
             }
           }
         }

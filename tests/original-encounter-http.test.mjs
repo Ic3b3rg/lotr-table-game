@@ -32,6 +32,7 @@ test('original interaction interleaves movement, one cost, retained first succes
   const r = await readyOriginal(t);
   await arrive(r);
   const before = await readSession(r.host);
+  assert.equal(before.encounterFingerprints[playable(before).id], hash(playable(before)));
   await ok(interact(r));
   let s = await finishPhysical(r);
   assert.equal(s.scenario.pending.kind, 'choice');

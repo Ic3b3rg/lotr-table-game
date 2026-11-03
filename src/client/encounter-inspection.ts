@@ -1,6 +1,5 @@
 import type { Session, Player, Command } from '../shared/protocol';
 import type { ScenarioInstance } from '../shared/scenario';
-import { canonical } from '../shared/canonical';
 import { sourceText } from './source-text';
 import { text } from './dom';
 import { refreshActions } from './actions';
@@ -72,7 +71,8 @@ export function createEncounterInspection(
       !session!.physical?.active &&
       i.visible &&
       !i.stopped &&
-      i.settled;
+      i.settled &&
+      !!session!.encounterFingerprints[i.id];
     commit.dataset.blocked = String(!allowed);
     commit.hidden = !supported;
     commit.replaceChildren(...(a ? [sourceText(a.label)] : []));
@@ -101,10 +101,8 @@ export function createEncounterInspection(
       i = node(),
       round = s?.round;
     if (!s || !sc || !i || !round?.turnId || !round.activeHeroId || commit.disabled) return;
-    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(i)));
-    const sourceFingerprint = Array.from(new Uint8Array(bytes), (b) =>
-      b.toString(16).padStart(2, '0'),
-    ).join('');
+    const sourceFingerprint = s.encounterFingerprints[i.id];
+    if (!sourceFingerprint) return;
     dialog.close();
     await submit({
       type: 'INTERACT_SCENARIO',
