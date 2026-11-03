@@ -1,0 +1,100 @@
+{
+  "scope": "P1a vertical source front execution; issue65 remains incomplete",
+  "base": "5378c0b702d7362f4badea1daf4b84fab30beac4",
+  "testedCodeHead": "479bcae9a380e13ddf93ac387903ccf6be31a2ad",
+  "schemaVersion": 12,
+  "preservedPhysicalVersion": 1,
+  "newPhysicalVersion": 2,
+  "tests": {
+    "total": 463,
+    "baseline": 444,
+    "added": 19,
+    "skipped": 0,
+    "typecheck": true,
+    "formatCheck": true,
+    "diffCheck": true
+  },
+  "privateEvidence": {
+    "directory": ".scratch/physical-p1",
+    "manifestSha256": "068327387774d309d0989d49bc27e1ebff3807755c8b671f8f109f72cda970fd",
+    "files": 209,
+    "bytes": 119238844,
+    "checkerSha256": "9442d2e78d194479b4f68e46f3b27946c41dc4adf392a0614f6868c7051028d1",
+    "matrixCheckSha256": "7d34481521797a2fb1599514836bce5f0c4be3606c66d37216ca529560157ec6",
+    "uiCheckerSha256": "fafed5c92165f8e81012bb29ac5cc6075991e721969e72585c76b692fb200b1d",
+    "uiCheckSha256": "32700b5108ee093a282aae680a494f22d31e8adc8425197c308ded97e0f095af"
+  },
+  "sources": {
+    "rawSha256": "3d06fbbf8f767b3e5e78e859c7187986041ed77d7af173917c4c72f2126b0c52",
+    "rawBytes": 780002,
+    "matrixSha256": "ebdef100f890e2871d1678ddddc0d592a5b06c01616c76eae6a2dcd0647fdabc",
+    "abilityWindowsSha256": "0297c147f56f498fdc490657b995b63c169244f292c3684915b8783685b1f563",
+    "authenticBackupSha256": "9c7ecb7110b6b6af3bbaf54ebddc3e8332e032f6e46c82fb6a9c4e05b0c7ba2a",
+    "rootLocksRechecked": 25,
+    "originalFrontHashesRechecked": 36
+  },
+  "coverage": {
+    "compiledDefinitions": 36,
+    "bodyExecutionCases": 36,
+    "independentTerminalChecks": 36,
+    "copiesConserved": 56,
+    "terminalDown": 18,
+    "terminalFaceup": 10,
+    "terminalReturned": 8,
+    "selectedPolicyDefinitions": 20,
+    "ordinaryCycleComplete": false,
+    "bodyCaseGates": 0,
+    "resourceRichAcquisitionsCertified": false
+  },
+  "browser": {
+    "backups": 27,
+    "restarts": 4,
+    "restores": 4,
+    "qa": 4,
+    "widths": [320, 768, 1024, 1440],
+    "identities": 3,
+    "exceptions": 0,
+    "favicon404": 8,
+    "hiddenCopyChecks": 25,
+    "initialQaSnapshotsWithCorrectedWipFinding": 1,
+    "finalQaSnapshots": 3,
+    "uiWritesOnly": true,
+    "backendSqliteWritesToAdvanceUi": 0,
+    "rootChildrenCompleted": 4,
+    "physicalInputs": 6,
+    "parentReturns": 1,
+    "finalDecks": {
+      "damage": 27,
+      "fear": 27
+    },
+    "finalAreaCopies": 2,
+    "finalFrames": 0,
+    "finalHeldCards": 0,
+    "sourceFilesRemovedAfterFreeze": true
+  },
+  "gates": {
+    "ordinaryCycleAndRemainingPolicyFollowups": "P1b required; completed issue65 not claimed",
+    "lastStand": "P2 unavailable at source barrier",
+    "originalEncounters": "P3 disabled by synthetic-only source manifest",
+    "boonAcquisition": "P4 and issue57 unconfirmed quantities",
+    "trulyEmptyRequiredDeck": "diagnostic continuation; no substitute or reshuffle"
+  },
+  "cleanup": {
+    "ownHostPid": 75207,
+    "port": 4355,
+    "hostStopped": true,
+    "browserClosed": true,
+    "previewTabsClosed": 3,
+    "otherProcessesSignalled": false,
+    "listenerAbsent": true,
+    "browserPidAbsent": true
+  },
+  "history": {
+    "commitsBeforeReport": 8,
+    "eachIntermediateCommitScanned": true,
+    "originalIdentityEffectAssociations": 0,
+    "trackedPrivateArtifacts": 0
+  },
+  "fullGameCertified": false,
+  "phonesLanWindowsSafariCertified": false
+}
