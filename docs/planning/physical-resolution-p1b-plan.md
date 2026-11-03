@@ -18,3 +18,14 @@ già autorizzati; nessuna delega o approvazione aggiuntiva.
    avanzamenti esclusivamente UI, ripresa durante figlio, viewport e privacy.
 7. Verifica privata mirata, suite completa/typecheck/formato/diff,
    manifesto/report e audit storia Git; commit ordinati, cleanup proprio.
+
+## Aggiustamento dalla prova browser
+
+Il browser ha riprodotto il commit oltre il timeout HTTP di cinque secondi
+con il ledger cresciuto: il profilo attribuisce il costo ai replay ripetuti,
+non a SQLite. Il raccordo può riusare un solo prefisso canonico già calcolato,
+con chiave completa del contesto e confronto dei record. Ogni output resta
+confrontato con il replay; copie difensive, modifiche del contesto o del
+prefisso e restart non devono introdurre esenzioni. RED: abort nativo a
+5.003 secondi con commit singolo; GREEN da verificare nel browser e con le
+prove di alterazione/ripristino già previste, prima di ripetere la suite.
