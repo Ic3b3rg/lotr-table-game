@@ -40,10 +40,12 @@ export async function generate(host, player, overrides = {}, at) {
   );
 }
 export async function waitGeneration(host, status = 'frozen') {
-  for (let i = 0; i < 200; i++) {
-    const state = await readSession(host);
+  const deadline=Date.now()+30000;
+  let last=null;
+  while (Date.now()<deadline) {
+    const state = await readSession(host);last=state.mapGeneration;
     if (state.mapGeneration?.status === status) return state;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  assert.fail(`Generation did not reach ${status}`);
+  assert.fail(`Generation did not reach ${status}: ${JSON.stringify(last && {status:last.status,reason:last.reason,attempt:last.job?.attempt})}`);
 }

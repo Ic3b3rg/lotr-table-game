@@ -214,9 +214,9 @@ export class MapGenerationService {
       if (this.active.id === g.job.id && this.active.generation === state.generation) return;
       this.cancel();
     }
-    this.run(state.generation, g.job, 0);
+    this.run(state.generation, g.job, 0,true);
   }
-  private run(generation: string, job: GenerationJob, batch: number) {
+  private run(generation: string, job: GenerationJob, batch: number,verifyPending:boolean) {
     let pack: GeneratorPack;
     try {
       pack = this.pack(true);
@@ -226,7 +226,7 @@ export class MapGenerationService {
       return;
     }
     const worker = new Worker(new URL('./map-generation-worker.mjs', import.meta.url), {
-      workerData: { pack, job },
+      workerData: { pack, job,verifyPending },
       resourceLimits: { maxOldGenerationSizeMb: GENERATION_POLICY.workerHeapMiB },
     });
     const timer = setTimeout(() => {
@@ -314,7 +314,7 @@ export class MapGenerationService {
               }
             : { status: 'pending', job: next, requests };
         });
-        if (saved && !paused) this.run(generation, next, batch + 1);
+        if (saved && !paused) this.run(generation, next, batch + 1,false);
       } catch (error) {
         console.error(
           'Generazione non completata:',
