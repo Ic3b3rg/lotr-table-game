@@ -31,3 +31,12 @@ Rischi da provare: conferma confusa con azione interazione; intro ricalcolata
 al replay; reward attribuito al lettore; spazi iterati in spawn order;
 evento soltanto dichiarato scambiato per handler; callback/return duplicati;
 seed aggiornato per nascondere storia; guida che scavalca un pending.
+
+Esecuzione del percorso originale sul codice runtime/UI `c32590c`;
+codice finale `4b20d7c`, con il solo testo della mappa a turni conclusi
+successivamente corretto e riverificato. I restanti commit successivi
+rafforzano test e documentazione. Il
+[report finale](../testing/original-exploration-verification.md) distingue
+automatici, compatibilità di 109 backup, fonte indipendente e QA originale con
+tre identità / 33 backup finali, incluse catture invalidate e limiti reali.
+Review Standards/Spec e integrazione restano al root.
