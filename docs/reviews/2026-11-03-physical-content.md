@@ -1,6 +1,6 @@
 # Review del catalogo fisico #57
 
-Diff indipendente fissato: `b9c0f465e79f6002d3ea8773ba5207000d4df921...44580c7be50d6361f7746340896e0776d394f489`. Due reviewer separati, Standards e Spec; codice integrato dal root sulla base `cba8ad5a7d0709990faae0cbed3d407d35bb10f0`. Autorità: [issue #57](https://github.com/Ic3b3rg/lotr-table-game/issues/57), [specifica](../planning/physical-content-spec.md), [piano](../planning/physical-content-plan.md), AGENTS, glossario e ADR.
+Diff indipendente fissato: `b9c0f465e79f6002d3ea8773ba5207000d4df921...44580c7be50d6361f7746340896e0776d394f489`. Review indipendenti Standards/Spec; integrazione root sulla base `cba8ad5a7d0709990faae0cbed3d407d35bb10f0`. Autorità: [issue #57](https://github.com/Ic3b3rg/lotr-table-game/issues/57), [specifica](../planning/physical-content-spec.md), [piano](../planning/physical-content-plan.md), AGENTS, glossario e ADR.
 
 ## Standards
 
@@ -13,12 +13,17 @@ Nessuno smell facoltativo aggiuntivo. Il reviewer conferma il confine privato e 
 
 ## Spec
 
-Review indipendente in corso; il root non dichiara conclusa la verifica Spec né esegue il merge prima del risultato.
+Due P2 riprodotti dal reviewer e corretti dal root:
+
+- Confine JSON: «Input JSON strict» veniva aggirato da un indice ereditato in `aliases.value`. Oltre ai prototipi personalizzati già respinti, ora sono rifiutati indici propri mancanti prima di Zod. Regressione RED→GREEN con getter su `Array.prototype`: da una lettura a zero; prototipo ripristinato nel `finally` del test.
+- Ruoli modello: «binding cross-card» lasciava usare il riferimento TitleModel di una carta come SkillModel di un'altra. Aggiunta unicità congiunta dei locator fra entrambi i ruoli; due regressioni RED→GREEN, anche alterando il modelId. Gli ID numerici restano distinti per fonte/tipo: il medesimo numero in oggetti diversi è valido.
+
+Il reviewer conferma le 60 voci, gli errata e i 21 titoli, inclusi 10/13/21 e l'assenza del binding 17. Nessun ulteriore difetto sostanziato; quantità beneficio correttamente diagnostiche.
 
 ## Verifica root e limiti
 
-`npm test`: **386/386**, nessuno saltato; suite focalizzata **85/85**. Typecheck, format:check e diff check verdi. Confrontati 94 artefatti, 25 fonti bloccate e 80 binding; riletti 42 modelli. Confronto indipendente 60 definizioni per otto dimensioni, 13 mutazioni di fedeltà respinte. Ricostruzione input e CLI aggiornati producono gli stessi byte della consegna; nessuna mutazione alle fonti. [Rapporto e impronte](../research/physical-content-catalog.md).
+`npm test`: **389/389**, nessuno saltato; suite focalizzata **88/88**. Typecheck, format:check e diff check verdi. Confrontati 94 artefatti, 25 fonti bloccate e 80 binding; riletti 42 modelli. Confronto indipendente 60 definizioni per otto dimensioni, 13 mutazioni respinte. Input e CLI aggiornati producono gli stessi byte; fonti immutate. [Rapporto](../research/physical-content-catalog.md).
 
 Tre quantità beneficio ancora sconosciute: nessun 5/5/5 dedotto dal totale 15. #57 rimane aperta anche dopo l'eventuale integrazione del codice; #33 e i consumer gameplay restano successivi. Danni/paure/titoli verificati possono essere consumati indipendentemente.
 
-Rilievi: Standards **2 P2 corretti**; Spec **pendente**.
+Rilievi per asse: Standards **2 P2 corretti**; Spec **2 P2 corretti**, incluso il difetto JSON condiviso. Nessun P2 aperto.

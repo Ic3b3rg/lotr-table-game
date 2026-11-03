@@ -39,8 +39,10 @@ export function boundPhysicalInput(value: unknown): void {
       ancestors.add(v);
       if (Array.isArray(v) && v.length > PHYSICAL_CONTENT_LIMITS.nodes) fail('Limite array.');
       const entries = Object.getOwnPropertyDescriptors(v);
-      if (!Array.isArray(v) && Reflect.ownKeys(entries).length > 64) fail('Limite campi.');
-      for (const k of Reflect.ownKeys(entries)) {
+      const keys = Reflect.ownKeys(entries);
+      if (Array.isArray(v) && keys.length !== v.length + 1) fail('Indici array mancanti non JSON.');
+      if (!Array.isArray(v) && keys.length > 64) fail('Limite campi.');
+      for (const k of keys) {
         if (Array.isArray(v) && k === 'length') continue;
         if (typeof k !== 'string') fail('Chiave non JSON.');
         if (Array.isArray(v) && (!/^(0|[1-9][0-9]*)$/.test(k) || Number(k) >= v.length))
@@ -217,6 +219,7 @@ export function validatePhysicalPack(p: PhysicalPack): void {
   unique(numbers, 'Numero titolo');
   unique(titleModels, 'TitleModel');
   unique(skillModels, 'SkillModel titolo');
+  unique([...titleModels, ...skillModels], 'Oggetto TitleModel/SkillModel');
   unique(titleModelIds, 'ID TitleModel');
   unique(skillModelIds, 'ID SkillModel titolo');
 

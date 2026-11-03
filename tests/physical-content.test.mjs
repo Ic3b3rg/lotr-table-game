@@ -506,6 +506,43 @@ test('rifiuta un indice array ereditato senza eseguire il getter', () => {
   assert.equal(reads, 0);
 });
 
+test('rifiuta indici mancanti prima di leggere un getter nel prototipo ordinario', () => {
+  const p = physicalPack();
+  p.cards[0].aliases.value = Array.from({ length: 8 }, (_, i) => `Alias immaginario ${i}`);
+  delete p.cards[0].aliases.value[7];
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, '7');
+  let reads = 0;
+  let error;
+  try {
+    Object.defineProperty(Array.prototype, '7', {
+      configurable: true,
+      get() {
+        reads++;
+        return 'Alias ereditato';
+      },
+      set(value) {
+        Object.defineProperty(this, '7', {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value,
+        });
+      },
+    });
+    try {
+      inspectPhysicalContent(p);
+    } catch (caught) {
+      error = caught;
+    }
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, '7', previous);
+    else delete Array.prototype[7];
+  }
+  assert.equal(reads, 0);
+  assert.ok(error instanceof Error, 'Un array con indici ereditati deve essere rifiutato.');
+  assert.match(error.message, /array.*JSON/i);
+});
+
 for (const model of ['titleModel', 'skillModels'])
   test(`rifiuta ${model} condiviso fra carte anche con localizzatori distinti`, () => {
     const p = physicalPack();
@@ -514,6 +551,16 @@ for (const model of ['titleModel', 'skillModels'])
     const priorModel = model === 'titleModel' ? previous.titleModel : previous.skillModels[0];
     const currentModel = model === 'titleModel' ? current.titleModel : current.skillModels[0];
     currentModel.modelId = priorModel.modelId;
+    assert.throws(() => inspectPhysicalContent(p), /duplicato/);
+    assert.throws(() => requirePhysicalFamily(p, 'title'), /duplicato/);
+  });
+
+for (const alterModelId of [false, true])
+  test(`rifiuta un oggetto condiviso fra ruoli TitleModel/SkillModel, ID alterato: ${alterModelId}`, () => {
+    const p = physicalPack();
+    const reference = structuredClone(p.cards.at(-2).binding.value.titleModel);
+    if (alterModelId) reference.modelId = 9999;
+    p.cards.at(-1).binding.value.skillModels = [reference];
     assert.throws(() => inspectPhysicalContent(p), /duplicato/);
     assert.throws(() => requirePhysicalFamily(p, 'title'), /duplicato/);
   });
