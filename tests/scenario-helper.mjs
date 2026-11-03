@@ -187,7 +187,12 @@ export function scenarioFor(p) {
   });
   return pack;
 }
-export async function readyScenario(t, edit = () => {}, catalogEdit = () => {}) {
+export async function readyScenario(
+  t,
+  edit = () => {},
+  catalogEdit = () => {},
+  generationEdit = () => {},
+) {
   const directory = await mkdtemp(join(tmpdir(), 'lotr-scenario-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const scenarioPath = join(directory, 'scenario.json');
@@ -211,6 +216,7 @@ export async function readyScenario(t, edit = () => {}, catalogEdit = () => {}) 
           ]);
           h.render.uv = Array.from({ length: 6 }, () => [0, 0]);
         }
+      generationEdit(raw);
     },
     { LOTR_SCENARIO_PACK: scenarioPath },
     catalog,

@@ -1,4 +1,5 @@
 import { scenarioReceiptProblem } from '../scenario/validate';
+import { explorationProblem, explorationSource } from '../shared/exploration';
 import { digest } from '../map-freeze/hash';
 import { physicalView } from '../physical-resolution/view';
 import { DatabaseSync } from 'node:sqlite';
@@ -364,6 +365,8 @@ export function advance(state: State) {
 }
 
 export function publicSession(state: State) {
+  const projection =
+    state.mapGeneration?.status === 'frozen' ? state.mapGeneration.projection : null;
   return {
     schemaVersion: state.schemaVersion,
     id: state.id,
@@ -388,6 +391,24 @@ export function publicSession(state: State) {
       (state.scenario?.instances ?? [])
         .filter((i) => state.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!))
         .map((i) => [i.id, digest(i)]),
+    ),
+    explorationFingerprints: Object.fromEntries(
+      state.scenario?.pack.manifest.exploration && projection
+        ? projection.spaces.flatMap((s) => {
+            const sc = state.scenario!,
+              tile = sc.tiles.find((t) => t.source === s.tileSource)!;
+            return tile.visible &&
+              !tile.explored &&
+              !explorationProblem(sc, projection, s.tileSource)
+              ? [
+                  [
+                    sc.spaceBindings.find((b) => b.sourceId === s.id)!.id,
+                    digest(explorationSource(sc, s.tileSource)),
+                  ],
+                ]
+              : [];
+          })
+        : [],
     ),
     physical: physicalView(
       state.physical,

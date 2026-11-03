@@ -38,6 +38,7 @@ export function performCommand(store: Store, playerId: string, command: Command)
       if (
         !isPhysicalCycle(state, command) &&
         command.type !== 'INTERACT_SCENARIO' &&
+        command.type !== 'EXPLORE_SCENARIO' &&
         command.type !== 'SCENARIO_INPUT'
       )
         allowScenarioPlay(state, command);
@@ -45,7 +46,7 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return result;
     }
-    if (command.type === 'INTERACT_SCENARIO')
+    if (command.type === 'INTERACT_SCENARIO' || command.type === 'EXPLORE_SCENARIO')
       throw new ApiError(
         409,
         'SCENARIO_CAPABILITY',

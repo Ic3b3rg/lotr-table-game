@@ -4,6 +4,17 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'exploration',
+    title: 'Esplorare durante il viaggio',
+    target: '#journey-map',
+    action: 'Torna alla mappa',
+    paragraphs: [
+      'Scegli una casella visibile adiacente su una tessera tratteggiata. Leggi la conferma prima di entrare: annullare è gratuito. Confermare usa un movimento del viaggio già pagato; esplorare non richiede un’azione interazione.',
+      'Il proprietario dell’eroe esploratore segue introduzione, piazzamenti e istruzione finale nell’avventura. L’ispirazione spetta a quell’eroe e rispetta il suo limite. I movimenti residui rimangono salvati e tornano disponibili al termine.',
+      'La rivelazione di un segnalino permette di leggerlo. La sua interazione rimane bloccata se gli effetti successivi sono ancora in sviluppo. Riavvio e ripristino conservano la stessa esplorazione, senza ripetere premi o costi.',
+    ],
+  },
+  {
     id: 'encounter',
     title: 'Incontro: ispezione, azione e progressi condivisi',
     target: '#scenario',

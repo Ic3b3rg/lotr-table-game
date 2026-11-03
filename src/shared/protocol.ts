@@ -61,6 +61,7 @@ export const SessionSchema = z.strictObject({
   mapGeneration: MapGenerationSchema.nullable(),
   scenario: ScenarioSchema.nullable().default(null),
   encounterFingerprints: z.record(z.string().max(200), HashSchema).default({}),
+  explorationFingerprints: z.record(z.string().max(100), HashSchema).default({}),
   physical: PhysicalViewSchema.nullable().default(null),
 });
 export const IdentitySchema = z.object({
@@ -89,6 +90,7 @@ const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), rou
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
   EncounterIntentSchema.options[0].extend(CommandBase),
+  EncounterIntentSchema.options[2].extend(CommandBase),
   CycleAnswerSchema.extend(CommandBase),
   z.strictObject({
     ...CommandBase,
@@ -285,6 +287,22 @@ const DemoReceiptSchema = z.strictObject({
   choice: z.enum(['A', 'B']).nullable(),
 });
 export const ReceiptSchema = z.union([
+  z.strictObject({
+    requestId: IntentIdSchema,
+    type: z.literal('EXPLORE_SCENARIO'),
+    appliedRevision: z.int().nonnegative(),
+    scenarioId: z.uuid(),
+    pendingId: z.uuid().nullable(),
+    source: HashSchema,
+    kind: z.literal('explore'),
+    phase: z.literal('action'),
+    mapId: z.uuid(),
+    heroId: ContentIdSchema,
+    spaceId: SpaceIdSchema,
+    movesRemaining: z.int().min(0).max(4),
+    roundId: z.uuid(),
+    turnId: z.uuid(),
+  }),
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.literal('CYCLE_INPUT'),

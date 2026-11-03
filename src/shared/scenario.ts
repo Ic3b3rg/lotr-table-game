@@ -128,8 +128,9 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('explore', {
     tile,
     noInspiration: z.boolean(),
-    skipIntro: z.literal(true),
-    skipOutro: z.literal(true),
+    skipIntro: z.boolean(),
+    skipOutro: z.boolean(),
+    skipAdjacentSectionEvent: z.boolean().optional(),
   }),
   action('section', { sectionId: z.int().min(0).max(3), text: SourceTextSchema }),
   action('objective', { id: z.int().nonnegative(), text: SourceTextSchema }),
@@ -212,6 +213,28 @@ export const ScenarioPackSchema = z.strictObject({
       'original-encounter-v1',
     ]),
     playablePrefabs: z.array(SourceSchema).length(1).optional(),
+    exploration: z
+      .strictObject({
+        version: z.literal('source-exploration-v1'),
+        definition: SourceSchema,
+        tiles: z
+          .array(
+            z.strictObject({
+              source: SourceSchema,
+              intros: z.array(SourceTextSchema).min(1).max(56),
+            }),
+          )
+          .min(1)
+          .max(200),
+        inspiration: z.union([z.literal(0), z.literal(1)]),
+        outro: SourceTextSchema,
+        adjacent: z.strictObject({
+          event: z.string().min(1).max(100),
+          variable: VariableRefSchema.nullable(),
+        }),
+        evidenceHash: HashSchema,
+      })
+      .optional(),
     evidenceHash: HashSchema,
     prefabs: z
       .array(
@@ -269,10 +292,21 @@ export const EncounterIntentSchema = z.discriminatedUnion('type', [
     heroId: ContentIdSchema.nullable(),
     input: EncounterInputSchema,
   }),
+  z.strictObject({
+    ...playBinding,
+    type: z.literal('EXPLORE_SCENARIO'),
+    mapId: z.uuid(),
+    heroId: ContentIdSchema,
+    roundId: z.uuid(),
+    turnId: z.uuid(),
+    fromSpaceId: z.string().min(1).max(100),
+    destinationSpaceId: z.string().min(1).max(100),
+    sourceFingerprint: HashSchema,
+  }),
 ]);
 export const ScenarioInstanceSchema = z.strictObject({
   id: z.string().min(1).max(200),
-  kind: z.enum(['principal', 'timer', 'encounter']),
+  kind: z.enum(['principal', 'timer', 'encounter', 'exploration']),
   definition: SourceSchema,
   prefab: SourceSchema.nullable(),
   spaceId: z.string().max(200).nullable(),
@@ -301,6 +335,8 @@ export const ScenarioRequestSchema = z.strictObject({
     'handoff',
     'physical',
     'choice',
+    'exploration-intro',
+    'exploration-outro',
   ]),
   options: z
     .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
@@ -328,6 +364,35 @@ const taskBase = {
   action: z.int().nonnegative(),
 };
 export const ScenarioSchema = z.strictObject({
+  explorations: z
+    .strictObject({
+      version: z.literal('source-exploration-v1'),
+      active: z.uuid().nullable(),
+      attempts: z
+        .array(
+          z.strictObject({
+            id: z.uuid(),
+            instanceId: z.string().max(200),
+            tileSource: SourceSchema,
+            heroId: ContentIdSchema,
+            playerId: z.uuid(),
+            roundId: z.uuid(),
+            turnId: z.uuid(),
+            requestId: z.string().min(24).max(80),
+            fromSpaceId: z.string().max(100),
+            destinationSpaceId: z.string().max(100),
+            movesRemaining: z.int().min(0).max(4),
+            movementCost: z.literal(1),
+            actionCost: z.literal(0),
+            entropy: HashSchema,
+            intro: z.int().nonnegative().max(99),
+            reward: z.int().min(0).max(1),
+            returned: z.boolean(),
+          }),
+        )
+        .max(200),
+    })
+    .optional(),
   play: z
     .strictObject({
       active: z.uuid().nullable(),
@@ -388,8 +453,10 @@ export const ScenarioSchema = z.strictObject({
           kind: z.literal('explore'),
           tileSource: SourceSchema,
           spaceIndex: z.int().nonnegative(),
-          stage: z.enum(['pre', 'revealed', 'next']),
+          stage: z.enum(['intro', 'pre', 'revealed', 'next', 'adjacent', 'outro', 'done']),
           waiting: z.string().max(200).nullable(),
+          adjacent: z.array(z.int().min(0).max(3)).max(4).optional(),
+          adjacentIndex: z.int().nonnegative().max(4).optional(),
         }),
         z.strictObject({
           ...taskBase,

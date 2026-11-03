@@ -1,0 +1,150 @@
+{
+  "issue": 73,
+  "base": "821f9d5914877df999e4e276526c8e5edeef7d90",
+  "implementationHead": "4b20d7c030d77342cd7b3548dcfd85a8e1f142c1",
+  "specAndPlanCommit": "4c6dcad2adb5cf6e4954429afebd780fae8c5892",
+  "originalUiHead": "c32590c17965a2e0d8154c89f46eada2f7fd3674",
+  "schemaVersion": 15,
+  "tests": {
+    "baseline": 526,
+    "passed": 541,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "fullLogSha256": "5a93ba8027fa276dbc7ca1e098eb8e8d998d37d124df5cf707758be8ae5d5230",
+    "typecheck": true,
+    "formatCheck": true,
+    "diffCheck": true
+  },
+  "evidence": {
+    "directory": ".scratch/exploration",
+    "manifestSha256": "fae1f564d84364ac31794d4bd9afb5a172d141b910d699de7ae02ef2b9b117b5",
+    "files": 612,
+    "bytes": 159988714,
+    "headerSha256": "4b200f56b87f0d27ae25a4da679db9e73bf1c3631cd5a5f010372611175d286f",
+    "sourceLockSha256": "53a4db4ae60cee17673f6de43e0948070fc0dd1131a4fc5a959091492db5e057",
+    "lockedPrimaryInputs": 18,
+    "sourceObjectsRead": 8,
+    "sourceBytesRead": 38568,
+    "reachedStates": 10,
+    "reachedActions": 9,
+    "compiledDefinitions": 31,
+    "compiledStates": 88,
+    "compiledActions": 63,
+    "deferredTransitions": 61,
+    "explorableTiles": 2,
+    "playablePrefabs": 1,
+    "packFingerprint": "c0538456dcd503e1b4b207669921d2efa1e5878c43a34c818be309a2feef9eec"
+  },
+  "compatibility": {
+    "parsedBackups": 109,
+    "publishedP2": 43,
+    "freeze": 1,
+    "finalUi71": 50,
+    "rootQa71IncludingPreconditions": 15,
+    "excludedInvalidUnpublishedP2": 11,
+    "allGameplayAndReceiptsCompared": true,
+    "oldFrozenPacksKeepTheirCapabilityGate": true
+  },
+  "ui": {
+    "identities": 3,
+    "originalPathBackups": 33,
+    "originalFinalRevision": 65,
+    "copyFixRestoredRevision": 66,
+    "restoreChangesOnlyAdministrativeFields": true,
+    "viewportWidths": [
+      320,
+      768,
+      1024,
+      1440
+    ],
+    "finalScreenshots": 17,
+    "configuredAssets200": 26,
+    "explorations": 2,
+    "rewards": [
+      1,
+      1
+    ],
+    "allThreeTurnsEnded": true,
+    "originalP2Selections": 0,
+    "secureContext": false,
+    "subtleCryptoAvailable": false,
+    "originalWindowRuntimeExceptions": 0,
+    "originalWindow404": 0,
+    "injectedConnectionRefused": 7,
+    "copyFixWindowResponses200": 132,
+    "copyFixWindowRuntimeExceptions": 0,
+    "copyFixWindowFavicon404": 1,
+    "networkLoadingFailedCounter": "not subscribed; no zero claim",
+    "readerFocus": "one native intermittent failure retained; one explicit DOM focus and Escape succeeded"
+  },
+  "sourceVerification": {
+    "independentStaticSliceComparison": true,
+    "unityExecution": false,
+    "actualAdjacentHandlerPresent": false,
+    "flavorDrawsIndependentlyCompared": 2,
+    "seedAndFreezeUnchanged": true,
+    "canonicalReplayOutputExemptions": 0
+  },
+  "isolation": {
+    "additionalCheckouts": 0,
+    "subagents": 0,
+    "installs": 0,
+    "githubWrites": 0,
+    "ownProcessesStopped": true,
+    "port4369Free": true,
+    "protectedScratchInventoryDeviation": "One initial filename-only inventory used the project scratch root. No protected table content, API, SQL or process access; no claim of zero filename or metadata enumeration."
+  },
+  "gatedFollowups": [
+    "interactions 109/75",
+    "119\u2194123",
+    "combat/Shadow",
+    "camp/adventure 2"
+  ],
+  "unfinishedIssues": [
+    33,
+    65,
+    57
+  ],
+  "unverifiedPlatforms": [
+    "physical phone",
+    "remote LAN device",
+    "Windows",
+    "Safari",
+    "Unity/JIT",
+    "complete adventure"
+  ],
+  "integration": {
+    "freshStandardsAndSpecReview": "completed; Standards P2 corrected, Spec no finding",
+    "githubReadOnly": true,
+    "pushOrPullRequestCreated": false
+  },
+  "childTestsBeforeRootCorrection": {
+    "baseline": 526,
+    "passed": 541,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "fullLogSha256": "5a93ba8027fa276dbc7ca1e098eb8e8d998d37d124df5cf707758be8ae5d5230",
+    "typecheck": true,
+    "formatCheck": true,
+    "diffCheck": true
+  },
+  "rootIntegration": {
+    "codeHead": "621cd8867986b91baabf0e8e732e480c19cc1783",
+    "proof": ".scratch/exploration-root-review/integration-verification.json",
+    "proofSha256": "1a791546e70939ac25c76f3de49fe8a2d7984bbe55eabc30e576b10c038b22fa",
+    "review": {
+      "standardsFindings": 1,
+      "specFindings": 0,
+      "standardsP2Corrected": true
+    },
+    "copiedArtifacts": 612,
+    "primaryLocks": 18,
+    "legacyBackupsCompared": 109,
+    "originalUiBackupsRevalidatedAfterFix": 33,
+    "originalPackAndPresentationUnchanged": true
+  }
+}

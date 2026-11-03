@@ -278,16 +278,26 @@ export function createGuidedStart(sync: () => Promise<void>) {
         }
         if (session.scenario.pack.manifest.scope === 'original-encounter-v1') {
           if (q) {
-            heading =
-              q.kind === 'choice'
+            const explorer = session.scenario.explorations?.attempts.find(
+              (a) => a.id === session.scenario!.explorations?.active,
+            );
+            heading = explorer
+              ? 'Esplora la tessera'
+              : q.kind === 'choice'
                 ? 'Scegli come proseguire'
                 : q.kind === 'physical'
                   ? 'Completa la prova o la conseguenza dell’incontro'
                   : 'Segui l’istruzione dell’avventura';
-            message = `${q.actorPlayerId ? (session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario indicato') : 'Il gruppo'} completa il passo corrente. L’interazione conserva costo e movimenti residui.`;
+            const actor = q.actorPlayerId
+              ? (session.players.find((p) => p.id === q.actorPlayerId)?.name ??
+                'Il proprietario indicato')
+              : 'Il gruppo';
+            message = explorer
+              ? `${actor} completa l’istruzione di esplorazione. L’ingresso ha usato 1 movimento, senza altre azioni; ${session.journey?.travel?.remaining ?? 0} movimenti residui restano salvati fino al ritorno.`
+              : `${actor} completa il passo corrente. L’interazione conserva costo e movimenti residui.`;
             target = '#scenario';
             label = 'Apri l’istruzione';
-            topic = q.kind === 'physical' ? 'physical' : 'encounter';
+            topic = explorer ? 'exploration' : q.kind === 'physical' ? 'physical' : 'encounter';
           } else if (session.scenario.phase === 'action' && !session.physical?.cycle?.pending) {
             topic = 'encounter';
             const available = session.scenario.instances.some(
@@ -303,9 +313,11 @@ export function createGuidedStart(sync: () => Promise<void>) {
               target = '#scenario';
               label = 'Controlla lo stato dell’avventura';
             } else if (session.round?.activeHeroId) {
-              message = available
-                ? 'Apri la mappa per viaggiare e raggiungere il segnalino disponibile. L’ispezione è gratuita; confermare l’interazione spende una sola azione.'
-                : 'L’incontro disponibile è concluso. Puoi usare i movimenti residui o concludere il turno; i successivi incontri richiedono ancora i loro effetti.';
+              message = session.scenario.pack.manifest.exploration
+                ? `Apri la mappa per viaggiare nelle caselle visibili adiacenti, esplorare le tessere abilitate o usare i ${session.journey?.travel?.remaining ?? 0} movimenti residui. L’esplorazione non richiede un’altra azione; le interazioni disponibili restano indicate sui segnalini.`
+                : available
+                  ? 'Apri la mappa per viaggiare e raggiungere il segnalino disponibile. L’ispezione è gratuita; confermare l’interazione spende una sola azione.'
+                  : 'L’incontro disponibile è concluso. Puoi usare i movimenti residui o concludere il turno; i successivi incontri richiedono ancora i loro effetti.';
             } else {
               message = available
                 ? 'Scegliete il prossimo turno. Il segnalino iniziale è disponibile; la Fase di Ombra originale richiede ancora i suoi effetti.'

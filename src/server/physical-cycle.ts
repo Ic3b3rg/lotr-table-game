@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { CycleIntentSchema, type CycleIntent, type CycleState } from '../shared/physical-cycle';
 import type { Command, Receipt } from '../shared/protocol';
 import { CommandSchema } from '../shared/protocol';
@@ -16,7 +16,7 @@ import type { LastStandArtifact } from '../physical-resolution/last-stand-progra
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
-import { interactScenario } from '../scenario/runtime';
+import { interactScenario, exploreScenario } from '../scenario/runtime';
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { scenarioStateProblem, scenarioReceiptProblem } from '../scenario/validate';
 
@@ -155,6 +155,43 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
   if (cycle.version === 2)
     allowScenarioPlay(state, { ...c, requestId: record.requestId, generation: state.generation });
+  invariant(
+    (c.type === 'EXPLORE_SCENARIO') === !!record.explorationEntropy,
+    'Entropia esplorazione fuori dal suo intento.',
+  );
+  if (c.type === 'EXPLORE_SCENARIO') {
+    invariant(cycle.version === 2, 'Esplorazione in un ledger storico.');
+    exploreScenario(
+      state,
+      record.playerId,
+      { ...c, requestId: record.requestId, generation: state.generation },
+      record.explorationEntropy!,
+    );
+    const sc = state.scenario!;
+    sc.commands.push({
+      playerId: record.playerId,
+      requestId: record.requestId,
+      pendingId: null,
+      source: c.sourceFingerprint,
+      kind: 'explore',
+      revision: base.appliedRevision,
+    });
+    return {
+      ...base,
+      type: 'EXPLORE_SCENARIO',
+      scenarioId: sc.id,
+      pendingId: null,
+      source: c.sourceFingerprint,
+      kind: 'explore',
+      phase: 'action',
+      mapId: state.journey!.id,
+      heroId: c.heroId,
+      spaceId: c.destinationSpaceId,
+      movesRemaining: state.journey!.travel!.remaining,
+      roundId: c.roundId,
+      turnId: c.turnId,
+    };
+  }
   if (c.type === 'INTERACT_SCENARIO' || c.type === 'SCENARIO_INPUT') {
     invariant(cycle.version === 2, 'Comando fonte in un ledger storico.');
     const command = { ...c, requestId: record.requestId, generation: state.generation };
@@ -228,7 +265,12 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   }
   if (cycle.pending || p.snapshot.active)
     fail('PHYSICAL_PENDING', 'Concludi la conseguenza corrente prima di proseguire nel round.');
-  if (cycle.version === 2 && (state.scenario!.pending || state.scenario!.play!.active))
+  if (
+    cycle.version === 2 &&
+    (state.scenario!.pending ||
+      state.scenario!.play!.active ||
+      state.scenario!.explorations?.active)
+  )
     fail('SCENARIO_PENDING', 'Concludi l’incontro prima di proseguire nel turno.');
   if (
     cycle.version === 2 &&
@@ -501,6 +543,9 @@ export function applyPhysicalCycle(
     requestId,
     intent: c,
     ...(p.lastStand ? { lastStandRules: p.lastStand.rules } : {}),
+    ...(c.type === 'EXPLORE_SCENARIO'
+      ? { explorationEntropy: randomBytes(32).toString('hex') }
+      : {}),
   });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
@@ -551,7 +596,7 @@ export function validateCycleReceipts(
     (c) =>
       (ordinary.has(c.receipt.type as CycleIntent['type']) ||
         (cycle.version === 2 &&
-          ['INTERACT_SCENARIO', 'SCENARIO_INPUT'].includes(c.receipt.type))) &&
+          ['INTERACT_SCENARIO', 'SCENARIO_INPUT', 'EXPLORE_SCENARIO'].includes(c.receipt.type))) &&
       c.receipt.appliedRevision > cycle.seed.revision,
   );
   if (cycle.version === 2) {
@@ -627,6 +672,9 @@ function originalSeedState(state: State): State {
       !sc.play.attempts.length &&
       !sc.play.tests.length &&
       sc.play.lore === 0 &&
+      (!sc.pack.manifest.exploration
+        ? !sc.explorations
+        : sc.explorations?.active === null && sc.explorations.attempts.length === 0) &&
       !sc.pending &&
       !sc.tasks.length,
     'Seed originale riscritto dopo lo startup.',

@@ -12,6 +12,60 @@ export function parseScenarioPack(raw: unknown) {
     'Manifest originale incompleto o estraneo.',
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
+  const exploration = pack.manifest.exploration;
+  if (exploration) {
+    invariant(original, 'Esplorazione fuori dal consumer originale.');
+    invariant(
+      new Set(exploration.tiles.map((t) => t.source)).size === exploration.tiles.length,
+      'Tessere esplorabili duplicate.',
+    );
+    const d = definitions.get(exploration.definition),
+      waiting = d?.states.find((s) => s.index === d.initial),
+      click = d?.states.find((s) => s.index === d.handlers['NODE CLICKED']),
+      confirm = click?.actions[0],
+      enter =
+        confirm?.op === 'confirm'
+          ? d?.states.find((s) => s.index === click!.transitions[confirm.confirmEvent])
+          : null,
+      get = enter?.actions[0],
+      explore = enter?.actions[1],
+      finish = d?.states.find((s) => s.index === enter?.transitions.FINISHED);
+    invariant(
+      d &&
+        d.states.length === 4 &&
+        Object.keys(d.handlers).length === 1 &&
+        waiting?.actions.length === 0 &&
+        Object.keys(waiting.transitions).length === 0 &&
+        click?.actions.length === 1 &&
+        confirm?.op === 'confirm' &&
+        click.transitions[confirm.cancelEvent] === d.initial &&
+        enter?.actions.length === 2 &&
+        get?.op === 'getTile' &&
+        get.target.scope === 'local' &&
+        d.variables.some((v) => v.name === get.target.name && v.type === 'int' && v.value === -1) &&
+        explore?.op === 'explore' &&
+        explore.tile.kind === 'variable' &&
+        digest(explore.tile.ref) === digest(get.target) &&
+        !explore.skipIntro &&
+        !explore.noInspiration &&
+        !explore.skipOutro &&
+        explore.skipAdjacentSectionEvent === false &&
+        finish?.actions.length === 2 &&
+        finish.actions[0]?.op === 'hideNode' &&
+        finish.actions[1]?.op === 'stop',
+      'Template esplorazione incompleto o non certificato.',
+    );
+    const principal = definitions.get(pack.principal)!,
+      { event, variable } = exploration.adjacent;
+    invariant(!principal.deferredHandlers[event], 'Evento adiacente con receiver non compilato.');
+    invariant(
+      principal.handlers[event] === undefined
+        ? variable === null
+        : variable?.scope === 'local' &&
+            principal.variables.some((v) => v.name === variable.name && v.type === 'int'),
+      'Binding/handler adiacente incoerenti.',
+    );
+  }
   invariant(definitions.size === pack.definitions.length, 'FSM duplicate.');
   invariant(
     definitions.has(pack.principal) && pack.timers.every((t) => definitions.has(t)),
@@ -61,16 +115,22 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (a.op === 'explore' && (!a.skipIntro || !a.skipOutro))
+          invariant(
+            d.source === exploration?.definition,
+            'Esplorazione senza presentazione certificata.',
+          );
         if (
           ['confirm', 'sourceTest', 'challenge', 'choice', 'nullProduct', 'lore'].includes(a.op) ||
           (a.op === 'message' && a.consequence)
         )
           invariant(
             original &&
-              pack.manifest.prefabs.some(
-                (p) =>
-                  pack.manifest.playablePrefabs!.includes(p.source) && p.fsmSource === d.source,
-              ),
+              ((a.op === 'confirm' && d.source === pack.manifest.exploration?.definition) ||
+                pack.manifest.prefabs.some(
+                  (p) =>
+                    pack.manifest.playablePrefabs!.includes(p.source) && p.fsmSource === d.source,
+                )),
             'Istruzione incontro fuori dal manifest chiuso.',
           );
         const events =
@@ -165,6 +225,12 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  invariant(
+    (pack.manifest.exploration?.tiles ?? []).every((t) =>
+      p.sections.some((s) => s.tiles.some((x) => x.source === t.source)),
+    ),
+    'Capacità esplorazione di un’altra realizzazione.',
+  );
   invariant(
     pack.identity.adventureSource === p.context.adventureSource &&
       pack.identity.adventureId === p.context.adventureId &&

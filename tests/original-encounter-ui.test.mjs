@@ -6,7 +6,9 @@ import { runInNewContext } from 'node:vm';
 const bundle = buildSync({
   stdin: {
     contents: `export {createEncounterInspection} from './src/client/encounter-inspection';
+      export {createExplorationInspection} from './src/client/exploration-inspection';
       export {createGuidedStart} from './src/client/guided-start';
+      export {createJourneyMap} from './src/client/journey-map';
       export {setOnline} from './src/client/actions';`,
     resolveDir: process.cwd(),
   },
@@ -31,6 +33,7 @@ function browser() {
       this.checked = false;
       this.value = '';
       this.classList = { add() {}, toggle() {} };
+      this.style = { setProperty() {} };
       nodes.push(this);
     }
     append(...children) {
@@ -60,6 +63,7 @@ function browser() {
   const document = {
     body: new Element(),
     createElement: (tag) => new Element(tag),
+    createElementNS: (_namespace, tag) => new Element(tag),
     createDocumentFragment: () => new Element('fragment'),
     querySelector: (selector) => {
       if (!elements.has(selector)) elements.set(selector, new Element());
@@ -79,6 +83,12 @@ function browser() {
     exports: module.exports,
     document,
     HTMLElement: Element,
+    Element,
+    ResizeObserver: class {
+      observe() {}
+    },
+    requestAnimationFrame() {},
+    matchMedia: () => ({ matches: false }),
     location: { pathname: '/join' },
     localStorage: { getItem: () => null, setItem() {} },
     crypto: {}, // The HTTP LAN origin has no SubtleCrypto.
@@ -177,7 +187,7 @@ test('an ordinary physical continuation retains the owner and decision as the gu
   assert.equal(b.document.querySelector('#start-action').href, '#scenario');
 });
 
-test('the original guide explains the unavailable Shadow after every turn and token have concluded', () => {
+test('the original guide and map preserve concluded turns without suggesting another turn', () => {
   const b = browser(),
     s = session();
   s.round.activeHeroId = null;
@@ -195,4 +205,85 @@ test('the original guide explains the unavailable Shadow after every turn and to
     /Scegliete il prossimo turno|segnalino.*disponibile/,
   );
   assert.equal(b.document.querySelector('#start-action').href, '#scenario');
+  s.mapGeneration = null;
+  s.journey.definition = {
+    label: 'Mappa inventata',
+    width: 100,
+    height: 100,
+    spaces: [{ id: 'space-invented', label: 'Casella inventata', x: 50, y: 50, hexes: [] }],
+    connections: [],
+  };
+  b.createJourneyMap(async () => {}).update(s, player, {
+    heroes: [{ id: hero.heroId, name: { text: 'Eroe inventato' } }],
+  });
+  assert.match(b.document.querySelector('#map-status').textContent, /turni sono conclusi/);
+  assert.doesNotMatch(b.document.querySelector('#map-status').textContent, /Inizia un turno/);
+  assert.equal(b.document.querySelector('#map-personal-controls').hidden, true);
+});
+
+test('exploration remains the guided next step with its owner, paid movement and residual budget', () => {
+  const b = browser(),
+    s = session();
+  s.scenario.explorations = {
+    active: 'frame',
+    attempts: [
+      {
+        id: 'frame',
+        heroId: hero.heroId,
+        playerId: player.id,
+        movementCost: 1,
+        actionCost: 0,
+        movesRemaining: 1,
+      },
+    ],
+  };
+  s.scenario.pending = { kind: 'exploration-intro', heroId: hero.heroId, actorPlayerId: player.id };
+  b.createGuidedStart(async () => {}).update(s, player, { kind: 'available' });
+  assert.match(b.document.querySelector('#start-title').textContent, /Esplora/);
+  assert.match(
+    b.document.querySelector('#start-instruction').textContent,
+    /Ada.*1 movimento.*1.*residu/,
+  );
+  assert.doesNotMatch(b.document.querySelector('#start-instruction').textContent, /interazione/);
+  assert.equal(b.document.querySelector('#start-action').href, '#scenario');
+});
+
+test('exploration source inspection cancels freely and commits the host fingerprint with no WebCrypto', async () => {
+  const b = browser(),
+    s = session(),
+    intents = [];
+  s.revision = 9;
+  s.journey.definition = {
+    spaces: [
+      { id: 'space-invented', label: 'Origine inventata' },
+      { id: 'new-space', label: 'Tessera inventata' },
+    ],
+    connections: [['space-invented', 'new-space']],
+  };
+  s.explorationFingerprints = { 'new-space': 'c'.repeat(64) };
+  s.scenario.pack.manifest.exploration = { definition: 'template-invented' };
+  s.scenario.pack.definitions.push({
+    source: 'template-invented',
+    handlers: { 'NODE CLICKED': 1 },
+    states: [{ index: 1, actions: [{ op: 'confirm', label: [], cancelLabel: [], text: [] }] }],
+  });
+  const before = structuredClone(s),
+    ui = b.createExplorationInspection(new b.Element(), async (intent) => intents.push(intent));
+  b.setOnline(true);
+  ui.update(s, player, null);
+  ui.open('new-space');
+  const cancel = b.nodes.find((n) => n.id === 'cancel-exploration'),
+    confirm = b.nodes.find((n) => n.id === 'confirm-exploration');
+  assert.equal(confirm.disabled, false);
+  cancel.onclick();
+  assert.equal(intents.length, 0);
+  assert.deepEqual(s, before);
+  ui.open('new-space');
+  await confirm.onclick();
+  assert.equal(intents.length, 1);
+  assert.equal(intents[0].type, 'EXPLORE_SCENARIO');
+  assert.equal(intents[0].sourceFingerprint, s.explorationFingerprints['new-space']);
+  assert.equal(intents[0].heroId, hero.heroId);
+  assert.equal(intents[0].fromSpaceId, 'space-invented');
+  assert.equal(intents[0].destinationSpaceId, 'new-space');
 });

@@ -1,5 +1,6 @@
 import { scenarioMapView } from '../shared/scenario-map';
 import { createEncounterInspection } from './encounter-inspection';
+import { createExplorationInspection } from './exploration-inspection';
 import type { Catalog } from '../shared/catalog';
 import { adjacent, JourneyPlanSchema, type JourneyPlan } from '../shared/journey-map';
 import type { Player, Session } from '../shared/protocol';
@@ -34,6 +35,11 @@ export function createJourneyMap(sync: () => Promise<void>) {
     controls,
   );
   const inspection = createEncounterInspection(root, async (intent) => {
+    const done = await commands.submit(intent);
+    if (done) element('#scenario-status').focus();
+    return done;
+  });
+  const exploration = createExplorationInspection(root, async (intent) => {
     const done = await commands.submit(intent);
     if (done) element('#scenario-status').focus();
     return done;
@@ -82,7 +88,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
     );
     const destination = journey?.definition.spaces.find((space) => space.id === select.value);
     const view = scenarioMapView(current);
-    const explorationBlocked = !!destination && !!view?.unexplored.includes(destination.id);
+    const unexplored = !!destination && !!view?.unexplored.includes(destination.id);
+    const explorationBlocked = unexplored && !current.explorationFingerprints[destination!.id];
+    move.textContent = unexplored ? 'Entra ed esplora · 1 movimento' : 'Conferma movimento';
     const canMove =
       !explorationBlocked &&
       Boolean(
@@ -100,7 +108,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
       : explorationBlocked
         ? 'Questa tessera è da esplorare. La sua esplorazione fonte non è ancora disponibile: nessun movimento viene consumato.'
         : canMove
-          ? `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
+          ? unexplored
+            ? `${origin!.label} → ${destination.label}. Prima dell’ingresso leggi la conferma: puoi annullare gratuitamente. Entrare usa 1 movimento; completa l’esplorazione prima di riprendere il viaggio.`
+            : `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
           : 'La destinazione deve essere adiacente alla posizione attuale, attraverso un collegamento valido.';
     let message = !journey
       ? plan
@@ -111,12 +121,16 @@ export function createJourneyMap(sync: () => Promise<void>) {
           ? 'Caricamento della mappa…'
           : 'La mappa non è ancora caricata su questo PC.'
       : pending
-        ? 'Concludi le carte rivelate: il viaggio rimane salvato.'
+        ? current.scenario?.explorations?.active
+          ? `Completa l’esplorazione nell’avventura. L’ingresso è già pagato; movimenti residui salvati: ${remaining}.`
+          : 'Concludi la richiesta corrente: il viaggio rimane salvato.'
         : own
           ? `${catalog.heroes.find((hero) => hero.id === active!.heroId)!.name.text} · ${origin!.label} · ${remaining} ${remaining === 1 ? 'movimento disponibile' : 'movimenti disponibili'}.`
           : round?.activeHeroId
             ? 'Il proprietario dell’eroe di turno conferma i movimenti dalla vista personale.'
-            : 'Le posizioni sono salvate. Inizia un turno nella Fase di Azione per viaggiare.';
+            : round?.heroes.every((hero) => hero.turnEnded)
+              ? 'I turni sono conclusi. Le posizioni sono salvate; consulta il prossimo passo nella guida al tavolo.'
+              : 'Le posizioni sono salvate. Inizia un turno nella Fase di Azione per viaggiare.';
     if (status.textContent !== message) status.textContent = message;
     if (journey) board.update(journey.heroes, round?.activeHeroId ?? null, select.value);
     refreshActions();
@@ -180,7 +194,11 @@ export function createJourneyMap(sync: () => Promise<void>) {
     const journey = current?.journey;
     const round = current?.round;
     const position = journey?.heroes.find((hero) => hero.heroId === round?.activeHeroId);
-    if (journey && round?.turnId && position)
+    if (journey && round?.turnId && position) {
+      if (scenarioMapView(current!)?.unexplored.includes(select.value)) {
+        exploration.open(select.value);
+        return;
+      }
       void commands.submit(
         {
           type: 'MOVE_HERO',
@@ -193,12 +211,14 @@ export function createJourneyMap(sync: () => Promise<void>) {
         },
         true,
       );
+    }
   };
   return {
     update(session: Session, identity: Player | null, content: Catalog | null) {
       current = session;
       player = identity;
       inspection.update(session, identity);
+      exploration.update(session, identity, content);
       catalog = content;
       root.hidden = !content || session.preparation?.status !== 'prepared';
       if (root.hidden || !catalog) return;
@@ -206,7 +226,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
         void load(session.generation);
       const view = scenarioMapView(session);
       element('#map-scope').textContent = session.scenario
-        ? 'La mappa mostra soltanto le tessere rivelate dal copione. Le tessere tratteggiate sono ancora da esplorare. Le posizioni degli eroi e i collegamenti provengono dalla mappa salvata.'
+        ? 'La mappa mostra le tessere rivelate dall’avventura. Le tessere tratteggiate sono ancora da esplorare. Seleziona una casella adiacente per entrarvi; le posizioni e i collegamenti provengono dalla mappa salvata.'
         : 'Tratto verificato in orientamento canonico. Generazione della mappa completa, esplorazione, nemici ed eventi dell’avventura seguiranno.';
       const nextMap = `${session.generation}:${session.journey?.id}:${JSON.stringify(session.scenario?.tiles)}:${session.scenario?.instances
         .filter((i) => i.visible)

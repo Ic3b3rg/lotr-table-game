@@ -193,14 +193,16 @@ export async function readyOriginal(
   edit = () => {},
   catalogEdit = sourceCatalog,
   frontEdit = () => {},
+  generationEdit = () => {},
 ) {
   const ready = await readyScenario(
     t,
-    (pack) => {
+    (pack, frozen) => {
       attachEncounter(pack);
-      edit(pack);
+      edit(pack, frozen);
     },
     catalogEdit,
+    generationEdit,
   );
   const raw = diagnosticRaw(),
     catalog = catalogFixture();
