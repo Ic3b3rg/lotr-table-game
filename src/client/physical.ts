@@ -247,7 +247,7 @@ export function createPhysicalControls(
           list.append(
             text(
               'li',
-              `${name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti${view.fronts ? '' : ' coperti'}; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
+              `${view.fronts ? `Fonte per ${name(r.heroId)} · totali tra gli eroi` : name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti${view.fronts ? '' : ' coperti'}; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
             ),
           );
         results.append(list);
