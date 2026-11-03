@@ -116,3 +116,23 @@ Il prossimo incremento può collegare il controller delle prove reali a
 e consegnare `scenario-callback` al proprietario della logica. Quelle
 operazioni e il checkpoint dovranno entrare nel ledger/Store.once ordinario
 prima di abilitare persona o attacco e pagare costi di gioco.
+
+## Integrazione del root
+
+La review Standards e la review Spec, in contesti indipendenti, non hanno
+rilevato P1/P2. Disposizione nel
+[rapporto di review](../reviews/2026-11-04-first-combat-kernel.md).
+Il root ha importato i nove commit e verificato l'identità del loro albero
+con la consegna, prima delle sole aggiunte documentali d'integrazione.
+
+Nel checkout d'integrazione: **567/567 test**, zero skip/todo/fallimenti,
+112.064ms; typecheck, formato e diff verdi. Il root ha inoltre ricontrollato
+i 41 input e il sigillo di 275 file/144.281.843 byte, ripetuto i checker
+primario e del nucleo, rigenerato otto artefatti identici e rieseguito sette
+comandi CLI con risultati identici. Popolazioni12/11 e tutte16 spese/23
+selezioni conservate. Nessuna nuova prova UI o gameplay originale.
+
+Le prove ricevute restano separate dalle copie di lavoro nella scratch
+ignorata `.scratch/combat-kernel-root-review/`. I nove commit sono stati
+controllati anche per la riservatezza: 21 percorsi/37 snapshot, nessun
+originale o artifact privato introdotto. L'app mantiene i gate già descritti.
