@@ -223,3 +223,21 @@ PYTHONDONTWRITEBYTECODE=1 "$AUDIT_PY" .scratch/realized-runtime/verify.py
 | **U — Current project has no authentic startup executor or recovery tests for it.** | Deliver the startup increment and per-request restore/idempotency tests described above, then later interaction/combat increments and #33 acceptance. #53 integration, reviews, PR/merge and issue closure belong to root. |
 
 No missing owner decision or unavailable source blocks the H3 startup implementation. The concrete remaining prerequisites are the frozen map consumer, source-bound startup orchestration, per-hero setup checkpoints and the later physical-effect capabilities listed above. #38, #41 and #33 are not closed by this research.
+
+## Root integration verification
+
+Fresh Standards and Spec reviews of `e27a4b7...6a7c97e` found no documented
+violations, meaningful optional smells or substantiated requirement/source
+mismatches. The Spec reviewer checked the lifecycle, positional parameter
+loading, retained count and shared-event claims against the private owners.
+Neither review claims a live execution or extends the certified seed scope.
+
+The root verified all **71 manifest artifacts** and the four realized input
+hashes, then repeated `verify.py` and `verify-report.py` in its own ignored
+`.scratch/realized-runtime-root-review/`, leaving the child evidence intact.
+All asset/parameter/graph/IL counts above reproduced, including 174 objects,
+223 action hashes, 275 IL bodies and 19 valid relative links. The public diff
+remains this single report; production code and the user's active table are
+unchanged. The previously verified 275-test baseline is regression evidence,
+not a gameplay-runtime test. The official Unity lifecycle references above
+were also checked against the pinned-version documentation during integration.
