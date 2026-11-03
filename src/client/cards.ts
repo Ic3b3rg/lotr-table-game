@@ -6,6 +6,8 @@ import type {
   SkillDefinition,
 } from '../shared/catalog';
 import { element, text } from './dom';
+import type { TitleSkillDefinition } from '../shared/skill-cards';
+type Card = SkillDefinition | TitleSkillDefinition | ItemDefinition;
 
 export function picture(name: string | undefined, label: string, className: string) {
   const frame = text('div', '', className);
@@ -38,17 +40,14 @@ export function sourceNotes(values: LocalizedText[], notes: string[] = []) {
   for (const note of notes) details.append(text('p', note));
   return details;
 }
-export function cardButton(
-  card: SkillDefinition | ItemDefinition,
-  open: (caller: HTMLButtonElement) => void,
-) {
+export function cardButton(card: Card, open: (caller: HTMLButtonElement) => void) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'physical-card';
   const type =
     'rank' in card
       ? `Oggetto · rango ${['', 'I', 'II', 'III'][card.rank]}`
-      : `${card.number === null ? '' : `Carta ${card.number} · `}${card.kind === 'weakness' ? 'Debolezza' : card.kind === 'basic' ? 'Base' : card.kind === 'hero' ? 'Eroe' : 'Ruolo'}`;
+      : `${card.number === null ? '' : `Carta ${card.number} · `}${card.kind === 'title' ? 'Titolo' : card.kind === 'weakness' ? 'Debolezza' : card.kind === 'basic' ? 'Base' : card.kind === 'hero' ? 'Eroe' : 'Ruolo'}`;
   button.append(text('span', type, 'card-type'), text('strong', card.name.text, 'card-name'));
   if ('image' in card && card.image) button.append(picture(card.image, '', 'item-illustration'));
   if (card.identityStatus === 'candidate')
@@ -123,7 +122,7 @@ export function createCardReader() {
         target,
       );
     },
-    card(card: SkillDefinition | ItemDefinition, target: HTMLElement) {
+    card(card: Card, target: HTMLElement) {
       const summary =
         'rank' in card
           ? `Rango ${['', 'I', 'II', 'III'][card.rank]} · ${card.slot === 'armor' ? 'Armatura' : card.slot === 'trinket' ? 'Monile' : `${card.hands} ${card.hands === 1 ? 'mano' : 'mani'}`} · ${card.quantity} ${card.quantity === 1 ? 'copia' : 'copie'}`

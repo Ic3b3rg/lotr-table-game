@@ -6,6 +6,7 @@ import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema, PreparedHeroSchema, preparationProblem } from '../shared/preparation';
 import { SkillTestSchema, skillTestProblem } from '../shared/skill-tests';
 import { ScoutingSchema, scoutingProblem } from '../shared/scouting';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { RoundSchema, roundProblem } from '../shared/rounds';
 import { journeyProblem } from '../shared/journey-map';
 import { groupProblem } from '../shared/group';
@@ -66,6 +67,7 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
     state.skillTest,
     state.scout,
     state.physical?.snapshot.resolution?.revealed,
+    physicalTitleSkills(state.physical),
   );
   if (testProblem) ctx.addIssue({ code: 'custom', message: testProblem });
   const scoutProblem = scoutingProblem(state.content, state.preparation, state.scout);

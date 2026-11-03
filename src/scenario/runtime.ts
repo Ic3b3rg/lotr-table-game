@@ -18,6 +18,7 @@ import { validateScenarioBinding, type parseScenarioPack } from './pack';
 import { applyScouting } from '../server/scouting';
 import { applySkillTest } from '../server/skill-tests';
 import { skillTestView } from '../shared/skill-tests';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { newRound } from '../server/rounds';
 import { ApiError } from '../server/errors';
 import {
@@ -639,7 +640,11 @@ export function resumeScenario(
         type: 'RESOLVE_SKILL_TEST',
         testId: state.skillTest!.id,
       });
-      const view = skillTestView(state.content, state.skillTest)!,
+      const view = skillTestView(
+          state.content,
+          state.skillTest,
+          physicalTitleSkills(state.physical),
+        )!,
         limit = state.content!.heroes.find((h) => h.id === hero.heroId)!.stats.inspiration;
       const reward = view.outcome === 'pass' && hero.inspiration < limit ? 1 : 0;
       hero.inspiration += reward;

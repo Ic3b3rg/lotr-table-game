@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ContentIdSchema } from './catalog';
 import { HashSchema } from './generated-map';
 import { StatSchema } from './skill-tests';
+import { TitleSkillDefinitionSchema } from './skill-cards';
 export const AdventureLossSchema = z.strictObject({
   kind: z.literal('adventure-loss'),
   timing: z.enum(['no-active-heroes', 'shadow-start']),
@@ -108,6 +109,7 @@ export const LastStandViewSchema = z.strictObject({
         name: z.string().max(1000),
         text: z.string().max(16000),
         prepared: z.boolean(),
+        skill: TitleSkillDefinitionSchema,
       }),
     )
     .max(21),

@@ -1,6 +1,6 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
-import { definitionId } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
 import { STAT_LABELS, type SkillTest } from '../shared/skill-tests';
 import { refreshActions } from './actions';
 import { createGameActions } from './game-actions';
@@ -199,7 +199,11 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
             );
             const list = text('ul', '', 'test-revealed');
             test.revealed.forEach((copy, index) => {
-              const card = catalog!.skills.find((entry) => entry.id === definitionId(copy))!;
+              const card = findSkillCard(
+                catalog!,
+                copy,
+                session.physical?.lastStand?.titles.map((t) => t.skill),
+              )!;
               const row = document.createElement('li');
               if (animate) {
                 row.className = 'draw-arrival';

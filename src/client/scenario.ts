@@ -2,7 +2,7 @@ import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import type { ScenarioOfferSchema } from '../shared/scenario';
 import type { z } from 'zod';
-import { definitionId } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
 import { element, text } from './dom';
 import { sourceText } from './source-text';
 import { createGameActions } from './game-actions';
@@ -169,7 +169,13 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           details.append(summary);
           const cards = text('ul', '', 'scenario-result-cards');
           for (const copy of c.revealed) {
-            const card = content?.skills.find((s) => s.id === definitionId(copy));
+            const card = content
+              ? findSkillCard(
+                  content,
+                  copy,
+                  session.physical?.lastStand?.titles.map((t) => t.skill),
+                )
+              : undefined;
             const li = document.createElement('li');
             if (card) li.append(cardButton(card, (caller) => reader.card(card, caller)));
             else li.textContent = copy;

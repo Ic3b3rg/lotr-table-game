@@ -15,6 +15,7 @@ import { journeyBudgetProblem, loadJourneyPlan } from './journey-map';
 import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
 import { skillTestView } from '../shared/skill-tests';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
 export type { State } from './state';
 
@@ -383,7 +384,7 @@ export function publicSession(state: State) {
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
     physical: physicalView(state.physical),
-    skillTest: skillTestView(state.content, state.skillTest),
+    skillTest: skillTestView(state.content, state.skillTest, physicalTitleSkills(state.physical)),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
 }

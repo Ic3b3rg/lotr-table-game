@@ -183,6 +183,7 @@ test('title acquisition, a pending prepare limit and genuine title copies surviv
     p = (await readBackup(host)).payload.state.physical;
   assert.equal(restarted, true);
   assert.equal(done.physical.lastStand.titles.length, 2);
+  assert.ok(done.physical.lastStand.titles.every((t) => t.skill.kind === 'title'));
   assert.equal(done.physical.lastStand.heroes[0].difficulty, 4);
   assert.equal(done.preparation.heroes[0].prepared.length, 4);
   assert.equal(

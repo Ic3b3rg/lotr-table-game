@@ -4,6 +4,7 @@ import { requirePhysicalFamily } from '../physical-content/catalog';
 import { frontToken } from './front-runtime';
 import { cycleRequest } from './cycle-request';
 import { travelMoves } from './effects';
+import { physicalTitleSkills } from './title-skills';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
 export function physicalView(p: PhysicalState | null): PhysicalView | null {
@@ -26,6 +27,7 @@ export function physicalView(p: PhysicalState | null): PhysicalView | null {
   if (ls) {
     const terminal = p.cycle?.terminal ?? ls.terminal;
     const titleCards = requirePhysicalFamily(p.raw, 'title').cards;
+    const titleSkills = physicalTitleSkills(p);
     view.lastStand = {
       test: structuredClone(ls.test),
       heroes: structuredClone(ls.heroes),
@@ -41,6 +43,7 @@ export function physicalView(p: PhysicalState | null): PhysicalView | null {
         ...t,
         name: titleCards.find((c) => c.id === t.cardId)!.name.value,
         text: titleCards.find((c) => c.id === t.cardId)!.text.value,
+        skill: titleSkills.find((c) => c.id === t.cardId)!,
         prepared: !!p.snapshot.resolution?.resources?.preparation.heroes
           .find((h) => h.heroId === t.heroId)
           ?.prepared.includes(t.copy),

@@ -4,6 +4,7 @@ import { skillTestView } from '../shared/skill-tests';
 import { ApiError } from './errors';
 import type { State } from './state';
 import { refillEmptyDeck, revealCards } from './skill-deck';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 
 export function applySkillTest(state: State, playerId: string, command: SkillTestCommand) {
   if (state.revision !== command.expectedRevision)
@@ -54,7 +55,7 @@ export function applySkillTest(state: State, playerId: string, command: SkillTes
         'INSPIRATION_REQUIRED',
         'Serve un’ispirazione per convertire un fato.',
       );
-    if (skillTestView(state.content, test)!.fateRemaining < 1)
+    if (skillTestView(state.content, test, physicalTitleSkills(state.physical))!.fateRemaining < 1)
       throw new ApiError(409, 'FATE_UNAVAILABLE', 'Non resta fato da convertire in questa prova.');
     hero.inspiration--;
     test!.converted++;
