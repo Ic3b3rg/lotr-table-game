@@ -185,6 +185,7 @@ const inputSchema = z.strictObject({
   }),
 });
 export type GeometryPack = z.infer<typeof geometrySchema>;
+export const GeometryPackSchema = geometrySchema;
 export type Shape = GeometryPack['tiles'][number];
 export type PhysicalEdge = Shape['edges'][number];
 export class InputError extends Error {}

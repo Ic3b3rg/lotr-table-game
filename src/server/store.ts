@@ -7,6 +7,8 @@ import { ReceiptSchema, type Receipt } from '../shared/protocol';
 import { ApiError } from './errors';
 import { StateSchema, parseState, type State } from './state';
 import { loadCatalog } from './catalog';
+import { MapGenerationService, generationReceipt } from './map-generation';
+import { generationReceiptProblem } from './generation-state';
 import { journeyBudgetProblem, loadJourneyPlan } from './journey-map';
 import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
@@ -27,6 +29,7 @@ export class Store {
   private readonly db: DatabaseSync;
   readonly cookieSecret: string;
   readonly journeyPlan: JourneyPlan | null;
+  readonly generator: MapGenerationService;
 
   constructor(readonly directory = dataDirectory()) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -40,7 +43,8 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 8,
+      schemaVersion: 9,
+      mapGeneration: null,
       id: randomUUID(),
       generation: randomUUID(),
       revision: 0,
@@ -65,16 +69,24 @@ export class Store {
     if (typeof secret?.value !== 'string') throw new Error('Chiave locale non disponibile');
     this.cookieSecret = secret.value;
     this.upgradeUnversionedSession();
+    this.generator = new MapGenerationService(
+      this,
+      process.env.LOTR_GENERATOR_PACK ?? join(directory, 'map-generator.json'),
+    );
     const saved = this.read(); // Fail on incompatible data; never replace it with a blank table.
     const mapPath = process.env.LOTR_MAP_PACK ?? join(directory, 'journey-map.json');
-    this.journeyPlan = saved.journey
-      ? {
-          definition: saved.journey.definition,
-          hash: createHash('sha256').update(JSON.stringify(saved.journey.definition)).digest('hex'),
-        }
-      : process.env.LOTR_MAP_PACK || existsSync(mapPath)
-        ? loadJourneyPlan(mapPath)
-        : null;
+    this.journeyPlan = saved.mapGeneration
+      ? null
+      : saved.journey
+        ? {
+            definition: saved.journey.definition,
+            hash: createHash('sha256')
+              .update(JSON.stringify(saved.journey.definition))
+              .digest('hex'),
+          }
+        : process.env.LOTR_MAP_PACK || existsSync(mapPath)
+          ? loadJourneyPlan(mapPath)
+          : null;
     const path = process.env.LOTR_CONTENT_PACK ?? join(directory, 'catalog.json');
     if (!saved.content && (process.env.LOTR_CONTENT_PACK || existsSync(path))) {
       const catalog = loadCatalog(path);
@@ -104,6 +116,26 @@ export class Store {
     const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
     if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
     const state = StateSchema.parse(JSON.parse(row.data));
+    if (state.mapGeneration) {
+      const commands = this.db
+        .prepare('SELECT player_id,request_id,result FROM commands')
+        .all()
+        .map((row) => {
+          if (
+            typeof row.player_id !== 'string' ||
+            typeof row.request_id !== 'string' ||
+            typeof row.result !== 'string'
+          )
+            throw new Error('Ricevuta non disponibile.');
+          return {
+            playerId: row.player_id,
+            requestId: row.request_id,
+            receipt: ReceiptSchema.parse(JSON.parse(row.result)),
+          };
+        });
+      const problem = generationReceiptProblem(state, commands);
+      if (problem) throw new Error(problem);
+    }
     if (state.journey?.travel) {
       const receipts = this.db
         .prepare('SELECT result FROM commands WHERE result IS NOT NULL')
@@ -133,6 +165,7 @@ export class Store {
   }
 
   close() {
+    this.generator.close();
     this.db.close();
   }
 
@@ -205,6 +238,31 @@ export class Store {
     }
   }
 
+  /** Clean attempt boundaries and final receipts share the same durable transaction. */
+  updateGeneration(generation: string, jobId: string, change: (state: State) => void): boolean {
+    return this.update((state) => {
+      const current = state.mapGeneration;
+      if (
+        state.generation !== generation ||
+        !current ||
+        current.status !== 'pending' ||
+        current.job.id !== jobId
+      )
+        return false;
+      change(state);
+      advance(state);
+      StateSchema.parse(state);
+      for (const request of state.mapGeneration!.requests) {
+        const result = generationReceipt(state, request.requestId, request.type);
+        const updated = this.db
+          .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
+          .run(JSON.stringify(result), request.playerId, request.requestId);
+        if (updated.changes !== 1) throw new Error('Ricevuta generazione mancante.');
+      }
+      return true;
+    });
+  }
+
   once(
     playerId: string,
     requestId: string,
@@ -254,6 +312,17 @@ export class Store {
           'È stato raggiunto il limite di prove per questa sessione.',
         );
       const result = apply(state);
+      if (state.mapGeneration) {
+        StateSchema.parse(state);
+        for (const request of state.mapGeneration.requests)
+          this.db
+            .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
+            .run(
+              JSON.stringify(generationReceipt(state, request.requestId, request.type)),
+              request.playerId,
+              request.requestId,
+            );
+      }
       this.db.prepare('UPDATE session SET data = ? WHERE id = 1').run(JSON.stringify(state));
       this.db
         .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
@@ -286,6 +355,7 @@ export function publicSession(state: State) {
     round: state.round,
     journey: state.journey,
     group: state.group,
+    mapGeneration: state.mapGeneration,
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

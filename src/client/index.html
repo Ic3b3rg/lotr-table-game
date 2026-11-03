@@ -273,6 +273,57 @@
             <p id="map-status" class="test-status" role="status" tabindex="-1"></p>
             <p id="map-error" class="company-error" role="alert" tabindex="-1" hidden></p>
           </section>
+          <section
+            id="adventure-generation"
+            class="skill-tests adventure-generation"
+            aria-labelledby="generation-title"
+            hidden
+          >
+            <h3 id="generation-title">Create la mappa dell’avventura</h3>
+            <p id="generation-status" class="test-status" role="status" tabindex="-1">
+              Collegamento al PC…
+            </p>
+            <ol
+              id="generation-progress"
+              class="generation-progress"
+              aria-label="Creazione della mappa"
+              hidden
+            >
+              <li>Richiesta salvata</li>
+              <li>Mappa in creazione</li>
+              <li>Mappa salvata</li>
+            </ol>
+            <p id="generation-observer" class="company-help">
+              Un partecipante conferma dalla propria vista personale. Tutti gli schermi seguiranno
+              la creazione.
+            </p>
+            <form id="generation-form" hidden>
+              <label class="check-label"
+                ><input id="generation-agreed" type="checkbox" required />Abbiamo concordato di
+                creare la mappa per questa compagnia.</label
+              >
+              <button id="generation-create" class="company-action" type="submit" data-write>
+                Crea la mappa
+              </button>
+            </form>
+            <button id="generation-resume" class="company-action" type="button" data-write hidden>
+              Riprendi la creazione
+            </button>
+            <div id="generation-result" hidden>
+              <p class="company-help">
+                Ricaricando, riavviando il PC o ripristinando una copia ritroverete questa stessa
+                mappa.
+              </p>
+              <a class="company-link" href="#backups" data-tools-link
+                >Conserva una copia della sessione</a
+              >
+            </div>
+            <p id="generation-startup" class="company-help" hidden>
+              Le posizioni iniziali, gli incontri e i primi passaggi dell’avventura devono ancora
+              essere avviati. I turni non sono disponibili.
+            </p>
+            <p id="generation-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+          </section>
           <div id="company-preparation"></div>
           <section id="scouting" class="skill-tests" aria-labelledby="scouting-title" hidden>
             <h3 id="scouting-title">Scoperta e carte preparate</h3>

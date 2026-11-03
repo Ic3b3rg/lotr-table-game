@@ -6,6 +6,7 @@ import { ScoutingSchema } from './scouting';
 import { RoundSchema, ShadowStepSchema } from './rounds';
 import { JourneySchema, SpaceIdSchema } from './journey-map';
 import { GroupSchema } from './group';
+import { MapGenerationSchema, HashSchema, Int32Schema } from './generated-map';
 
 export const NameSchema = z
   .string()
@@ -40,7 +41,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(8),
+  schemaVersion: z.literal(9),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -54,6 +55,7 @@ export const SessionSchema = z.strictObject({
   round: RoundSchema.nullable(),
   journey: JourneySchema.nullable(),
   group: GroupSchema.nullable(),
+  mapGeneration: MapGenerationSchema.nullable(),
 });
 export const IdentitySchema = z.object({
   player: PlayerSchema.nullable(),
@@ -64,6 +66,24 @@ const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('GENERATE_ADVENTURE_MAP'),
+    expectedRevision: z.int().nonnegative(),
+    packFingerprint: HashSchema,
+    contextFingerprint: HashSchema,
+    requestedSeed: Int32Schema.optional(),
+    agreed: z.literal(true),
+  }),
+  z.strictObject({
+    ...CommandBase,
+    type: z.literal('RESUME_ADVENTURE_MAP'),
+    expectedRevision: z.int().nonnegative(),
+    jobId: z.uuid(),
+    packFingerprint: HashSchema,
+    contextFingerprint: HashSchema,
+    agreed: z.literal(true),
+  }),
   z.strictObject({
     ...CommandBase,
     type: z.literal('SET_GROUP_SIZE'),
@@ -223,6 +243,14 @@ const DemoReceiptSchema = z.strictObject({
 export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum(['GENERATE_ADVENTURE_MAP', 'RESUME_ADVENTURE_MAP']),
+    appliedRevision: z.int().nonnegative(),
+    jobId: z.uuid(),
+    status: z.enum(['pending', 'paused', 'frozen']),
+    projectionFingerprint: HashSchema.nullable(),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.literal('SET_GROUP_SIZE'),
     appliedRevision: z.int().nonnegative(),
     expectedPlayers: z.int().min(1).max(5),
@@ -327,4 +355,9 @@ export type RoundCommand = Extract<
       | 'CONFIRM_SHADOW_STEP'
       | 'END_RALLY';
   }
+>;
+
+export type MapGenerationCommand = Extract<
+  Command,
+  { type: 'GENERATE_ADVENTURE_MAP' | 'RESUME_ADVENTURE_MAP' }
 >;

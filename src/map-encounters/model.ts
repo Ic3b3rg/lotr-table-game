@@ -161,4 +161,5 @@ export function parseEncounterInput(value: unknown) {
   return { ...raw, assembly };
 }
 export type EncounterInput = ReturnType<typeof parseEncounterInput>;
+export const PlacementPackSchema = schema.shape.placement;
 export type PlacementModel = EncounterInput['placement']['models'][number];

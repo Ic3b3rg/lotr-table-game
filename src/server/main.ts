@@ -87,6 +87,8 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/api/catalog')
       return json(res, store.read().content);
+    if (req.method === 'GET' && url.pathname === '/api/map-generation-plan')
+      return json(res, store.generator.offer(store.read()));
     if (req.method === 'GET' && url.pathname === '/api/journey-map-plan')
       return json(res, store.journeyPlan);
     if (req.method === 'GET' && url.pathname.startsWith('/api/map-content/')) {
@@ -150,6 +152,8 @@ const server = createServer(async (req, res) => {
         throw new ApiError(401, 'SEAT_REQUIRED', 'Entra o recupera il tuo posto per continuare.');
       const command = await input(req, CommandSchema);
       const receipt = performCommand(store, player.id, command);
+      if (command.type === 'GENERATE_ADVENTURE_MAP' || command.type === 'RESUME_ADVENTURE_MAP')
+        store.generator.activate();
       return json(res, { receipt, session: publicSession(store.read()) });
     }
     if (req.method === 'GET' && url.pathname === '/api/backups') {
@@ -174,6 +178,7 @@ const server = createServer(async (req, res) => {
         );
       const body = await input(req, RestoreSchema);
       store.restore(body);
+      store.generator.cancel();
       res.setHeader('set-cookie', 'lotr-seat=; Path=/api; Max-Age=0; HttpOnly; SameSite=Strict');
       return json(res, { session: publicSession(store.read()) });
     }

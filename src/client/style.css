@@ -1725,3 +1725,19 @@ body.reduce-motion .draw-arrival {
     font-size: 14px;
   }
 }
+
+.generation-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding: 0.75rem 0 0.75rem 1.5rem;
+  color: var(--muted);
+}
+.generation-progress .step-done,
+.generation-progress [aria-current='step'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.adventure-generation .check-label {
+  margin-block: 1rem;
+}

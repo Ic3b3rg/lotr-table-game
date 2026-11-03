@@ -1,5 +1,6 @@
 import type {
   GroupCommand,
+  MapGenerationCommand,
   JourneyCommand,
   RoundCommand,
   ScoutingCommand,
@@ -10,6 +11,7 @@ import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
 type GameCommand =
+  | MapGenerationCommand
   | GroupCommand
   | JourneyCommand
   | RoundCommand
