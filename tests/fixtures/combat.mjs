@@ -258,3 +258,48 @@ export function combatFixture() {
 export function rehashAsset(a) {
   a.dataHash = hash(a.data);
 }
+
+export const seedFor = (a, changes = {}) => ({
+  id: 'invented-run',
+  entropy: '1'.repeat(64),
+  budget: 0,
+  availability: { inPlay: 0, pending: 0, reserved: 0 },
+  heroes: a.source.projection.context.heroes.map((h) => ({
+    heroId: h.catalogId,
+    spaceId: a.compiled.spawns[0].position.spaceId,
+    defeated: false,
+    requiredHooks: [],
+  })),
+  ...changes,
+});
+// Technical adapter only: supplied successes are a kernel contract test, never gameplay evidence.
+export function technicalPort(successes = 3, change = (r) => r, effects = []) {
+  return {
+    attackResult(query) {
+      return change({
+        id: `${query.id}/test`,
+        contextFingerprint: hash(query),
+        artifactFingerprint: query.artifactFingerprint,
+        projectionFingerprint: query.projectionFingerprint,
+        heroId: query.heroId,
+        stat: query.stat,
+        successes: Array.from({ length: successes }, (_, n) => `${query.id}/success/${n}`),
+        afterTest: { spaceId: query.spaceId, defeated: false },
+        requiredHooks: [],
+      });
+    },
+    externalEffect(query) {
+      const effect = effects.find((e) => e.effectId === query.effectId);
+      if (!effect) throw new Error('Unknown invented effect');
+      return {
+        id: `${query.id}/effect`,
+        contextFingerprint: hash(query),
+        artifactFingerprint: query.artifactFingerprint,
+        projectionFingerprint: query.projectionFingerprint,
+        hits: effect.hits,
+        modifiers: effect.modifiers ?? [],
+        evidence: { file: 'invented.assets', locator: 'invented effect', sha256: hash(effect) },
+      };
+    },
+  };
+}

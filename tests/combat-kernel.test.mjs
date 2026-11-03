@@ -1,22 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as combat from '../dist/combat-library.mjs';
-import { combatFixture } from './fixtures/combat.mjs';
+import { combatFixture, seedFor } from './fixtures/combat.mjs';
 import { hash } from './fixtures/map-freeze.mjs';
 
-export const seedFor = (a, changes = {}) => ({
-  id: 'invented-run',
-  entropy: '1'.repeat(64),
-  budget: 0,
-  availability: { inPlay: 0, pending: 0, reserved: 0 },
-  heroes: a.source.projection.context.heroes.map((h) => ({
-    heroId: h.catalogId,
-    spaceId: a.compiled.spawns[0].position.spaceId,
-    defeated: false,
-    requiredHooks: [],
-  })),
-  ...changes,
-});
 const spawn = (a, id = 'spawn-1') => ({ id, spawnId: a.compiled.spawns[0].id });
 
 test('spawn places two independent figures on the frozen source space and spends only points', () => {

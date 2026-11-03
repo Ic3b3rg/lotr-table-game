@@ -1,18 +1,26 @@
 import { z } from 'zod';
 import { HashSchema } from '../shared/generated-map';
 import { digest } from '../map-freeze/hash';
-import { bounded, check, unique, id } from './model';
+import { bounded, check, unique } from './model';
 import { verifyCombatArtifact, type CombatArtifact } from './compiler';
+import { planAttack, applyPlan, applyExternal, provoke } from './attack';
 import {
   SeedSchema,
   CommandSchema,
   SpawnCommandSchema,
+  PlanCommandSchema,
+  ApplyCommandSchema,
+  ExternalCommandSchema,
+  ProvokeCommandSchema,
+  ProofSchema,
   type CombatSeed,
   type Command,
   type KernelState,
   type Receipt,
   type Gate,
   type JournalEntry,
+  type TrustedCombatPort,
+  type Proof,
 } from './kernel-model';
 
 function initialState(a: CombatArtifact, seed: CombatSeed): KernelState {
@@ -33,6 +41,12 @@ function initialState(a: CombatArtifact, seed: CombatSeed): KernelState {
     );
     unique(h.requiredHooks, 'Hook eroe');
   }
+  if (seed.activation)
+    check(
+      a.compiled.instructions.some((i) => i.source === seed.activation!.instructionSource) &&
+        seed.heroes.some((h) => h.heroId === seed.activation!.heroId),
+      'Attivazione interrotta cross-source.',
+    );
   const used = seed.availability.inPlay + seed.availability.pending + seed.availability.reserved;
   check(used <= a.compiled.enemy.capacity, 'Disponibilità oltre capacità.');
   return {
@@ -40,24 +54,29 @@ function initialState(a: CombatArtifact, seed: CombatSeed): KernelState {
     budget: seed.budget,
     availability: { ...seed.availability, available: a.compiled.enemy.capacity - used },
     group: null,
+    heroes: structuredClone(seed.heroes),
+    pendingPlan: null,
+    usedResultIds: [],
+    selections: [],
+    randomCursor: 0,
+    callbacks: [],
+    suspended: null,
   };
 }
-
-function transition(
+function spawn(
   a: CombatArtifact,
   seed: CombatSeed,
-  previous: KernelState,
-  command: Command,
-): { state: KernelState; receipt: Receipt } | Gate {
-  const state = structuredClone(previous),
-    recipe = a.compiled.spawns.find((s) => s.id === command.spawnId);
+  state: KernelState,
+  command: Extract<Command, { kind: 'spawn' }>,
+): Receipt | Gate {
+  const recipe = a.compiled.spawns.find((s) => s.id === command.spawnId);
   check(recipe, 'Spawn estraneo.');
   check(!state.group, 'Logica già collegata a un gruppo.');
   const { available } = state.availability;
   if (available > 0 && available < recipe.size)
     return { status: 'gated', gates: ['spawn-availability-unproven'] };
   const localBudget = state.budget + recipe.points;
-  // Native eligibility checks one figure; specified-size spawning does not recalculate size.
+  // Native eligibility checks one figure; specified-size spawning never recalculates size.
   const failed =
     available === 0 || localBudget < a.compiled.enemy.costs.find((c) => c.size === 1)!.points;
   const branch = failed ? recipe.failure : recipe.success;
@@ -82,48 +101,125 @@ function transition(
       })),
     };
   }
-  state.revision++;
   return {
-    state,
-    receipt: {
-      id: command.id,
-      status: failed ? 'failed' : 'spawned',
-      reason: failed ? (available === 0 ? 'no-availability' : 'budget-ineligible') : null,
-      continuation: { kind: 'source-event', origin: recipe.origin, ...branch },
-    },
+    id: command.id,
+    status: failed ? 'failed' : 'spawned',
+    reason: failed ? (available === 0 ? 'no-availability' : 'budget-ineligible') : null,
+    continuation: { kind: 'source-event', origin: recipe.origin, ...branch },
   };
 }
-
+function transition(
+  a: CombatArtifact,
+  seed: CombatSeed,
+  previous: KernelState,
+  command: Command,
+  port: TrustedCombatPort,
+  replayProof: Proof | null,
+): { state: KernelState; receipt: Receipt; proof: Proof | null } | Gate {
+  const state = structuredClone(previous);
+  if (state.suspended) {
+    const s = state.suspended;
+    return {
+      status: 'gated',
+      gates:
+        s.kind === 'physical' || s.kind === 'scenario-callback' || s.kind === 'resume-activation'
+          ? s.dependencies
+          : ['scenario-continuation'],
+    };
+  }
+  let receipt: Receipt;
+  let proof: Proof | null = null;
+  if (command.kind === 'spawn') {
+    const r = spawn(a, seed, state, command);
+    if (r.status === 'gated') return r;
+    receipt = r;
+  } else {
+    check(state.group?.status === 'in-play', 'Gruppo assente/sconfitto.');
+    if (command.kind === 'plan' || command.kind === 'external') {
+      const r =
+        command.kind === 'plan'
+          ? planAttack(a, seed, state, command, port, replayProof)
+          : applyExternal(a, seed, state, command, port, replayProof);
+      if ('status' in r) return r;
+      receipt = r.receipt;
+      proof = r.proof;
+    } else if (command.kind === 'apply') receipt = applyPlan(a, seed, state, command);
+    else receipt = provoke(a, seed, state, command);
+  }
+  state.revision++;
+  return { state, receipt, proof };
+}
 class CombatKernel {
   #artifact: CombatArtifact;
   #seed: CombatSeed;
   #state: KernelState;
   #journal: JournalEntry[] = [];
-  constructor(artifact: CombatArtifact, seed: CombatSeed) {
+  #port: TrustedCombatPort;
+  constructor(
+    artifact: CombatArtifact,
+    seed: CombatSeed,
+    port: TrustedCombatPort = {},
+    replay: { command: Command; proof: Proof | null; receipt: unknown }[] = [],
+  ) {
     this.#artifact = artifact;
     this.#seed = seed;
     this.#state = initialState(artifact, seed);
+    this.#port = port;
+    for (const entry of replay)
+      check(
+        digest(this.#command(entry.command, entry.proof)) === digest(entry.receipt),
+        'Receipt kernel incoerente.',
+      );
   }
-  #command(command: Command): Receipt | Gate {
+  #command(command: Command, replayProof: Proof | null = null): Receipt | Gate {
     const prior = this.#journal.find((j) => j.command.id === command.id);
     if (prior) {
       check(digest(prior.command) === digest(command), 'Intento duplicato con payload diverso.');
       return structuredClone(prior.receipt);
     }
     check(this.#journal.length < 1000, 'Budget journal kernel raggiunto.');
-    const result = transition(this.#artifact, this.#seed, this.#state, command);
-    if ('status' in result) return result;
+    const result = transition(
+      this.#artifact,
+      this.#seed,
+      this.#state,
+      command,
+      this.#port,
+      replayProof,
+    );
+    if ('status' in result) return structuredClone(result);
     this.#state = result.state;
     this.#journal.push({
       command: structuredClone(command),
+      proof: structuredClone(result.proof),
       receipt: structuredClone(result.receipt),
     });
     return structuredClone(result.receipt);
   }
   spawn(raw: unknown) {
     bounded(raw);
-    const input = z.strictObject({ id, spawnId: id }).parse(raw);
-    return this.#command(SpawnCommandSchema.parse({ kind: 'spawn', ...input }));
+    return this.#command({ kind: 'spawn', ...SpawnCommandSchema.omit({ kind: true }).parse(raw) });
+  }
+  planAttack(raw: unknown) {
+    bounded(raw);
+    return this.#command({ kind: 'plan', ...PlanCommandSchema.omit({ kind: true }).parse(raw) });
+  }
+  applyPlan(raw: unknown) {
+    bounded(raw);
+    return this.#command({ kind: 'apply', ...ApplyCommandSchema.omit({ kind: true }).parse(raw) });
+  }
+  applyExternal(raw: unknown) {
+    bounded(raw);
+    return this.#command({
+      kind: 'external',
+      ...ExternalCommandSchema.omit({ kind: true }).parse(raw),
+    });
+  }
+  provoke(raw: unknown) {
+    bounded(raw);
+    return this.#command({
+      kind: 'provoke',
+      ...ProvokeCommandSchema.omit({ kind: true }).parse(raw),
+    });
   }
   view(): KernelState {
     return structuredClone(this.#state);
@@ -142,9 +238,13 @@ class CombatKernel {
     return structuredClone({ ...data, fingerprint: digest(data) });
   }
 }
-export function createCombatKernel(artifact: unknown, rawSeed: unknown) {
+export function createCombatKernel(
+  artifact: unknown,
+  rawSeed: unknown,
+  port: TrustedCombatPort = {},
+) {
   bounded(rawSeed);
-  return new CombatKernel(verifyCombatArtifact(artifact), SeedSchema.parse(rawSeed));
+  return new CombatKernel(verifyCombatArtifact(artifact), SeedSchema.parse(rawSeed), port);
 }
 const CheckpointSchema = z.strictObject({
   format: z.literal('combat-checkpoint-v1'),
@@ -153,13 +253,22 @@ const CheckpointSchema = z.strictObject({
   projectionFingerprint: HashSchema,
   seed: SeedSchema,
   seedFingerprint: HashSchema,
-  journal: z.array(z.strictObject({ command: CommandSchema, receipt: z.unknown() })).max(1000),
+  journal: z
+    .array(
+      z.strictObject({
+        command: CommandSchema,
+        proof: ProofSchema.nullable(),
+        receipt: z.unknown(),
+      }),
+    )
+    .max(1000),
   state: z.unknown(),
   fingerprint: HashSchema,
 });
 export function restoreCombatKernel(
   raw: unknown,
   expected?: { artifactFingerprint?: string; projectionFingerprint?: string },
+  port: TrustedCombatPort = {},
 ) {
   bounded(raw);
   const c = CheckpointSchema.parse(raw);
@@ -174,12 +283,7 @@ export function restoreCombatKernel(
       expected.projectionFingerprint === a.projectionFingerprint,
       'Checkpoint cross-source proiezione.',
     );
-  const kernel = new CombatKernel(a, c.seed);
-  for (const entry of c.journal) {
-    const { kind: _, ...input } = entry.command;
-    const receipt = kernel.spawn(input);
-    check(digest(receipt) === digest(entry.receipt), 'Receipt kernel incoerente.');
-  }
+  const kernel = new CombatKernel(a, c.seed, port, c.journal);
   check(digest(kernel.checkpoint()) === digest(raw), 'Checkpoint diverso dal replay completo.');
   return kernel;
 }
