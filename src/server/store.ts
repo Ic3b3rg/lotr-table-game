@@ -29,6 +29,7 @@ export function dataDirectory() {
 
 export class Store {
   private readonly db: DatabaseSync;
+  private validatedRead: { data: string; commands: string; state: State } | null = null;
   readonly cookieSecret: string;
   readonly journeyPlan: JourneyPlan | null;
   readonly generator: MapGenerationService;
@@ -124,41 +125,47 @@ export class Store {
   read(): State {
     const row = this.db.prepare('SELECT data FROM session WHERE id = 1').get();
     if (typeof row?.data !== 'string') throw new Error('Salvataggio non disponibile');
+    const rows = this.db
+      .prepare(
+        'SELECT player_id,request_id,fingerprint,result FROM commands ORDER BY player_id,request_id',
+      )
+      .all();
+    const commandData = JSON.stringify(rows);
+    // Reuse proof only for byte-identical persisted state AND receipts. Every
+    // write (including another SQLite connection) invalidates it; callers own
+    // a clone, so an uncommitted mutation cannot change the validated value.
+    if (this.validatedRead?.data === row.data && this.validatedRead.commands === commandData)
+      return structuredClone(this.validatedRead.state);
     const state = StateSchema.parse(JSON.parse(row.data));
     if (state.mapGeneration) {
-      const commands = this.db
-        .prepare('SELECT player_id,request_id,fingerprint,result FROM commands')
-        .all()
-        .map((row) => {
-          if (
-            typeof row.player_id !== 'string' ||
-            typeof row.request_id !== 'string' ||
-            typeof row.result !== 'string' ||
-            typeof row.fingerprint !== 'string'
-          )
-            throw new Error('Ricevuta non disponibile.');
-          return {
-            playerId: row.player_id,
-            requestId: row.request_id,
-            fingerprint: row.fingerprint,
-            receipt: ReceiptSchema.parse(JSON.parse(row.result)),
-          };
-        });
+      const commands = rows.map((row) => {
+        if (
+          typeof row.player_id !== 'string' ||
+          typeof row.request_id !== 'string' ||
+          typeof row.result !== 'string' ||
+          typeof row.fingerprint !== 'string'
+        )
+          throw new Error('Ricevuta non disponibile.');
+        return {
+          playerId: row.player_id,
+          requestId: row.request_id,
+          fingerprint: row.fingerprint,
+          receipt: ReceiptSchema.parse(JSON.parse(row.result)),
+        };
+      });
       const problem =
         generationReceiptProblem(state, commands) ?? scenarioReceiptProblem(state, commands);
       if (problem) throw new Error(problem);
     }
     if (state.journey?.travel) {
-      const receipts = this.db
-        .prepare('SELECT result FROM commands WHERE result IS NOT NULL')
-        .all()
-        .map((command) => {
-          if (typeof command.result !== 'string') throw new Error('Conferma non disponibile');
-          return ReceiptSchema.parse(JSON.parse(command.result));
-        });
+      const receipts = rows.map((command) => {
+        if (typeof command.result !== 'string') throw new Error('Conferma non disponibile');
+        return ReceiptSchema.parse(JSON.parse(command.result));
+      });
       const problem = journeyBudgetProblem(state, receipts);
       if (problem) throw new Error(problem);
     }
+    this.validatedRead = { data: row.data, commands: commandData, state: structuredClone(state) };
     return state;
   }
 
@@ -339,6 +346,7 @@ export class Store {
       this.db
         .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
         .run(JSON.stringify(result), playerId, requestId);
+      if (state.physical?.cycle) this.read();
       this.db.exec('COMMIT');
       return result;
     } catch (error) {
