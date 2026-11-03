@@ -108,6 +108,17 @@ export function rewardExploration(state: State) {
     frame = sc.explorations!.attempts.find((a) => a.id === sc.explorations!.active)!;
   const amount = sc.pack.manifest.exploration!.inspiration;
   if (!amount) return;
+  const task = sc.tasks.at(-1),
+    instance = sc.instances.find((i) => i.id === frame.instanceId)!;
+  invariant(
+    task?.kind === 'explore' && task.instanceId === instance.id && task.entry === instance.entry,
+    'Ricompensa senza cursore esplorazione.',
+  );
+  const action = sc.pack.definitions
+    .find((d) => d.source === instance.definition)!
+    .states.find((s) => s.index === instance.state)!
+    .actions.find((a) => a.index === task.action)!;
+  invariant(action.op === 'explore', 'Ricompensa fuori dall’azione fonte.');
   const p = state.physical!,
     before = state.preparation!.heroes.find((h) => h.heroId === frame.heroId)!.inspiration;
   const resources = p.snapshot.resolution!.resources;
@@ -124,10 +135,10 @@ export function rewardExploration(state: State) {
       {
         effectId: `exploration-reward:${frame.id}`,
         instanceId: frame.instanceId,
-        state: 0,
-        entry: 0,
-        action: 0,
-        parameterHash: digest(sc.pack.manifest.exploration),
+        state: instance.state,
+        entry: task.entry,
+        action: task.action,
+        parameterHash: action.origin.parameterHash,
       },
       {
         profile: 'source-fronts-v1',

@@ -20,6 +20,7 @@ test('travel exploration consumes one move, suspends for source and returns with
   assert.equal(next.round.heroes.find((h) => h.heroId === s.round.activeHeroId).actionsUsed, 1);
   assert.equal(next.scenario.pending.kind, 'exploration-intro');
   assert.equal(next.scenario.pending.heroId, s.round.activeHeroId);
+  const introRequest = next.scenario.pending;
   for (let n = 0; next.scenario.pending && n < 15; n++) {
     const q = next.scenario.pending,
       actor = q.actorPlayerId === ready.other.body.player.id ? ready.other : ready.player;
@@ -30,6 +31,14 @@ test('travel exploration consumes one move, suspends for source and returns with
   assert.equal(next.scenario.pending, null);
   assert.equal(next.scenario.explorations.attempts[0].returned, true);
   assert.equal(next.scenario.explorations.active, null);
+  const { readBackup } = await import('./skill-test-helper.mjs');
+  const rewardRun = (await readBackup(ready.host)).payload.state.physical.runs.find((r) =>
+    r.program.children.some((c) => c.kind === 'inspiration'),
+  );
+  assert.equal(rewardRun.source.instanceId, introRequest.instanceId);
+  assert.equal(rewardRun.source.state, introRequest.state);
+  assert.equal(rewardRun.source.entry, introRequest.entry);
+  assert.equal(rewardRun.source.action, introRequest.action);
   const reward = next.scenario.explorations.attempts[0].reward;
   assert.ok(reward === 0 || reward === 1);
   assert.equal(
