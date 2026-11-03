@@ -66,6 +66,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     const turnsEnded =
       sc?.pack.manifest.scope === 'original-encounter-v1' &&
       current.round?.heroes.every((h) => h.turnEnded);
+    const explorer = sc?.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
       : current.physical?.cycle?.pending
@@ -76,15 +77,17 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
             : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
           : q?.kind === 'choice'
             ? `${actor?.name ?? 'Il proprietario indicato'} sceglie come proseguire. L’azione è già pagata; la scelta è obbligatoria.`
-            : q?.heroId
-              ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-              : q
-                ? 'Un partecipante conferma per il gruppo.'
-                : activeHero
-                  ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                  : turnsEnded
-                    ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
-                    : 'Avvio completato · scegliete il prossimo eroe di turno.';
+            : q && explorer
+              ? `${actor?.name ?? 'Il proprietario indicato'} continua l’esplorazione con ${hero?.name.text ?? 'l’eroe di turno'}. L’ingresso ha usato 1 movimento, senza altre azioni. Movimenti residui: ${current.journey?.travel?.remaining ?? 0}. Segui l’istruzione qui sotto.`
+              : q?.heroId
+                ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+                : q
+                  ? 'Un partecipante conferma per il gruppo.'
+                  : activeHero
+                    ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+                    : turnsEnded
+                      ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                      : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -101,8 +104,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       element('#scenario-limit').textContent =
         'Turni, viaggio e Riorganizzazione usano gli effetti attivi. Gli incontri originali, il combattimento e l’Ombra originale restano da implementare; le conferme Ombra della fonte sintetica sono manuali.';
     if (sc?.pack.manifest.scope === 'original-encounter-v1')
-      element('#scenario-limit').textContent =
-        'Il segnalino iniziale certificato è giocabile. Ulteriori incontri ed esplorazioni, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.';
+      element('#scenario-limit').textContent = sc.pack.manifest.exploration
+        ? 'Puoi esplorare le tessere abilitate e rivelarne i segnalini. Il segnalino iniziale è giocabile; gli altri incontri, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.'
+        : 'Il segnalino iniziale certificato è giocabile. Ulteriori incontri ed esplorazioni, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.';
     refreshActions();
   }
   agreed.oninput = () => {
