@@ -37,8 +37,11 @@ export function boundPhysicalInput(value: unknown): void {
       for (const k of Reflect.ownKeys(entries)) {
         if (Array.isArray(v) && k === 'length') continue;
         if (typeof k !== 'string') fail('Chiave non JSON.');
+        if (Array.isArray(v) && (!/^(0|[1-9][0-9]*)$/.test(k) || Number(k) >= v.length))
+          fail('Proprietà array non JSON.');
         const descriptor = entries[k];
         if (!descriptor || !('value' in descriptor)) fail('Accessor non JSON.');
+        if (!descriptor.enumerable) fail('Campo non enumerabile non JSON.');
         bytes += Buffer.byteLength(k) + 4;
         visit(descriptor.value, depth + 1);
       }

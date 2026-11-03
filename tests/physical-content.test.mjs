@@ -463,6 +463,32 @@ test('accetta i limiti esatti di testo e fonti preservando spazi e ordine', () =
   assert.equal(r.sources.length, 128);
 });
 
+test('rifiuta proprietà extra degli array invece di perderle durante la copia', () => {
+  const p = physicalPack();
+  p.cards.certificate = 'invented';
+  assert.throws(() => inspectPhysicalContent(p));
+});
+
+test('rifiuta proprietà non enumerabili invece di ignorarle', () => {
+  const p = physicalPack();
+  Object.defineProperty(p.cards[0], 'certificate', { value: 'invented' });
+  assert.throws(() => inspectPhysicalContent(p));
+});
+
+test('rifiuta accessor prima di eseguirli', () => {
+  const p = physicalPack();
+  let reads = 0;
+  Object.defineProperty(p.cards[0], 'name', {
+    enumerable: true,
+    get() {
+      reads++;
+      throw new Error('getter executed');
+    },
+  });
+  assert.throws(() => inspectPhysicalContent(p), /Accessor/);
+  assert.equal(reads, 0);
+});
+
 test('export della singola famiglia verificata rimane consumabile in presenza di una famiglia irrisolta', () => {
   const p = physicalPack();
   p.cards[36].quantity = {
