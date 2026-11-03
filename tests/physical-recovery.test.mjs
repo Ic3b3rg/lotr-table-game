@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { readyPhysical, reachPhysical } from './physical-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
+import { startScenario } from './scenario-helper.mjs';
 import { readSession, readBackup, signBackup } from './skill-test-helper.mjs';
 import { startHost } from './host-helper.mjs';
 
@@ -25,6 +26,21 @@ const recover = async (host, seat) => {
   assert.equal(r.status, 200);
   return { ...seat, cookie: r.headers.get('set-cookie').split(';')[0] };
 };
+test('HTTP: before placement a re-signed backup cannot move the frozen physical participants to another bound space', async (t) => {
+  const { host, player } = await readyPhysical(t);
+  assert.equal((await startScenario(host, player)).status, 200);
+  const before = await readSession(host),
+    backup = await readBackup(host);
+  assert.equal(backup.payload.state.journey, null);
+  const p = backup.payload.state.physical;
+  const otherSpace = backup.payload.state.scenario.spaceBindings.find(
+    (b) => b.id !== p.heroes[0].spaceId,
+  ).id;
+  for (const hero of p.heroes) hero.spaceId = otherSpace;
+  signBackup(backup);
+  assert.equal((await restore(host, backup)).status, 422);
+  assert.deepEqual(await readSession(host), before);
+});
 test('HTTP: competing requests, duplicate intents, stale source and crash have one effect and stable receipt', async (t) => {
   const ready = await readyPhysical(t),
     { player, other } = ready;

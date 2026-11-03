@@ -183,9 +183,12 @@ export function validateScenarioPhysical(state: State) {
       }),
     'Binding fisico cambiato.',
   );
-  const spaceId =
-    state.journey?.definition.startSpaceId ??
-    sc.spaceBindings.find((b) => b.id === p.heroes[0]?.spaceId)?.id;
+  invariant(state.mapGeneration?.status === 'frozen', 'Partecipanti fisici senza realizzazione.');
+  const projection = state.mapGeneration.projection;
+  const startTile = projection.sections.find((s) => s.id === 0)!.tiles[0]!.source;
+  const startSource = projection.spaces.find((s) => s.tileSource === startTile && s.index === 1);
+  const spaceId = sc.spaceBindings.find((b) => b.sourceId === startSource?.id)?.id;
+  invariant(spaceId, 'Posizione iniziale fisica senza binding fonte.');
   invariant(
     digest(p.heroes) ===
       digest(
