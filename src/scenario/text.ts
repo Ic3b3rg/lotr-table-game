@@ -22,7 +22,9 @@ export function compileSourceText(value: string): SourceText {
       });
     buffer = '';
   };
-  for (const token of value.split(/(<\/?[bi]>|[\ue000-\uf8ff])/g)) {
+  for (const token of value
+    .replace(/\[(\/?[bi])\]/g, '<$1>')
+    .split(/(<\/?[bi]>|[\ue000-\uf8ff])/g)) {
     if (token === '<b>' || token === '</b>' || token === '<i>' || token === '</i>') {
       flush();
       if (token === '<b>') bold++;

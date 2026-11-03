@@ -1,0 +1,117 @@
+import type { State } from '../server/state';
+import { HANDOFF_TEXT } from '../shared/scenario';
+import { digest } from '../map-freeze/hash';
+import { invariant } from '../map-freeze/validate';
+export function validateSourceRequest(state: State) {
+  const sc = state.scenario!,
+    q = sc.pending;
+  if (!q) return;
+  const i = sc.instances.find((i) => i.id === q.instanceId)!,
+    d = sc.pack.definitions.find((d) => d.source === i.definition)!,
+    s = d.states.find((s) => s.index === q.state)!;
+  if (q.kind === 'handoff') {
+    invariant(
+      q.action === -1 &&
+        i.kind === 'principal' &&
+        s.actions.some((a) => a.op === 'release' && i.completed.includes(a.index)) &&
+        digest(q.text) === digest(HANDOFF_TEXT),
+      'Handoff fuori dalla fonte.',
+    );
+    return;
+  }
+  const a = s.actions.find((a) => a.index === q.action);
+  invariant(a, 'Richiesta senza azione.');
+  if (a.op === 'message') {
+    const kind =
+      a.mode === 'scout'
+        ? 'scout'
+        : a.mode === 'spirit'
+          ? 'test'
+          : a.mode === 'tile'
+            ? 'placement'
+            : a.mode === 'objective'
+              ? 'objective'
+              : 'message';
+    invariant(
+      q.kind === kind && digest(q.text) === digest(a.text),
+      'Tipo/testo richiesta diversi dal packet congelato.',
+    );
+    const expected =
+      kind === 'scout' || kind === 'test'
+        ? state.preparation!.heroes.find(
+            (h) =>
+              !sc.completedSetup.some(
+                (c) =>
+                  c.kind === kind &&
+                  c.heroId === h.heroId &&
+                  c.source === `${i.id}:${i.entry}:${a.index}`,
+              ),
+          )
+        : null;
+    invariant(q.heroId === (expected?.heroId ?? null), 'Ordine eroi della richiesta incoerente.');
+    if (a.mode === 'tile') {
+      const effect = sc.effects
+        .filter(
+          (e) =>
+            e.instanceId === i.id &&
+            e.entry === i.entry &&
+            e.action < a.index &&
+            e.op === 'revealTile',
+        )
+        .at(-1);
+      invariant(effect, 'Piazzamento senza RevealTile.');
+      const reveal = s.actions.find((a) => a.index === effect.action)!;
+      invariant(
+        reveal.op === 'revealTile' && state.mapGeneration?.status === 'frozen',
+        'Piazzamento senza realizzazione.',
+      );
+      const p = state.mapGeneration.projection,
+        t = reveal.tile,
+        hash =
+          t.kind === 'start'
+            ? p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId
+            : t.kind === 'hash'
+              ? t.value
+              : (t.ref.scope === 'global' ? sc.globals : i.variables)[t.ref.name];
+      invariant(
+        p.sections.flatMap((s) => s.tiles).find((t) => t.hashId === hash)?.source === q.tileSource,
+        'Tessera del piazzamento incoerente.',
+      );
+    } else invariant(q.tileSource === null, 'Tessera non richiesta dal packet.');
+  } else {
+    invariant(
+      a.op === 'section' && q.kind === 'placement' && state.mapGeneration?.status === 'frozen',
+      'Richiesta non asincrona.',
+    );
+    const task = sc.tasks.find(
+      (t) =>
+        t.kind === 'section' &&
+        t.instanceId === i.id &&
+        t.entry === i.entry &&
+        t.action === a.index,
+    );
+    invariant(task?.kind === 'section', 'Piazzamento sezione senza continuazione.');
+    const tile = state.mapGeneration.projection.sections.find((s) => s.id === a.sectionId)!.tiles[
+      task.tileIndex
+    ];
+    invariant(tile && tile.source === q.tileSource, 'Ordine tessere della richiesta incoerente.');
+    const text = a.text.map((t) =>
+      t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
+    );
+    invariant(digest(text) === digest(q.text), 'Testo piazzamento sezione incoerente.');
+  }
+}
+export function validateMessageLog(state: State) {
+  const sc = state.scenario!;
+  const expected = sc.effects.flatMap((e) => {
+    const i = sc.instances.find((i) => i.id === e.instanceId)!,
+      d = sc.pack.definitions.find((d) => d.source === i.definition)!,
+      a = d.states.find((s) => s.index === e.state)!.actions.find((a) => a.index === e.action)!;
+    const completed = e.entry < i.entry || (e.entry === i.entry && i.completed.includes(e.action));
+    return a.op === 'message' && !a.ignoreLog && completed ? [{ id: e.id, text: a.text }] : [];
+  });
+  invariant(
+    digest(sc.messageLog) === digest(expected),
+    'Registro messaggi incoerente con IgnoreLog/completamenti.',
+  );
+}

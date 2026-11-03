@@ -68,6 +68,9 @@ test('adattatore usa poligoni interi e movementGraph, senza mutare freeze o RNG'
   }));
   const pack = lib.parseScenarioPack(raw).pack;
   lib.validateScenarioBinding(pack, p);
+  const missing = structuredClone(pack);
+  missing.sources = [{ file: 'unrelated.assets', sha256: 'a'.repeat(64) }];
+  assert.throws(() => lib.validateScenarioBinding(missing, p), /source|fonte|hash/i);
   const bad = structuredClone(pack);
   bad.manifest.prefabs[0].source = 'example.assets:999';
   assert.throws(() => lib.validateScenarioBinding(bad, p), /Prefab/);

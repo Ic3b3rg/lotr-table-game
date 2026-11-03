@@ -1,11 +1,37 @@
 // Invented source definitions and prose only.
 import { hash } from './map-freeze.mjs';
 const origin = {
-  type: 'Invented.Action',
   parameterHash: hash('invented parameters'),
   load: 'hash-match-positional',
 };
-export const action = (index, op, data = {}) => ({ index, op, origin: { ...origin }, ...data });
+// Technical handler identifiers; all parameters, states, content and asset identities are invented.
+const actionTypes = {
+  message: 'FFG.JIME.Actions.DisplayMessage',
+  getStart: 'FFG.JIME.Actions.GetStartTileId',
+  revealTile: 'FFG.JIME.Actions.RevealTile',
+  highlight: 'FFG.JIME.Actions.HighlightTileSpace',
+  explore: 'FFG.JIME.Actions.ExploreTile',
+  section: 'FFG.JIME.Actions.SetSectionVisibility',
+  objective: 'FFG.JIME.Actions.SetObjective',
+  threat: 'FFG.JIME.Actions.AddThreatEvent',
+  set: 'HutongGames.PlayMaker.Actions.SetBoolValue',
+  flip: 'HutongGames.PlayMaker.Actions.BoolFlip',
+  getTile: 'FFG.JIME.Actions.GetTileId',
+  getPosition: 'HutongGames.PlayMaker.Actions.GetPosition',
+  branchBool: 'FFG.Common.Actions.CheckBool',
+  broadcast: 'HutongGames.PlayMaker.Actions.SendEventByName',
+  release: 'FFG.Common.Actions.FinishProcessingEvent',
+  stop: 'FFG.Common.Actions.FinishFSM',
+  revealNode: 'FFG.JIME.Actions.RevealNode',
+  hideNode: 'FFG.JIME.Actions.HideThisNode',
+  addInt: 'HutongGames.PlayMaker.Actions.IntAdd',
+};
+export const action = (index, op, data = {}) => ({
+  index,
+  op,
+  origin: { ...origin, type: actionTypes[op] },
+  ...data,
+});
 export const text = (value) => [{ kind: 'text', text: value, style: 'plain' }];
 export const state = (index, actions = [], transitions = {}) => ({ index, actions, transitions });
 export function scenarioFixture() {

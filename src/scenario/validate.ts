@@ -1,3 +1,7 @@
+import { validateSourcePlayReceipts } from './play-receipts';
+import { validateSourceRequest, validateMessageLog } from './request-state';
+import { validatePreparedRewards } from './prepared-effects';
+import { validateInstanceFlags } from './instance-state';
 import type { State } from '../server/state';
 import type { Receipt } from '../shared/protocol';
 import type { ScenarioInstance, VariableRef } from '../shared/scenario';
@@ -32,6 +36,7 @@ export function scenarioStateProblem(state: State): string | null {
       digest(sc.spaceBindings) === digest(geometry.bindings),
       'Binding geometria cambiato.',
     );
+    if (state.journey) invariant(state.journey.id === sc.id, 'Identità consumer mappa incoerente.');
     if (state.journey)
       invariant(
         digest(state.journey.definition) === digest(geometry.definition),
@@ -307,6 +312,10 @@ export function scenarioStateProblem(state: State): string | null {
         );
       }
     }
+    validateInstanceFlags(sc);
+    validatePreparedRewards(state);
+    validateSourceRequest(state);
+    validateMessageLog(state);
     const q = sc.pending;
     if (q) {
       const { fingerprint, ...data } = q;
@@ -427,6 +436,11 @@ export function scenarioReceiptProblem(
       r.kind !== c.kind
     )
       return 'Ricevuta scenario incoerente.';
+  }
+  try {
+    validateSourcePlayReceipts(state, commands);
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Ricevute consumer non valide.';
   }
   return null;
 }

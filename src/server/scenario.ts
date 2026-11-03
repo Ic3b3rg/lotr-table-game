@@ -1,3 +1,5 @@
+import { validatePreparedPolicies } from '../scenario/prepared-effects';
+import { definitionId } from '../shared/preparation';
 import type { Command, ScenarioCommand } from '../shared/protocol';
 import type { State } from './state';
 import { loadScenarioPack, validateScenarioBinding } from '../scenario/pack';
@@ -18,6 +20,7 @@ export function scenarioOffer(state: State, path: string) {
   try {
     const { pack, fingerprint } = loadScenarioPack(path);
     validateScenarioBinding(pack, state.mapGeneration.projection);
+    validatePreparedPolicies(pack, state.content);
     return {
       ...base,
       available: true,
@@ -30,7 +33,7 @@ export function scenarioOffer(state: State, path: string) {
     return {
       ...base,
       reason:
-        'Il pacchetto privato dell’avventura manca o non certifica i prefab di questa mappa. Controllate il materiale sul PC.',
+        'Il materiale privato necessario per questa mappa manca o non corrisponde. Controllate il pacchetto dell’avventura sul PC.',
     };
   }
 }
@@ -71,6 +74,19 @@ export function applyScenario(
         'SCENARIO_BOUNDARY',
         'L’avventura richiede la compagnia pronta senza altre richieste o turni.',
       );
+    if (
+      state.preparation.heroes.some(
+        (h) =>
+          h.prepared.length !== 1 ||
+          definitionId(h.prepared[0]!) !==
+            state.content!.roles.find((r) => r.id === h.roleId)!.skills[0],
+      )
+    )
+      throw new ApiError(
+        409,
+        'SCENARIO_BOUNDARY',
+        'L’avventura richiede la preparazione iniziale di ruolo. Le Scoperte libere dei tavoli precedenti restano conservate, ma non costituiscono questo nuovo avvio.',
+      );
     beginScenario(state, loadScenarioPack(path));
   } else resumeScenario(state, playerId, command);
   const sc = state.scenario!;
@@ -91,9 +107,7 @@ export function allowScenarioPlay(state: State, command: Command) {
   const sc = state.scenario!;
   const allowed =
     sc.phase === 'action' &&
-    ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO', 'DISCARD_PREPARED_SKILL'].includes(
-      command.type,
-    );
+    ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type);
   if (!allowed)
     throw new ApiError(
       409,

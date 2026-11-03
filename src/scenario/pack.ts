@@ -3,6 +3,7 @@ import { ScenarioPackSchema, type ScenarioPack } from '../shared/scenario';
 import type { Projection } from '../shared/generated-map';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { validateSourceHandler } from './handlers';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
@@ -54,6 +55,7 @@ export function parseScenarioPack(raw: unknown) {
         'Ordine azioni non valido.',
       );
       for (const a of s.actions) {
+        validateSourceHandler(a);
         const refs = [
           ...('target' in a ? [a.target] : []),
           ...('ref' in a ? [a.ref] : []),
@@ -88,6 +90,18 @@ export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
     'Scenario/source mismatch.',
   );
   const files = new Map(pack.sources.map((f) => [f.file, f.sha256]));
+  invariant(files.size === pack.sources.length, 'Source file duplicate.');
+  for (const source of [
+    p.context.adventureSource,
+    ...p.assignments.flatMap((a) => [a.modelSource, a.prefab.source]),
+  ]) {
+    const file = source.split(':')[0]!;
+    const expected = p.provenance.files.find((f) => f.file === file);
+    invariant(
+      expected && files.get(file) === expected.sha256,
+      'Source hash mancante o incoerente.',
+    );
+  }
   for (const f of p.provenance.files)
     if (files.has(f.file)) invariant(files.get(f.file) === f.sha256, 'Source hash mismatch.');
   const principal = pack.definitions.find((d) => d.source === pack.principal)!;

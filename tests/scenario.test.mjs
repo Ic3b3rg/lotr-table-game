@@ -13,6 +13,11 @@ test('HTTP avvio: initialization di tutti i prefab prima di intro e nessuna rige
   const s = await readSession(host),
     sc = s.scenario;
   assert.equal(sc.pending.kind, 'message');
+  assert.equal(sc.messageLog.length, 0);
+  assert.deepEqual(
+    sc.initialInspiration.map((x) => x.value),
+    [0, 0],
+  );
   assert.equal(sc.pending.state, 2);
   assert.equal(sc.globals.boundTile, s.mapGeneration.projection.sections[0].tiles[0].hashId);
   assert.deepEqual(
@@ -29,6 +34,7 @@ test('HTTP avvio: initialization di tutti i prefab prima di intro e nessuna rige
   assert.equal((await scenarioInput(host, player, { kind: 'ack' })).status, 200);
   const placed = await readSession(host);
   assert.equal(placed.scenario.pending.kind, 'placement');
+  assert.equal(placed.scenario.messageLog.length, 1);
   assert.equal(placed.scenario.tiles.filter((t) => t.visible).length, 1);
   assert.equal(placed.journey, null);
 });
@@ -172,6 +178,16 @@ test('Scout2 e Spirito1 per eroe, eventi in space order, flip once-only e unico 
   );
   const turn = await readSession(host);
   assert.ok(turn.round.turnId);
+  assert.equal(
+    (
+      await command(host, player, {
+        type: 'DISCARD_PREPARED_SKILL',
+        heroId: 'hero-1',
+        copy: turn.preparation.heroes.find((h) => h.heroId === 'hero-1').prepared[0],
+      })
+    ).status,
+    409,
+  );
   assert.equal(
     (await command(host, player, { type: 'BEGIN_SHADOW', roundId: turn.round.id, agreed: true }))
       .status,
@@ -341,4 +357,12 @@ test('un prefab auditato solo per initialization non abilita reveal di un’altr
     409,
   );
   assert.equal((await readSession(host)).scenario, null);
+});
+test('IgnoreLog effettivo controlla il registro, senza duplicare un messaggio per eroe', async (t) => {
+  const { host, player } = await readyScenario(t, (p) => {
+    p.definitions[0].states.find((s) => s.index === 2).actions[0].ignoreLog = true;
+  });
+  assert.equal((await startScenario(host, player)).status, 200);
+  assert.equal((await scenarioInput(host, player, { kind: 'ack' })).status, 200);
+  assert.deepEqual((await readSession(host)).scenario.messageLog, []);
 });

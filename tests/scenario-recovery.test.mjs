@@ -1,3 +1,4 @@
+import { hash } from './fixtures/map-freeze.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readyScenario, startScenario, scenarioInput } from './scenario-helper.mjs';
@@ -32,6 +33,9 @@ test('backup: source/cursor/binding/effetti/ricevute incoerenti non sostituiscon
     (b) => (b.payload.state.scenario.projectionFingerprint = '0'.repeat(64)),
     (b) => (b.payload.state.scenario.globals.boundTile = -2),
     (b) => (b.payload.state.scenario.instances[0].state = 999),
+    (b) => (b.payload.state.scenario.instances.find((i) => i.kind === 'encounter').visible = true),
+    (b) => (b.payload.state.scenario.instances.find((i) => i.kind === 'encounter').stopped = true),
+    (b) => (b.payload.state.scenario.instances.find((i) => i.kind === 'encounter').processing = 1),
     (b) => b.payload.state.scenario.effects.push(b.payload.state.scenario.effects[0]),
     (b) => (b.payload.state.scenario.tiles[0].explored = true),
     (b) =>
@@ -110,4 +114,88 @@ test('restore durante ogni richiesta aperta mantiene carte/cursori/RNG e resping
   });
   t.after(() => restarted.stop());
   assert.deepEqual(await readSession(restarted), active);
+});
+test('consumer nuovo: posizioni, azioni e turni devono corrispondere alle ricevute', async (t) => {
+  const { host, player, other } = await readyScenario(t);
+  assert.equal((await startScenario(host, player)).status, 200);
+  for (let n = 0; n < 40; n++) {
+    const s = await readSession(host),
+      q = s.scenario.pending;
+    if (!q) break;
+    const actor = q.heroId === 'hero-2' ? other : player;
+    const input =
+      q.kind === 'scout'
+        ? q.stage === 'ready'
+          ? { kind: 'scout-reveal' }
+          : {
+              kind: 'scout-resolve',
+              prepareCopy: null,
+              top: s.scout.revealed,
+              bottom: [],
+              discardPreparedCopy: null,
+            }
+        : q.kind === 'test'
+          ? q.stage === 'ready'
+            ? { kind: 'test-reveal' }
+            : { kind: 'test-resolve' }
+          : { kind: 'ack' };
+    assert.equal((await scenarioInput(host, actor, input)).status, 200);
+  }
+  const { command } = await import('./preparation-helper.mjs');
+  let s = await readSession(host);
+  assert.equal(
+    (
+      await command(host, player, {
+        type: 'START_TURN',
+        roundId: s.round.id,
+        heroId: 'hero-1',
+        agreed: true,
+      })
+    ).status,
+    200,
+  );
+  s = await readSession(host);
+  const turn = {
+    mapId: s.journey.id,
+    roundId: s.round.id,
+    turnId: s.round.turnId,
+    heroId: 'hero-1',
+  };
+  assert.equal((await command(host, player, { type: 'START_TRAVEL', ...turn })).status, 200);
+  s = await readSession(host);
+  const from = s.journey.heroes[0].spaceId;
+  const candidates = s.journey.definition.connections.flatMap(([a, b]) =>
+    a === from ? [b] : b === from ? [a] : [],
+  );
+  const to = candidates.find((id) => {
+    const source = s.scenario.spaceBindings.find((b) => b.id === id).sourceId;
+    const space = s.mapGeneration.projection.spaces.find((x) => x.id === source);
+    return s.scenario.tiles.find((t) => t.source === space.tileSource).explored;
+  });
+  assert.ok(to);
+  assert.equal(
+    (
+      await command(host, player, {
+        type: 'MOVE_HERO',
+        ...turn,
+        fromSpaceId: from,
+        destinationSpaceId: to,
+      })
+    ).status,
+    200,
+  );
+  const before = await readSession(host),
+    backup = await readBackup(host);
+  for (const edit of [
+    (b) => (b.payload.state.journey.heroes.find((h) => h.heroId === 'hero-1').spaceId = from),
+    (b) => (b.payload.state.round.heroes.find((h) => h.heroId === 'hero-1').actionsUsed = 2),
+    (b) => (b.payload.state.round.heroes.find((h) => h.heroId === 'hero-2').turnEnded = true),
+    (b) => delete b.payload.commands.find((c) => c.receipt.type === 'START_TURN').receipt.heroId,
+  ]) {
+    const bad = structuredClone(backup);
+    edit(bad);
+    signBackup(bad);
+    assert.equal((await restore(host, bad)).status, 422);
+    assert.deepEqual(await readSession(host), before);
+  }
 });

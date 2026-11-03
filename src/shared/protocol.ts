@@ -330,6 +330,8 @@ export const ReceiptSchema = z.union([
     phase: z.enum(['action', 'shadow', 'rally']),
     turnId: z.uuid().nullable(),
     testId: z.uuid().nullable(),
+    heroId: ContentIdSchema.nullable().optional(),
+    sourceTurnId: z.uuid().nullable().optional(),
   }),
   z.strictObject({
     requestId: IntentIdSchema,

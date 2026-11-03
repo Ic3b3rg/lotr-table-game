@@ -62,8 +62,20 @@ export function performCommand(store: Store, playerId: string, command: Command)
       command.type === 'END_RALLY'
     ) {
       const result = applyRoundCommand(state, playerId, command);
+      const source = state.scenario
+        ? {
+            heroId: 'heroId' in command ? command.heroId : null,
+            sourceTurnId: command.type === 'END_TURN' ? command.turnId : result.turnId,
+          }
+        : {};
       advance(state);
-      return { requestId, type: command.type, appliedRevision: state.revision, ...result };
+      return {
+        requestId,
+        type: command.type,
+        appliedRevision: state.revision,
+        ...result,
+        ...source,
+      };
     }
     if (
       command.type === 'START_SCOUT' ||

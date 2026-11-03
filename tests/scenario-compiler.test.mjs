@@ -53,11 +53,25 @@ test('compiler: ogni azione eseguibile e ogni handler ha evidenza, senza omissio
 });
 test('testo fonte: enfasi e icone accessibili, markup sconosciuto resta testo e PUA ignote bloccano', () => {
   assert.equal(typeof lib.compileSourceText, 'function');
+  assert.deepEqual(lib.compileSourceText('[i]Inventato[/i] [b]forte[/b]')[0], {
+    kind: 'text',
+    text: 'Inventato',
+    style: 'italic',
+  });
   const tokens = lib.compileSourceText('<b>Testo inventato</b> \uf461 <script>inventato</script>');
   assert.deepEqual(tokens[0], { kind: 'text', text: 'Testo inventato', style: 'bold' });
   assert.ok(tokens.some((t) => t.kind === 'icon' && t.name === 'spirit'));
   assert.ok(tokens.some((t) => t.kind === 'text' && t.text.includes('<script>')));
   assert.throws(() => lib.compileSourceText('simbolo \ueeee'), /icon/i);
+});
+test('un certificato non rende eseguibile un tipo fonte ignoto o associato all’handler sbagliato', () => {
+  const unknown = input();
+  unknown.pack.definitions[0].states[0].actions[0].origin.type = 'Invented.UnknownAction';
+  unknown.certificates[0].states[0].actions[0].type = 'Invented.UnknownAction';
+  assert.throws(() => lib.compileScenarioPack(unknown), /handler|fonte/i);
+  const wrongHandler = input();
+  wrongHandler.pack.definitions[0].states[0].actions[0].op = 'getTile';
+  assert.throws(() => lib.compileScenarioPack(wrongHandler), /handler|fonte/i);
 });
 test('i controlli carte inviano richiesta/source/hero correnti anziché comandi liberi', () => {
   assert.equal(typeof lib.bindScenarioCards, 'function');

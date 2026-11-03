@@ -137,6 +137,25 @@ export const ScenarioPackSchema = z.strictObject({
   principal: SourceSchema,
   timers: z.array(SourceSchema).max(20),
   definitions: z.array(ScenarioDefinitionSchema).min(1).max(500),
+  preparedEffects: z
+    .array(
+      z.discriminatedUnion('effect', [
+        z.strictObject({
+          skillId: ContentIdSchema,
+          cardHash: HashSchema,
+          effect: z.literal('inspiration'),
+          amount: z.literal(1),
+        }),
+        z.strictObject({
+          skillId: ContentIdSchema,
+          cardHash: HashSchema,
+          effect: z.literal('requires-capability'),
+          capability: z.string().min(1).max(100),
+        }),
+      ]),
+    )
+    .max(100)
+    .optional(),
   manifest: z.strictObject({
     scope: z.literal('startup-only'),
     evidenceHash: HashSchema,
@@ -288,6 +307,26 @@ export const ScenarioSchema = z.strictObject({
       }),
     )
     .max(5000),
+  cardEffects: z
+    .array(
+      z.strictObject({
+        id: z.string().max(400),
+        heroId: ContentIdSchema,
+        copy: CopyIdSchema,
+        policyHash: HashSchema,
+        source: z.string().max(300),
+        reward: z.int().min(0).max(1),
+      }),
+    )
+    .max(100)
+    .optional(),
+  initialInspiration: z
+    .array(z.strictObject({ heroId: ContentIdSchema, value: z.int().nonnegative() }))
+    .min(1)
+    .max(5),
+  messageLog: z
+    .array(z.strictObject({ id: z.string().max(300), text: SourceTextSchema }))
+    .max(1000),
   handoffCount: z.int().min(0).max(1),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
@@ -300,3 +339,11 @@ export const ScenarioOfferSchema = z.strictObject({
   projectionFingerprint: HashSchema.nullable(),
   name: z.string().max(200).nullable(),
 });
+
+export const HANDOFF_TEXT: SourceText = [
+  {
+    kind: 'text',
+    text: 'L’avvio è completo. Inizia la Fase di Azione e scegli il primo eroe di turno.',
+    style: 'plain',
+  },
+];

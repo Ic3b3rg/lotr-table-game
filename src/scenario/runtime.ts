@@ -1,3 +1,5 @@
+import { HANDOFF_TEXT } from '../shared/scenario';
+import { preparedReward, requirePreparedCapability } from './prepared-effects';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
 import type { ScenarioCommand } from '../shared/protocol';
@@ -138,6 +140,14 @@ function messageRequest(
     tileSource: a.mode === 'tile' ? visible.at(-1)!.source : null,
   });
 }
+function logMessage(sc: Scenario, i: ScenarioInstance, index: number) {
+  const a = current(sc, i).actions.find((a) => a.index === index)!;
+  if (a.op === 'message' && !a.ignoreLog) {
+    const id = actionKey(i, index);
+    invariant(!sc.messageLog.some((m) => m.id === id), 'Callback messaggio duplicato.');
+    sc.messageLog.push({ id, text: structuredClone(a.text) });
+  }
+}
 function complete(i: ScenarioInstance, index: number) {
   if (!i.completed.includes(index)) i.completed.push(index);
 }
@@ -219,7 +229,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       const { definition } = projectionToJourney(p, space.id, sc.pack.name);
       invariant(!state.journey, 'Piazzamento eroi ripetuto.');
       state.journey = {
-        id: randomUUID(),
+        id: sc.id,
         definition,
         travel: null,
         heroes: state.preparation!.heroes.map((h) => ({
@@ -384,13 +394,7 @@ function pump(state: State) {
         entry: principal.entry,
         action: -1,
         kind: 'handoff',
-        text: [
-          {
-            kind: 'text',
-            text: 'L’avvio è completo. Inizia la Fase di Azione e scegli il primo eroe di turno.',
-            style: 'plain',
-          },
-        ],
+        text: structuredClone(HANDOFF_TEXT),
         heroId: null,
         actorPlayerId: null,
         stage: 'ready',
@@ -429,6 +433,11 @@ export function beginScenario(state: State, parsed: ReturnType<typeof parseScena
     effects: [],
     events: [],
     commands: [],
+    initialInspiration: state.preparation!.heroes.map((h) => ({
+      heroId: h.heroId,
+      value: h.inspiration,
+    })),
+    messageLog: [],
     handoffCount: 0,
   };
   state.scenario = sc;
@@ -471,6 +480,9 @@ export function beginScenario(state: State, parsed: ReturnType<typeof parseScena
       m = sc.pack.manifest.prefabs.find((m) => m.source === a.prefab.source)!;
     add(`node:${spaceId}`, 'encounter', m.fsmSource, a.prefab.source, spaceId);
   }
+  sc.cardEffects = [];
+  for (const hero of state.preparation!.heroes)
+    for (const copy of hero.prepared) preparedReward(state, hero.heroId, copy, 'initial');
   principal.processing = 1;
   invariant(send(sc, principal, 'SCENARIO_BEGIN'), 'SCENARIO_BEGIN non compilato.');
   pump(state);
@@ -538,6 +550,7 @@ export function resumeScenario(
       }
       if (input.kind !== 'scout-resolve') throw wrong();
       const scout = state.scout!;
+      requirePreparedCapability(sc.pack, input.prepareCopy);
       const { kind, ...choices } = input;
       applyScouting(state, playerId, {
         ...base,
@@ -545,6 +558,8 @@ export function resumeScenario(
         scoutId: scout.id,
         ...choices,
       });
+      if (input.prepareCopy)
+        preparedReward(state, hero.heroId, input.prepareCopy, actionKey(i, q.action));
       sc.completedSetup.push({
         kind: 'scout',
         heroId: hero.heroId,
@@ -616,6 +631,7 @@ export function resumeScenario(
       messageRequest(state, i, a);
       return;
     }
+    logMessage(sc, i, q.action);
     complete(i, q.action);
   } else {
     if (input.kind !== 'ack') throw wrong();
@@ -633,7 +649,10 @@ export function resumeScenario(
     const task = sc.tasks.at(-1);
     if (task?.kind === 'section' && task.instanceId === i.id && task.action === q.action)
       task.tileIndex++;
-    else complete(i, q.action);
+    else {
+      logMessage(sc, i, q.action);
+      complete(i, q.action);
+    }
   }
   pump(state);
 }
