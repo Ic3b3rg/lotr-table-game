@@ -108,6 +108,7 @@ export const ScenarioDefinitionSchema = z.strictObject({
   initial: z.int().nonnegative(),
   variables: z.array(variable).max(200),
   handlers: z.record(z.string().min(1).max(100), z.int().nonnegative()),
+  deferredHandlers: z.record(z.string().min(1).max(100), z.string().min(1).max(100)).default({}),
   states: z
     .array(
       z.strictObject({
@@ -147,6 +148,8 @@ export const ScenarioPackSchema = z.strictObject({
           encounterId: Int32Schema,
           nodeSource: SourceSchema,
           nodeType: z.enum(['search', 'person', 'threat']),
+          sourceNodeType: z.int().min(0).max(20).default(0),
+          token3DType: z.int().min(0).max(100).default(2),
           fsmSource: SourceSchema,
           initializationHash: HashSchema,
           closureHash: HashSchema,

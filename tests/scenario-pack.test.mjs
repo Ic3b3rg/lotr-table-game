@@ -75,3 +75,30 @@ test('adattatore usa poligoni interi e movementGraph, senza mutare freeze o RNG'
   bad.sources[0].sha256 = '0'.repeat(64);
   assert.throws(() => lib.validateScenarioBinding(bad, p), /hash/);
 });
+test('vista mappa scenario filtra soltanto tessere rivelate e conserva grafo e ID', async (t) => {
+  const { readyScenario, startScenario, scenarioInput } = await import('./scenario-helper.mjs');
+  const { readSession } = await import('./skill-test-helper.mjs');
+  const { host, player } = await readyScenario(t);
+  await startScenario(host, player);
+  await scenarioInput(host, player, { kind: 'ack' });
+  await scenarioInput(host, player, { kind: 'ack' });
+  const s = await readSession(host);
+  assert.equal(typeof lib.scenarioMapView, 'function');
+  const view = lib.scenarioMapView(s);
+  const p = s.mapGeneration.projection,
+    start = p.sections[0].tiles[0];
+  assert.equal(
+    view.definition.spaces.length,
+    p.spaces.filter((x) => x.tileSource === start.source).length,
+  );
+  assert.equal(view.unexplored.length, view.definition.spaces.length);
+  assert.equal(view.nodes.length, 0);
+  assert.deepEqual(
+    view.definition.connections,
+    s.journey.definition.connections.filter(
+      ([a, b]) =>
+        view.definition.spaces.some((s) => s.id === a) &&
+        view.definition.spaces.some((s) => s.id === b),
+    ),
+  );
+});

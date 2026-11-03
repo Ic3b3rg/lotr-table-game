@@ -82,6 +82,10 @@ function send(sc: Scenario, i: ScenarioInstance, event: string) {
   return true;
 }
 function broadcast(sc: Scenario, event: string) {
+  invariant(
+    !sc.instances.some((i) => !i.stopped && definition(sc, i).deferredHandlers[event]),
+    'Broadcast richiede un ricevitore non compilato.',
+  );
   const receivers = sc.instances.filter(
     (i) => !i.stopped && definition(sc, i).handlers[event] !== undefined,
   );
@@ -288,7 +292,7 @@ function runInstance(state: State, i: ScenarioInstance) {
     if (i.stopped) return progress;
     if (s.actions.some((a) => !i.completed.includes(a.index))) return progress;
     i.settled = true;
-    if (s.actions.length && send(sc, i, 'FINISHED')) continue;
+    if (send(sc, i, 'FINISHED')) continue;
     return progress;
   }
   throw new Error('Limite transizioni startup superato.');

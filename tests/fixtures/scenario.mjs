@@ -24,6 +24,7 @@ export function scenarioFixture() {
         initial: 0,
         variables: [{ name: 'start', type: 'int', value: 0 }],
         handlers: { SCENARIO_BEGIN: 1 },
+        deferredHandlers: {},
         states: [
           state(0, [action(0, 'getStart', { target: { scope: 'local', name: 'start' } })]),
           state(1, [
@@ -40,6 +41,7 @@ export function scenarioFixture() {
         initial: 0,
         variables: [],
         handlers: {},
+        deferredHandlers: {},
         states: [state(0)],
       },
     ],
@@ -53,6 +55,8 @@ export function scenarioFixture() {
           encounterId: 100000,
           nodeSource: 'example.assets:70003',
           nodeType: 'search',
+          sourceNodeType: 0,
+          token3DType: 2,
           fsmSource: 'example.assets:70002',
           initializationHash: hash('initialization'),
           closureHash: hash('closure'),

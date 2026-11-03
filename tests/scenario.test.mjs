@@ -310,3 +310,35 @@ test('stale/cross-request e doppio invio non ridisegnano carte o saltano una ric
   assert.equal(wrong.status, 409);
   assert.deepEqual(await readSession(host), opened);
 });
+test('initialization segue anche FINISHED di uno stato senza azioni', async (t) => {
+  const { host, player, pack } = await readyScenario(t, (p) => {
+    const d = p.definitions.find((d) => d.source === p.manifest.prefabs[0].fsmSource);
+    d.states.find((s) => s.index === 8).transitions.FINISHED = 9;
+    d.states.push({ index: 9, actions: [], transitions: { FINISHED: 0 } });
+  });
+  assert.equal((await startScenario(host, player)).status, 200);
+  const sc = (await readSession(host)).scenario;
+  assert.equal(
+    sc.instances.find((i) => i.definition === pack.manifest.prefabs[0].fsmSource).state,
+    0,
+  );
+});
+test('un prefab auditato solo per initialization non abilita reveal di un’altra realizzazione', async (t) => {
+  const { host, player } = await readyScenario(t, (p) => {
+    const d = p.definitions.find((d) => d.source === p.manifest.prefabs[0].fsmSource);
+    d.deferredHandlers = { REVEALED: 'reveal-not-compiled' };
+    delete d.handlers.REVEALED;
+  });
+  const offer = await (await host.request('/api/scenario-plan')).json();
+  assert.equal(offer.available, false);
+  assert.equal(
+    (
+      await startScenario(host, player, {
+        packFingerprint: 'a'.repeat(64),
+        projectionFingerprint: 'b'.repeat(64),
+      })
+    ).status,
+    409,
+  );
+  assert.equal((await readSession(host)).scenario, null);
+});
