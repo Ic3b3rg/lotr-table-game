@@ -96,7 +96,9 @@ export function createPhysicalControls(
               ? `Prevenzione per ${name(active.heroId)}`
               : active.kind === 'discard'
                 ? `Scarto per ${name(active.heroId)}`
-                : `Conseguenza sospesa per ${name(active.heroId)}`,
+                : active.kind === 'decision'
+                  ? `Decisione per ${name(active.heroId)}`
+                  : `Conseguenza sospesa per ${name(active.heroId)}`,
           ),
         );
         root.append(

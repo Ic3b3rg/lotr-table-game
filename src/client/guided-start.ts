@@ -202,7 +202,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : session.scenario.pack.name;
         message =
           q?.kind === 'physical'
-            ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} risolve la conseguenza coperta. Controlla destinatario, quantità e allocazione qui sotto. Carte e scelte sono già salvate.`
+            ? session.physical?.fronts
+              ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} risolve la decisione qui sotto. Controlla carta, destinatario e costi: fonte e figli sono salvati.`
+              : `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} risolve la conseguenza coperta. Controlla destinatario, quantità e allocazione qui sotto. Carte e scelte sono già salvate.`
             : q?.heroId
               ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} completa ${q.kind === 'scout' ? 'Scoperta 2' : 'Spirito 1'} con il proprio eroe. Le carte e le scelte sono salvate a ogni conferma.`
               : q
