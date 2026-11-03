@@ -8,6 +8,7 @@ const bundle = buildSync({
     contents: `export {createEncounterInspection} from './src/client/encounter-inspection';
       export {createExplorationInspection} from './src/client/exploration-inspection';
       export {createGuidedStart} from './src/client/guided-start';
+      export {createJourneyMap} from './src/client/journey-map';
       export {setOnline} from './src/client/actions';`,
     resolveDir: process.cwd(),
   },
@@ -32,6 +33,7 @@ function browser() {
       this.checked = false;
       this.value = '';
       this.classList = { add() {}, toggle() {} };
+      this.style = { setProperty() {} };
       nodes.push(this);
     }
     append(...children) {
@@ -61,6 +63,7 @@ function browser() {
   const document = {
     body: new Element(),
     createElement: (tag) => new Element(tag),
+    createElementNS: (_namespace, tag) => new Element(tag),
     createDocumentFragment: () => new Element('fragment'),
     querySelector: (selector) => {
       if (!elements.has(selector)) elements.set(selector, new Element());
@@ -80,6 +83,12 @@ function browser() {
     exports: module.exports,
     document,
     HTMLElement: Element,
+    Element,
+    ResizeObserver: class {
+      observe() {}
+    },
+    requestAnimationFrame() {},
+    matchMedia: () => ({ matches: false }),
     location: { pathname: '/join' },
     localStorage: { getItem: () => null, setItem() {} },
     crypto: {}, // The HTTP LAN origin has no SubtleCrypto.
@@ -178,7 +187,7 @@ test('an ordinary physical continuation retains the owner and decision as the gu
   assert.equal(b.document.querySelector('#start-action').href, '#scenario');
 });
 
-test('the original guide explains the unavailable Shadow after every turn and token have concluded', () => {
+test('the original guide and map preserve concluded turns without suggesting another turn', () => {
   const b = browser(),
     s = session();
   s.round.activeHeroId = null;
@@ -196,6 +205,20 @@ test('the original guide explains the unavailable Shadow after every turn and to
     /Scegliete il prossimo turno|segnalino.*disponibile/,
   );
   assert.equal(b.document.querySelector('#start-action').href, '#scenario');
+  s.mapGeneration = null;
+  s.journey.definition = {
+    label: 'Mappa inventata',
+    width: 100,
+    height: 100,
+    spaces: [{ id: 'space-invented', label: 'Casella inventata', x: 50, y: 50, hexes: [] }],
+    connections: [],
+  };
+  b.createJourneyMap(async () => {}).update(s, player, {
+    heroes: [{ id: hero.heroId, name: { text: 'Eroe inventato' } }],
+  });
+  assert.match(b.document.querySelector('#map-status').textContent, /turni sono conclusi/);
+  assert.doesNotMatch(b.document.querySelector('#map-status').textContent, /Inizia un turno/);
+  assert.equal(b.document.querySelector('#map-personal-controls').hidden, true);
 });
 
 test('exploration remains the guided next step with its owner, paid movement and residual budget', () => {

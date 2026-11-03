@@ -128,7 +128,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
           ? `${catalog.heroes.find((hero) => hero.id === active!.heroId)!.name.text} · ${origin!.label} · ${remaining} ${remaining === 1 ? 'movimento disponibile' : 'movimenti disponibili'}.`
           : round?.activeHeroId
             ? 'Il proprietario dell’eroe di turno conferma i movimenti dalla vista personale.'
-            : 'Le posizioni sono salvate. Inizia un turno nella Fase di Azione per viaggiare.';
+            : round?.heroes.every((hero) => hero.turnEnded)
+              ? 'I turni sono conclusi. Le posizioni sono salvate; consulta il prossimo passo nella guida al tavolo.'
+              : 'Le posizioni sono salvate. Inizia un turno nella Fase di Azione per viaggiare.';
     if (status.textContent !== message) status.textContent = message;
     if (journey) board.update(journey.heroes, round?.activeHeroId ?? null, select.value);
     refreshActions();
