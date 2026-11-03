@@ -60,14 +60,24 @@ test('a defeated hero leaves the map, cannot take ordinary actions, and loss occ
     (input) => {
       for (const d of input.definitions) d.body = [{ op: 'keep-faceup' }];
     },
+    (catalog) => {
+      for (const card of catalog.skills) {
+        card.success = 1;
+        card.fate = 0;
+      }
+    },
   );
   await reachPhysical(ready);
-  // No usable inspiration: the real zero-success test fails; faceup limit also forces failure.
+  // The real test has sufficient successes; only the live faceup limit forces failure.
   for (const option of ['reveal', 'resolve']) {
     const r = await scenarioInput(ready.host, ready.player, { kind: 'physical-choice', option });
     assert.equal(r.status, 200, await r.text());
   }
   const defeated = await readSession(ready.host);
+  const outcome = defeated.physical.lastStand.selections[0];
+  assert.ok(outcome.successes >= outcome.difficulty);
+  assert.equal(outcome.forcedFailure, true);
+  assert.equal(outcome.outcome, 'fail');
   assert.equal(defeated.journey.heroes[0].removed, true);
   assert.equal(defeated.physical.lastStand.heroes[0].defeated, true);
   assert.equal(defeated.physical.lastStand.terminal, null);
