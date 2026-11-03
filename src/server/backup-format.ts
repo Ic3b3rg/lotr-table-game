@@ -1,3 +1,4 @@
+import { scenarioReceiptProblem } from '../scenario/validate';
 import { digest } from '../map-freeze/hash';
 import { z } from 'zod';
 import { IntentIdSchema, ReceiptSchema } from '../shared/protocol';
@@ -15,6 +16,8 @@ export const BackupCommandSchema = z.strictObject({
 export const BackupPayloadSchema = z
   .strictObject({ state: StateSchema, commands: z.array(BackupCommandSchema).max(5000) })
   .superRefine((payload, ctx) => {
+    const scenarioProblem = scenarioReceiptProblem(payload.state, payload.commands);
+    if (scenarioProblem) ctx.addIssue({ code: 'custom', message: scenarioProblem });
     const generationProblem = generationReceiptProblem(payload.state, payload.commands);
     if (generationProblem) ctx.addIssue({ code: 'custom', message: generationProblem });
     const budgetProblem = journeyBudgetProblem(

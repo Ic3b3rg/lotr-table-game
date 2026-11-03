@@ -1,5 +1,7 @@
+import { bindScenarioCards } from '../shared/scenario-cards';
 import type {
   GroupCommand,
+  ScenarioCommand,
   MapGenerationCommand,
   JourneyCommand,
   RoundCommand,
@@ -11,6 +13,7 @@ import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
 type GameCommand =
+  | ScenarioCommand
   | MapGenerationCommand
   | GroupCommand
   | JourneyCommand
@@ -41,12 +44,21 @@ export function createGameActions(
       await action(async () => {
         const current = getSession()!;
         error.hidden = true;
-        const signature = JSON.stringify({ ...intent, generation: current.generation });
+        const bound = ['RESOLVE_SCOUT', 'CONVERT_FATE', 'RESOLVE_SKILL_TEST'].includes(intent.type)
+          ? bindScenarioCards(
+              current,
+              intent as Extract<
+                Intent,
+                { type: 'RESOLVE_SCOUT' | 'CONVERT_FATE' | 'RESOLVE_SKILL_TEST' }
+              >,
+            )
+          : intent;
+        const signature = JSON.stringify({ ...bound, generation: current.generation });
         if (pending?.signature !== signature)
           pending = {
             signature,
             body: {
-              ...intent,
+              ...bound,
               requestId: randomIntent(),
               generation: current.generation,
               expectedRevision: current.revision,

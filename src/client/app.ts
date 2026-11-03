@@ -1,3 +1,4 @@
+import { ScenarioOfferSchema } from '../shared/scenario';
 import { HostSchema, IdentitySchema, SessionSchema, type Session } from '../shared/protocol';
 import { element, text } from './dom';
 import { request } from './api';
@@ -74,8 +75,9 @@ function sync(fresh = false): Promise<void> {
         await invitation();
         invitationUpdatedAt = Date.now();
       }
+      const scenarioOffer = ScenarioOfferSchema.parse(await request('/api/scenario-plan'));
       renderSession(session);
-      companyController.update(session, me.player, generationOffer);
+      companyController.update(session, me.player, generationOffer, scenarioOffer);
       personalController?.update(session, me.player);
       guidedController.update(session, me.player, generationOffer);
       demoController.update(session, personal ? me.player : null);

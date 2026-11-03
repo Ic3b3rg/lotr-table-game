@@ -70,7 +70,7 @@ export function createRounds(sync: () => Promise<void>) {
         : round.phase === 'shadow'
           ? 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
           : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
-    form.hidden = !player || Boolean(round?.activeHeroId);
+    form.hidden = !player || Boolean(round?.activeHeroId) || (!!current.scenario && !!allEnded);
     const choosing = Boolean(round?.phase === 'action' && !allEnded);
     element('#round-hero-field').hidden = !choosing;
     select.disabled = !choosing;
@@ -107,7 +107,15 @@ export function createRounds(sync: () => Promise<void>) {
     element('#round-turn-controls').hidden = !ownActive;
     element('#round-unused').textContent =
       `Puoi concludere anche senza usare tutte le azioni. Azioni usate: ${active?.actionsUsed ?? 0} / 2.`;
-    element('#round-interact').hidden = !ownActive || pending || active?.actionsUsed === 2;
+    element('#round-interact').hidden =
+      !!current.scenario || !ownActive || pending || active?.actionsUsed === 2;
+    if (current.scenario) {
+      element('#round-phase-help').textContent =
+        'Ogni eroe può svolgere fino a due azioni. Il viaggio nelle tessere esplorate è disponibile; interazioni, ulteriori esplorazioni, combattimento e Ombra attendono i loro effetti completi.';
+      if (allEnded)
+        status.textContent =
+          'Tutti i turni sono conclusi. La Fase di Ombra richiede ancora gli effetti dell’avventura.';
+    }
     end.dataset.blocked = String(!ownActive || pending);
     element('#round-observer').hidden = Boolean(player);
     refreshActions();

@@ -26,7 +26,7 @@ export function createMapGeneration(sync: () => Promise<void>) {
     if (!current) return;
     const g = current.mapGeneration,
       visible = Boolean(g || offer?.kind !== 'legacy');
-    root.hidden = current.preparation?.status !== 'prepared' || !visible;
+    root.hidden = !!current.scenario || current.preparation?.status !== 'prepared' || !visible;
     const frozen = g?.status === 'frozen',
       running = offer?.running ?? false;
     root.setAttribute('aria-busy', String(running));

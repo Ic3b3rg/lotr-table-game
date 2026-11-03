@@ -1,3 +1,4 @@
+import { scenarioStateProblem } from '../scenario/validate';
 import { z } from 'zod';
 import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol';
 import { CatalogSchema } from '../shared/catalog';
@@ -28,6 +29,8 @@ const BaseStateSchema = SessionSchema.omit({
   players: z.array(PrivatePlayerSchema).max(5),
 });
 export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
+  const scenarioError = scenarioStateProblem(state);
+  if (scenarioError) ctx.addIssue({ code: 'custom', message: scenarioError });
   const generationError = generationStateProblem(state);
   if (generationError) ctx.addIssue({ code: 'custom', message: generationError });
   const groupError = groupProblem(state.group, state.players.length, state.preparation);
@@ -88,7 +91,10 @@ export const StateSchema = BaseStateSchema.superRefine((state, ctx) => {
 });
 export type State = z.infer<typeof StateSchema>;
 
-const PreviousStateSchema = BaseStateSchema.omit({ mapGeneration: true });
+const VersionNineStateSchema = BaseStateSchema.omit({ scenario: true }).extend({
+  schemaVersion: z.literal(9),
+});
+const PreviousStateSchema = BaseStateSchema.omit({ mapGeneration: true, scenario: true });
 const VersionEightStateSchema = PreviousStateSchema.extend({ schemaVersion: z.literal(8) });
 const LegacyStateSchema = PreviousStateSchema.omit({
   content: true,
@@ -142,22 +148,31 @@ const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.li
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (version === 9)
+      return StateSchema.parse({
+        ...VersionNineStateSchema.parse(raw),
+        schemaVersion: 10,
+        scenario: null,
+      });
     if (version === 8)
       return StateSchema.parse({
         ...VersionEightStateSchema.parse(raw),
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
       });
     if (version === 7)
       return StateSchema.parse({
         ...VersionSevenStateSchema.parse(raw),
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
       });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
       });
@@ -166,7 +181,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionFiveStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
         journey: null,
@@ -176,7 +192,8 @@ export function parseState(raw: unknown): State {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
         journey: null,
@@ -190,7 +207,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
         journey: null,
@@ -209,7 +227,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
         journey: null,
@@ -222,7 +241,8 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 9,
+        schemaVersion: 10,
+        scenario: null,
         mapGeneration: null,
         group: null,
         journey: null,

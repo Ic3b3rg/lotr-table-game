@@ -21,6 +21,8 @@ export function createMapBoard(select: (id: string) => void) {
   let zoom = 1;
   let panX = 0;
   let panY = 0;
+  let needsLayout = false;
+  let layoutWidth = 0;
   let dragging: { id: number; x: number; y: number } | null = null;
   const actors = new Map<string, HTMLElement>();
   const spaces = new Map<string, { button: HTMLButtonElement; highlight: SVGGElement }>();
@@ -45,6 +47,18 @@ export function createMapBoard(select: (id: string) => void) {
     panY = (0.5 - target.y / map.height) * camera.clientHeight * zoom * 0.94;
     transform();
   }
+  function layout() {
+    if (!map || !viewport.clientWidth) return;
+    if (needsLayout) {
+      zoom = viewport.clientWidth < 600 ? 2 : 0.82;
+      needsLayout = false;
+    } else if (layoutWidth)
+      zoom = Math.max(0.7, Math.min(2.5, (zoom * layoutWidth) / camera.clientWidth));
+    layoutWidth = camera.clientWidth;
+    center();
+  }
+  // The guided path can reveal this panel after draw; measure its visible size.
+  new ResizeObserver(layout).observe(viewport);
   viewport.onpointerdown = (event) => {
     if (event.button !== 0 || (event.target instanceof Element && event.target.closest('button')))
       return;
@@ -97,7 +111,12 @@ export function createMapBoard(select: (id: string) => void) {
   document.body.classList.toggle('reduce-motion', motion.checked);
 
   return {
-    draw(definition: JourneyDefinition, heroes: Journey['heroes'], catalog: Catalog) {
+    draw(
+      definition: JourneyDefinition,
+      heroes: Journey['heroes'],
+      catalog: Catalog,
+      unexplored = new Set<string>(),
+    ) {
       map = definition;
       positions = heroes;
       actors.clear();
@@ -113,7 +132,9 @@ export function createMapBoard(select: (id: string) => void) {
       const base = svg('g', { class: 'map-ground-shape' });
       const highlights = svg('g');
       for (const [index, space] of map.spaces.entries()) {
-        const highlight = svg('g', { class: 'map-space-highlight' });
+        const highlight = svg('g', {
+          class: `map-space-highlight${unexplored.has(space.id) ? ' map-space-unexplored' : ''}`,
+        });
         for (const hex of space.hexes) {
           const points = hex.polygon.map((point) => `${point.x},${point.y}`).join(' ');
           clip.append(svg('polygon', { points }));
@@ -167,10 +188,11 @@ export function createMapBoard(select: (id: string) => void) {
         plane.append(actor);
         actors.set(hero.heroId, actor);
       }
-      zoom = viewport.clientWidth < 600 ? 1.2 : 0.82;
+      needsLayout = true;
       panX = 0;
       panY = 0;
       transform();
+      requestAnimationFrame(layout);
     },
     update(heroes: Journey['heroes'], active: string | null, selected: string) {
       if (!map) return;

@@ -1,3 +1,6 @@
+import { createScenario } from './scenario';
+import type { ScenarioOfferSchema } from '../shared/scenario';
+import type { z } from 'zod';
 import { CatalogSchema, type Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import { request } from './api';
@@ -13,6 +16,7 @@ import type { GenerationOffer } from '../shared/generated-map';
 
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
+  const scenario = createScenario(sync, reader);
   const preparation = createPreparation(sync, reader);
   const skillTests = createSkillTests(sync, reader);
   const scouting = createScouting(sync, reader);
@@ -84,7 +88,12 @@ export function createCompany(sync: () => Promise<void>) {
     }
   }
   return {
-    update(session: Session, player: Player | null, generationOffer: GenerationOffer) {
+    update(
+      session: Session,
+      player: Player | null,
+      generationOffer: GenerationOffer,
+      scenarioOffer: z.infer<typeof ScenarioOfferSchema>,
+    ) {
       const nextKey = `${session.generation}:${session.catalog?.id ?? ''}`;
       if (key !== nextKey && !loading) void load(session);
       preparation.update(session, location.pathname === '/join' ? player : null, catalog);
@@ -93,7 +102,20 @@ export function createCompany(sync: () => Promise<void>) {
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);
       scouting.update(session, location.pathname === '/join' ? player : null, catalog);
       mapGeneration.update(session, location.pathname === '/join' ? player : null, generationOffer);
-      if (session.mapGeneration || generationOffer.kind !== 'legacy')
+      scenario.update(
+        session,
+        location.pathname === '/join' ? player : null,
+        catalog,
+        scenarioOffer,
+      );
+      if (session.scenario) {
+        element('#rounds').hidden = session.scenario.phase !== 'action';
+        element('#journey-map').hidden = !session.journey;
+        element('#scouting').hidden = !session.scout;
+        element('#skill-tests').hidden =
+          session.scenario.pending?.kind !== 'test' ||
+          session.scenario.pending.stage !== 'revealed';
+      } else if (session.mapGeneration || generationOffer.kind !== 'legacy')
         for (const id of ['#journey-map', '#rounds', '#skill-tests', '#scouting'])
           element(id).hidden = true;
     },

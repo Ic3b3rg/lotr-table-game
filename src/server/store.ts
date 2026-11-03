@@ -1,3 +1,4 @@
+import { scenarioReceiptProblem } from '../scenario/validate';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -30,8 +31,10 @@ export class Store {
   readonly cookieSecret: string;
   readonly journeyPlan: JourneyPlan | null;
   readonly generator: MapGenerationService;
+  readonly scenarioPackPath: string;
 
   constructor(readonly directory = dataDirectory()) {
+    this.scenarioPackPath = process.env.LOTR_SCENARIO_PACK ?? join(directory, 'scenario.json');
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     // FULL commits are acknowledged before an action returns success.
     // https://nodejs.org/download/release/v24.11.1/docs/api/sqlite.html#class-databasesync
@@ -43,7 +46,8 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 9,
+      schemaVersion: 10,
+      scenario: null,
       mapGeneration: null,
       id: randomUUID(),
       generation: randomUUID(),
@@ -133,7 +137,8 @@ export class Store {
             receipt: ReceiptSchema.parse(JSON.parse(row.result)),
           };
         });
-      const problem = generationReceiptProblem(state, commands);
+      const problem =
+        generationReceiptProblem(state, commands) ?? scenarioReceiptProblem(state, commands);
       if (problem) throw new Error(problem);
     }
     if (state.journey?.travel) {
@@ -356,6 +361,7 @@ export function publicSession(state: State) {
     journey: state.journey,
     group: state.group,
     mapGeneration: state.mapGeneration,
+    scenario: state.scenario,
     skillTest: skillTestView(state.content, state.skillTest),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };

@@ -53,10 +53,10 @@ export function createSkillTests(sync: () => Promise<void>, reader: CardReader) 
       Boolean(round.turnId) &&
       (progress?.actionsUsed ?? 2) < 2;
     const interaction = Boolean(round) && context.value === 'interaction';
-    form.hidden = active || rally || heroSelect.options.length === 0;
+    form.hidden = !!current.scenario || active || rally || heroSelect.options.length === 0;
     element('#test-context-field').hidden = !round;
     context.options[0]!.disabled = !canInteract;
-    element('#test-inspiration-controls').hidden = !own || rally;
+    element('#test-inspiration-controls').hidden = !!current.scenario || !own || rally;
     element('#skill-test-buttons').hidden = !active || !own;
     element('#test-target-field').hidden = mode.value === 'count';
     target.disabled = mode.value === 'count';

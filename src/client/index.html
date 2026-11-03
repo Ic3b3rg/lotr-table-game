@@ -270,6 +270,7 @@
                 </form>
               </div>
             </div>
+            <div id="map-nodes" class="map-nodes" aria-label="Segnalini visibili"></div>
             <p id="map-status" class="test-status" role="status" tabindex="-1"></p>
             <p id="map-error" class="company-error" role="alert" tabindex="-1" hidden></p>
           </section>
@@ -323,6 +324,48 @@
               essere avviati. I turni non sono disponibili.
             </p>
             <p id="generation-error" class="company-error" role="alert" tabindex="-1" hidden></p>
+          </section>
+          <section
+            id="scenario"
+            class="skill-tests scenario"
+            aria-labelledby="scenario-title"
+            hidden
+          >
+            <h3 id="scenario-title">Avvia l’avventura</h3>
+            <p id="scenario-status" class="test-status" role="status" tabindex="-1"></p>
+            <div id="scenario-message" class="source-message"></div>
+            <div id="scenario-objective" class="scenario-objective" hidden></div>
+            <form id="scenario-start-form" hidden>
+              <label class="check-label"
+                ><input id="scenario-agreed" type="checkbox" required />Il gruppo è pronto ad
+                avviare l’avventura dalla mappa salvata.</label
+              >
+              <button id="scenario-start" class="company-action" type="submit" data-write>
+                Avvia l’avventura
+              </button>
+            </form>
+            <button id="scenario-next" class="company-action" type="button" data-write hidden>
+              Continua
+            </button>
+            <a id="scenario-cards-link" class="company-link" href="#scouting" hidden
+              >Vai alle carte rivelate</a
+            >
+            <a id="scenario-turn-link" class="company-link" href="#rounds" hidden
+              >Scegli il primo turno</a
+            >
+            <details id="scenario-results-details" hidden>
+              <summary>Scoperta e prove completate</summary>
+              <ul id="scenario-results" class="scenario-results"></ul>
+            </details>
+            <p id="scenario-limit" class="company-help" hidden>
+              Potete iniziare i turni e viaggiare nelle tessere già esplorate. Le interazioni
+              successive, l’esplorazione di nuove tessere, il combattimento e la Fase di Ombra
+              richiedono ancora i loro effetti completi.
+            </p>
+            <a class="company-link" href="#backups" data-tools-link
+              >Salvataggi e copie della sessione</a
+            >
+            <p id="scenario-error" class="company-error" role="alert" tabindex="-1" hidden></p>
           </section>
           <div id="company-preparation"></div>
           <section id="scouting" class="skill-tests" aria-labelledby="scouting-title" hidden>
@@ -565,6 +608,24 @@
           </details>
           <p id="backup-status" class="footnote" role="status"></p>
           <p id="backup-error" class="form-error" role="alert" hidden></p>
+          <dialog
+            id="restore-confirmation"
+            class="scenario-node-dialog"
+            aria-labelledby="restore-confirm-title"
+          >
+            <h2 id="restore-confirm-title">Ripristinare questa copia?</h2>
+            <p id="restore-confirm-summary"></p>
+            <p>
+              Il tavolo attuale sarà sostituito. I giocatori dovranno recuperare il proprio posto
+              con il codice personale.
+            </p>
+            <button id="cancel-restore" type="button" class="company-action" autofocus>
+              Annulla
+            </button>
+            <button id="confirm-restore" type="button" class="company-action" data-write>
+              Conferma il ripristino
+            </button>
+          </dialog>
         </section>
       </div>
       <footer class="page-footer">

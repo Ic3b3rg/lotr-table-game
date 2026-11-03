@@ -1,3 +1,4 @@
+import { scenarioOffer } from './scenario';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
@@ -89,6 +90,8 @@ const server = createServer(async (req, res) => {
       return json(res, store.read().content);
     if (req.method === 'GET' && url.pathname === '/api/map-generation-plan')
       return json(res, store.generator.offer(store.read()));
+    if (req.method === 'GET' && url.pathname === '/api/scenario-plan')
+      return json(res, scenarioOffer(store.read(), store.scenarioPackPath));
     if (req.method === 'GET' && url.pathname === '/api/journey-map-plan')
       return json(res, store.journeyPlan);
     if (req.method === 'GET' && url.pathname.startsWith('/api/map-content/')) {

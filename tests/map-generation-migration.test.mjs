@@ -32,6 +32,7 @@ for (const moment of ['prova', 'Scoperta', 'viaggio'])
       before = await readSession(host);
     backup.payload.state.schemaVersion = 8;
     delete backup.payload.state.mapGeneration;
+    delete backup.payload.state.scenario;
     signBackup(backup);
     await host.stop();
     const db = new DatabaseSync(join(host.dataDir, 'session.sqlite'));
@@ -40,7 +41,7 @@ for (const moment of ['prova', 'Scoperta', 'viaggio'])
     const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
     t.after(() => restarted.stop());
     const migrated = await readSession(restarted);
-    assert.deepEqual(migrated, { ...before, schemaVersion: 9, mapGeneration: null });
+    assert.deepEqual(migrated, { ...before, schemaVersion: 10, mapGeneration: null });
     assert.deepEqual((await readBackup(restarted)).payload.commands, backup.payload.commands);
     const destination = await startHost();
     t.after(() => destination.dispose());

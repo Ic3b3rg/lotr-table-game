@@ -10,6 +10,7 @@ type GenerationState = {
   content: Catalog | null;
   preparation: Preparation | null;
   players: { id: string }[];
+  scenario?: unknown;
   journey: unknown;
   round: unknown;
   scout: unknown;
@@ -21,7 +22,9 @@ export function generationStateProblem(state: GenerationState): string | null {
     if (!g) return null;
     invariant(state.preparation?.status === 'prepared' && state.content, 'Compagnia non pronta.');
     invariant(
-      !state.journey && !state.round && !state.scout && !state.skillTest,
+      state.scenario
+        ? g.status === 'frozen'
+        : !state.journey && !state.round && !state.scout && !state.skillTest,
       'Realizzazione e consumer legacy non possono coesistere.',
     );
     const c = g.status === 'frozen' ? g.projection.context : g.job.context;

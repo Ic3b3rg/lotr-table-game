@@ -1,3 +1,5 @@
+import { scenarioMapView } from '../shared/scenario-map';
+import { sourceText } from './source-text';
 import type { Catalog } from '../shared/catalog';
 import { adjacent, JourneyPlanSchema, type JourneyPlan } from '../shared/journey-map';
 import type { Player, Session } from '../shared/protocol';
@@ -31,6 +33,27 @@ export function createJourneyMap(sync: () => Promise<void>) {
     element('#map-error'),
     controls,
   );
+  const nodeDialog = document.createElement('dialog');
+  nodeDialog.className = 'scenario-node-dialog';
+  nodeDialog.setAttribute('aria-label', 'Ispeziona il segnalino');
+  const nodeText = document.createElement('div'),
+    nodeInfo = text(
+      'p',
+      'Le interazioni di questo segnalino richiedono effetti ancora in sviluppo. Ispezionare e annullare non spende azioni.',
+      'company-help',
+    );
+  const commit = text(
+    'button',
+    'Interagisci · non disponibile',
+    'company-action',
+  ) as HTMLButtonElement;
+  commit.disabled = true;
+  const close = text('button', 'Chiudi ispezione', 'company-action') as HTMLButtonElement;
+  close.type = 'button';
+  close.onclick = () => nodeDialog.close();
+  nodeDialog.append(nodeText, nodeInfo, commit, close);
+  root.append(nodeDialog);
+  const tokens = element('#map-nodes');
   const board = createMapBoard((id) => {
     select.value = id;
     commands.clear();
@@ -64,21 +87,27 @@ export function createJourneyMap(sync: () => Promise<void>) {
       !own || !journey || pending || (progress?.actionsUsed ?? 2) >= 2,
     );
     const destination = journey?.definition.spaces.find((space) => space.id === select.value);
-    const canMove = Boolean(
-      position &&
-        destination &&
-        journey &&
-        adjacent(journey.definition, position.spaceId, destination.id),
-    );
+    const view = scenarioMapView(current);
+    const explorationBlocked = !!destination && !!view?.unexplored.includes(destination.id);
+    const canMove =
+      !explorationBlocked &&
+      Boolean(
+        position &&
+          destination &&
+          journey &&
+          adjacent(journey.definition, position.spaceId, destination.id),
+      );
     move.dataset.blocked = String(!own || pending || remaining < 1 || !canMove);
     element('#map-budget').textContent =
       `Azioni disponibili: ${2 - (progress?.actionsUsed ?? 0)} · Movimenti del viaggio: ${remaining}`;
     const origin = journey?.definition.spaces.find((space) => space.id === position?.spaceId);
     element('#map-preview').textContent = !destination
       ? 'Seleziona una casella prima di confermare il movimento.'
-      : canMove
-        ? `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
-        : 'La destinazione deve essere adiacente alla posizione attuale, attraverso un collegamento valido.';
+      : explorationBlocked
+        ? 'Questa tessera è da esplorare. La sua esplorazione fonte non è ancora disponibile: nessun movimento viene consumato.'
+        : canMove
+          ? `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
+          : 'La destinazione deve essere adiacente alla posizione attuale, attraverso un collegamento valido.';
     let message = !journey
       ? plan
         ? beforeTurns
@@ -180,15 +209,46 @@ export function createJourneyMap(sync: () => Promise<void>) {
       if (root.hidden || !catalog) return;
       if (!session.journey && planKey !== session.generation && !loading)
         void load(session.generation);
-      const nextMap = `${session.generation}:${session.journey?.id}`;
+      const view = scenarioMapView(session);
+      element('#map-scope').textContent = session.scenario
+        ? 'La mappa mostra soltanto le tessere rivelate dal copione. Le tessere tratteggiate sono ancora da esplorare. Le posizioni degli eroi e i collegamenti provengono dalla mappa salvata.'
+        : 'Tratto verificato in orientamento canonico. Generazione della mappa completa, esplorazione, nemici ed eventi dell’avventura seguiranno.';
+      const nextMap = `${session.generation}:${session.journey?.id}:${JSON.stringify(session.scenario?.tiles)}:${session.scenario?.instances
+        .filter((i) => i.visible)
+        .map((i) => i.id)
+        .join(',')}`;
       if (mapKey !== nextMap) {
         mapKey = nextMap;
         agreed.checked = false;
         if (session.journey) {
           element('#map-view').hidden = false;
-          board.draw(session.journey.definition, session.journey.heroes, catalog);
+          const visibleDefinition = view?.definition ?? session.journey.definition;
+          board.draw(
+            visibleDefinition,
+            session.journey.heroes,
+            catalog,
+            new Set(view?.unexplored ?? []),
+          );
+          tokens.replaceChildren(
+            ...(view?.nodes ?? []).map((n) => {
+              const b = text(
+                'button',
+                `${n.content.nodeType === 'person' ? 'Persona' : n.content.nodeType === 'threat' ? 'Minaccia' : 'Ricerca'} · ${visibleDefinition.spaces.find((s) => s.id === n.spaceId)!.label}`,
+                'map-node',
+              ) as HTMLButtonElement;
+              b.type = 'button';
+              b.onclick = () => {
+                nodeText.replaceChildren(sourceText(n.content.inspection));
+                nodeDialog.showModal();
+              };
+              return b;
+            }),
+          );
           select.replaceChildren(
-            ...['', ...session.journey.definition.spaces.map((space) => space.id)].map((id) => {
+            ...[
+              '',
+              ...(view?.definition ?? session.journey.definition).spaces.map((space) => space.id),
+            ].map((id) => {
               const option = document.createElement('option');
               option.value = id;
               option.textContent =
