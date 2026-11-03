@@ -29,7 +29,9 @@ non costituisce una conclusione originale implementata.
 ## Contratto e compatibilità
 
 Schema14 migra1–13 senza nuove pescate, spese, mescolate o selezioni durante
-parse/GET. Ogni run nuovo abilitato dichiara regole P2 e fingerprint delle
+parse/GET. I validator dei formati storici conservano anche il tetto15 delle
+prove ordinarie: il budget per le copie aggiunte si applica soltanto a14.
+Ogni run nuovo abilitato dichiara regole P2 e fingerprint delle
 istruzioni; quelle regole non sostituiscono `executionRules` P1b. Run
 versione2 non marcati mantengono la semantica storica, quelli marcati
 `retained-paid-effects-v1` mantengono il seguito pagato, e i run spaziali
