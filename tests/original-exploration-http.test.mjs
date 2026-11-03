@@ -8,6 +8,52 @@ import {
 } from './original-exploration-helper.mjs';
 import { readSession } from './skill-test-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
+import { certificates } from './fixtures/exploration.mjs';
+import { hash } from './fixtures/map-freeze.mjs';
+import { compileScenarioPack } from '../dist/scenario-library.mjs';
+
+test('an incomplete reveal continuation is unavailable before movement or reward, even with a valid source fingerprint', async (t) => {
+  const ready = await readyExploration(t, (pack, frozen) => {
+    const certs = structuredClone(certificates(pack));
+    for (const assignment of frozen.mapGeneration.projection.assignments) {
+      const space = frozen.mapGeneration.projection.spaces.find((s) => s.id === assignment.spaceId);
+      if (space.sectionId !== 1) continue;
+      const prefab = pack.manifest.prefabs.find((p) => p.source === assignment.prefab.source);
+      const d = pack.definitions.find((d) => d.source === prefab.fsmSource);
+      if (d.handlers.REVEALED !== 1) continue;
+      certs
+        .find((c) => c.source === d.source)
+        .deferredEdges.push({
+          from: 1,
+          event: 'FINISHED',
+          to: 2,
+          capability: 'invented-uncompiled-release',
+        });
+      delete d.states.find((s) => s.index === 1).transitions.FINISHED;
+      d.states = d.states.filter((s) => s.index !== 2);
+    }
+    Object.assign(pack, compileScenarioPack({ pack, certificates: certs }).pack);
+  });
+  const s = await startTravel(ready),
+    to = destinations(s)[0];
+  assert.equal(s.explorationFingerprints[to.id], undefined);
+  const sc = s.scenario;
+  const sourceFingerprint = hash({
+    scenarioId: sc.id,
+    packFingerprint: sc.packFingerprint,
+    projectionFingerprint: sc.projectionFingerprint,
+    template: sc.pack.manifest.exploration.definition,
+    tile: sc.tiles.find((tile) => tile.source === to.tileSource),
+  });
+  const { readBackup } = await import('./skill-test-helper.mjs');
+  const before = await readBackup(ready.host);
+  const r = await explore(ready, to, ready.player, { sourceFingerprint });
+  assert.equal(r.status, 409, await r.text());
+  const after = await readBackup(ready.host);
+  assert.deepEqual(after.payload, before.payload);
+  assert.equal(after.checksum, before.checksum);
+});
+
 test('travel exploration consumes one move, suspends for source and returns with its capped actor reward once', async (t) => {
   const ready = await readyExploration(t),
     s = await startTravel(ready),
