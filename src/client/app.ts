@@ -7,6 +7,7 @@ import { demoView } from './demo';
 import { backupView } from './backups';
 import { createCompany } from './company';
 import { createGuidedStart } from './guided-start';
+import { GenerationOfferSchema } from '../shared/generated-map';
 
 const personal = location.pathname === '/join';
 element('#personal').hidden = !personal;
@@ -63,6 +64,9 @@ function sync(fresh = false): Promise<void> {
     try {
       const session = SessionSchema.parse(await request('/api/session'));
       const me = IdentitySchema.parse(await request('/api/me'));
+      const generationOffer = GenerationOfferSchema.parse(
+        await request('/api/map-generation-plan'),
+      );
       if (
         !personal &&
         (generation !== session.generation || Date.now() - invitationUpdatedAt > 15_000)
@@ -71,9 +75,9 @@ function sync(fresh = false): Promise<void> {
         invitationUpdatedAt = Date.now();
       }
       renderSession(session);
-      companyController.update(session, me.player);
+      companyController.update(session, me.player, generationOffer);
       personalController?.update(session, me.player);
-      guidedController.update(session, me.player);
+      guidedController.update(session, me.player, generationOffer);
       demoController.update(session, personal ? me.player : null);
       backupController.update(session, me.canManageBackups);
       const requestedSession = new URL(location.href).searchParams.get('session');

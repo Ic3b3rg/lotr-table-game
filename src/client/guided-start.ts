@@ -1,5 +1,6 @@
 import type { Player, Session } from '../shared/protocol';
 import { rosterProblem } from '../shared/preparation';
+import type { GenerationOffer } from '../shared/generated-map';
 import { SHADOW_LABELS } from '../shared/rounds';
 import { refreshActions } from './actions';
 import { element } from './dom';
@@ -100,7 +101,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
   };
 
   return {
-    update(session: Session, player: Player | null) {
+    update(session: Session, player: Player | null, generationOffer: GenerationOffer) {
       current = session;
       const identity = personal ? player : null;
       if (generation !== session.generation) {
@@ -188,6 +189,20 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : ready
               ? 'Controlla e prepara i mazzi'
               : 'Vai alla scelta degli eroi';
+      } else if (session.mapGeneration || generationOffer.kind !== 'legacy') {
+        step = 5;
+        topic = 'map';
+        target = '#adventure-generation';
+        label = 'Vai alla mappa';
+        const frozen = session.mapGeneration?.status === 'frozen';
+        heading = frozen
+          ? 'La mappa è salvata'
+          : session.mapGeneration
+            ? 'Create la mappa · richiesta salvata'
+            : 'Create la mappa della compagnia';
+        message = frozen
+          ? 'Il PC conserva questa mappa e i suoi incontri. L’avvio dell’avventura è ancora da completare; i turni restano in attesa.'
+          : generationOffer.message;
       } else if (
         !session.journey &&
         !session.round &&
@@ -258,6 +273,8 @@ export function createGuidedStart(sync: () => Promise<void>) {
         target = prepared || (expected && !waiting) ? '#recover-code' : '#player-name';
         label = 'Vai al tuo posto';
       }
+      element('#start-progress').lastElementChild!.textContent =
+        session.mapGeneration || generationOffer.kind !== 'legacy' ? 'Avventura' : 'Gioca';
       document.body.dataset.step = String(step);
       document.body.dataset.phase = session.round?.phase ?? '';
       document.body.dataset.active = String(Boolean(session.round?.activeHeroId));

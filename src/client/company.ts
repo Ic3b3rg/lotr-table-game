@@ -8,6 +8,8 @@ import { createSkillTests } from './skill-tests';
 import { createScouting } from './scouting';
 import { createRounds } from './rounds';
 import { createJourneyMap } from './journey-map';
+import { createMapGeneration } from './map-generation';
+import type { GenerationOffer } from '../shared/generated-map';
 
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
@@ -16,6 +18,7 @@ export function createCompany(sync: () => Promise<void>) {
   const scouting = createScouting(sync, reader);
   const rounds = createRounds(sync);
   const journeyMap = createJourneyMap(sync);
+  const mapGeneration = createMapGeneration(sync);
   const status = element('#content-status');
   const heroes = element('#hero-catalog');
   const cards = element('#catalog-cards');
@@ -81,7 +84,7 @@ export function createCompany(sync: () => Promise<void>) {
     }
   }
   return {
-    update(session: Session, player: Player | null) {
+    update(session: Session, player: Player | null, generationOffer: GenerationOffer) {
       const nextKey = `${session.generation}:${session.catalog?.id ?? ''}`;
       if (key !== nextKey && !loading) void load(session);
       preparation.update(session, location.pathname === '/join' ? player : null, catalog);
@@ -89,6 +92,10 @@ export function createCompany(sync: () => Promise<void>) {
       journeyMap.update(session, location.pathname === '/join' ? player : null, catalog);
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);
       scouting.update(session, location.pathname === '/join' ? player : null, catalog);
+      mapGeneration.update(session, location.pathname === '/join' ? player : null, generationOffer);
+      if (session.mapGeneration || generationOffer.kind !== 'legacy')
+        for (const id of ['#journey-map', '#rounds', '#skill-tests', '#scouting'])
+          element(id).hidden = true;
     },
   };
 }
