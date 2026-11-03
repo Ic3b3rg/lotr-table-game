@@ -8,7 +8,7 @@ combattimento originale e non completa33/65/57.
 ## Interfaccia
 
 La build produce `dist/combat-library.mjs` e `dist/combat.mjs`.
-L'interface pubblica espone sei funzioni:
+L'interfaccia pubblica espone cinque funzioni; il checkpoint si esporta dal kernel:
 
 | Funzione                                                   | Contratto                                                                                                                           |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -53,7 +53,7 @@ if (planned.status === 'planned') {
 }
 ```
 
-La porta fidata legge risultati **già completati**, senza pagare costi né
+La porta fidata sincrona legge risultati **già completati**, senza pagare costi né
 pescare durante questa lettura. La risposta è legata a query, artifact,
 proiezione, eroe e caratteristica. Contiene identità distinte dei successi,
 posizione/sconfitta dell'attaccante dopo le finestre della prova e hook
@@ -96,6 +96,8 @@ named/unique/linked, bonus o arma a distanza in questo incremento. Per le
 difese sono supportati Perforante e Stordire; altri modificatori non hanno
 un fallback. Record fonte nativi non consumati rimangono dati inerti.
 Le altre azioni del slice hanno proprietari espliciti e non vengono eseguite.
+Il limite delle figure in gioco è applicativo; non certifica la dotazione
+fisica per tipo.
 
 Si riusano limiti e guardia JSON del catalogo fisico:8MiB,100.000 nodi,
 profondità24 e stringhe fino a16.384 caratteri. I contratti del modulo sono
