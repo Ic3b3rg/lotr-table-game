@@ -1,0 +1,84 @@
+{
+  "base": "082a86db1421d1f254c1d457cb5dd27aa0d575b9",
+  "codeHead": "6c237f232fb1ef68ae3866b4fdb13fd57ed43797",
+  "schemaVersion": 15,
+  "specAndPlanCommit": "4baddbf236d40ff0e1bf9d201bebd6ee285f0164",
+  "implementationCommit": "79948376dba55ee01ed4cf88e3d12a4033348edb",
+  "fixCommit": "6c237f232fb1ef68ae3866b4fdb13fd57ed43797",
+  "tests": {
+    "total": 523,
+    "passed": 523,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "typecheck": true,
+  "format": true,
+  "diffCheck": true,
+  "originalPack": {
+    "fingerprint": "eb796dc77f809d369c43be9af53f5048853016bdacaeeee3ec40f72126375788",
+    "fileSha256": "8660f73c41b4917e7ac195756256f9c1c965c177aff62cb4c8af881238573ea9",
+    "definitions": 30,
+    "states": 80,
+    "actions": 54,
+    "playablePrefabs": 1
+  },
+  "sourceSlice": {
+    "states": 17,
+    "actions": 18,
+    "messageStatChecks": 3,
+    "physicalMessageChecks": 3,
+    "loreOwners": 1
+  },
+  "compatibility": {
+    "valid": 44,
+    "publishedP2": 43,
+    "sourceFreeze": 1,
+    "unpublishedOldSnapshotsExcluded": 11
+  },
+  "browser": {
+    "independentIdentities": 3,
+    "sourceActors": 3,
+    "widths": [320, 768, 1024, 1440],
+    "finalBackupsValidated": 50,
+    "sharedContributions": [2, 1],
+    "sourceTestNotRepeated": true,
+    "physicalConsequencesConsumed": true,
+    "mightFailureThenSuccessAcrossHeroes": true,
+    "noInventedLore": true,
+    "originalUIP2Selections": 0,
+    "p2CoveredByAutomaticTests": true,
+    "packlessPendingRestart": true,
+    "pendingUIRestoreGameplayAndReceiptsIdentical": true,
+    "packlessLoreRestart": true,
+    "freezeUnchanged": true,
+    "hiddenDeferredListenerPreserved": true,
+    "asset404": 0,
+    "runtimeExceptions": 0,
+    "readerNativeEscapeCycles": 3,
+    "intermittentFocusCaptureClassified": true,
+    "visualOnlyRestoredFinalCountCapture": true
+  },
+  "privateEvidence": {
+    "path": ".scratch/node5/manifest.private.json",
+    "sha256": "966d9e1a84473bfc870f2647d91c1450f4345e3888f60186e26255207f54703f",
+    "files": 712,
+    "readme": ".scratch/node5/README.private.md",
+    "sourceLockSha256": "1b5dddaf738d8d2af44e9319bed55f18cf8a205490322e3dcd5d9880b500da55",
+    "privacyAudit": true
+  },
+  "shutdown": {
+    "ownBrowserContextsClosed": 3,
+    "ownProcessesExited": true,
+    "sharedTablesUntouched": true
+  },
+  "remaining": [
+    "Other encounters and deferred listener event",
+    "Combat and Shadow",
+    "Complete outcomes, camp, adventure2 and issue33",
+    "Unconfirmed benefit quantities issue57",
+    "Real empty physical deck diagnostics",
+    "Phones/LAN/Windows/Safari certification",
+    "Root Standards/Spec review and integration"
+  ]
+}
