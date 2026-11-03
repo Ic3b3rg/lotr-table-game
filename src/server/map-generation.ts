@@ -239,10 +239,14 @@ export class MapGenerationService {
       workerData: { pack, job, verifyPending },
       resourceLimits: { maxOldGenerationSizeMb: GENERATION_POLICY.workerHeapMiB },
     });
+    const isCurrent = () =>
+      !this.closed && !this.cancelled.has(worker) && this.active?.worker === worker;
     const timer = setTimeout(() => {
+      if (!isCurrent()) return;
+      this.cancelled.add(worker);
+      clear();
       void worker.terminate();
       this.pause(generation, job.id, 'administrative-stop');
-      this.active = null;
     }, GENERATION_POLICY.workerWallMilliseconds);
     this.active = { id: job.id, generation, worker, timer };
     let delivered = false;
@@ -252,8 +256,9 @@ export class MapGenerationService {
     };
     worker.once('message', (raw: unknown) => {
       delivered = true;
+      const accepted = isCurrent();
       clear();
-      if (this.closed || this.cancelled.has(worker)) return;
+      if (!accepted) return;
       try {
         if (
           raw &&
@@ -334,14 +339,15 @@ export class MapGenerationService {
       }
     });
     worker.once('error', () => {
+      const accepted = isCurrent();
       clear();
-      if (this.closed || this.cancelled.has(worker)) return;
+      if (!accepted) return;
       this.pause(generation, job.id, 'worker-failed');
     });
     worker.once('exit', () => {
+      const accepted = isCurrent();
       clear();
-      if (!this.closed && !delivered && !this.cancelled.has(worker))
-        this.pause(generation, job.id, 'worker-failed');
+      if (accepted && !delivered) this.pause(generation, job.id, 'worker-failed');
     });
   }
   private pause(

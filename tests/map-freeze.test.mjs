@@ -33,6 +33,42 @@ function company() {
     },
   };
 }
+test('gli snapshot RNG congelati devono corrispondere a seed e ordinale anche dopo rehash', async () => {
+  const { runGenerationAttempt, validateProjection } = await import(
+    '../dist/map-freeze-library.mjs'
+  );
+  const state = company();
+  const pack = parseGeneratorPack(generatorFixture(state.content));
+  const context = deriveContext(pack, state);
+  const { projection } = runGenerationAttempt(pack, context, {
+    requestedSeed: 1,
+    seed: 1,
+    attempt: 0,
+    incoming: pack.template.selection.incoming,
+    attempts: [],
+  });
+  for (const checkpoint of ['geometry', 'final']) {
+    const bad = structuredClone(projection);
+    bad.rng[checkpoint].seedArray[1]++;
+    const { fingerprint, ...data } = bad;
+    bad.fingerprint = hash(data);
+    assert.throws(() => validateProjection(bad), /RNG/, checkpoint);
+  }
+  const excessive = structuredClone(projection);
+  const samples =
+    excessive.policy.selectionOperations +
+    excessive.policy.assemblyOperations +
+    excessive.policy.encounterOperations +
+    1;
+  Object.assign(excessive.rng.final, {
+    samples,
+    inext: ((samples - 1) % 55) + 1,
+    inextp: (((samples % 55) + 20) % 55) + 1,
+  });
+  const { fingerprint, ...data } = excessive;
+  excessive.fingerprint = hash(data);
+  assert.throws(() => validateProjection(excessive), /RNG.*budget/);
+});
 test('il contesto A1 usa ordine e inventario effettivi della compagnia, senza un contesto fixture nel pack', () => {
   const state = company();
   const pack = parseGeneratorPack(generatorFixture(state.content));

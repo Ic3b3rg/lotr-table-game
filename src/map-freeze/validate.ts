@@ -21,6 +21,24 @@ const same = (a: unknown, b: unknown) => digest(a) === digest(b);
 function unique(values: unknown[], label: string) {
   invariant(new Set(values).size === values.length, `${label} duplicati.`);
 }
+function validateRngSequence(
+  seed: number,
+  states: Projection['rng']['final'][],
+  maxSamples: number,
+) {
+  for (const state of states)
+    invariant(
+      state.seed === seed && state.samples <= maxSamples,
+      'RNG oltre il budget o seed incoerente.',
+    );
+  const replay = new SourceRandom(seed);
+  let samples = 0;
+  for (const state of states) {
+    invariant(state.samples >= samples, 'Ordinali RNG non ordinati.');
+    for (; samples < state.samples; samples++) replay.nextInt(0, 1);
+    invariant(same(replay.snapshot(), state), 'RNG non coerente con seed e ordinale.');
+  }
+}
 export function validateContext(c: GenerationContext) {
   invariant(
     !c.usedEncounterIds.length && !c.usedGroupIds.length && !c.unlockedChainIds.length,
@@ -531,7 +549,7 @@ function validateEncounters(p: Projection) {
     'Closure prefab incompleta.',
   );
 }
-/** Offline semantic validation; never invokes generator, draws or prefab effects. */
+/** Offline validation: bounded local RNG replay, no session mutation or generation/effects. */
 export function validateProjection(raw: unknown): Projection {
   invariant(
     Buffer.byteLength(JSON.stringify(raw)) <= MAX_PROJECTION_BYTES,
@@ -554,6 +572,10 @@ export function validateProjection(raw: unknown): Projection {
       p.rng.final.samples >= p.rng.geometry.samples,
     'RNG al confine incoerente.',
   );
+  const geometrySamples = p.policy.selectionOperations + p.policy.assemblyOperations;
+  const maxSamples = geometrySamples + p.policy.encounterOperations;
+  invariant(p.rng.geometry.samples <= geometrySamples, 'RNG geometrico oltre il budget.');
+  validateRngSequence(p.successfulSeed, [p.rng.geometry, p.rng.final], maxSamples);
   p.attempts.forEach((a, i) =>
     invariant(
       a.index === i &&
@@ -568,6 +590,7 @@ export function validateProjection(raw: unknown): Projection {
     'Seed riuscito incoerente.',
   );
   for (const [i, a] of p.attempts.entries()) {
+    if (a.rng) validateRngSequence(a.seed, [a.rng], maxSamples);
     invariant(a.historyFingerprint === digest(a.history), 'Storia retry incoerente.');
     if (i)
       invariant(

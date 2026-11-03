@@ -221,3 +221,23 @@ Nessun materiale o decisione ulteriore è necessario per consegnare questo freez
 Clock/float/JIT Unity rimangono **not-certified**. Nessuna FSM o effetto startup
 è stato eseguito. Review fresche Standards/Spec, PR/merge e integrazione restano
 al root. Questo task non chiude #41, #38 o #33 e non dichiara finita l'avventura.
+
+## Integrazione root
+
+Le [review fresche](../reviews/2026-11-03-map-freeze.md) hanno rilevato zero
+violazioni Standards, un helper retry facoltativo rinviato e due P2 Spec,
+corretti con quattro regressioni rosse→verdi. Il validatore verifica ora
+gli slot RNG rispetto a seed/ordinale con ricostruzione locale bounded;
+i worker scaduti vengono invalidati e tutti gli eventi sono correlati
+all'attivazione corrente prima di modificare il job.
+
+Root **301/301** test, zero skipped, tipi/formato/diff con exit0. Ripetuti
+pipeline privata H3, confronto con riferimenti e verifica degli artefatti
+UI in `.scratch/map-freeze-root-review/`: fingerprint della proiezione H3
+e risultato UI invariati, backup offline accettati e pending replay valido.
+Nessun dato del tavolo utente o originale è stato modificato.
+
+Il root può ora chiudere il prerequisito #41 per composizione, incontri,
+freeze e handoff persistente. La continuazione resta esplicitamente pending:
+esecuzione dei prefab, richieste per eroe e avvio appartengono a #38;
+la partita completa resta #33.
