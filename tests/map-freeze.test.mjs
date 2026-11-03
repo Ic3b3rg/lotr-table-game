@@ -236,8 +236,11 @@ test('la ripresa ricostruisce dal seed richiesto i confini puliti e rifiuta pool
   assert.throws(() => verifyPendingReplay(pack, wrong));
 });
 
-test('una realizzazione di nuova A1 non può importare una storia iniziale inventata con rehash',async()=>{
-  const {validateProjection}=await import('../dist/map-freeze-library.mjs');const p=await realization();
-  p.context.usedEncounterIds.push(1234567);p.contextFingerprint=hash(p.context);p.history.usedEncounterIds.unshift(1234567);
-  assert.throws(()=>validateProjection(rehash(p)));
+test('una realizzazione di nuova A1 non può importare una storia iniziale inventata con rehash', async () => {
+  const { validateProjection } = await import('../dist/map-freeze-library.mjs');
+  const p = await realization();
+  p.context.usedEncounterIds.push(1234567);
+  p.contextFingerprint = hash(p.context);
+  p.history.usedEncounterIds.unshift(1234567);
+  assert.throws(() => validateProjection(rehash(p)));
 });
