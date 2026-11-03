@@ -1,0 +1,99 @@
+{
+  "formatVersion": 1,
+  "issue": 53,
+  "base": "e27a4b727bd5550cf74239193538045272343213",
+  "implementation": "677c981a682143a00283104414e62d3952ea8463",
+  "node": "24.11.1",
+  "tests": {
+    "baseline": 275,
+    "final": 297,
+    "added": 22,
+    "failed": 0,
+    "skipped": 0
+  },
+  "pack": {
+    "sourceLocks": 23,
+    "heroMappings": 6,
+    "itemMappings": 78,
+    "bytes": 888807,
+    "fingerprint": "a7b6d39b29aa991837b066279272a3b02be77c1a4622d54c6185e441465489e2",
+    "catalogFingerprint": "030181ab4eca72c8cfd25f274702d6a53c8542bada6ec5c72471ec13d88ffe0b"
+  },
+  "privateH3": {
+    "heroes": 3,
+    "tiles": 10,
+    "spaces": 22,
+    "movementEdges": 43,
+    "assignments": 15,
+    "eligibleItemCount": 16,
+    "rngGeometry": 292,
+    "rngFinal": 348,
+    "bytes": 226688,
+    "fingerprint": "6dda6d5d4f3fc2fe6e62e2e7d11acbcd5d883a94142979ef50042125859e2435",
+    "sourceComponents": [3, 18, 1],
+    "movementComponents": [22],
+    "referenceOutputsMatch": true,
+    "equipmentOrderPreserved": true
+  },
+  "ui": {
+    "port": 4349,
+    "independentIdentities": 3,
+    "heroes": 3,
+    "spaces": 21,
+    "movementEdges": 36,
+    "assignments": 14,
+    "rngFinal": 343,
+    "bytes": 209383,
+    "fingerprint": "5230c7db6c08129f631ad55705bc0cfa05d296b7aca03bf0e029c6ef5c8253c8",
+    "crashPending": true,
+    "explicitResumeBySecondIdentity": true,
+    "missingPackPendingMessage": true,
+    "withoutPackReloadAndRestore": true,
+    "projectionIdentical": true,
+    "deckOrderIdentical": true,
+    "rngIdentical": true,
+    "historyIdentical": true,
+    "receiptsIdentical": true,
+    "generationRenewed": true,
+    "keyboard": true,
+    "viewportWidths": [320, 768, 1024, 1440],
+    "startupStillPending": true
+  },
+  "pendingReplayVerified": true,
+  "sourceInputPins": {
+    "encounters-root-review/H3-seed1.input.json": "e19655042ca3b7297e68d7f489ae8eef448ddb2b3aed9425043c115118244ccf",
+    "private-content/catalog.json": "7ae5de91cca7541bb4c29c5a0462200a0e190e359f98c3e9fba6c3d67d3df297",
+    "private-content/identity-map.json": "6e583f56b1a0b6ea0e91275dd4cddc882df15f2b9ed794b3ce0979f026c8eff2",
+    "private-content/sources-private.json": "91ae7936d85afdb492d0466816f06723bf510aaae1d79d877275ef8c58733ae9",
+    "private-content/unity-read-audit.json": "9cd06ea02225adc6ba0c538956fcd018cdcb3757115241157e033ba228285164"
+  },
+  "referenceOutputHashes": {
+    "encounters": "d943e5c9f508e8d6b9996983b243a9340fb211ca3ff4a63e36347bd414673e4f",
+    "assemblyAndMovement": "a17c4f395c710c03d7ab525db35c629d8e8412396a017c321bf01943b46d1b0a"
+  },
+  "scriptHashes": {
+    "normalize.mjs": "a8fbdfbeb4e23e4c66eb43516153b92cf7fb426f7579c58dba731761272358e0",
+    "check-real.mjs": "d22043344ceefe480e01170439f27d2fb934939a9c26f8f7c746eeb0b5f6f52a",
+    "compare-reference.mjs": "dfdb732894bc56f690f41e33dbfe7d058579afad0c7e2d076a666c6cef6ac3d5",
+    "verify-artifacts.mjs": "16eaf5106c8bc0385c6dd5f9779d9f8c6c11c9ead1cc33ad38e27d1badfbe348"
+  },
+  "artifactHashes": {
+    "ui-frozen.backup.json": "9afc0203122b51d5c0c17a49a052127a0c5fedd2ebf3be2533df82efb7563065",
+    "ui-restored.backup.json": "ecedba3272e2b5ea743b646f7c728da409a1fcb5c68fd50d2bcb4315d7f1511a",
+    "ui-frozen.session.json": "5a35f8b7b0c7aa822dac6814c8c119d0944f20dfa3c630784708f1628d36bce2",
+    "ui-restored.session.json": "04b81555d8a5a7804bd5d275f6026a4ecbec93802063cb306902f0fd9bfbfcf5",
+    "ui-pending.session.json": "7ed42b493c46dd09c1b770f75eb091b34d6701fdeaa5085ed87b3eb168dc5d3b",
+    "ui-evidence.json": "cea490e3477c5868857037391f1d047238d4aeab550be5b6212e654ec1764148",
+    "real-attempt.json": "da602c2f391c771f5db30e83b07bc283bb152e73e0d45d461bd0ff1eee7b5836",
+    "reference-comparison.json": "054077b8be29c9416505893fc0bcd8ab465c13418f1ff9601d532ea3b6f301a5",
+    "normalization-evidence.json": "d2b6ab0e5e082d38f84f77a18dd4e6dc507cb10aa86829cdd8857877c33c26af"
+  },
+  "limits": {
+    "sourceParity": "not-certified",
+    "startup": "pending",
+    "fsmExecuted": false,
+    "liveUnity": false,
+    "uiVerification": "DOM interactions and observations; AX snapshots unavailable",
+    "reviewsAndIntegration": "root"
+  }
+}

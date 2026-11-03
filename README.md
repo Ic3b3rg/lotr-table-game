@@ -82,15 +82,34 @@ Aprire [il tavolo della compagnia](http://127.0.0.1:4321). Il percorso dati dist
 
 Dal percorso guidato, entrare al tavolo e scegliere i propri eroi: da due a quattro in solitario, uno per persona con due–cinque partecipanti. Ruoli e oggetti suggeriti sono modificabili; le copie già assegnate restano riservate. I limiti individuali dell'eroe, le mani, l'armatura e il rango iniziale vengono controllati dall'host. Il PC condiviso può consultare tutte le schede senza entrare.
 
-Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Le prove standard sono disponibili subito sotto; cambi al campo e avventure seguiranno.
+Quando il gruppo ha concordato le scelte, **Prepara i mazzi della compagnia** assegna quindici carte per eroe: ruolo 1 preparato e quattordici carte coperte. La composizione è consultabile; l'ordine coperto resta salvato sull'host. Dopo la conferma la compagnia è fissata e si recuperano soltanto i posti esistenti. Nel percorso tecnico precedente le prove standard sono disponibili subito sotto. Con il generatore A1 configurato, il passo successivo è la creazione della mappa e i comandi di gioco attendono lo startup.
 
 Le schede distinguono originale italiano, traduzione e verifica incompleta. Il pacchetto attuale comprende sei eroi, sei ruoli, 74 definizioni abilità e 78 oggetti; quattro testi conservano una candidatura esplicita, compreso Guardian 1 di provenienza `Custom`. Non certifica l'intera scatola o gli effetti del futuro motore. [Metadati e limiti verificati](docs/testing/party-content-metadata.json).
 
-Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 7 vengono migrati allo schema 8, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 8. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento.
+Il primo catalogo acquisito viene congelato nel salvataggio. Modificare il file di input non riscrive una partita esistente. Il backup include testi, copie e ordine esatti; le immagini sono opzionali e si reinstallano separatamente. I vecchi salvataggi e backup negli schemi da 1 a 8 vengono migrati allo schema 9, conservando compagnia, ordine dei mazzi, prove e Scoperta in corso. I salvataggi anteriori allo schema 5 mantengono i round disattivati finché il gruppo non li avvia; i round già attivi vengono conservati. Per tornare al software precedente serve una copia conservata prima della migrazione: il vecchio host non legge lo schema 9. Il numero di giocatori resta non configurato solo per gli stati anteriori allo schema 7; i gruppi già configurati sono conservati. Una Scoperta 2 già aperta viene conclusa con le carte salvate: non viene ripescata durante l’aggiornamento. Le vecchie mappe e le richieste aperte restano nel percorso precedente; non vengono trasformate in un avvio A1 completato.
+
+## Creazione della mappa A1
+
+Il generatore usa un pacchetto privato verificato per lo stesso catalogo:
+`map-generator.json` nella cartella dati, oppure il percorso indicato da
+`LOTR_GENERATOR_PACK`. Il pacchetto non è distribuito nella repository;
+[formato, prove e riproduzione](docs/testing/map-freeze-verification.md).
+
+Dopo la preparazione un partecipante conferma **Crea la mappa**. Il PC salva la
+richiesta e lavora mantenendo disponibili le viste dei giocatori. Una ricerca
+interrotta può essere ripresa dalla vista personale: prima del risultato serve
+lo stesso materiale iniziale. Dopo il salvataggio, reload, riavvio e backup
+riusano la stessa mappa anche senza il pacchetto, conservando incontri e storia.
+
+Il risultato resta prima dell'avvio dell'avventura: posizioni iniziali,
+rivelazioni, Scoperta 2 e prove Spirito 1 saranno governate dallo startup #38.
+I turni e i comandi liberi restano in attesa. Il freeze non costituisce
+un'avventura giocabile completa; il percorso dimostrativo seguente rimane
+separato per le sessioni precedenti.
 
 ## Turni e fasi del round
 
-Dalla vista personale, dopo preparazione e collocazione sulla mappa, concordate **Inizia i round**.
+Nel percorso precedente, dalla vista personale, dopo preparazione e collocazione sulla mappa, concordate **Inizia i round**.
 Il gruppo sceglie l'ordine; il proprietario avvia il turno di un proprio eroe.
 Ogni eroe ha fino a due azioni, anche ripetute, e può concludere senza usarle
 tutte. **Interazione · 1 azione** rivela una prova e consuma l'azione nella
@@ -114,6 +133,7 @@ Il bonus di Aragorn segue le posizioni salvate, senza altri costi. Nei vecchi ro
 
 ## Mappa e viaggio
 
+Questo è il percorso precedente con mappa dimostrativa; non avvia lo startup A1.
 Il pacchetto mappa è distinto dalle carte: `journey-map.json` con eventuali
 PNG in `assets/` accanto al file. Si installa nella cartella dati o si indica
 con `LOTR_MAP_PACK`. Per il frammento privato preparato in questo worktree:
@@ -157,9 +177,10 @@ La prima chiamata elenca le giunzioni legali; la seconda congela quella
 selezionata in un file nuovo, senza sovrascrivere. Senza `--output` il JSON va
 su stdout. Il risultato `scope: geometry-only` conserva pacchetto, impronta,
 pose e grafo; non viene caricato dall'host. La verifica originale copre la
-prima sezione 302A/custom100A. Scelta casuale, mappa completa e avvio dello
-scenario restano in [#41](https://github.com/Ic3b3rg/lotr-table-game/issues/41)
-e [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38).
+prima sezione 302A/custom100A. La pipeline completa di selezione, geometria,
+movimento e incontri è ora collegata al freeze di sessione descritto sopra.
+L’avvio dello scenario resta a [#38](https://github.com/Ic3b3rg/lotr-table-game/issues/38);
+[#41](https://github.com/Ic3b3rg/lotr-table-game/issues/41) non viene chiusa dal solo freeze.
 
 La build produce anche `dist/map-primitives.mjs`: `SourceRandom` con stato
 snapshot/ripristino, `sourceShuffle` e `comparisonSort` conservano le scelte
