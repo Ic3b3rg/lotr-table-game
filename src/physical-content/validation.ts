@@ -8,6 +8,7 @@ const unique = (values: (string | number)[], label: string) => {
   if (new Set(values).size !== values.length) fail(`${label}: duplicato.`);
 };
 const key = (r: { sourceId: string; locator: string }) => `${r.sourceId}\0${r.locator}`;
+const modelKey = (r: { sourceId: string; modelId: number }) => `${r.sourceId}\0${r.modelId}`;
 
 /** Rejects oversized/non-JSON trees before zod traverses untrusted arrays. */
 export function boundPhysicalInput(value: unknown): void {
@@ -28,7 +29,12 @@ export function boundPhysicalInput(value: unknown): void {
       bytes += 8;
     else if (typeof v === 'object') {
       if (ancestors.has(v)) fail('Ciclo JSON.');
-      if (!Array.isArray(v) && ![Object.prototype, null].includes(Object.getPrototypeOf(v)))
+      const prototype = Object.getPrototypeOf(v);
+      if (
+        Array.isArray(v)
+          ? prototype !== Array.prototype
+          : prototype !== Object.prototype && prototype !== null
+      )
         fail('Richiesto oggetto JSON.');
       ancestors.add(v);
       if (Array.isArray(v) && v.length > PHYSICAL_CONTENT_LIMITS.nodes) fail('Limite array.');
@@ -73,6 +79,8 @@ export function validatePhysicalPack(p: PhysicalPack): void {
   const aliasOwners = new Map<string, string>();
   const titleModels: string[] = [];
   const skillModels: string[] = [];
+  const titleModelIds: string[] = [];
+  const skillModelIds: string[] = [];
   const numbers: number[] = [];
   const allCopies = p.cards.flatMap((c) => c.copies.map((copy) => copy.id));
   if (allCopies.length > PHYSICAL_CONTENT_LIMITS.copies) fail('Limite copie.');
@@ -198,6 +206,8 @@ export function validatePhysicalPack(p: PhysicalPack): void {
       }
       titleModels.push(key(b.titleModel));
       skillModels.push(...b.skillModels.map(key));
+      titleModelIds.push(modelKey(b.titleModel));
+      skillModelIds.push(...b.skillModels.map(modelKey));
       if ((b.skillStatus === 'linked') !== b.skillModels.length > 0)
         fail(`${c.id}: stato binding discordante.`);
       if (b.skillStatus === 'absent-in-checked-base' && !c.binding.note.trim())
@@ -207,6 +217,8 @@ export function validatePhysicalPack(p: PhysicalPack): void {
   unique(numbers, 'Numero titolo');
   unique(titleModels, 'TitleModel');
   unique(skillModels, 'SkillModel titolo');
+  unique(titleModelIds, 'ID TitleModel');
+  unique(skillModelIds, 'ID SkillModel titolo');
 
   for (const e of p.errata) {
     const c = p.cards.find((card) => card.id === e.cardId);

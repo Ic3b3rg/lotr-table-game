@@ -92,3 +92,16 @@ node dist/physical-content.mjs --input .scratch/physical-content/delivery/pack.i
 ```
 
 Nessuna modifica a host/sessione/protocollo/UI, schema condiviso, map-generation/assembly/encounters o freeze; sole due entry build aggiunte. Nessuna dipendenza installata, app/salvataggio originale modificato, prova sul tavolo utente o scrittura GitHub. Review Standards/Spec e integrazione spettano al root; questo report non le anticipa.
+
+## Verifica di integrazione sul main aggiornato
+
+Root: base `cba8ad5a7d0709990faae0cbed3d407d35bb10f0`, con freeze #53 già integrato. Il conflitto nella lista delle entry build è risolto conservando entrambe le entry del freeze e le due del catalogo; nessuna modifica al comportamento del freeze.
+
+La review Standards indipendente ha riprodotto due P2: un indice array ereditato poteva eseguire un getter prima della copia, e due binding con stesso `sourceId/modelId` ma locator diversi superavano l'unicità. Correzioni root: gli array richiedono il prototipo JSON ordinario prima del traversal e i binding verificano sia locator sia identità del modello, separatamente per fonte e tipo. Tre regressioni osservate RED→GREEN; un caso positivo mantiene consumabili identità omonime di fonti o tipi diversi.
+
+- **386/386 test**, nessuno saltato: 301 del main aggiornato e 85 del catalogo. Typecheck, format:check e diff check passano.
+- Ricalcolati tutti i **94 hash/byte degli artefatti** del manifest, i **25 hash delle fonti bloccate** e gli **80 collegamenti fonte/hash**. Manifest e ZIP coincidono con le impronte sopra.
+- Riletti nuovamente i **42 oggetti modello**, con accordo esatto rispetto alla consegna. Il confronto indipendente riesamina **60/60 definizioni**, otto dimensioni meccaniche per carta; respinge nuovamente **13/13 alterazioni**.
+- Ricostruzione privata in directory root distinta: input byte per byte identico; CLI aggiornata produce diagnostico e tre export verificati identici alla consegna. Il beneficio resta rifiutato senza creare output. Input e fonti originali invariati.
+
+Evidenze root in `.scratch/physical-content-root-review/`, con `check.py`, `summary.json`, confronto indipendente, log completi e riproduzione. Stato delle review e disposizione dei rilievi in [review di integrazione](../reviews/2026-11-03-physical-content.md). La review Spec è ancora in corso: nessuna dichiarazione di completamento o merge anticipato. #57 resta aperta per le quantità dei tre benefici; questo codice non soddisfa il flusso completo di #33.

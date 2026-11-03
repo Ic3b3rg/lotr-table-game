@@ -489,6 +489,49 @@ test('rifiuta accessor prima di eseguirli', () => {
   assert.equal(reads, 0);
 });
 
+test('rifiuta un indice array ereditato senza eseguire il getter', () => {
+  const p = physicalPack();
+  const card = p.cards[0];
+  let reads = 0;
+  const prototype = Object.create(Array.prototype);
+  Object.defineProperty(prototype, '0', {
+    get() {
+      reads++;
+      return card;
+    },
+  });
+  delete p.cards[0];
+  Object.setPrototypeOf(p.cards, prototype);
+  assert.throws(() => inspectPhysicalContent(p), /JSON/);
+  assert.equal(reads, 0);
+});
+
+for (const model of ['titleModel', 'skillModels'])
+  test(`rifiuta ${model} condiviso fra carte anche con localizzatori distinti`, () => {
+    const p = physicalPack();
+    const previous = p.cards.at(-2).binding.value;
+    const current = p.cards.at(-1).binding.value;
+    const priorModel = model === 'titleModel' ? previous.titleModel : previous.skillModels[0];
+    const currentModel = model === 'titleModel' ? current.titleModel : current.skillModels[0];
+    currentModel.modelId = priorModel.modelId;
+    assert.throws(() => inspectPhysicalContent(p), /duplicato/);
+    assert.throws(() => requirePhysicalFamily(p, 'title'), /duplicato/);
+  });
+
+test('identità modello distinte per fonte e tipo rimangono consumabili', () => {
+  const p = physicalPack();
+  p.sources.push({ ...p.sources[1], id: 'invented-other-models' });
+  const previous = p.cards.at(-2).binding.value;
+  const current = p.cards.at(-1).binding.value;
+  current.titleModel.sourceId = 'invented-other-models';
+  current.titleModel.modelId = previous.titleModel.modelId;
+  current.skillModels[0].modelId = previous.titleModel.modelId;
+  const result = requirePhysicalFamily(p, 'title');
+  assert.equal(result.cards.length, 21);
+  assert.equal(result.cards.at(-1).binding.value.titleModel.sourceId, 'invented-other-models');
+  assert.equal(result.cards.at(-1).binding.value.skillModels[0].modelId, 20);
+});
+
 test('export della singola famiglia verificata rimane consumabile in presenza di una famiglia irrisolta', () => {
   const p = physicalPack();
   p.cards[36].quantity = {
