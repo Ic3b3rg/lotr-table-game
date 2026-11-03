@@ -1,3 +1,4 @@
+import { hash } from './fixtures/map-freeze.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readSession } from './skill-test-helper.mjs';
@@ -157,5 +158,98 @@ test('first failure consumes the real consequence and P2 before return and exclu
   assert.equal(s.journey.heroes[0].removed, true);
   assert.equal(s.round.activeHeroId, null);
   assert.equal((await cycleCommand(r, 'START_TURN')).status, 409);
+  assert.ok(s.physical.parents.every((p) => p.returnCount === 1));
+});
+
+test('a source test keeps its own success when a conversion child leads to defeat, and returns without another hero choice', async (t) => {
+  const r = await readyOriginal(
+    t,
+    () => {},
+    (c) => {
+      for (const card of c.skills) {
+        card.success = 0;
+        card.fate = 1;
+      }
+      c.heroes[1].stats.fear = 2;
+    },
+    (input, catalog) => {
+      for (const d of input.definitions)
+        d.body = d.cardId.includes('damage')
+          ? [
+              {
+                op: 'suffer',
+                hero: 'each-other-hero-any-distance',
+                family: 'fear',
+                n: 1,
+                face: 'down',
+              },
+              { op: 'self-flip-down' },
+            ]
+          : [
+              { op: 'suffer', hero: 'self', family: 'fear', n: 1, face: 'down' },
+              { op: 'keep-faceup' },
+            ];
+      for (const c of catalog.skills)
+        input.policies.push({
+          id: c.id,
+          kind: 'skill',
+          definitionHash: hash(c),
+          source: { sourceId: 'invented', locator: 'Fixture!defeat-child' },
+          effects:
+            c.id === 'role-2-skill-1'
+              ? [
+                  { op: 'convert-one-scout', scout: 1 },
+                  { op: 'limits', damage: 0, fear: 1 },
+                ]
+              : [{ op: 'after-prepare-flip-fear' }],
+        });
+    },
+  );
+  await arrive(r);
+  await ok(interact(r));
+  let s = await finishPhysical(r);
+  assert.equal(playable(s).variables.seen, false);
+  assert.equal(s.physical.heroes[1].facedown.fear, 2);
+  await ok(cycleCommand(r, 'END_TURN'));
+  await arrive(r, r.other);
+  await ok(interact(r, r.other));
+  await ok(scenarioInput(r.host, r.other, { kind: 'physical-choice', option: 'reveal' }));
+  await ok(scenarioInput(r.host, r.other, { kind: 'physical-choice', option: 'role-2-skill-1:1' }));
+  s = await readSession(r.host);
+  assert.equal(s.physical.active.mode, 'scout');
+  const cards = s.physical.active.options.map((o) => o.id);
+  assert.equal(cards.length, 1);
+  await ok(
+    scenarioInput(r.host, r.other, {
+      kind: 'physical-scout',
+      prepare: cards[0],
+      discard: null,
+      top: [],
+      bottom: [],
+    }),
+  );
+  s = await finishPhysical(r);
+  assert.equal(
+    s.physical.lastStand.heroes.find((h) => h.heroId === 'hero-2').defeated,
+    true,
+    JSON.stringify({
+      lastStand: s.physical.lastStand,
+      areas: s.physical.heroes,
+      fronts: s.physical.fronts,
+      pending: s.scenario.pending?.kind,
+      tests: s.scenario.play.tests,
+    }),
+  );
+  assert.equal(s.scenario.play.tests.at(-1).successes, 1);
+  assert.equal(playable(s).variables.seen, true);
+  assert.equal(s.scenario.pending, null);
+  assert.equal(s.scenario.play.active, null);
+  assert.equal(s.scenario.play.attempts.at(-1).interrupted, 'hero-defeated');
+  assert.equal(s.scenario.play.attempts.at(-1).returned, true);
+  assert.equal(playable(s).visible, true);
+  assert.equal(playable(s).state, 0);
+  assert.equal(s.round.heroes[1].actionsUsed, 2);
+  assert.equal(s.round.activeHeroId, null);
+  assert.equal(s.journey.travel, null);
   assert.ok(s.physical.parents.every((p) => p.returnCount === 1));
 });

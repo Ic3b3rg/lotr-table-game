@@ -9,7 +9,6 @@ import { STAT_LABELS } from '../shared/skill-tests';
 import { compileSourceText } from '../scenario/text';
 import { sourceText } from './source-text';
 import { cardButton, type CardReader } from './cards';
-import { findSkillCard } from '../shared/skill-cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
@@ -102,13 +101,10 @@ export function createPhysicalControls(
         const cards = text('ul', '', 'physical-test-cards');
         for (const c of t.cards) {
           const row = text('li', `${c.success} successi · ${c.fate} fati`),
-            card = catalog
-              ? findSkillCard(
-                  catalog,
-                  c.skillId,
-                  session.physical?.lastStand?.titles.map((t) => t.skill),
-                )
-              : undefined;
+            card =
+              catalog?.skills.find((skill) => skill.id === c.skillId) ??
+              session.physical?.lastStand?.titles.find((title) => title.skill.id === c.skillId)
+                ?.skill;
           if (card && reader) row.prepend(cardButton(card, (caller) => reader.card(card, caller)));
           else row.prepend(text('span', c.name));
           cards.append(row);

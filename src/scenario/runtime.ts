@@ -346,6 +346,28 @@ function runInstance(state: State, i: ScenarioInstance) {
       entry = i.entry;
     for (const a of s.actions) {
       if (i.started.includes(a.index)) continue;
+      const attempt = sc.play?.attempts.find(
+        (a) => a.id === sc.play?.active && a.instanceId === i.id,
+      );
+      if (
+        attempt &&
+        ['confirm', 'sourceTest', 'challenge', 'choice'].includes(a.op) &&
+        defeatedHeroes(state).includes(attempt.heroId)
+      ) {
+        // Resolve the completed parent's callback and immediate source effects first.
+        // A defeated figure cannot begin the next test or make a new hero choice.
+        const d = definition(sc, i),
+          waits = d.states.filter((s) => s.transitions['NODE CLICKED'] !== undefined),
+          wait = d.handlers['NODE CLICKED'] !== undefined ? d.initial : waits[0]?.index;
+        invariant(
+          wait !== undefined && (d.handlers['NODE CLICKED'] !== undefined || waits.length === 1),
+          'Incontro interrotto senza attesa fonte univoca.',
+        );
+        attempt.interrupted = 'hero-defeated';
+        enter(sc, i, wait);
+        progress = true;
+        break;
+      }
       i.started.push(a.index);
       sc.effects.push({
         id: actionKey(i, a.index),

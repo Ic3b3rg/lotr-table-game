@@ -188,7 +188,12 @@ export function sourceCatalog(c) {
   }
   c.heroes[1].stats.wisdom = 1;
 }
-export async function readyOriginal(t, edit = () => {}, catalogEdit = sourceCatalog) {
+export async function readyOriginal(
+  t,
+  edit = () => {},
+  catalogEdit = sourceCatalog,
+  frontEdit = () => {},
+) {
   const ready = await readyScenario(
     t,
     (pack) => {
@@ -201,9 +206,11 @@ export async function readyOriginal(t, edit = () => {}, catalogEdit = sourceCata
     catalog = catalogFixture();
   catalogEdit(catalog);
   await writeFile(join(ready.host.dataDir, 'physical-content.json'), JSON.stringify(raw));
+  const fronts = inventedFrontInput(raw);
+  frontEdit(fronts, catalog);
   await writeFile(
     join(ready.host.dataDir, 'physical-fronts.json'),
-    JSON.stringify(compilePhysicalFronts(raw, inventedFrontInput(raw), catalog)),
+    JSON.stringify(compilePhysicalFronts(raw, fronts, catalog)),
   );
   await writeFile(
     join(ready.host.dataDir, 'physical-last-stand.json'),

@@ -226,6 +226,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       progress.hidden = !sc?.play;
       const nextProgress = JSON.stringify([
         session.generation,
+        content?.id,
         sc?.play,
         sc?.instances.map((i) => [i.id, i.variables, i.stopped]),
         session.round?.heroes,
@@ -255,6 +256,8 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
               'company-help',
             ),
           );
+        else if (sc.play.attempts.at(-1)?.interrupted === 'hero-defeated')
+          summary.push(text('p', 'Interazione terminata: l’eroe è sconfitto.', 'company-help'));
         summary.push(text('p', `Sapienza ottenuta: ${sc.play.lore}.`, 'company-help'));
         for (const t of sc.play.tests.slice(-5))
           summary.push(

@@ -63,6 +63,10 @@ Hide/stop e ritorno seguono ordine e completamenti effettivi.
 Le conseguenze usano quantità/faccia verificate, nessuna negazione non
 concessa, prevenzioni e costi reali, tutte le carte e P2 prima del ritorno.
 Sconfitta e perdita mantengono destinatario e blocchi ordinari esistenti.
+Se un figlio provoca la sconfitta dell'attore, il risultato del padre e gli
+effetti fonte immediati restano acquisiti; prima di una nuova scelta/prova
+del suo eroe il tentativo termina con causa esplicita e ritorna all'attesa
+fonte. Questa interruzione obbligatoria non aggiunge un Cancel al ramo.
 
 ## Ledger, recupero e compatibilità
 

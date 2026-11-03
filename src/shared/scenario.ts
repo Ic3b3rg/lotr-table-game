@@ -344,6 +344,7 @@ export const ScenarioSchema = z.strictObject({
             requestId: z.string().min(24).max(80),
             cost: z.literal(1),
             returned: z.boolean(),
+            interrupted: z.literal('hero-defeated').optional(),
           }),
         )
         .max(1000),
