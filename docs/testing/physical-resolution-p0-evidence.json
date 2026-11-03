@@ -6,7 +6,7 @@
   "codeCommit": "476e313a8317a6f2b022b391a2edbc49e819ba29",
   "schemaVersion": 11,
   "baselineTests": 419,
-  "tests": 443,
+  "tests": 444,
   "skipped": 0,
   "families": 2,
   "definitions": 36,
@@ -48,5 +48,22 @@
     "hostStopped": true,
     "browserStopped": true,
     "port4353Free": true
+  },
+  "originalImplementationTests": 443,
+  "integrationCodeCommit": "b252100136ee1afd71b57b794bd9ebc792e78a28",
+  "integrationVerification": {
+    "privatePath": ".scratch/physical-p0-root-review/integration-verification.json",
+    "sha256": "87d843843254fce5bb32eb5095cea7c749340c04f1e8570d0fc745e27fdf4ed5",
+    "randomBudgetRegression": {
+      "parents": 32,
+      "childrenPerParent": 32,
+      "decisions": 1026,
+      "copies": 56,
+      "journalLimit": 2050,
+      "rngWordLimit": 7084800
+    },
+    "originalManifestUnchanged": true,
+    "privateArtifactsVerified": 151,
+    "extraHostLogVerified": true
   }
 }

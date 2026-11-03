@@ -92,7 +92,7 @@ ordine, senza nuova promessa di account o cifratura.
 
 ## Test e cicli TDD
 
-**443/443 test**, baseline419 più24, zero skipped. npm test, typecheck,
+**444/444 test**, baseline419 più25, zero skipped. npm test, typecheck,
 format:check e diffcheck passano sul codice finale. Fixture pubbliche inventate;
 HTTP, SQLite, filesystem e processi reali. Nessuna suppression nuova, test
 saltato o soglia abbassata.
@@ -153,7 +153,8 @@ testi e parametri inventati; nome e avvisi lo distinguono sempre dall'A1.
    ricevute identici; cambiano solo generation/revisione/data previste.
    Lo scarto precedente è già materializzato nella quarta richiesta e resta
    identico. In totale sono verificati otto confronti integrali di restart,
-   includendo inizializzazione e conclusione sul validatore finale. 5. 320/768/1024/1440: nessun overflow, controlli≥44px, actor esclusivo, nessun
+   includendo inizializzazione e conclusione sul validatore finale.
+5. 320/768/1024/1440: nessun overflow, controlli≥44px, actor esclusivo, nessun
    Continua/Annulla generico, guida/Escape e ritorno del focus. AX con label
    Danni/Paure, status e ring di focus; PNG privati ispezionati. Zero eccezioni
    runtime; nelle due QA finali restano4/2 richieste favicon404 preesistenti.
@@ -177,7 +178,8 @@ privato. Nessun originale o materiale di altri checkout modificato.
 Raw reale: **780.002byte**, SHA256
 `3d06fbbf8f767b3e5e78e859c7187986041ed77d7af173917c4c72f2126b0c52`,
 ricontrollato prima/dopo.36 definizioni/56 copie, famiglie18/28 ciascuna.
-Le quantità beneficio57 rimangono pending, senza5/5/5 o nuova domanda.
+Le quantità beneficio57 rimangono irrisolte:5/5/5 è soltanto l'ipotesi non
+confermata del proprietario, che ora non può contare la scatola. Nessuna nuova domanda.
 Catalogo e contesto del freeze autentico sono hash-verificati prima dell'uso;
 la matrice61 e gli audit già chiusi non sono rilanciati.
 
@@ -212,3 +214,25 @@ ID2 o l'intera33; non certifica telefoni fisici/LAN/Windows/Safari (#5/#8).
 Review Standards/Spec fresche, PR/merge e chiusura spettano al root.
 Host4353, browser dedicato e scheda preview del task sono chiusi; i dati
 isolati e le prove rimangono recuperabili nella scratch indicata sopra.
+
+## Integrazione root
+
+Le [review indipendenti](../reviews/2026-11-03-physical-resolution-p0.md)
+riscontrano Standards1 P2, corretto, e Spec0. Il registro casuale iniziale
+di256 decisioni rifiutava l'ottavo programma valido da32 figli. Una regressione
+RED→GREEN esegue tutti i32 padri ammessi, con32 figli ciascuno e1.026 decisioni,
+conservando56 copie e un solo ritorno per padre anche dopo serializzazione.
+Il limite è ora2+32×32×2=2.050 decisioni; il cursore ammette il budget
+corrispondente di27 indici per mescolata e128 parole per indice. I programmi
+ammessi e i limiti dei padri/figli non sono ridotti.
+
+Il root verifica i151 file del manifest originale e i due input bloccati,
+quindi ripete parsing, replay, uguaglianze e controlli di privacy su copie
+separate in `.scratch/physical-p0-root-review/evidence/`. Otto coppie di
+riavvio e quattro di ripristino concordano; finale56 copie, mazzi27/27,
+quattro risposte, quattro figli e un ritorno. Il log host, letto dal checker
+ma esterno al manifest originale, viene copiato e registrato separatamente.
+Sono controlli degli artefatti UI precedenti, non una nuova sessione browser.
+Il manifest originale e le evidenze del child rimangono immutati. La suite
+root finale passa444/444, zero skipped, con typecheck, formato e diff verdi.
+Il tavolo4339/PID12892 rimane invariato.
