@@ -77,6 +77,35 @@ test('P1 successive Scout children preserve their cards through the normal consu
   assert.equal(s.physical.parents[0].returnCount, 1);
 });
 
+test('P1 can discard an initially rewarded prepared card and restore its historical trigger', async (t) => {
+  const ready = await readyFronts(t, (pack) => {
+    const card = catalogFixture().skills.find((c) => c.id === 'role-1-skill-1');
+    pack.preparedEffects = [
+      { skillId: card.id, cardHash: hash(card), effect: 'inspiration', amount: 1 },
+    ];
+  });
+  const { host, player } = ready;
+  const initial = await reachPhysical(ready);
+  assert.equal(initial.scenario.cardEffects[0].source, 'initial');
+  assert.equal(initial.scenario.cardEffects[0].reward, 1);
+  const result = await scenarioInput(host, player, { kind: 'physical-choice', option: '0' });
+  assert.equal(result.status, 200, await result.text());
+  const backup = await readBackup(host);
+  assert.ok(backup.payload.state.preparation.heroes[0].discard.includes('role-1-skill-1:1'));
+  const current = await readSession(host);
+  const restored = await host.request('/api/restores', {
+    backup,
+    generation: current.generation,
+    expectedRevision: current.revision,
+    confirmed: true,
+  });
+  assert.equal(restored.status, 200, await restored.text());
+  const after = await readBackup(host);
+  for (const key of ['physical', 'preparation', 'scenario'])
+    assert.deepEqual(after.payload.state[key], backup.payload.state[key]);
+  assert.deepEqual(after.payload.commands, backup.payload.commands);
+});
+
 test('P1 tests reconcile a completed legacy reveal while a descendant holds those copies after refill', async (t) => {
   const ready = await readyFronts(t, (pack, pr) => {
     const card = catalogFixture().skills.find((c) => c.id === 'role-2-skill-1');

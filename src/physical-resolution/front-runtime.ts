@@ -15,6 +15,7 @@ import {
   type PolicyEffect,
 } from './front-program';
 import { FrontResourcesSchema, type FrontResources } from './front-state';
+import { canResolveAlternative } from './front-feasibility';
 
 type Family = 'damage' | 'fear';
 type Decision = Extract<PhysicalActive, { kind: 'decision' }>;
@@ -243,16 +244,22 @@ class FrontReplay {
     this.s.parents.at(-1)!.status = 'suspended';
     throw paused;
   }
-  private policy(hero: number): { copy: string; effect: PolicyEffect }[] {
-    const h = this.hero(hero),
+  private policy(
+    hero: number,
+    resources = this.resources,
+  ): { copy: string; effect: PolicyEffect; effectIndex: number }[] {
+    const h = resources.preparation.heroes[hero]!,
       sources = [h.heroId, ...h.prepared, ...h.itemCopies];
     return sources.flatMap((copy) => {
-      if (this.resources.depletion.some((d) => d.copy === copy && d.remaining === 0)) return [];
+      if (resources.depletion.some((d) => d.copy === copy && d.remaining === 0)) return [];
       const id = copy === h.heroId ? copy : definitionId(copy);
-      return (this.artifact.policies.find((p) => p.id === id)?.effects ?? []).map((effect) => ({
-        copy,
-        effect,
-      }));
+      return (this.artifact.policies.find((p) => p.id === id)?.effects ?? []).map(
+        (effect, effectIndex) => ({
+          copy,
+          effect,
+          effectIndex,
+        }),
+      );
     });
   }
   private persist(hero: number): { copy: string; effect: PersistentOp }[] {
@@ -340,14 +347,14 @@ class FrontReplay {
       for (const [n, op] of d.body.entries()) this.operation(hero, copy, op, `${path}/${n}`);
     });
   }
-  private eligibleTrinkets(hero: number, other = false) {
-    return this.resources.preparation.heroes.flatMap((h, n) =>
+  private eligibleTrinkets(hero: number, other = false, resources = this.resources) {
+    return resources.preparation.heroes.flatMap((h, n) =>
       (other ? n !== hero : n === hero)
         ? h.itemCopies
             .filter(
               (c) =>
                 this.catalog.items.find((i) => i.id === definitionId(c))?.slot === 'trinket' &&
-                this.resources.depletion.some((d) => d.copy === c && d.remaining > 0),
+                resources.depletion.some((d) => d.copy === c && d.remaining > 0),
             )
             .map((copy) => ({ hero: n, copy }))
         : [],
@@ -384,9 +391,25 @@ class FrontReplay {
     return true;
   }
   private feasible(hero: number, op: FrontOp): boolean {
-    if (op.op === 'discard-prepared') return this.hero(hero).prepared.length >= op.n;
-    if (op.op === 'deplete') return this.eligibleTrinkets(hero).length > 0;
-    return true;
+    return canResolveAlternative(op, {
+      hero,
+      resources: this.resources,
+      condition: (condition) => this.condition(hero, condition),
+      ignoresLoss: (resources) =>
+        this.policy(hero, resources).some(
+          ({ effect }) => effect.op === 'ignore-card-resource-loss',
+        ),
+      trinkets: (resources, other) => this.eligibleTrinkets(hero, other, resources),
+    });
+  }
+  private condition(
+    hero: number,
+    condition: 'self-space-in-darkness' | 'exists-nearby-hero-excluding-self',
+  ) {
+    return condition === 'self-space-in-darkness'
+      ? this.run.program.profile === 'source-fronts-v1' &&
+          this.run.program.darknessHeroes.includes(hero)
+      : this.scope(hero, 'each-nearby-excluding-self').length > 0;
   }
   private operation(hero: number, copy: string, op: FrontOp, path: string): void {
     this.frame(path, hero, copy, op.op, 0, () => {
@@ -461,12 +484,8 @@ class FrontReplay {
           return;
         }
         case 'conditional': {
-          const pass =
-            op.condition === 'self-space-in-darkness'
-              ? this.run.program.profile === 'source-fronts-v1' &&
-                this.run.program.darknessHeroes.includes(hero)
-              : this.scope(hero, 'each-nearby-excluding-self').length > 0;
-          if (pass) this.operation(hero, copy, op.then, `${path}/then`);
+          if (this.condition(hero, op.condition))
+            this.operation(hero, copy, op.then, `${path}/then`);
           return;
         }
         case 'choose-alternative': {
@@ -620,7 +639,6 @@ class FrontReplay {
       () => {
         const remaining = empty();
         for (const c of cards) remaining[c.family] = c.amount;
-        const cannotDamage = this.persist(hero).some(({ effect: e }) => e.op === 'prohibit');
         if (negate && total(remaining)) {
           const allowed = [negate];
           if (
@@ -636,6 +654,7 @@ class FrontReplay {
           ) as typeof negate;
           const successes = this.test(hero, stat, `${path}/test`, true);
           if (successes) {
+            const cannotDamage = this.cannotPreventDamage(hero);
             const input = this.ask(hero, `${path}/negate`, {
               mode: 'allocate',
               title: `Assegna fino a ${successes} successi, una sola volta. Puoi subire volontariamente.`,
@@ -664,10 +683,11 @@ class FrontReplay {
           faceFear = face;
         while (total(remaining)) {
           this.tick();
+          const cannotDamage = this.cannotPreventDamage(hero);
           const offers = this.p.heroes
             .flatMap((_, actor) =>
-              this.policy(actor).flatMap<Offer>(({ copy, effect: e }, index) => {
-                const id = `${actor}:${index}:${copy}`,
+              this.policy(actor).flatMap<Offer>(({ copy, effect: e, effectIndex }) => {
+                const id = `${actor}:${effectIndex}:${copy}`,
                   self = actor === hero,
                   same = this.p.heroes[actor]!.spaceId === this.p.heroes[hero]!.spaceId;
                 if (used.has(id)) return [];

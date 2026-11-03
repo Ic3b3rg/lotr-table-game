@@ -106,9 +106,17 @@ export function validatePreparedRewards(state: State) {
     );
     const hero = state.preparation!.heroes.find((h) => h.heroId === e.heroId);
     invariant(hero, 'Trigger senza eroe.');
-    if (e.source === 'initial')
-      invariant(hero.prepared.includes(e.copy), 'Abilità iniziale non preparata.');
-    else
+    if (e.source === 'initial') {
+      const initial =
+        physical?.version === 2 && physical.runs[0]?.context
+          ? physical.runs[0].context.preparation.heroes.find((h) => h.heroId === hero.heroId)!
+          : hero;
+      const first = state.content!.roles.find((r) => r.id === hero.roleId)!.skills[0]!;
+      invariant(
+        definitionId(e.copy) === first && initial.prepared.includes(e.copy),
+        'Abilità iniziale non preparata.',
+      );
+    } else
       invariant(
         sc.completedSetup.some(
           (c) =>
