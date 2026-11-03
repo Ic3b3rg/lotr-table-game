@@ -7,12 +7,12 @@
   "schemaVersion": 15,
   "tests": {
     "baseline": 526,
-    "passed": 540,
+    "passed": 541,
     "failed": 0,
     "cancelled": 0,
     "skipped": 0,
     "todo": 0,
-    "fullLogSha256": "7df968a3d509a77a8f9ba81cb20537671bdcb241263851e76b77981614b04be4",
+    "fullLogSha256": "5a93ba8027fa276dbc7ca1e098eb8e8d998d37d124df5cf707758be8ae5d5230",
     "typecheck": true,
     "formatCheck": true,
     "diffCheck": true
@@ -53,11 +53,19 @@
     "originalFinalRevision": 65,
     "copyFixRestoredRevision": 66,
     "restoreChangesOnlyAdministrativeFields": true,
-    "viewportWidths": [320, 768, 1024, 1440],
+    "viewportWidths": [
+      320,
+      768,
+      1024,
+      1440
+    ],
     "finalScreenshots": 17,
     "configuredAssets200": 26,
     "explorations": 2,
-    "rewards": [1, 1],
+    "rewards": [
+      1,
+      1
+    ],
     "allThreeTurnsEnded": true,
     "originalP2Selections": 0,
     "secureContext": false,
@@ -88,8 +96,17 @@
     "port4369Free": true,
     "protectedScratchInventoryDeviation": "One initial filename-only inventory used the project scratch root. No protected table content, API, SQL or process access; no claim of zero filename or metadata enumeration."
   },
-  "gatedFollowups": ["interactions 109/75", "119↔123", "combat/Shadow", "camp/adventure 2"],
-  "unfinishedIssues": [33, 65, 57],
+  "gatedFollowups": [
+    "interactions 109/75",
+    "119\u2194123",
+    "combat/Shadow",
+    "camp/adventure 2"
+  ],
+  "unfinishedIssues": [
+    33,
+    65,
+    57
+  ],
   "unverifiedPlatforms": [
     "physical phone",
     "remote LAN device",
@@ -99,8 +116,35 @@
     "complete adventure"
   ],
   "integration": {
-    "freshStandardsAndSpecReview": "root responsibility",
+    "freshStandardsAndSpecReview": "completed; Standards P2 corrected, Spec no finding",
     "githubReadOnly": true,
     "pushOrPullRequestCreated": false
+  },
+  "childTestsBeforeRootCorrection": {
+    "baseline": 526,
+    "passed": 541,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "fullLogSha256": "5a93ba8027fa276dbc7ca1e098eb8e8d998d37d124df5cf707758be8ae5d5230",
+    "typecheck": true,
+    "formatCheck": true,
+    "diffCheck": true
+  },
+  "rootIntegration": {
+    "codeHead": "621cd8867986b91baabf0e8e732e480c19cc1783",
+    "proof": ".scratch/exploration-root-review/integration-verification.json",
+    "proofSha256": "1a791546e70939ac25c76f3de49fe8a2d7984bbe55eabc30e576b10c038b22fa",
+    "review": {
+      "standardsFindings": 1,
+      "specFindings": 0,
+      "standardsP2Corrected": true
+    },
+    "copiedArtifacts": 612,
+    "primaryLocks": 18,
+    "legacyBackupsCompared": 109,
+    "originalUiBackupsRevalidatedAfterFix": 33,
+    "originalPackAndPresentationUnchanged": true
   }
 }

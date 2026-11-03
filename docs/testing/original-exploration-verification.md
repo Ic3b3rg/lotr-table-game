@@ -186,3 +186,34 @@ avventura2 e chiusure33/65/57. Quantità benefici 5/5/5 non confermate e mazzi
 realmente vuoti mantengono diagnosi/continuazione, senza carte false,
 reshuffle o domande ripetute al proprietario. Nessuna certificazione di
 telefono reale, LAN remota, Windows, Safari, Unity/JIT o partita completa.
+
+
+## Integrazione e review del root
+
+Revisione fissata su `821f9d5...404cd93`: Standards1 P2, Spec0 finding.
+Il root ha corretto il P2 in `621cd8867986b91baabf0e8e732e480c19cc1783`: un handler compilato poteva
+rinviare la continuazione necessaria al rilascio e bloccare la partita dopo
+il costo. Ora la destinazione richiede un percorso completo fino a rilascio
+o arresto su ogni ramo supportato; percorsi interattivi o broadcast senza
+prova del contesto/receiver rimangono gated prima dell’ingresso. Il controllo
+vale anche per il comando con fingerprint corretto e per il receiver
+adiacente. La regressione HTTP RED→GREEN verifica409, nessun movimento o
+premio e identità dell’intero payload e checksum del salvataggio.
+
+**541/541 test**, zero fail/skip/todo; typecheck, formato e diff verdi.
+Nessun test preesistente soppresso o criterio ridotto. I due percorsi positivi
+e il vero handler adiacente della fixture continuano a passare.
+
+Il root ha verificato tutti i **612 artefatti,159.988.714 byte**, i18 input
+primari e l’identità del tree all’integrazione. Il checker indipendente
+riproduce10 stati/9 azioni e le due selezioni flavor. Riletti109 backup
+storici con confronto integrale di gameplay/ricevute; sul bundle corretto
+sono nuovamente validi tutti i33 backup del percorso UI. Il pack originale,
+le due rivelazioni e la presentazione rimangono identici: questa correzione
+non invalida le17 catture finali già classificate. Due screenshot sono stati
+ispezionati anche dal root; non si attribuisce a questo controllo un nuovo
+percorso UI. Le prove e i sigilli del child sono conservati senza modifiche.
+
+[Review separate e disposizione](../reviews/2026-11-03-original-exploration.md).
+Il perimetro73 è completato; #33/#65/#57 e gli altri seguiti elencati restano
+aperti. Nessuna partita completa o certificazione aggiuntiva è dichiarata.
