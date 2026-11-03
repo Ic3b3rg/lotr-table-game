@@ -5,11 +5,13 @@
   "schemaVersion": 13,
   "physicalVersion": 3,
   "tests": {
-    "passed": 480,
+    "passed": 482,
     "failed": 0,
     "skipped": 0,
     "baseline": 467,
-    "fullLogSha256": "7dc9fe043cf2b775df4e1c23556c6e277d848be2328aa05a0771fd415ed7e311"
+    "fullLogSha256": "1f211ea125fe0a2ef94e35296a642e1621dfbdf7673fec1f5d993a58aafe6c12",
+    "childImplementationPassed": 480,
+    "childFullLogSha256": "7dc9fe043cf2b775df4e1c23556c6e277d848be2328aa05a0771fd415ed7e311"
   },
   "evidence": {
     "directory": ".scratch/physical-p1b",
@@ -36,5 +38,19 @@
     "9c7ecb7110b6b6af3bbaf54ebddc3e8332e032f6e46c82fb6a9c4e05b0c7ba2a"
   ],
   "unfinishedIssues": [65, 33, 57],
-  "unverifiedPlatforms": ["phones", "LAN", "Windows", "Safari"]
+  "unverifiedPlatforms": ["phones", "LAN", "Windows", "Safari"],
+  "integration": {
+    "codeHead": "e40e1ac9a5d13c0d78ee9775969d039fbc1f5f2d",
+    "privateVerificationPath": ".scratch/physical-p1b-root-review/integration-verification.json",
+    "sha256": "971ef94087d35d1d270382ad1d37e03eb1cf8804e04b7845ad4f783ea3e96080",
+    "fullTestsLogSha256": "1f211ea125fe0a2ef94e35296a642e1621dfbdf7673fec1f5d993a58aafe6c12",
+    "standardsP1Corrected": 1,
+    "specP2Corrected": 1,
+    "regressionsRedThenGreen": 2,
+    "legacyCasesComparedWithHistoricalSources": 2,
+    "allRestoreGameplayFieldsCompared": true,
+    "fullFreezeUnchanged": true,
+    "originalManifestUnchanged": true,
+    "newBrowserRun": false
+  }
 }

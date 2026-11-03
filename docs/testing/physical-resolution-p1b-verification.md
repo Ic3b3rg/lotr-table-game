@@ -56,7 +56,7 @@ La sezione Scoperta è raggiungibile durante Riorganizzazione anche senza
 un reveal già aperto; una regressione DOM ha riprodotto e corretto la
 precedente sezione nascosta.
 
-**Verifica automatica finale: 480/480 test, zero skip**, baseline467 più13.
+**Verifica automatica finale: 482/482 test, zero skip**, baseline467 più15.
 `npm test`, `npm run typecheck`, `npm run format:check` e `git diff --check`
 passano. HTTP, SQLite e processi reali nei test di ciclo, recovery,
 transazione e Store. Coprono reazioni/costi/copie, quantità/facce/posizioni,
@@ -159,3 +159,30 @@ Telefoni, LAN, Windows e Safari non certificati. Port4339/PID12892 e la
 scratch browser del root non sono stati usati. Il root riceve commit
 locali, checkout pulito e processi/schede propri chiusi; nessuna issue è
 stata chiusa o aggiornata dall'implementer.
+
+## Integrazione root
+
+Le [review indipendenti](../reviews/2026-11-03-physical-resolution-p1b.md)
+riscontrano Standards1 P1 e Spec1 P2, corretti con due regressioni RED→GREEN.
+La nuova continuazione della capacità pagata non viene imposta ai run storici
+P1a: i nuovi run versione2 dichiarano la versione delle regole, quelli
+ordinari spaziali conservano il proprio formato3. I run precedenti senza
+marcatore mantengono il risultato pubblicato, anche durante una ripresa.
+Un confronto compilando in memoria il codice della base5cbf06a conferma due
+stati storici accettati e la continuazione pendente strutturalmente identica.
+Le nuove capacità mantengono il seguito dopo il costo.
+
+Il confine del ledger conserva inoltre il vincolo del handoff: il primo
+round è1 in Fase di Azione. Il validator usa il round iniziale conservato,
+non esenta il controllo quando esiste il ciclo. Una storia risignata con
+round999 e ricevute coerentemente alterate è ora rifiutata senza modificare
+il tavolo; i round successivi reali continuano a derivare dal replay.
+
+Il root ricontrolla161 hash/74.890.755byte, esegue il checker indipendente
+su copie proprie e riconvalida17 backup con il codice corretto. Il
+confronto aggiuntivo include tutti i campi di gameplay e le ricevute del
+restore, esclusi generation/revision/updatedAt previsti; il freeze completo
+resta invariato in tutti i backup. Sono prove sugli artefatti della QA già
+descritta, non una nuova sessione browser né un nuovo percorso originale.
+Le evidenze originali rimangono immutate. Suite finale root482/482,
+typecheck, formato e diff verdi;4339/PID12892 intatto. #65/#33/#57 aperte.
