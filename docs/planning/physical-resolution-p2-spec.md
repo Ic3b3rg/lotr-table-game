@@ -83,8 +83,10 @@ output e ricevute sono sempre confrontati.
   possedute da una proiezione separata, derivata dalle carte congelate; non
   inseriscono titoli nel catalogo iniziale. Lettore, preparazione, Scoperta
   e prova ordinaria condividono questa risoluzione. Il numero disponibile
-  segue le copie nelle vere zone, incluse le nuove carte, entro i budget
-  esistenti delle zone; non resta fissato alla composizione iniziale di15.
+  segue le copie nelle vere zone, inclusi titoli e debolezze aggiunte, entro
+  il budget30 già vigente per zone/rivelazioni; la riconciliazione delle
+  copie resta esatta e non usa un tetto basato sui soli titoli o sulle15
+  carte iniziali.
 - Fallimento: eroe sconfitto, figura rimossa, copie/risorse conservate;
   niente seconda prova dello sconfitto o suoi normali turni/azioni/bersagli.
   Con superstiti il padre può riprendere; al successivo inizio Ombra
