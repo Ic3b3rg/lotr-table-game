@@ -41,6 +41,8 @@ Facce e orientamenti sconosciuti rimangono espliciti e impediscono la validità 
 
 Rifiutare versioni/chiavi/tipi sconosciuti, ID e alias ambigui, riferimenti mancanti, copie duplicate/insufficienti, ordinali non contigui, numeri titolo duplicati, binding cross-card e stati di verifica incompatibili con dati o fonti. Stato verified richiede prove e dati completi; conflitti/unresolved devono avere motivo esplicito. Le famiglie indipendenti possono risultare complete anche in un diagnostico complessivo.
 
+`requirePhysicalFamily(value, family)` rende consumabile una singola famiglia completamente verificata anche se un'altra è irrisolta. Restituisce un output congelato `profile: "base-physical-family-v1"`, `status: "verified"`, con famiglia, sole carte/errata pertinenti e fonti dichiarate. Non è un input/certificato per il pack completo. La CLI accetta l'opzione facoltativa `--family damage|fear|boon|title`; una famiglia incompleta rifiuta la pubblicazione.
+
 Limiti pubblici: input CLI massimo 8 MiB; al massimo 100 definizioni, 200 copie, 128 fonti, 128 errata; massimo 16.384 caratteri per stringa, profondità 24 e 100.000 nodi prima della validazione di schema; array e sotto-oggetti bounded. Non interpretare URI come percorsi da leggere o URL da scaricare.
 
 ## CLI e I/O

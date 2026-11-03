@@ -36,3 +36,4 @@ Esecuzione inline nel solo checkout assegnato; niente subagenti. Specifica: [phy
 
 - Baseline verificata: `npm test`, 275/275; Node 24.11.1 e node_modules root riutilizzati con collegamento locale ignorato.
 - Decisione già autorizzata: specifica/piano non aprono una nuova richiesta di approvazione; l'implementazione procede integralmente come richiesto. I limiti di dati restano espliciti e non si aggirano con assunzioni.
+- Ruling: aggiungere export API/CLI della singola famiglia verificata, con profilo distinto — la ricerca lascia per ora aperta solo la ripartizione delle 15 copie beneficio; le altre famiglie devono restare consumabili autonomamente — costo se non necessario: una piccola superficie API documentata e testata. Nessuna quantità è assunta.
