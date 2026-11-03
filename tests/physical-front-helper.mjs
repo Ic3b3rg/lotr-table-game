@@ -4,18 +4,25 @@ import { readyPhysical, reachPhysical } from './physical-helper.mjs';
 import { inventedFrontInput, diagnosticRaw, hash } from './fixtures/physical-fronts.mjs';
 import { suffer } from './fixtures/physical-resolution.mjs';
 import { compilePhysicalFronts } from '../dist/physical-resolution-library.mjs';
-export async function readyFronts(t, edit = () => {}) {
-  const ready = await readyPhysical(t, (pack, pr) => {
-    pack.name = 'Prova sintetica P1 — fonte inventata, fronti verificati';
-    pack.manifest.scope = 'synthetic-physical-p1';
-    pr.profile = 'source-fronts-v1';
-    pr.initialCredits = [0, 0];
-    pr.darknessHeroes = [];
-    pr.limits = [0, 1].map(() => ({ kind: 'requires-capability', capability: 'source-derived' }));
-    pr.children = [{ ...suffer(0, 2, 0), face: 'faceup' }];
-    edit(pack, pr);
-    pack.definitions[0].states.at(-1).actions[0].origin.parameterHash = hash(pr);
-  });
+export async function readyFronts(t, edit = () => {}, catalogEdit = () => {}) {
+  const ready = await readyPhysical(
+    t,
+    (pack, pr) => {
+      pack.name = 'Prova sintetica P1 — fonte inventata, fronti verificati';
+      pack.manifest.scope = 'synthetic-physical-p1';
+      pr.profile = 'source-fronts-v1';
+      pr.initialCredits = [0, 0];
+      pr.darknessHeroes = [];
+      pr.limits = [0, 1].map(() => ({ kind: 'requires-capability', capability: 'source-derived' }));
+      pr.children = [{ ...suffer(0, 2, 0), face: 'faceup' }];
+      edit(pack, pr);
+      const action = pack.definitions[0].states
+        .flatMap((s) => s.actions)
+        .find((a) => a.op === 'physical' && a.program === pr);
+      action.origin.parameterHash = hash(pr);
+    },
+    catalogEdit,
+  );
   const raw = diagnosticRaw(),
     input = inventedFrontInput(raw);
   for (const d of input.definitions.filter((d) => d.cardId.includes('damage')))

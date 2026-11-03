@@ -18,6 +18,7 @@ import { validateScenarioBinding, type parseScenarioPack } from './pack';
 import { applyScouting } from '../server/scouting';
 import { applySkillTest } from '../server/skill-tests';
 import { skillTestView } from '../shared/skill-tests';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { newRound } from '../server/rounds';
 import { ApiError } from '../server/errors';
 import {
@@ -532,6 +533,7 @@ export function resumeScenario(
   state: State,
   playerId: string,
   command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
+  physicalPath?: string,
 ) {
   const sc = state.scenario,
     q = sc?.pending;
@@ -571,7 +573,7 @@ export function resumeScenario(
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
   if (q.kind === 'physical') {
-    answerScenarioPhysical(state, playerId, command);
+    answerScenarioPhysical(state, playerId, command, physicalPath);
   } else if (q.kind === 'scout' || q.kind === 'test') {
     const hero = state.preparation!.heroes.find((h) => h.heroId === q.heroId)!;
     if (q.kind === 'scout') {
@@ -638,7 +640,11 @@ export function resumeScenario(
         type: 'RESOLVE_SKILL_TEST',
         testId: state.skillTest!.id,
       });
-      const view = skillTestView(state.content, state.skillTest)!,
+      const view = skillTestView(
+          state.content,
+          state.skillTest,
+          physicalTitleSkills(state.physical),
+        )!,
         limit = state.content!.heroes.find((h) => h.id === hero.heroId)!.stats.inspiration;
       const reward = view.outcome === 'pass' && hero.inspiration < limit ? 1 : 0;
       hero.inspiration += reward;

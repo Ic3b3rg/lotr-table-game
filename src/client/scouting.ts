@@ -1,6 +1,6 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
-import { definitionId } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
 import { rallyScoutCount } from '../shared/rally-scout';
 import { refreshActions } from './actions';
 import { cardButton, type CardReader } from './cards';
@@ -35,8 +35,13 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   let proximityKey = '';
   let choices: Choice[] = [];
   const commands = createGameActions(() => current, sync, root, status, error, controls);
-  const label = (copy: string) =>
-    catalog!.skills.find((card) => card.id === definitionId(copy))!.name.text;
+  const skill = (copy: string) =>
+    findSkillCard(
+      catalog!,
+      copy,
+      current?.physical?.lastStand?.titles.map((t) => t.skill),
+    );
+  const label = (copy: string) => skill(copy)!.name.text;
   function options(select: HTMLSelectElement, copies: string[], empty: string) {
     const previous = select.value;
     select.replaceChildren(
@@ -158,7 +163,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
     );
     list.replaceChildren(
       ...choices.map((choice, index) => {
-        const card = catalog!.skills.find((entry) => entry.id === definitionId(choice.copy))!;
+        const card = skill(choice.copy)!;
         const row = text('li', '', 'scout-card');
         row.append(cardButton(card, (caller) => reader.card(card, caller)));
         if (!own) return row;

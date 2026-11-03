@@ -12,6 +12,7 @@ export function rallyScoutCount(
   if (heroId === ARAGORN_ID) return 3;
   const aragorn = journey?.heroes.find((hero) => hero.heroId === ARAGORN_ID);
   const hero = journey?.heroes.find((hero) => hero.heroId === heroId);
+  if (aragorn?.removed || hero?.removed) return 2;
   if (!journey || !aragorn || !hero) return null;
   return hero.spaceId === aragorn.spaceId ||
     adjacent(journey.definition, aragorn.spaceId, hero.spaceId)

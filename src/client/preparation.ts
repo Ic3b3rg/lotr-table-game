@@ -1,6 +1,7 @@
 import type { Catalog } from '../shared/catalog';
 import type { Player, Session } from '../shared/protocol';
 import { definitionId, rosterProblem } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 import { cardButton, picture, type CardReader } from './cards';
@@ -165,7 +166,11 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         ),
       );
       for (const copy of hero.prepared) {
-        const card = content.skills.find((entry) => entry.id === definitionId(copy));
+        const card = findSkillCard(
+          content,
+          copy,
+          current?.physical?.lastStand?.titles.map((t) => t.skill),
+        );
         if (card) prepared.append(cardButton(card, (button) => reader.card(card, button)));
       }
       const deck = document.createElement('details');
@@ -176,7 +181,11 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       );
       const list = document.createElement('ul');
       for (const copy of hero.composition.filter((value) => !hero.prepared.includes(value))) {
-        const card = content.skills.find((entry) => entry.id === definitionId(copy));
+        const card = findSkillCard(
+          content,
+          copy,
+          current?.physical?.lastStand?.titles.map((t) => t.skill),
+        );
         if (!card) continue;
         const row = document.createElement('li');
         const button = document.createElement('button');

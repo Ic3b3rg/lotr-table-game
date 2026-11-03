@@ -111,7 +111,7 @@ test('salvataggi e backup schema 2 migrano senza rimescolare o perdere la compag
   const migrated = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => migrated.stop());
   const state = await readSession(migrated);
-  assert.equal(state.schemaVersion, 13);
+  assert.equal(state.schemaVersion, 14);
   assert.equal(state.skillTest, null);
   assert.deepEqual((await readBackup(migrated)).payload.state.preparation, initialPreparation);
   assert.deepEqual((await readBackup(migrated)).payload.commands, backup.payload.commands);
@@ -164,6 +164,25 @@ test('copie rivelate o ispirazione incoerenti non sostituiscono il tavolo anche 
     assert.equal(response.status, 422);
     assert.deepEqual(await readSession(host), state);
   }
+  assert.equal(
+    (await command(host, player, { type: 'RESOLVE_SKILL_TEST', testId: state.skillTest.id }))
+      .status,
+    200,
+  );
+  const resolved = await readSession(host),
+    historical = await readBackup(host);
+  historical.payload.state.schemaVersion = 13;
+  historical.payload.state.skillTest.availableCount = 16;
+  signBackup(historical);
+  // Schema14's added-card budget must not loosen the published historical schema.
+  const response = await host.request('/api/restores', {
+    backup: historical,
+    generation: resolved.generation,
+    expectedRevision: resolved.revision,
+    confirmed: true,
+  });
+  assert.equal(response.status, 422);
+  assert.deepEqual(await readSession(host), resolved);
 });
 
 test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia', async (t) => {
@@ -190,7 +209,7 @@ test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia',
   });
   assert.equal(response.status, 200);
   const imported = await readSession(host);
-  assert.equal(imported.schemaVersion, 13);
+  assert.equal(imported.schemaVersion, 14);
   assert.equal(imported.preparation, null);
   assert.equal(imported.skillTest, null);
   assert.deepEqual(imported.catalog, current.catalog);
@@ -203,7 +222,7 @@ test('lo schema 2 del solo catalogo migra anche senza il campo della compagnia',
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 13);
+  assert.equal(migrated.schemaVersion, 14);
   assert.equal(migrated.preparation, null);
   assert.deepEqual(migrated.catalog, current.catalog);
   await recover(restarted, player);

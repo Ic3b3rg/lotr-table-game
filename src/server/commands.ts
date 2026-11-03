@@ -1,5 +1,7 @@
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { applyPhysicalCycle, isPhysicalCycle } from './physical-cycle';
+import { loadLastStandSource } from '../scenario/physical';
+import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Command } from '../shared/protocol';
 import { ApiError } from './errors';
@@ -16,6 +18,17 @@ export function performCommand(store: Store, playerId: string, command: Command)
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (
+      'heroId' in command &&
+      typeof command.heroId === 'string' &&
+      defeatedHeroes(state).includes(command.heroId) &&
+      command.type !== 'SCENARIO_INPUT'
+    )
+      throw new ApiError(
+        409,
+        'HERO_DEFEATED',
+        'Questo eroe è sconfitto e non può effettuare altre azioni.',
+      );
     if (command.type === 'GENERATE_ADVENTURE_MAP' || command.type === 'RESUME_ADVENTURE_MAP') {
       store.generator.apply(state, playerId, command);
       advance(state);
@@ -29,11 +42,18 @@ export function performCommand(store: Store, playerId: string, command: Command)
         store.scenarioPackPath,
         store.physicalPackPath,
       );
+      syncPhysicalDefeat(state);
       advance(state);
       return { requestId, type: command.type, appliedRevision: state.revision, ...result };
     }
     if (isPhysicalCycle(state, command)) {
-      const result = applyPhysicalCycle(state, playerId, command);
+      const lastStand =
+        command.type === 'CYCLE_INPUT' &&
+        command.input.kind === 'physical-continue-last-stand' &&
+        !state.physical!.lastStand
+          ? loadLastStandSource(store.physicalPackPath, state.physical!.raw)
+          : undefined;
+      const result = applyPhysicalCycle(state, playerId, command, lastStand);
       advance(state);
       return result;
     }

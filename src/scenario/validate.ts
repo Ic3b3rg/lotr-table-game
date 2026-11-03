@@ -7,7 +7,8 @@ import { validateSourceTasks } from './task-state';
 import type { State } from '../server/state';
 import type { Receipt } from '../shared/protocol';
 import type { ScenarioInstance, VariableRef } from '../shared/scenario';
-import { definitionId } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { parseScenarioPack, validateScenarioBinding } from './pack';
@@ -286,6 +287,9 @@ export function scenarioStateProblem(state: State): string | null {
         ...hero.deck,
         ...hero.discard,
         ...hero.prepared,
+        ...(state.physical?.snapshot.lastStand?.titles
+          .filter((t) => t.heroId === hero.heroId)
+          .map((t) => t.copy) ?? []),
         ...(state.physical?.snapshot.resolution?.revealed
           .filter((h) => h.heroId === hero.heroId)
           .flatMap((h) => h.cards) ?? []),
@@ -306,7 +310,7 @@ export function scenarioStateProblem(state: State): string | null {
         );
       else {
         const cards = c.revealed.map(
-          (copy) => state.content!.skills.find((s) => s.id === definitionId(copy))!,
+          (copy) => findSkillCard(state.content!, copy, physicalTitleSkills(state.physical))!,
         );
         const successes = cards.reduce((n, s) => n + s.success, c.converted),
           fate = cards.reduce((n, s) => n + s.fate, 0);

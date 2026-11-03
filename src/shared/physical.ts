@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ContentIdSchema } from './catalog';
+import { LastStandViewSchema } from './last-stand';
 
 export const PhysicalFamilySchema = z.enum(['damage', 'fear']);
 export const PhysicalCountsSchema = z.strictObject({
@@ -108,6 +109,10 @@ export const PhysicalProgramSchema = z.discriminatedUnion('profile', [
   FrontPhysicalProgramSchema,
 ]);
 export const PhysicalInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('physical-continue-last-stand'),
+    rules: z.literal('source-last-stand-v1'),
+  }),
   z.strictObject({ kind: z.literal('physical-choice'), option: z.string().min(1).max(200) }),
   z.strictObject({
     kind: z.literal('physical-select'),
@@ -178,6 +183,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
       'required-deck-empty',
       'weakness-deck-empty',
       'boon-quantity-unconfirmed',
+      'adventure-loss-consumer-unavailable',
     ]),
     remaining: PhysicalCountsSchema,
     family: PhysicalFamilySchema.nullable(),
@@ -221,6 +227,7 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  lastStand: LastStandViewSchema.optional(),
   cycle: z
     .strictObject({
       pending: z

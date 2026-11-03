@@ -23,7 +23,8 @@ export function scoutingProblem(
     return 'Scoperta richiede un eroe della compagnia preparata.';
   if (
     (scout.resetBefore && scout.count !== 2) ||
-    scout.revealed.length !== Math.min(scout.count, 15 - hero.prepared.length)
+    scout.revealed.length !==
+      Math.min(scout.count, hero.deck.length + hero.discard.length + scout.revealed.length)
   )
     return 'Il numero di carte scoperte non è coerente.';
   return null;

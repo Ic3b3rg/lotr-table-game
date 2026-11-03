@@ -15,6 +15,7 @@ import { journeyBudgetProblem, loadJourneyPlan } from './journey-map';
 import type { JourneyPlan } from '../shared/journey-map';
 import { preparationView } from '../shared/preparation';
 import { skillTestView } from '../shared/skill-tests';
+import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { BackupCommandSchema, checksum, type BackupPayload, type Restore } from './backup-format';
 export type { State } from './state';
 
@@ -51,7 +52,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 13,
+      schemaVersion: 14,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -383,7 +384,7 @@ export function publicSession(state: State) {
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
     physical: physicalView(state.physical),
-    skillTest: skillTestView(state.content, state.skillTest),
+    skillTest: skillTestView(state.content, state.skillTest, physicalTitleSkills(state.physical)),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
 }

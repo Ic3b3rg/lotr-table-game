@@ -65,7 +65,10 @@ export function createJourneyMap(sync: () => Promise<void>) {
     const journey = current.journey;
     const round = current.round;
     const pending = Boolean(
-      current.physical?.active || current.scout || current.skillTest?.status === 'converting',
+      current.physical?.active ||
+        current.physical?.lastStand?.terminal ||
+        current.scout ||
+        current.skillTest?.status === 'converting',
     );
     const active = current.preparation?.heroes.find((hero) => hero.heroId === round?.activeHeroId);
     const own = Boolean(active && active.playerId === player?.id && round?.phase === 'action');
@@ -277,7 +280,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
           ...(session.journey?.heroes ?? []).map((hero) =>
             text(
               'li',
-              `${catalog!.heroes.find((entry) => entry.id === hero.heroId)!.name.text} · ${session.journey!.definition.spaces.find((space) => space.id === hero.spaceId)!.label}`,
+              `${catalog!.heroes.find((entry) => entry.id === hero.heroId)!.name.text} · ${hero.removed ? 'Sconfitto · figura rimossa' : session.journey!.definition.spaces.find((space) => space.id === hero.spaceId)!.label}`,
             ),
           ),
         );

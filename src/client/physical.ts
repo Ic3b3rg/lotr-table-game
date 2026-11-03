@@ -5,9 +5,14 @@ import type { Player, Session } from '../shared/protocol';
 import { bindPhysicalAnswer, physicalAllocationProblem } from '../shared/physical-actions';
 import { refreshActions } from './actions';
 import { element, text } from './dom';
+import { STAT_LABELS } from '../shared/skill-tests';
+import { compileSourceText } from '../scenario/text';
+import { sourceText } from './source-text';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
+  'adventure-loss-consumer-unavailable':
+    'La Compagnia ha perso. La conseguenza finale è salvata; il seguito originale dell’avventura non è ancora disponibile.',
   'weakness-deck-empty':
     'La riserva comune delle debolezze è vuota. La continuazione resta salvata senza creare copie.',
   'boon-quantity-unconfirmed':
@@ -19,7 +24,7 @@ const gateMessages = {
   'effective-limits-unavailable':
     'Una capacità necessaria per determinare i limiti effettivi non è ancora disponibile. La conseguenza resta sospesa prima della pesca.',
   'last-stand-unavailable':
-    'È raggiunto un limite effettivo della prova sintetica. Occorre Ultimo Sforzo, ancora non disponibile; la fonte resta sospesa con tutte le carte salvate.',
+    'Questo salvataggio si è fermato a un limite effettivo con le regole precedenti. Continua Ultimo Sforzo per salvare la sua istruzione e iniziare la prova. Carte e costi precedenti restano conservati.',
 };
 
 export function createPhysicalControls(
@@ -45,9 +50,11 @@ export function createPhysicalControls(
       root.append(
         text(
           'p',
-          view.fronts
-            ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
-            : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
+          view.lastStand
+            ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+            : view.fronts
+              ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+              : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
           'physical-notice',
         ),
       );
@@ -61,6 +68,17 @@ export function createPhysicalControls(
       for (const h of view.heroes) {
         const row = text('li', '', 'physical-area');
         row.append(text('strong', name(h.heroId)));
+        const status = view.lastStand?.heroes.find((s) => s.heroId === h.heroId);
+        if (status)
+          row.append(
+            text(
+              'span',
+              status.defeated
+                ? 'Sconfitto · figura rimossa'
+                : `Prossimo Ultimo Sforzo: difficoltà ${status.difficulty}`,
+              'company-help',
+            ),
+          );
         row.append(
           text('span', `${h.facedown.damage} danni coperti`, 'physical-back damage-back'),
           text('span', `${h.facedown.fear} paure coperte`, 'physical-back fear-back'),
@@ -68,6 +86,99 @@ export function createPhysicalControls(
         areas.append(row);
       }
       root.append(areas);
+      if (view.lastStand) {
+        const lastStand = view.lastStand;
+        if (lastStand.terminal) {
+          const loss = text(
+            'p',
+            lastStand.terminal.timing === 'no-active-heroes'
+              ? 'Nessun eroe è rimasto attivo: la Compagnia ha perso. La perdita è salvata; il seguito dell’avventura non è ancora disponibile.'
+              : 'È iniziata la Fase di Ombra dopo una sconfitta: la Compagnia ha perso. La perdita è salvata; il seguito dell’avventura non è ancora disponibile.',
+            'physical-warning',
+          );
+          loss.setAttribute('role', 'status');
+          root.append(loss);
+        } else if (lastStand.lossAtNextShadow)
+          root.append(
+            text(
+              'p',
+              'Una sconfitta è registrata. Gli eroi rimasti possono ancora proseguire; all’inizio della prossima Fase di Ombra la Compagnia perderà.',
+              'physical-warning',
+            ),
+          );
+        for (const s of lastStand.selections.slice(-5)) {
+          const article = text('article', '', 'physical-last-stand');
+          article.append(
+            text(
+              'h4',
+              `Ultimo Sforzo ${s.family === 'damage' ? 'danni' : 'paure'} · ${name(s.heroId)}`,
+            ),
+          );
+          const instruction = text('p', '', 'physical-front-text');
+          instruction.append(sourceText(compileSourceText(s.instruction.replaceAll('\\n', '\n'))));
+          article.append(
+            instruction,
+            text(
+              'p',
+              `${STAT_LABELS[s.stat]} · difficoltà affrontata ${s.difficulty}`,
+              'physical-test-target',
+            ),
+          );
+          if (s.outcome) {
+            const outcome = text(
+              'p',
+              s.outcome === 'pass'
+                ? `Ultimo Sforzo superato con ${s.successes} successi. ${s.returned} carte coperte restituite; ${s.inspiration} ispirazione ottenuta. La fonte prosegue.`
+                : `Ultimo Sforzo fallito${s.forcedFailure ? ': le sole carte scoperte raggiungono un limite effettivo' : `: ${s.successes} successi`}. ${name(s.heroId)} è sconfitto.`,
+              'physical-outcome',
+            );
+            outcome.setAttribute('role', 'status');
+            article.append(outcome);
+          }
+          root.append(article);
+        }
+        if (lastStand.test) {
+          const test = lastStand.test,
+            list = document.createElement('ul');
+          list.className = 'physical-test-cards';
+          for (const c of test.cards)
+            list.append(text('li', `${c.name} · ${c.success} successi · ${c.fate} fati`));
+          const status = text(
+            'p',
+            `${test.successes} successi · ${test.fateRemaining} fati disponibili · difficoltà ${test.difficulty}`,
+            'physical-test-total',
+          );
+          status.setAttribute('role', 'status');
+          root.append(list, status);
+          if (test.forcedFailure)
+            root.append(
+              text(
+                'p',
+                'Le sole carte scoperte raggiungono un limite effettivo: questa prova non può essere superata. I successi non annullano il divieto.',
+                'physical-warning',
+              ),
+            );
+        }
+        for (const t of lastStand.titles) {
+          const article = text('article', '', 'physical-title');
+          article.append(
+            text('h4', `${t.name} · ${name(t.heroId)}`),
+            text('p', t.text, 'physical-front-text'),
+            text(
+              'p',
+              t.removed
+                ? 'Rimosso dall’avventura · proprietà conservata per la campagna'
+                : t.pending
+                  ? 'Titolo ottenuto · completa il limite delle carte preparate'
+                  : t.prepared
+                    ? 'Preparato · si usa soltanto nella sua finestra e pagando il suo costo'
+                    : 'Proprietà conservata · abilità non preparata',
+              'company-help',
+            ),
+          );
+          root.append(article);
+        }
+      }
       for (const front of view.fronts ?? []) {
         const article = text('article', '', 'physical-front');
         article.append(
@@ -110,6 +221,30 @@ export function createPhysicalControls(
         );
         if (active.kind === 'gate') {
           root.append(text('p', gateMessages[active.reason], 'company-help'));
+          if (
+            active.reason === 'last-stand-unavailable' &&
+            view.fronts &&
+            player?.id === active.actorPlayerId
+          ) {
+            const button = text(
+              'button',
+              'Continua Ultimo Sforzo',
+              'company-action',
+            ) as HTMLButtonElement;
+            button.type = 'button';
+            button.id = 'physical-continue-last-stand';
+            button.dataset.write = '';
+            button.onclick = () => {
+              if (current)
+                submit(
+                  bindPhysicalDecision(current, {
+                    kind: 'physical-continue-last-stand',
+                    rules: 'source-last-stand-v1',
+                  }),
+                );
+            };
+            root.append(button);
+          }
           if (active.reason === 'required-deck-empty')
             root.append(
               text(

@@ -3,6 +3,8 @@ import type { Receipt } from '../shared/protocol';
 import { adjacent } from '../shared/journey-map';
 import { invariant } from '../map-freeze/validate';
 import { validateCycleReceipts } from '../server/physical-cycle';
+import { defeatedHeroes } from '../server/physical-defeat';
+import { replayPhysical } from '../physical-resolution/runtime';
 export function validateSourcePlayReceipts(
   state: State,
   commands: { playerId: string; requestId: string; receipt: Receipt }[],
@@ -14,6 +16,10 @@ export function validateSourcePlayReceipts(
     previous.round = seed.round;
     previous.journey = seed.journey;
     delete previous.physical!.cycle;
+    previous.physical!.runs = previous.physical!.runs.filter(
+      (r) => r.source.instanceId !== 'ordinary-cycle',
+    );
+    previous.physical!.snapshot = replayPhysical(previous.physical!);
     validateSourcePlayReceipts(
       previous,
       commands.filter((c) => c.receipt.appliedRevision <= seed.revision),
@@ -120,7 +126,9 @@ export function validateSourcePlayReceipts(
     for (const h of round.heroes) {
       const p = progress.get(h.heroId)!;
       invariant(
-        p.actions === h.actionsUsed && p.ended === h.turnEnded && !h.rallyDone,
+        p.actions === h.actionsUsed &&
+          (p.ended || defeatedHeroes(state).includes(h.heroId)) === h.turnEnded &&
+          !h.rallyDone,
         'Budget/progressi non coerenti con le ricevute.',
       );
     }

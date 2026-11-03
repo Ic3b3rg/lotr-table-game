@@ -103,7 +103,7 @@ export function applyScenario(
       }
     }
     beginScenario(state, parsed, physical);
-  } else resumeScenario(state, playerId, command);
+  } else resumeScenario(state, playerId, command, physicalPath);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
   const kind = command.type === 'START_SCENARIO' ? 'start' : command.input.kind;

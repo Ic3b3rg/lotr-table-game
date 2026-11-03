@@ -205,7 +205,8 @@ export function createMapBoard(select: (id: string) => void) {
       for (const hero of heroes) {
         const space = map.spaces.find((entry) => entry.id === hero.spaceId)!;
         const actor = actors.get(hero.heroId)!;
-        const together = heroes.filter((entry) => entry.spaceId === hero.spaceId);
+        actor.hidden = !!hero.removed;
+        const together = heroes.filter((entry) => !entry.removed && entry.spaceId === hero.spaceId);
         const offset =
           (together.findIndex((entry) => entry.heroId === hero.heroId) -
             (together.length - 1) / 2) *

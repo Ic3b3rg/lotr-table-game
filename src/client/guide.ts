@@ -5,7 +5,7 @@ import { element, text } from './dom';
 const TOPICS = [
   {
     id: 'physical',
-    title: 'Danni e paure: fronti, scelte e ripresa',
+    title: 'Danni, paure e Ultimo Sforzo: scelte e ripresa',
     target: '#scenario',
     action: 'Torna alla conseguenza',
     paragraphs: [
@@ -16,6 +16,8 @@ const TOPICS = [
       'Ogni decisione salva carte, costo e passo successivo insieme. Reload, riavvio e ripristino conservano la stessa casualità e la stessa richiesta. Un mazzo realmente vuoto o una capacità ancora non eseguibile sospende la conseguenza con un motivo preciso.',
       'Fine turno risolve prima i fronti e il Riposo confermato disponibile: il turno resta aperto durante tutti i figli. Riposo scarta la preparata come costo e fino alla quantità indicata di propri danni o paure coperti, anche misti. Lo scarto imposto da un altro effetto non attiva Riposo. Le reazioni dopo Riposo seguono prima del completamento.',
       'Il viaggio mostra il budget effettivo di ciascuna azione e conserva separatamente i movimenti residui. Le passive cessano quando la carta cambia faccia o zona. Riorganizzazione ricompone i mazzi una volta e risolve Scoperta, vincoli di cima e trigger delle carte prima del nuovo round. Vicino segue il grafo della mappa; Protezione richiede la stessa casella.',
+      'Ultimo Sforzo si verifica dopo tutte le carte della fonte. Se entrambi i limiti sono raggiunti scegli l’ordine; la difficoltà è una sola per eroe e aumenta dopo ogni successo, anche cambiando tipo. L’istruzione resta la stessa dopo reload. Rivela le vere carte abilità e scegli costi e conversioni disponibili: il PC calcola l’esito. Se le sole scoperte raggiungono un limite, nessun numero di successi permette di superarlo.',
+      'Un successo restituisce tutte le coperte del tipo e concede ispirazione entro il limite. I titoli ottenuti si preparano subito, completando l’eventuale scarto per il limite quattro. La proprietà resta distinta dall’abilità preparata o rimossa. Un uso che richiede benefici ancora non disponibili si ferma prima di spendere carte o applicare effetti. Uno sconfitto conserva i suoi componenti, perde la figura e non compie altre azioni; gli eroi rimasti possono proseguire fino all’inizio Ombra. Senza superstiti la perdita è immediata.',
       'Il backup completo è una copia privata per il recupero: include identità e ordine delle carte nascoste. Chi apre quel file o il database del PC può leggerli. Conservalo come materiale amministrativo, separato dalla normale vista di gioco.',
     ],
   },
