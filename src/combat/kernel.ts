@@ -4,6 +4,7 @@ import { digest } from '../map-freeze/hash';
 import { bounded, check, unique } from './model';
 import { verifyCombatArtifact, type CombatArtifact } from './compiler';
 import { planAttack, applyPlan, applyExternal, provoke } from './attack';
+import { createFigures } from './figures';
 import {
   SeedSchema,
   CommandSchema,
@@ -93,12 +94,7 @@ function spawn(
       logic: structuredClone(recipe.logic),
       exhausted: false,
       status: 'in-play',
-      figures: Array.from({ length: recipe.size }, (_, n) => ({
-        id: `${seed.id}/figure/${n}`,
-        health,
-        armor,
-        sorcery,
-      })),
+      figures: createFigures(seed.id, recipe.size, { health, armor, sorcery }),
     };
   }
   return {
