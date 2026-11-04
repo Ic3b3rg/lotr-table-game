@@ -32,12 +32,21 @@ Le continuazioni durevoli sospendono l'Ombra su ogni messaggio/piazzamento
 fonte, conservano causa e ritorno e riprendono la stessa entry/azione.
 Sapienza all'entry una volta, nessuna ispirazione da sconfitta per la fuga;
 annuncio con inserto letterale e obiettivo persistito con binding globale
-rimangono distinti. L'obiettivo è consultabile. L'ordine delle tessere usa
+rimangono distinti. L'obiettivo risolve i binding all'entry e resta consultabile. L'ordine delle tessere usa
 ConnectedSpaces fonte e gli scambi piccoli di mscorlib, con pose congelate.
 Rivelazione e piazzamento non esplorano né abilitano nuove interazioni.
 
+La soglia richiede una prova collettiva reale prima dello spawn: ogni
+proprietario rivela e risolve le proprie carte, con conseguenze coperte sui
+fallimenti. Il consumer P1/P2 mantiene prevenzioni, esiti e ritorno al padre.
+SetSectionVisibility presenta anche il popup separato dei segnalini
+esplorazione dopo tutte le tessere (A060038ac).
+
 Il preflight attraversa su copia l'intero seguito prima di tick, premio,
-pesca o minaccia; le conferme simulate sono soltanto controllo di closure.
+pesca o minaccia; le conferme sulla copia sono soltanto controllo di closure. Le prove
+fisiche non vengono simulate: per le prove che tornano allo stesso seguito
+in entrambi gli esiti, controlla strutturalmente il programma e P1/P2, poi
+attraversa soltanto la continuazione non fisica della copia.
 Verifica tutti i receiver, le soglie attraversate e il pool completo degli
 spawn, senza scegliere o eliminare candidati per evitare dipendenze.
 La prima soglia è posseduta da R27941/R20900; registrazione successiva da
