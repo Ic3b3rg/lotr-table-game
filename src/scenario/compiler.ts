@@ -48,11 +48,18 @@ const CompilationSchema = z.strictObject({
   certificates: z.array(certificate).min(1).max(600),
   roundsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   followupCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  shadowCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.combat?.source.shadow
+      ? input.shadowCertificate?.instructionHash === digest(pack.manifest.combat.source.shadow)
+      : !input.shadowCertificate,
+    'Attivazioni non attestate o introdotte fuori dal freeze.',
+  );
   invariant(
     pack.manifest.followup
       ? input.followupCertificate?.instructionHash === digest(pack.manifest.followup)

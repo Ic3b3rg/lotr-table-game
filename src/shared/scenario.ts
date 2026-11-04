@@ -32,6 +32,7 @@ export const SourceTextSchema = z
           'inspiration',
           'action',
           'attack',
+          'ranged',
           'damage',
           'fear',
           'lore',
@@ -463,6 +464,37 @@ const taskBase = {
   entry: z.int().nonnegative(),
   action: z.int().nonnegative(),
 };
+const ExplorationAttemptFields = {
+  id: z.uuid(),
+  instanceId: z.string().max(200),
+  tileSource: SourceSchema,
+  heroId: ContentIdSchema,
+  playerId: z.uuid(),
+  roundId: z.uuid(),
+  requestId: z.string().min(24).max(80),
+  fromSpaceId: z.string().max(100),
+  destinationSpaceId: z.string().max(100),
+  movesRemaining: z.int().min(0).max(4),
+  movementCost: z.literal(1),
+  actionCost: z.literal(0),
+  entropy: HashSchema,
+  intro: z.int().nonnegative().max(99),
+  reward: z.int().min(0).max(1),
+  returned: z.boolean(),
+};
+const TurnExplorationAttemptSchema = z.strictObject({
+  ...ExplorationAttemptFields,
+  turnId: z.uuid(),
+});
+const ShadowExplorationAttemptSchema = z.strictObject({
+  ...ExplorationAttemptFields,
+  turnId: z.null(),
+  shadowOrigin: z.strictObject({
+    version: z.literal('source-shadow-exploration-v1'),
+    frameId: z.uuid(),
+    attemptId: z.uuid(),
+  }),
+});
 export const ScenarioSchema = z.strictObject({
   rounds: SourceRoundStateSchema.optional(),
   enemies: DeploymentStateSchema.optional(),
@@ -475,27 +507,7 @@ export const ScenarioSchema = z.strictObject({
       version: z.literal('source-exploration-v1'),
       active: z.uuid().nullable(),
       attempts: z
-        .array(
-          z.strictObject({
-            id: z.uuid(),
-            instanceId: z.string().max(200),
-            tileSource: SourceSchema,
-            heroId: ContentIdSchema,
-            playerId: z.uuid(),
-            roundId: z.uuid(),
-            turnId: z.uuid(),
-            requestId: z.string().min(24).max(80),
-            fromSpaceId: z.string().max(100),
-            destinationSpaceId: z.string().max(100),
-            movesRemaining: z.int().min(0).max(4),
-            movementCost: z.literal(1),
-            actionCost: z.literal(0),
-            entropy: HashSchema,
-            intro: z.int().nonnegative().max(99),
-            reward: z.int().min(0).max(1),
-            returned: z.boolean(),
-          }),
-        )
+        .array(z.union([TurnExplorationAttemptSchema, ShadowExplorationAttemptSchema]))
         .max(200),
     })
     .optional(),
@@ -660,6 +672,40 @@ export const ScenarioSchema = z.strictObject({
   handoffCount: z.int().min(0).max(1),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
+const publicExplorations = ScenarioSchema.shape.explorations.unwrap();
+export const ScenarioViewSchema = ScenarioSchema.extend({
+  enemies: DeploymentStateSchema.omit({ entropy: true }).optional(),
+  explorations: publicExplorations
+    .extend({
+      attempts: z
+        .array(
+          z.union([
+            TurnExplorationAttemptSchema.omit({ entropy: true }),
+            ShadowExplorationAttemptSchema.omit({ entropy: true }),
+          ]),
+        )
+        .max(200),
+    })
+    .optional(),
+});
+export type ScenarioView = z.infer<typeof ScenarioViewSchema>;
+export function scenarioView(sc: Scenario | null): ScenarioView | null {
+  if (!sc) return null;
+  const { enemies, explorations, ...visible } = sc;
+  const publicEnemies = enemies ? (({ entropy: _entropy, ...rest }) => rest)(enemies) : null;
+  return {
+    ...visible,
+    ...(publicEnemies ? { enemies: publicEnemies } : {}),
+    ...(explorations
+      ? {
+          explorations: {
+            ...explorations,
+            attempts: explorations.attempts.map(({ entropy: _entropy, ...attempt }) => attempt),
+          },
+        }
+      : {}),
+  };
+}
 export type ScenarioInstance = z.infer<typeof ScenarioInstanceSchema>;
 export type ScenarioRequest = z.infer<typeof ScenarioRequestSchema>;
 export const ScenarioOfferSchema = z.strictObject({

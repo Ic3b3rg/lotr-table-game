@@ -6,6 +6,7 @@ import { invariant } from '../map-freeze/validate';
 import { validateSourceHandler } from './handlers';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { verifyCombatClosure } from '../combat/compiler';
+import { validateShadowCapability } from './shadow-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -111,6 +112,7 @@ export function parseScenarioPack(raw: unknown) {
   if (pack.manifest.combat) {
     const combat = verifyCombatClosure(pack.manifest.combat);
     invariant(original && followup && rounds, 'Combattimento senza capacità originale precedente.');
+    validateShadowCapability(pack, combat);
     const deployment = verifySourceDeployment(followup.deployment);
     invariant(
       combat.source.deploymentFingerprint === deployment.fingerprint &&

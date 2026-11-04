@@ -1,4 +1,4 @@
-import { ScenarioSchema, EncounterIntentSchema } from './scenario';
+import { ScenarioViewSchema, EncounterIntentSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
@@ -60,7 +60,7 @@ export const SessionSchema = z.strictObject({
   journey: JourneySchema.nullable(),
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
-  scenario: ScenarioSchema.nullable().default(null),
+  scenario: ScenarioViewSchema.nullable().default(null),
   combat: CombatViewSchema.optional(),
   encounterFingerprints: z.record(z.string().max(200), HashSchema).default({}),
   explorationFingerprints: z.record(z.string().max(100), HashSchema).default({}),

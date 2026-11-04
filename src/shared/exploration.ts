@@ -1,5 +1,9 @@
 import type { Scenario, ScenarioDefinition } from './scenario';
 import type { Projection } from './generated-map';
+type ExplorationContext = Pick<
+  Scenario,
+  'pack' | 'id' | 'packFingerprint' | 'projectionFingerprint' | 'tiles'
+>;
 
 // A compiled handler alone is insufficient: a deferred continuation may omit
 // the release. Prove every supported settling path before spending movement.
@@ -69,7 +73,11 @@ function processingCloses(d: ScenarioDefinition, event: string): boolean {
 }
 
 /** Capability is per tile and reveal closure; it never grants encounter interaction. */
-export function explorationProblem(sc: Scenario, p: Projection, tileSource: string): string | null {
+export function explorationProblem(
+  sc: ExplorationContext,
+  p: Projection,
+  tileSource: string,
+): string | null {
   const capability = sc.pack.manifest.exploration;
   if (!capability?.tiles.some((t) => t.source === tileSource))
     return 'Questa tessera richiede effetti di esplorazione ancora in sviluppo.';
@@ -87,14 +95,14 @@ export function explorationProblem(sc: Scenario, p: Projection, tileSource: stri
   return null;
 }
 
-export function explorationConfirmation(sc: Scenario) {
+export function explorationConfirmation(sc: ExplorationContext) {
   const d = sc.pack.definitions.find((d) => d.source === sc.pack.manifest.exploration?.definition);
   return d?.states
     .find((s) => s.index === d.handlers['NODE CLICKED'])
     ?.actions.find((a) => a.op === 'confirm');
 }
 
-export function explorationSource(sc: Scenario, tileSource: string) {
+export function explorationSource(sc: ExplorationContext, tileSource: string) {
   return {
     scenarioId: sc.id,
     packFingerprint: sc.packFingerprint,

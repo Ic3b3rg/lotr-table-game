@@ -8,6 +8,7 @@ const icons: Record<string, Extract<SourceText[number], { kind: 'icon' }>['name'
   '\uf475': 'action',
   '\uf469': 'damage',
   '\uf468': 'fear',
+  '\uf471': 'ranged',
 };
 /** Source markup is parsed into data. No HTML is ever evaluated or inserted. */
 export function compileSourceText(value: string): SourceText {

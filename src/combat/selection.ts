@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import { digest } from '../map-freeze/hash';
-import { check } from './model';
+import { bounded, check } from './model';
+import { z } from 'zod';
+import { ContentIdSchema } from '../shared/catalog';
+import { HashSchema } from '../shared/generated-map';
+import { CombatStreamsSchema } from '../shared/combat';
 import type { CombatArtifact } from './compiler';
 import type { CombatSeed, KernelState, EnemySelection } from './kernel-model';
 
@@ -72,9 +76,11 @@ function groupIndex(
   check(length > 0 && length <= 1000, 'Popolazione RNG invalida.');
   const bound = 0x100000000 - (0x100000000 % length);
   for (let n = 0; n < 128; n++) {
-    check(streams[stream] < 1000000, 'Budget casualità superato.');
+    const cursor = streams[stream];
+    check(cursor !== undefined && cursor < 1000000, 'Budget casualità superato.');
+    streams[stream] = cursor + 1;
     const word = createHash('sha256')
-      .update(`combat-group-v1:${stream}:${entropy}:${streams[stream]++}`)
+      .update(`combat-group-v1:${stream}:${entropy}:${cursor}`)
       .digest()
       .readUInt32BE(0);
     if (word < bound) return word % length;
@@ -108,11 +114,33 @@ export function selectGroupInstruction(
     index,
   };
 }
+export function selectActivationHero(
+  population: string[],
+  entropy: string,
+  streams: CombatStreams,
+) {
+  bounded({ population, entropy, streams });
+  CombatStreamsSchema.parse(streams);
+  z.array(ContentIdSchema).min(1).max(5).parse(population);
+  HashSchema.parse(entropy);
+  check(new Set(population).size === population.length, 'Eroi attivi duplicati.');
+  check(streams.target !== undefined, 'Stream bersaglio non congelato.');
+  const cursorBefore = streams.target;
+  const index = groupIndex(entropy, streams, 'target', population.length);
+  return {
+    algorithm: 'combat-target-sha256-rejection-v1' as const,
+    population: [...population],
+    heroId: population[index]!,
+    index,
+    cursorBefore,
+    cursorAfter: streams.target!,
+  };
+}
 export function groupAttackPacket(
   a: CombatClosure,
   group: DeployedGroup,
   selection: InstructionSelection,
-  cause: 'counterattack' | 'provocation',
+  cause: 'counterattack' | 'provocation' | 'activation',
   entropy: string,
   streams: CombatStreams,
 ) {
@@ -133,7 +161,7 @@ export function groupAttackPacket(
   let fear = (row?.fear ?? 0) + bonuses.reduce((n, b) => n + b.fear, 0);
   const offered = { damage, fear };
   const reductions: { family: 'damage' | 'fear'; cursorBefore: number; cursorAfter: number }[] = [];
-  if (cause === 'counterattack' && elite)
+  if (cause === 'activation' || (cause === 'counterattack' && elite))
     for (let n = 0; n < (group.attackReduction ?? 0) && damage + fear > 1; n++) {
       const cursorBefore = streams.reduction;
       const family =

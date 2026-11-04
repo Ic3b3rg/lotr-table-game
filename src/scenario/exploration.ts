@@ -11,10 +11,47 @@ import { applyGrantedMove, applyJourneyCommand } from '../server/journey-map';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { ApiError } from '../server/errors';
 
+export type ExplorationCommand = Omit<Extract<Command, { type: 'EXPLORE_SCENARIO' }>, 'turnId'> & {
+  turnId: string | null;
+};
+
+function explorationContext(state: State, c: ExplorationCommand, grantId?: string) {
+  if (c.turnId !== null) return { turnId: c.turnId };
+  const sc = state.scenario!,
+    cs = state.combat;
+  invariant(
+    grantId &&
+      cs?.active === grantId &&
+      sc.pack.manifest.combat?.source.shadow &&
+      state.round?.phase === 'shadow' &&
+      state.round.id === c.roundId,
+    'Esplorazione senza turno o attivazione fonte.',
+  );
+  let attempt = cs.attempts.find((a) => a.id === grantId);
+  const seen = new Set<string>();
+  while (attempt?.parentId) {
+    invariant(!seen.has(attempt.id), 'Origine ciclica del movimento.');
+    seen.add(attempt.id);
+    attempt = cs.attempts.find((a) => a.id === attempt!.parentId);
+  }
+  const frameId = attempt?.activation?.frameId;
+  invariant(
+    attempt?.kind === 'activation' &&
+      frameId &&
+      sc.rounds?.active === frameId &&
+      sc.rounds.frames.some((f) => f.id === frameId && f.stage === 'enemies'),
+    'Movimento estraneo alla fase nemica corrente.',
+  );
+  return {
+    turnId: null,
+    shadowOrigin: { version: 'source-shadow-exploration-v1' as const, frameId, attemptId: grantId },
+  };
+}
+
 export function prepareExploration(
   state: State,
   playerId: string,
-  c: Extract<Command, { type: 'EXPLORE_SCENARIO' }>,
+  c: ExplorationCommand,
   entropy: string,
   grantId?: string,
 ): ScenarioInstance {
@@ -55,9 +92,13 @@ export function prepareExploration(
   )
     fail('SCENARIO_PENDING', 'Concludi la richiesta corrente prima di esplorare.');
   if (defeatedHeroes(state).includes(c.heroId)) fail('HERO_DEFEATED', 'Questo eroe è sconfitto.');
+  const context = explorationContext(state, c, grantId);
   // The existing journey interface owns position, adjacency, player, turn and budget checks.
   if (grantId) applyGrantedMove(state, grantId, c.heroId, c.fromSpaceId, c.destinationSpaceId);
-  else applyJourneyCommand(state, playerId, { ...c, type: 'MOVE_HERO' }, null);
+  else {
+    invariant(c.turnId !== null, 'Esplorazione ordinaria senza turno.');
+    applyJourneyCommand(state, playerId, { ...c, turnId: c.turnId, type: 'MOVE_HERO' }, null);
+  }
   const d = sc.pack.definitions.find((d) => d.source === sc.pack.manifest.exploration!.definition)!;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId, kind: 'exploration' });
   const instance: ScenarioInstance = {
@@ -88,7 +129,7 @@ export function prepareExploration(
     heroId: c.heroId,
     playerId,
     roundId: c.roundId,
-    turnId: c.turnId,
+    ...context,
     requestId: c.requestId,
     fromSpaceId: c.fromSpaceId,
     destinationSpaceId: c.destinationSpaceId,

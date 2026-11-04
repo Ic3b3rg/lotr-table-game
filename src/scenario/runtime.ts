@@ -1,6 +1,6 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
 import { objectiveText } from './objective';
-import { prepareExploration, rewardExploration } from './exploration';
+import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
@@ -1237,7 +1237,7 @@ export function resumeScenario(
 export function exploreScenario(
   state: State,
   playerId: string,
-  c: Extract<Command, { type: 'EXPLORE_SCENARIO' }>,
+  c: ExplorationCommand,
   entropy: string,
   grantId?: string,
 ) {

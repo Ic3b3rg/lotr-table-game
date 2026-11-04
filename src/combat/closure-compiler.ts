@@ -20,6 +20,30 @@ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 export function compileCombatClosure(raw: unknown) {
   bounded(raw);
   const source = CombatClosureSourceSchema.parse(raw);
+  if (source.shadow) {
+    unique(
+      source.shadow.instructions.map((i) => i.source),
+      'Policy attivazione',
+    );
+    unique(
+      source.shadow.terrain.tiles.map((t) => t.source),
+      'Terreno attivazione',
+    );
+    unique(
+      source.shadow.thresholds.map((t) => t.source),
+      'Soglia attivazione',
+    );
+    check(
+      source.shadow.companyFingerprint ===
+        digest({
+          items: source.items,
+          definitions: source.definitions,
+          clauses: source.clauses,
+          heroes: source.heroes,
+        }),
+      'Compagnia attivazioni alterata.',
+    );
+  }
   unique(source.models, 'Modello combattimento');
   unique(
     source.assets.map((a) => a.source),
@@ -119,6 +143,22 @@ export function compileCombatClosure(raw: unknown) {
       check(typeof extra === 'string', 'Chiave aggiunta assente.');
       const addition = extra ? source.additions.find((a) => a.key === extra) : null;
       check(!extra || addition, 'Aggiunta non compilata.');
+      const policy = source.shadow?.instructions.find((p) => p.source === refI);
+      check(!source.shadow || policy, 'Policy attivazione mancante.');
+      const activation = policy
+        ? {
+            ...policy,
+            primary: text(i.KeyActivation),
+            alternative: text(i.KeyAltActivation),
+            interrupted: text(i.KeyInterruptActivation),
+            randomHero: text(i.KeyActivation).value.includes('{0}'),
+          }
+        : null;
+      if (activation)
+        check(
+          !activation.interrupted.value.includes('{0}'),
+          'Ripresa con nuovo bersaglio casuale non supportata.',
+        );
       return {
         source: refI,
         order,
@@ -129,6 +169,7 @@ export function compileCombatClosure(raw: unknown) {
         text: flavor,
         addition: addition ?? null,
         dataHash: asset(refI, 'EnemyActivationModel').dataHash,
+        ...(activation ? { activation } : {}),
       };
     });
     check(instructions.length > 0, 'Pool vuoto.');
@@ -152,6 +193,12 @@ export function compileCombatClosure(raw: unknown) {
       special,
     };
   });
+  if (source.shadow)
+    check(
+      digest(source.shadow.instructions.map((i) => i.source).sort()) ===
+        digest([...instructionRefs].sort()),
+      'Closure attivazioni incompleta o estranea.',
+    );
   const bonuses = bonusRefs.map((ref) => {
     const d = asset(ref, 'EnemyBonusModel').data;
     const mask = integer(d.BlocksModifiers, 'Immunità modificatori', 0, 63);

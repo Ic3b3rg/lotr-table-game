@@ -1,4 +1,5 @@
 import { combatView } from '../combat/controller';
+import { scenarioView } from '../shared/scenario';
 import { scenarioReceiptProblem } from '../scenario/validate';
 import { explorationProblem, explorationSource } from '../shared/exploration';
 import { digest } from '../map-freeze/hash';
@@ -387,7 +388,7 @@ export function publicSession(state: State) {
     journey: state.journey,
     group: state.group,
     mapGeneration: state.mapGeneration,
-    scenario: state.scenario,
+    scenario: scenarioView(state.scenario),
     ...(state.combat ? { combat: combatView(state) } : {}),
     encounterFingerprints: Object.fromEntries(
       (state.scenario?.instances ?? [])

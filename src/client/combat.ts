@@ -31,20 +31,21 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
       const nextKey = `${session.generation}:${player?.id}:${JSON.stringify(view)}:${session.round?.heroes.map((h) => h.actionsUsed)}`;
       if (key === nextKey) return;
       key = nextKey;
+      const hadFocus = body.contains(document.activeElement);
       body.replaceChildren();
       commands.clear();
       const active = view.current,
         q = view.pending;
       const actor = q?.actorPlayerId ?? session.physical?.active?.actorPlayerId;
       status.textContent = active
-        ? `${name(active.heroId)} · ${active.kind === 'provocation' ? 'Provocazione' : 'Attacco'} contro ${active.name}. ${actor ? `Agisce ${session.players.find((p) => p.id === actor)?.name ?? 'il proprietario indicato'}.` : ''} ${active.returnLabel}`
+        ? `${active.kind === 'activation' ? `${active.name} si attiva · ${active.activation?.recipientHeroId ? 'destinatario' : 'destinatario iniziale'} ${name(active.heroId)}` : `${name(active.heroId)} · ${active.kind === 'provocation' ? 'Provocazione' : 'Attacco'} contro ${active.name}`}. ${actor ? `Agisce ${session.players.find((p) => p.id === actor)?.name ?? 'il proprietario indicato'}.` : ''} ${active.returnLabel}`
         : view.last
-          ? `${view.last.kind === 'provocation' ? 'Provocazione' : 'Attacco'} di ${name(view.last.heroId)} completato${view.last.hits === null ? '' : `: ${view.last.hits} colpi`}. ${view.last.returnLabel}`
+          ? `${view.last.kind === 'activation' ? `Attivazione di ${view.last.name} completata` : `${view.last.kind === 'provocation' ? 'Provocazione' : 'Attacco'} di ${name(view.last.heroId)} completato`}${view.last.hits === null ? '' : `: ${view.last.hits} colpi`}. ${view.last.returnLabel}`
           : 'Scegli bersaglio e armi, controlla gli slot, poi conferma. Le scelte prima della conferma sono gratuite.';
       if (active) {
         const heading = text(
           'h4',
-          `${active.kind === 'provocation' ? 'Rispondi alla provocazione' : 'Attacco in corso'} · ${active.name}`,
+          `${active.kind === 'activation' ? 'Attivazione nemica' : active.kind === 'provocation' ? 'Rispondi alla provocazione' : 'Attacco in corso'} · ${active.name}`,
         );
         body.append(heading);
         if (active.instruction) {
@@ -52,6 +53,14 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
           p.append(sourceText(compileSourceText(active.instruction.replaceAll('\\n', '\n'))));
           body.append(p);
         }
+        if (active.activation?.branch)
+          body.append(
+            text(
+              'p',
+              `${active.activation.branch === 'alternative' ? 'Istruzione alternativa' : 'Attacco primario'} · ${active.activation.movesRemaining} movimenti rimasti.`,
+              'combat-summary',
+            ),
+          );
         if (active.packet)
           body.append(
             text(
@@ -110,6 +119,7 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
             fields.append(b);
           }
           body.append(fields);
+          if (hadFocus) fields.querySelector('button')?.focus({ preventScroll: true });
         } else
           body.append(
             text(

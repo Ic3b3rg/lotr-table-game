@@ -127,8 +127,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       element('#scenario-limit').textContent =
         'Il seguito del timer e i piazzamenti obbligatori della minaccia sono disponibili. I gruppi apparsi attendono la prossima Ombra: non si attivano in questa fase. Combattimento, provocazione, successive attivazioni e altri incontri conservano i propri limiti.';
     if (current.combat)
-      element('#scenario-limit').textContent =
-        'Attacchi e provocazioni usano carte, capacità e conseguenze reali. Le successive attivazioni dell’Ombra e il seguito dell’avventura richiedono ancora i loro effetti.';
+      element('#scenario-limit').textContent = sc?.pack.manifest.combat?.source.shadow
+        ? 'Attacchi, provocazioni e attivazioni dell’Ombra usano carte, capacità e conseguenze reali. Seguite le richieste fino alle Scoperte e al prossimo turno. L’avventura completa è ancora in sviluppo.'
+        : 'Attacchi e provocazioni usano carte, capacità e conseguenze reali. Le successive attivazioni dell’Ombra e il seguito dell’avventura richiedono ancora i loro effetti.';
     refreshActions();
   }
   agreed.oninput = () => {
