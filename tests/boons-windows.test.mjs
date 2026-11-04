@@ -259,3 +259,19 @@ test('conditional acquisition reads direct suffering even when a front returns t
   f.open([grant]);
   assert.equal(f.p.snapshot.resolution.resources.boonCustody[0].kind, 'hidden');
 });
+
+test('a zero direct packet does not require stock for an impossible positive-suffering acquisition', () => {
+  const f = runtimeBoons(() => {}, false),
+    outcome = inventedOutcome();
+  outcome.sealed = false;
+  const addition = boonGrant(0, 'hidden').addition;
+  addition.predicate = 'damage-positive';
+  f.open([{ kind: 'enemy-attack', hero: 0, negate: 'might', outcome, addition }]);
+  assert.equal(f.p.snapshot.active.kind, 'decision');
+  finish(f);
+  assert.deepEqual(f.p.snapshot.parents[0].results[0].enemyOutcome.suffered, {
+    damage: 0,
+    fear: 0,
+  });
+  assert.deepEqual(f.p.snapshot.resolution.resources.boonCustody, []);
+});

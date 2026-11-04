@@ -2124,7 +2124,7 @@ class FrontReplay {
         );
       if (run.spatial)
         invariant(
-          this.p.version === 3 &&
+          (this.p.version === 3 || !!this.p.boons) &&
             digest(run.spatial.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))) ===
               digest(this.p.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))),
           'Contesto spaziale di un’altra compagnia o versione.',

@@ -386,6 +386,14 @@ export function openPhysical(
       if (child.kind !== 'combat-addition' && child.kind !== 'enemy-attack') continue;
       const addition = child.addition;
       if (!addition) continue;
+      if (
+        child.kind === 'enemy-attack' &&
+        ((addition.predicate === 'damage-positive' && !child.outcome.offered.damage) ||
+          (addition.predicate === 'fear-positive' && !child.outcome.offered.fear) ||
+          (addition.predicate === 'recipient-in-darkness' &&
+            !program.darknessHeroes.includes(child.hero)))
+      )
+        continue;
       if (child.kind === 'combat-addition') {
         const suffered = child.outcome.suffered,
           predicate = addition.predicate;

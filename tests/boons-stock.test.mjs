@@ -4,6 +4,23 @@ import { runtimeBoons, boonGrant } from './fixtures/boons.mjs';
 import { validatePhysical, physicalView } from '../dist/physical-resolution-library.mjs';
 import { compileCombatClosure, preflightCombatGroup } from '../dist/combat-library.mjs';
 import { closureFixture, groupFixture } from './fixtures/combat-closure.mjs';
+import { buildSync } from 'esbuild';
+import { fileURLToPath } from 'node:url';
+const built = buildSync({
+  stdin: {
+    contents: "export { preflightCombatOperation } from './src/combat/preflight';",
+    resolveDir: fileURLToPath(new URL('../', import.meta.url)),
+    loader: 'ts',
+  },
+  bundle: true,
+  write: false,
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+});
+const { preflightCombatOperation } = await import(
+  `data:text/javascript;base64,${Buffer.from(built.outputFiles[0].contents).toString('base64')}`
+);
 
 test('source acquisition keeps exact copies outside skill zones, rejects duplicates and returns the same copy', () => {
   const f = runtimeBoons();
@@ -122,4 +139,34 @@ test('public boon reader shows faceup custody and stock without programs, origin
       !encoded.includes('valueIndex') &&
       !encoded.includes('exchange-test-cards'),
   );
+});
+
+test('combat continuation checks its actual receiver when an exhausted type is already held', () => {
+  const f = runtimeBoons();
+  f.open([boonGrant(0), boonGrant(1)]);
+  const src = closureFixture();
+  src.additions[0].effect = { op: 'gain-boon', boon: 'determined' };
+  const a = compileCombatClosure(src),
+    g = groupFixture();
+  const state = {
+    physical: f.p,
+    preparation: f.context.preparation,
+    scenario: {
+      enemies: { groups: [g] },
+      spaceBindings: [{ id: 'ordinary-space', sourceId: 'invented-space' }],
+      tiles: [{ source: 'invented-tile', visible: true, explored: true }],
+    },
+    journey: { heroes: f.heroes.map((h) => ({ heroId: h.heroId, spaceId: 'ordinary-space' })) },
+    mapGeneration: {
+      status: 'frozen',
+      projection: {
+        spaces: [{ id: 'invented-space', tileSource: 'invented-tile' }],
+        movementGraph: { edges: [] },
+      },
+    },
+  };
+  assert.deepEqual(preflightCombatOperation(state, a, g, 'hero-1', 'counterattack'), []);
+  assert.deepEqual(preflightCombatOperation(state, a, g, 'hero-3', 'counterattack'), [
+    'boon-supply-exhaustion-rule',
+  ]);
 });

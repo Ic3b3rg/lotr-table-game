@@ -828,7 +828,7 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
         quantities: null,
         artifact: state.physical?.boons,
         custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
-        heroIds: state.physical?.heroes.map((h) => h.heroId),
+        heroIds: [a.heroId],
       });
       invariant(!missing.length && !g.logic, 'Closure della provocazione figlia non preflightata.');
       move.provoked.push(g.id);
