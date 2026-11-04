@@ -89,6 +89,21 @@ test('message inspiration uses the existing physical consumer once and records a
   assert.equal(f.state.scenario.messageLog.length, 1);
   assert.equal(f.state.physical.snapshot.parents.length, 1);
 });
+test('an automatic inspiration reward retains its source outcome until acknowledgement without repeating the reward', () => {
+  const f = runtime([state(0, [message(0, 'Esito e premio inventati', { inspiration: 1 })])]),
+    before = f.state.preparation.heroes[0].inspiration;
+  pumpPhaseEvent(f.state);
+  assert.equal(f.state.preparation.heroes[0].inspiration, before + 1);
+  assert.equal(f.state.scenario.pending?.kind, 'message');
+  assert.equal(f.state.scenario.messageLog.length, 0);
+  const q = structuredClone(f.state.scenario.pending);
+  pumpPhaseEvent(f.state);
+  assert.deepEqual(f.state.scenario.pending, q);
+  assert.equal(f.state.preparation.heroes[0].inspiration, before + 1);
+  finish(f);
+  assert.equal(f.state.scenario.messageLog.length, 1);
+  assert.equal(f.state.physical.snapshot.parents[0].returnCount, 1);
+});
 test('whole clue continuation rejects a hidden receiver behind a source-admitted result before paying any action', () => {
   const f = runtime([
     state(0, [], { 'NODE CLICKED': 1 }),

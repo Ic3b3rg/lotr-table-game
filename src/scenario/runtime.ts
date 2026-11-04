@@ -348,6 +348,10 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: S
         'SCENARIO_PHYSICAL_DECK_EMPTY',
         'Il mazzo della conseguenza è realmente vuoto. La continuazione resta sospesa prima del costo.',
       );
+    if (a.op === 'message' && a.inspiration) {
+      messageRequest(state, i, a);
+      return;
+    }
     complete(i, a.index);
     if (a.op === 'confirm') invariant(send(sc, i, a.confirmEvent), 'Conferma senza seguito fonte.');
     else if (a.op === 'challenge' || a.op === 'sourceTest') {
@@ -822,9 +826,15 @@ function advanceTask(state: State) {
     const p = state.physical!,
       parent = p.snapshot.parents.find((r) => r.id === task.parentId)!;
     if (parent.status === 'completed') {
-      complete(owner, task.action);
-      sc.tasks.pop();
       const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      sc.tasks.pop();
+      // A resource child can complete without presenting a physical decision.
+      // Its source DisplayMessage still owns an acknowledgement before FINISHED.
+      if (a.op === 'message' && a.inspiration) {
+        messageRequest(state, owner, a);
+        return true;
+      }
+      complete(owner, task.action);
       if (a.op === 'confirm')
         invariant(send(sc, owner, a.confirmEvent), 'Conferma senza seguito fonte.');
       else if (a.op === 'sourceTest' || a.op === 'challenge') {

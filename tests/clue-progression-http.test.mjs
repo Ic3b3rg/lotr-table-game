@@ -21,6 +21,15 @@ test('a real-card clue costs once, preserves travel and updates the mission and 
   const receipts = await Promise.all(pending.filter((r) => r.status === 200).map((r) => r.json()));
   assert.deepEqual(receipts[0].receipt, receipts[1].receipt);
   let s = await finishPhysical(r);
+  assert.equal(
+    s.scenario.pending.kind,
+    'message',
+    'the source reward must be acknowledged before the clue event',
+  );
+  assert.equal(s.scenario.globals.clueTotal, 3);
+  const reward = await scenarioInput(r.host, r.player, { kind: 'ack' });
+  assert.equal(reward.status, 200, await reward.text());
+  s = await readSession(r.host);
   assert.equal(s.scenario.globals.clueTotal, 2);
   assert.equal(s.scenario.play.lore, 0, 'section placement precedes the mission award');
   assert.equal(s.scenario.objective.id, 0);
