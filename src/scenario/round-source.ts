@@ -4,7 +4,7 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { processRoundEvent, startPhaseEvent, pumpPhaseEvent, resumeScenario } from './runtime';
 import { defeatedHeroes } from '../server/physical-defeat';
-import { groupTrialProgram } from './encounter-physical';
+import { spawnPhysicalProgram } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { validatePhysical } from '../physical-resolution/runtime';
 import { livingEnemyGroups } from './deployment';
@@ -12,7 +12,7 @@ import { combatArtifact, startSourceActivation, advanceCombat } from '../combat/
 import { preflightCombatOperation } from '../combat/preflight';
 import { activeCompany, activationTargets } from '../combat/movement';
 import { effectiveGroup, reachableBoonKinds } from '../combat/group';
-import { beginHeroFailure, validateFailureParty } from './conclusion';
+import { beginHeroFailure, beginThreatFailure, validateFailureParty } from './conclusion';
 import { preflightBoonRequests, type BoonRequest } from '../physical-resolution/boon-stock';
 
 function fail(message: string): never {
@@ -59,7 +59,7 @@ function threat(state: State) {
 function threatBoundary(state: State, after: number) {
   const data = source(state),
     sc = state.scenario!;
-  if (after >= data.threat.limit)
+  if (after >= data.threat.limit && !sc.pack.manifest.threatContinuations)
     fail(
       'La minaccia raggiungerebbe la perdita dell’avventura, il cui seguito non è ancora disponibile. Nessun tick o aumento è stato applicato.',
     );
@@ -84,6 +84,13 @@ export function preflightSourceShadow(state: State, entropy?: string) {
       'Un eroe è sconfitto: l’inizio dell’Ombra richiede il seguito della perdita dell’avventura. Nessun avanzamento è stato applicato.',
     );
   }
+  if (
+    integer(state, data.bindings.threat) >= data.threat.limit &&
+    state.scenario!.pack.manifest.threatContinuations
+  ) {
+    validateFailureParty(state);
+    return;
+  }
   invariant(!data.configuration.initialEnemyGroups.length, 'Attivazioni nemiche non disponibili.');
   const shadow = state.scenario!.pack.manifest.combat?.source.shadow;
   if (livingEnemyGroups(state).length && !shadow)
@@ -101,15 +108,16 @@ export function preflightSourceShadow(state: State, entropy?: string) {
   for (const d of work.scenario!.pack.definitions)
     for (const s of d.states)
       for (const a of s.actions)
-        if (a.op === 'spawnRandom' && a.trial) {
+        if (a.op === 'spawnRandom' && (a.trial || a.suffering)) {
           const p = state.physical!;
           if (!(p.version === 3 && p.fronts && p.lastStand))
             fail(
               'La prova della soglia richiede le capacità fisiche complete. Nessun effetto è stato applicato.',
             );
           validatePhysical(p);
-          validatePhysicalProgram(groupTrialProgram(state, a), p.heroes.length);
+          validatePhysicalProgram(spawnPhysicalProgram(state, a), p.heroes.length);
           delete a.trial;
+          delete a.suffering;
         }
   // This closure's spawn has no result-dependent branches: all new groups wait
   // until the next Shadow. Inspect the certified pool structurally, not a draw.
@@ -130,6 +138,7 @@ export function preflightSourceShadow(state: State, entropy?: string) {
       for (let n = 0; n < 2000; n++) {
         const sc = work.scenario!,
           frame = activeFrame(work);
+        if (sc.conclusion) break;
         if (sc.pending) {
           const q = sc.pending;
           if (
@@ -161,10 +170,19 @@ export function preflightSourceShadow(state: State, entropy?: string) {
         }
         if (advanceSourceShadow(work)) break;
         if (frame.stage === 'threat') {
-          applySourceThreat(work);
-          if (activeFrame(work).stage === 'reset') break;
+          applySourceThreat(work, 'preflight-source-closure-only');
+          if (work.scenario!.conclusion || activeFrame(work).stage === 'reset') break;
         }
         invariant(n < 1999, 'Preflight seguito ciclico.');
+      }
+      if (work.scenario!.conclusion) {
+        invariant(
+          work.scenario!.conclusion!.outcome === 'failure' &&
+            'kind' in work.scenario!.conclusion!.cause &&
+            work.scenario!.conclusion!.cause.kind === 'threat',
+          'Preflight concluso con causa estranea alla minaccia.',
+        );
+        return;
       }
       invariant(
         activeFrame(work).stage === 'reset',
@@ -306,7 +324,8 @@ export function sourceShadowAvailability(state: State) {
   )
     return undefined;
   try {
-    preflightActivations(state);
+    if (state.scenario.pack.manifest.threatContinuations) preflightSourceShadow(state);
+    else preflightActivations(state);
     return { enabled: true, reason: null };
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
@@ -354,6 +373,7 @@ function refreshSourceGroups(state: State) {
 export function beginSourceShadow(state: State, requestId: string, entropy?: string) {
   preflightSourceShadow(state, entropy);
   if (beginHeroFailure(state, 'shadow-start', requestId)) return false;
+  if (beginThreatFailure(state, 'threat-start', requestId)) return false;
   initializeShadow(state, requestId);
   if (state.scenario!.pack.manifest.followup) {
     invariant(entropy, 'Entropia della fase assente.');
@@ -395,7 +415,7 @@ function continueDispatch(state: State) {
 export function advanceSourceShadow(state: State): boolean {
   const sc = state.scenario!,
     cap = sc.pack.manifest.followup;
-  if (!cap || !sc.rounds?.active) return false;
+  if (!cap || !sc.rounds?.active || sc.conclusion) return false;
   const frame = activeFrame(state);
   if (sc.pending) return false;
   if (frame.stage === 'events') {
@@ -422,6 +442,15 @@ export function advanceSourceShadow(state: State): boolean {
       .filter((t) => t.threshold <= frame.threat!.after)
       .sort((a, b) => a.threshold - b.threshold)[0];
     if (!next) {
+      if (
+        sc.pack.manifest.threatContinuations &&
+        integer(state, sc.pack.manifest.rounds!.bindings.threat) >=
+          sc.pack.manifest.rounds!.threat.limit
+      ) {
+        invariant(frame.threatRequestId, 'Perdita senza comando di aumento fonte.');
+        beginThreatFailure(state, 'threat-increase', frame.threatRequestId);
+        return false;
+      }
       refreshSourceGroups(state);
       frame.stage = 'reset';
       return true;
@@ -470,12 +499,16 @@ export function finishSourceDarkness(state: State) {
   frame.stage = 'threat';
   state.round!.shadowStep = 'threat';
 }
-export function applySourceThreat(state: State) {
+export function applySourceThreat(state: State, requestId?: string) {
   const sc = state.scenario!,
     data = source(state),
     frame = sc.rounds!.frames.find((f) => f.id === sc.rounds!.active)!;
   invariant(frame?.stage === 'threat' && frame.threat, 'Minaccia senza richiesta corrente.');
   threatBoundary(state, frame.threat.after);
+  if (sc.pack.manifest.threatContinuations) {
+    invariant(requestId, 'Aumento senza comando fonte.');
+    frame.threatRequestId = requestId;
+  }
   sc.globals[data.bindings.threat] = frame.threat.after;
   if (sc.pack.manifest.followup) {
     frame.stage = 'thresholds';

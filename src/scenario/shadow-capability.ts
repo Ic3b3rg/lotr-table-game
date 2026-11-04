@@ -46,6 +46,7 @@ export function validateShadowCapability(pack: ScenarioPack, combat: CombatClosu
         digest(spawn.points) === digest(multiply.target) &&
         !spawn.excludeGameEnemyPoints &&
         !spawn.trial &&
+        !spawn.suffering &&
         spawn.sections === null &&
         Object.values(spawn.filter).every((n) => n === 0),
       'Budget o popolazione della soglia non corrispondenti alla fonte.',
@@ -57,7 +58,18 @@ export function validateShadowCapability(pack: ScenarioPack, combat: CombatClosu
         next?.op === 'threat' &&
         next.source === threshold.nextSource &&
         next.threshold === threshold.nextThreshold &&
-        followup.thresholds.some((t) => t.source === threshold.nextSource && t.definition === null),
+        followup.thresholds.some(
+          (t) =>
+            t.source === threshold.nextSource &&
+            (t.definition === null ||
+              pack.manifest.threatContinuations?.thresholds.some(
+                (r) =>
+                  r.source === t.source &&
+                  r.definition === t.definition &&
+                  r.owner === threshold.nextOwner &&
+                  r.threshold === threshold.nextThreshold,
+              )),
+        ),
       'Registrazione successiva della soglia non certificata.',
     );
     const finish = d.states.find((s) => s.index === registration!.transitions.FINISHED);

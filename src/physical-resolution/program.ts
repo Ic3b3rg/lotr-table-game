@@ -20,7 +20,7 @@ export function validatePhysicalProgram(program: PhysicalProgram, count: number)
     for (const c of program.children)
       invariant(
         c.hero < count &&
-          (c.kind !== 'group-test' ||
+          ((c.kind !== 'group-test' && c.kind !== 'group-suffer') ||
             (new Set(c.heroes).size === c.heroes.length && c.heroes.every((h) => h < count))) &&
           (c.kind !== 'suffer' ||
             (!c.prevention.length &&

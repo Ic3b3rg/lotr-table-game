@@ -7,6 +7,8 @@ import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
 import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
 import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
+import { NegatedSufferingSchema } from './negated-suffering';
+import { ThreatContinuationsSchema, ThreatCauseSchema } from './threat-continuations';
 
 export const SourceTextSchema = z
   .array(
@@ -216,6 +218,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('broadcast', { event: z.string().min(1).max(100) }),
   action('send', { definition: SourceSchema, event: z.string().min(1).max(100) }),
   action('spawnRandom', {
+    suffering: NegatedSufferingSchema.optional(),
     points: VariableRefSchema,
     text: SourceTextSchema,
     excludeGameEnemyPoints: z.boolean(),
@@ -324,6 +327,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    threatContinuations: ThreatContinuationsSchema.optional(),
     boons: z
       .strictObject({ version: z.literal('source-boons-v1'), fingerprint: HashSchema })
       .optional(),
@@ -595,12 +599,15 @@ export const ScenarioSchema = z.strictObject({
       version: z.literal('source-adventure-failure-v1'),
       id: z.uuid(),
       outcome: z.literal('failure'),
-      timing: z.enum(['no-active-heroes', 'shadow-start']),
-      cause: z.strictObject({
-        runId: z.uuid(),
-        heroId: ContentIdSchema,
-        instructionHash: HashSchema,
-      }),
+      timing: z.enum(['no-active-heroes', 'shadow-start', 'threat-start', 'threat-increase']),
+      cause: z.union([
+        ThreatCauseSchema,
+        z.strictObject({
+          runId: z.uuid(),
+          heroId: ContentIdSchema,
+          instructionHash: HashSchema,
+        }),
+      ]),
       triggerRequestId: z.string().min(24).max(80),
       episodeHash: HashSchema,
       suspendedRequest: ScenarioRequestSchema.nullable(),

@@ -217,7 +217,7 @@ export function physicalRequestData(
       action.op === 'confirm' ||
       action.op === 'sourceTest' ||
       action.op === 'challenge' ||
-      (action.op === 'spawnRandom' && action.trial) ||
+      (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
       (action.op === 'message' && (action.consequence || action.inspiration)),
     'Richiesta fisica senza programma fonte.',
   );

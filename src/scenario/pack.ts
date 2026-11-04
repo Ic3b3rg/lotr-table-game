@@ -7,6 +7,7 @@ import { validateSourceHandler } from './handlers';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { verifyCombatClosure } from '../combat/compiler';
 import { validateShadowCapability } from './shadow-capability';
+import { validateThreatCapability } from './threat-capability';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isFailureReward } from './failure-capability';
@@ -82,6 +83,7 @@ export function parseScenarioPack(raw: unknown) {
   const globals = new Map(pack.globals.map((v) => [v.name, v]));
   const rounds = pack.manifest.rounds;
   const followup = pack.manifest.followup;
+  validateThreatCapability(pack);
   if (followup) {
     invariant(original && rounds, 'Seguito senza fase originale.');
     const deployment = verifySourceDeployment(followup.deployment);
@@ -269,6 +271,13 @@ export function parseScenarioPack(raw: unknown) {
                   a.text.some((t) => t.kind === 'text' && t.text.includes(b.placeholder)),
               ),
             'Argomenti obiettivo non legati alla fonte.',
+          );
+        if (a.op === 'spawnRandom' && a.suffering)
+          invariant(
+            pack.manifest.threatContinuations?.thresholds.some(
+              (t) => t.definition === d.source && t.form === 'spawn-register',
+            ),
+            'Conseguenza di soglia fuori dalla capacità attestata.',
           );
         if (a.op === 'send' || a.op === 'multiplyInt' || a.op === 'spawnRandom')
           invariant(followup, 'Azione fuori dalla capacità seguito.');

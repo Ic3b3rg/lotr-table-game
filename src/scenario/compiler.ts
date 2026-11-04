@@ -51,11 +51,19 @@ const CompilationSchema = z.strictObject({
   shadowCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.threatContinuations
+      ? input.threatContinuationsCertificate?.instructionHash ===
+          digest(pack.manifest.threatContinuations)
+      : !input.threatContinuationsCertificate,
+    'Continuazioni di minaccia assenti o non attestate.',
+  );
   invariant(
     pack.manifest.failure
       ? input.failureCertificate?.instructionHash === digest(pack.manifest.failure)

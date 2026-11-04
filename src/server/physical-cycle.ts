@@ -565,7 +565,7 @@ function executeIntent(
           'SHADOW_STEP_CHANGED',
           'L’Ombra fonte non usa conferme manuali per nemici e oscurità.',
         );
-      if (applySourceThreat(state))
+      if (applySourceThreat(state, record.requestId))
         runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
     } else if (
       c.step === 'darkness' &&

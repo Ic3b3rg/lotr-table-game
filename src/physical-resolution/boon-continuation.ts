@@ -83,7 +83,11 @@ export function boonProgramProblems(
     )
       for (const kind of endTurnReturnedKinds(p, context, spatial, child.hero))
         possible.get(kind)!.delete(p.heroes[child.hero]!.heroId);
-    if (['suffer', 'group-test', 'darkness', 'enemy-attack', 'end-turn'].includes(child.kind))
+    if (
+      ['suffer', 'group-test', 'group-suffer', 'darkness', 'enemy-attack', 'end-turn'].includes(
+        child.kind,
+      )
+    )
       uncertainSurvival = true;
     if (child.kind !== 'combat-addition' && child.kind !== 'enemy-attack') continue;
     const addition = child.addition;

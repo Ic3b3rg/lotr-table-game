@@ -1,5 +1,5 @@
 import type { State } from '../server/state';
-import type { ScenarioAction, ScenarioRequest, ScenarioPack } from '../shared/scenario';
+import type { ScenarioAction, ScenarioRequest, ScenarioPack, Scenario } from '../shared/scenario';
 import { definitionId } from '../shared/preparation';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
@@ -48,11 +48,55 @@ export function beginHeroFailure(state: State, timing: Timing, requestId: string
   if (timing === 'shadow-start' && state.round?.phase !== 'action') return false;
   if (timing === 'no-active-heroes' && (!ls.terminal || !ls.heroes.every((h) => h.defeated)))
     return false;
-  validateFailureParty(state);
-  const principal = sc.instances.find((i) => i.kind === 'principal')!;
   const { runId, heroId, instructionHash } =
     timing === 'no-active-heroes' ? ls.terminal! : ls.lossDue;
-  const cause = { runId, heroId, instructionHash };
+  return beginFailure(state, timing, requestId, { runId, heroId, instructionHash });
+}
+export function beginThreatFailure(
+  state: State,
+  timing: 'threat-start' | 'threat-increase',
+  requestId: string,
+): boolean {
+  const sc = state.scenario!,
+    cap = sc.pack.manifest.threatContinuations,
+    rounds = sc.pack.manifest.rounds;
+  if (sc.conclusion || !cap || !rounds) return false;
+  const value = sc.globals[rounds.bindings.threat];
+  invariant(typeof value === 'number' && Number.isInteger(value), 'Minaccia senza binding intero.');
+  if (value < rounds.threat.limit) return false;
+  const frame =
+    timing === 'threat-increase' ? sc.rounds!.frames.find((f) => f.id === sc.rounds!.active) : null;
+  if (timing === 'threat-increase') {
+    invariant(
+      frame?.stage === 'thresholds' &&
+        frame.threat &&
+        !frame.threshold &&
+        !sc.pending &&
+        !sc.tasks.length &&
+        !state.physical!.snapshot.active,
+      'Perdita prima del ritorno completo delle soglie.',
+    );
+    frame.stage = 'conclusion';
+  } else invariant(state.round?.phase === 'action', 'Limite iniziale fuori dalla fase fonte.');
+  return beginFailure(state, timing, requestId, {
+    kind: 'threat',
+    before: frame?.threat?.before ?? value,
+    after: value,
+    limit: rounds.threat.limit,
+    frameId: frame?.id ?? null,
+    controllerHash: cap.methods.controller.bodyHash,
+  });
+}
+function beginFailure(
+  state: State,
+  timing: NonNullable<Scenario['conclusion']>['timing'],
+  requestId: string,
+  cause: NonNullable<Scenario['conclusion']>['cause'],
+) {
+  const sc = state.scenario!,
+    cap = sc.pack.manifest.failure!;
+  validateFailureParty(state);
+  const principal = sc.instances.find((i) => i.kind === 'principal')!;
   const cards = equippedCards(state);
   const bonus = cards.some((id) =>
     cap.partyBonus.skills.some(
