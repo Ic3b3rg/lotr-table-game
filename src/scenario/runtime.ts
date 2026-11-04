@@ -477,15 +477,19 @@ export function processRoundEvent(state: State, event: string, end: boolean) {
       ]
     : sc.instances.filter((i) => i.kind === 'principal');
   for (const i of targets) {
-    const d = definition(sc, i);
+    const d = definition(sc, i),
+      cursor = current(sc, i);
     if (i.stopped) continue;
-    if (d.deferredHandlers[event])
+    if (
+      cursor.deferredTransitions?.[event] ||
+      (cursor.transitions[event] === undefined && d.deferredHandlers[event])
+    )
       throw new ApiError(
         409,
         'ROUND_SOURCE_CAPABILITY',
         'Un ricevitore della fase non è ancora disponibile. Nessun avanzamento è stato applicato.',
       );
-    if (d.handlers[event] === undefined) continue;
+    if (cursor.transitions[event] === undefined && d.handlers[event] === undefined) continue;
     i.processing = 1;
     sc.events.push({ id: eventId(sc, event), event, receivers: [i.id] });
     invariant(send(sc, i, event), 'Evento della fase senza handler.');

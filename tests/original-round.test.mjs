@@ -246,3 +246,25 @@ test('an uncompiled hidden receiver reached by the timer blocks before the whole
   assert.equal((await r.json()).error.code, 'ROUND_SOURCE_CAPABILITY');
   assert.deepEqual((await readBackup(ready.host)).payload, before.payload);
 });
+
+test('a reached local phase transition cannot be silently ignored by preflight', async (t) => {
+  const ready = await readyRounds(t, (pack) => {
+    const d = pack.definitions.find((d) => d.source === pack.principal);
+    d.states.find((s) => s.index === 11).transitions.EXAMPLE_ROUND_START = 60;
+    d.states.push(
+      state(60, [
+        action(0, 'message', {
+          mode: 'ordinary',
+          text: [{ kind: 'text', text: 'Istruzione locale inventata', style: 'plain' }],
+          ignoreLog: false,
+        }),
+      ]),
+    );
+  });
+  await endTurns(ready);
+  const before = await readBackup(ready.host);
+  const r = await cycleCommand(ready, 'BEGIN_SHADOW');
+  assert.equal(r.status, 409);
+  assert.equal((await r.json()).error.code, 'ROUND_SOURCE_CAPABILITY');
+  assert.deepEqual((await readBackup(ready.host)).payload, before.payload);
+});
