@@ -232,7 +232,11 @@ function logMessage(sc: Scenario, i: ScenarioInstance, index: number) {
 function complete(i: ScenarioInstance, index: number) {
   if (!i.completed.includes(index)) i.completed.push(index);
 }
-type SourceProbe = { path: number[]; cursor: number };
+type SourceProbe = {
+  path: number[];
+  cursor: number;
+  supply: { damage: number; fear: number };
+};
 class SourceFork extends Error {
   constructor(readonly count: number) {
     super('Source continuation branches');
@@ -259,7 +263,14 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
         round: structuredClone(state.round),
         journey: structuredClone(state.journey),
       },
-      probe = { path: paths.pop()!, cursor: 0 };
+      probe: SourceProbe = {
+        path: paths.pop()!,
+        cursor: 0,
+        supply: {
+          damage: state.physical?.snapshot.decks.damage.length ?? 0,
+          fear: state.physical?.snapshot.decks.fear.length ?? 0,
+        },
+      };
     try {
       start(work, probe);
       for (let n = 0; work.scenario!.pending; n++) {
@@ -338,16 +349,18 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: S
       'Closure fisica non posseduta.',
     );
     validatePhysicalProgram(encounterProgram(state, a), state.physical.heroes.length);
-    if (
-      a.op === 'message' &&
-      a.consequence &&
-      !state.physical.snapshot.decks[a.consequence.family].length
-    )
-      throw new ApiError(
-        409,
-        'SCENARIO_PHYSICAL_DECK_EMPTY',
-        'Il mazzo della conseguenza è realmente vuoto. La continuazione resta sospesa prima del costo.',
-      );
+    if (a.op === 'message' && a.consequence) {
+      const { family, amount } = a.consequence;
+      if (probe.supply[family] < amount)
+        throw new ApiError(
+          409,
+          'SCENARIO_PHYSICAL_DECK_EMPTY',
+          'Il mazzo necessario non ha carte sufficienti per il seguito obbligatorio. Nessun costo o pesca è stato applicato.',
+        );
+      // Reserve the full printed consequence on this path. No draw, prevention
+      // choice or hypothetical return may supply a later mandatory message.
+      probe.supply[family] -= amount;
+    }
     if (a.op === 'message' && a.inspiration) {
       messageRequest(state, i, a);
       return;
