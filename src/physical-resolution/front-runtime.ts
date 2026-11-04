@@ -632,12 +632,14 @@ class FrontReplay {
     path: string,
     targets: number[],
     f: (n: number, path: string) => void,
+    activeOnly = false,
   ) {
-    const left = [...targets];
+    let left = targets.filter((n) => !activeOnly || this.lastStand.active(n));
     while (left.length) {
+      const actor = activeOnly && !this.lastStand.active(hero) ? left[0]! : hero;
       const selected = Number(
         this.choose(
-          hero,
+          actor,
           `${path}/order-${left.length}`,
           'Scegli l’eroe da risolvere per primo.',
           left.map((n) => ({
@@ -648,6 +650,7 @@ class FrontReplay {
       );
       left.splice(left.indexOf(selected), 1);
       f(selected, `${path}/hero-${selected}`);
+      if (activeOnly) left = left.filter((n) => this.lastStand.active(n));
     }
   }
   private down(copy: string) {
@@ -2237,7 +2240,7 @@ class FrontReplay {
           };
           parent.results.push(this.result);
           const path = `${run.id}/${index}`;
-          if (!this.lastStand.active(child.hero)) {
+          if (!this.lastStand.active(child.hero) && child.kind !== 'group-suffer') {
             parent.completedChildren++;
             continue;
           }
@@ -2392,15 +2395,21 @@ class FrontReplay {
               this.inspiration(child.hero);
               break;
             case 'group-suffer': {
-              this.ordered(child.hero, `${path}/group-suffer`, child.heroes, (hero, orderPath) => {
-                this.suffer(
-                  hero,
-                  [{ family: child.family, amount: child.amount }],
-                  child.face,
-                  orderPath,
-                  child.negate,
-                );
-              });
+              this.ordered(
+                child.hero,
+                `${path}/group-suffer`,
+                child.heroes,
+                (hero, orderPath) => {
+                  this.suffer(
+                    hero,
+                    [{ family: child.family, amount: child.amount }],
+                    child.face,
+                    orderPath,
+                    child.negate,
+                  );
+                },
+                true,
+              );
               break;
             }
             case 'group-test': {
