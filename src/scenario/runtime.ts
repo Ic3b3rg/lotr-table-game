@@ -55,7 +55,7 @@ function setValue(
   sc: Scenario,
   i: ScenarioInstance,
   ref: VariableRef,
-  value: number | boolean | [number, number, number],
+  value: string | number | boolean | [number, number, number],
 ) {
   const store = variable(sc, i, ref);
   invariant(ref.name in store, 'Binding sconosciuto.');
@@ -92,7 +92,18 @@ function enter(sc: Scenario, i: ScenarioInstance, state: number) {
 }
 function send(sc: Scenario, i: ScenarioInstance, event: string) {
   if (i.stopped) return false;
-  const target = current(sc, i).transitions[event] ?? definition(sc, i).handlers[event];
+  const state = current(sc, i),
+    d = definition(sc, i);
+  const target = state.transitions[event] ?? d.handlers[event];
+  const capability =
+    state.deferredTransitions?.[event] ??
+    (target === undefined ? d.deferredHandlers[event] : undefined);
+  if (capability)
+    throw new ApiError(
+      409,
+      'ROUND_SOURCE_CAPABILITY',
+      `Il seguito della fonte richiede ${capability}. I progressi restano salvati.`,
+    );
   if (target === undefined) return false;
   enter(sc, i, target);
   return true;
@@ -248,6 +259,26 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       setValue(sc, i, a.target, (v + n) | 0);
       break;
     }
+    case 'subtractInt':
+    case 'compareInt': {
+      const value = (v: typeof a.left) =>
+        v.kind === 'literal' ? v.value : variable(sc, i, v.ref)[v.ref.name];
+      const left = value(a.left),
+        right = value(a.right);
+      invariant(
+        typeof left === 'number' && typeof right === 'number',
+        'Operatore intero con binding non numerico.',
+      );
+      if (a.op === 'subtractInt') setValue(sc, i, a.target, (left - right) | 0);
+      else {
+        invariant(
+          send(sc, i, left === right ? a.equalEvent : left < right ? a.lessEvent : a.greaterEvent),
+          'Ramo intero non compilato.',
+        );
+        return;
+      }
+      break;
+    }
     case 'getTile':
     case 'getPosition': {
       const space = p.spaces.find((s) => s.id === i.spaceId);
@@ -361,7 +392,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
   }
   complete(i, a.index);
 }
-function runInstance(state: State, i: ScenarioInstance) {
+function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
   const sc = state.scenario!;
   let progress = false;
   for (let n = 0; n < 1000; n++) {
@@ -370,6 +401,27 @@ function runInstance(state: State, i: ScenarioInstance) {
       entry = i.entry;
     for (const a of s.actions) {
       if (i.started.includes(a.index)) continue;
+      if (
+        synchronous &&
+        ![
+          'set',
+          'flip',
+          'addInt',
+          'subtractInt',
+          'compareInt',
+          'branchBool',
+          'broadcast',
+          'release',
+          'stop',
+          'revealNode',
+          'hideNode',
+        ].includes(a.op)
+      )
+        throw new ApiError(
+          409,
+          'ROUND_SOURCE_CAPABILITY',
+          'Questo evento della fase richiede un consumer fonte ulteriore. Nessun avanzamento è stato applicato.',
+        );
       const attempt = sc.play?.attempts.find(
         (a) => a.id === sc.play?.active && a.instanceId === i.id,
       );
@@ -413,6 +465,49 @@ function runInstance(state: State, i: ScenarioInstance) {
     return progress;
   }
   throw new Error('Limite transizioni startup superato.');
+}
+
+/** Source controller dispatch: timers then principal at round end; principal at round start. */
+export function processRoundEvent(state: State, event: string, end: boolean) {
+  const sc = state.scenario!;
+  const targets = end
+    ? [
+        ...sc.instances.filter((i) => i.kind === 'timer'),
+        ...sc.instances.filter((i) => i.kind === 'principal'),
+      ]
+    : sc.instances.filter((i) => i.kind === 'principal');
+  for (const i of targets) {
+    const d = definition(sc, i),
+      cursor = current(sc, i);
+    if (i.stopped) continue;
+    if (
+      cursor.deferredTransitions?.[event] ||
+      (cursor.transitions[event] === undefined && d.deferredHandlers[event])
+    )
+      throw new ApiError(
+        409,
+        'ROUND_SOURCE_CAPABILITY',
+        'Un ricevitore della fase non è ancora disponibile. Nessun avanzamento è stato applicato.',
+      );
+    if (cursor.transitions[event] === undefined && d.handlers[event] === undefined) continue;
+    i.processing = 1;
+    sc.events.push({ id: eventId(sc, event), event, receivers: [i.id] });
+    invariant(send(sc, i, event), 'Evento della fase senza handler.');
+    for (let n = 0; n < 1000; n++) {
+      let progress = false;
+      for (const receiver of sc.instances)
+        progress = runInstance(state, receiver, true) || progress;
+      if (!progress) break;
+      invariant(n < 999, 'Receiver della fase ciclico.');
+    }
+    invariant(
+      !i.processing &&
+        !sc.pending &&
+        !sc.tasks.length &&
+        sc.instances.every((i) => i.stopped || i.settled),
+      'Evento della fase senza completamento sincrono.',
+    );
+  }
 }
 function advanceTask(state: State) {
   const sc = state.scenario!,
@@ -668,6 +763,9 @@ export function beginScenario(
     })),
     messageLog: [],
     handoffCount: 0,
+    ...(parsed.pack.manifest.rounds
+      ? { rounds: { version: 'source-rounds-v1' as const, active: null, frames: [] } }
+      : {}),
   };
   state.scenario = sc;
   initializeScenarioPhysical(state, journeyDefinition.startSpaceId, physical);

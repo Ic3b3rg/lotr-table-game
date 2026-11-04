@@ -72,6 +72,32 @@ export function parseScenarioPack(raw: unknown) {
     'FSM mancante.',
   );
   const globals = new Map(pack.globals.map((v) => [v.name, v]));
+  const rounds = pack.manifest.rounds;
+  if (rounds) {
+    invariant(original, 'Fonte delle fasi fuori dal consumer originale.');
+    invariant(
+      !rounds.configuration.initialEnemyGroups.length,
+      'Attivazioni nemiche non disponibili.',
+    );
+    for (const [binding, type] of [
+      ['round', 'int'],
+      ['threat', 'int'],
+      ['darkness', 'bool'],
+      ['darknessOverride', 'string'],
+    ] as const)
+      invariant(
+        globals.get(rounds.bindings[binding])?.type === type,
+        'Binding della fase assente o di tipo errato.',
+      );
+    invariant(
+      new Set(rounds.darkness.spaces.map((s) => s.id)).size === rounds.darkness.spaces.length,
+      'Caselle oscurità duplicate.',
+    );
+    invariant(
+      rounds.darkness.tokenPrefabs.every((s) => pack.manifest.prefabs.some((p) => p.source === s)),
+      'Token oscurità senza prefab fonte.',
+    );
+  }
   const checkVariables = (variables: typeof pack.globals) => {
     invariant(
       new Set(variables.map((v) => v.name)).size === variables.length,
@@ -83,7 +109,9 @@ export function parseScenarioPack(raw: unknown) {
           ? Number.isInteger(v.value)
           : v.type === 'bool'
             ? typeof v.value === 'boolean'
-            : Array.isArray(v.value),
+            : v.type === 'string'
+              ? typeof v.value === 'string'
+              : Array.isArray(v.value),
         'Tipo variabile incoerente.',
       );
   };
@@ -102,6 +130,11 @@ export function parseScenarioPack(raw: unknown) {
     );
     for (const s of d.states) {
       invariant(
+        Object.keys(s.deferredTransitions ?? {}).every((e) => s.transitions[e] === undefined) &&
+          (!Object.keys(s.deferredTransitions ?? {}).length || !!rounds),
+        'Confine condizionale ambiguo o senza capacità della fase.',
+      );
+      invariant(
         Object.values(s.transitions).every((t) => indices.has(t)),
         'Transizione senza stato.',
       );
@@ -115,6 +148,15 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (a.op === 'compareInt' || a.op === 'subtractInt')
+          invariant(rounds, 'Operatore della fase fuori dalla capacità congelata.');
+        if (a.op === 'compareInt')
+          invariant(
+            [a.equalEvent, a.lessEvent, a.greaterEvent].every(
+              (e) => s.transitions[e] !== undefined || !!s.deferredTransitions?.[e],
+            ),
+            'Confronto intero senza ramo fonte o gate.',
+          );
         if (a.op === 'explore' && (!a.skipIntro || !a.skipOutro))
           invariant(
             d.source === exploration?.definition,
@@ -167,6 +209,8 @@ export function parseScenarioPack(raw: unknown) {
           ...(a.op === 'challenge' ? [a.sum] : []),
           ...('tile' in a && a.tile.kind === 'variable' ? [a.tile.ref] : []),
           ...(a.op === 'addInt' && a.value.kind === 'variable' ? [a.value.ref] : []),
+          ...('left' in a && a.left.kind === 'variable' ? [a.left.ref] : []),
+          ...('right' in a && a.right.kind === 'variable' ? [a.right.ref] : []),
         ];
         for (const ref of refs)
           invariant(
@@ -225,6 +269,17 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.rounds) {
+    const source = pack.manifest.rounds;
+    invariant(
+      source.projectionFingerprint === p.fingerprint &&
+        source.darkness.spaces.length === p.spaces.length &&
+        p.spaces.every((space) =>
+          source.darkness.spaces.some((s) => s.id === space.id && s.source === space.source),
+        ),
+      'Proprietà delle fasi di un’altra realizzazione o incomplete.',
+    );
+  }
   invariant(
     (pack.manifest.exploration?.tiles ?? []).every((t) =>
       p.sections.some((s) => s.tiles.some((x) => x.source === t.source)),

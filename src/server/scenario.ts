@@ -158,7 +158,13 @@ export function allowScenarioPlay(state: State, command: Command) {
     sc.phase === 'action' &&
     (['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type) ||
       (original && (command.type === 'INTERACT_SCENARIO' || command.type === 'EXPLORE_SCENARIO')));
-  if (!allowed)
+  const phaseCommand =
+    original &&
+    !!sc.pack.manifest.rounds &&
+    ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'END_RALLY', 'START_RALLY_SCOUT'].includes(
+      command.type,
+    );
+  if (!allowed && !phaseCommand)
     throw new ApiError(
       409,
       'SCENARIO_CAPABILITY',

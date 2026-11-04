@@ -19,6 +19,14 @@ import { z } from 'zod';
 import { interactScenario, exploreScenario } from '../scenario/runtime';
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { scenarioStateProblem, scenarioReceiptProblem } from '../scenario/validate';
+import {
+  beginSourceShadow,
+  sourceDarknessHeroes,
+  finishSourceDarkness,
+  applySourceThreat,
+  finishSourceReset,
+  finishSourceRally,
+} from '../scenario/round-source';
 
 const originalIntents = z.discriminatedUnion('type', [
   ...CycleIntentSchema.options,
@@ -48,6 +56,7 @@ function owned(state: State, heroId: string, playerId: string) {
   return hero;
 }
 function darknessHeroes(state: State) {
+  if (state.scenario?.pack.manifest.rounds) return sourceDarknessHeroes(state);
   invariant(state.mapGeneration?.status === 'frozen', 'Contesto fisico senza mappa congelata.');
   const sc = state.scenario!,
     spaces = state.mapGeneration.projection.spaces;
@@ -69,6 +78,8 @@ function finish(state: State, task: NonNullable<CycleState['pending']>) {
     round.turnId = null;
     state.journey!.travel = null;
   } else if (task.type === 'START_RALLY_SCOUT') progress.rallyDone = true;
+  else if (state.scenario!.rounds && task.type === 'BEGIN_SHADOW') finishSourceDarkness(state);
+  else if (state.scenario!.rounds) finishSourceReset(state);
   else {
     round.phase = 'rally';
     round.shadowStep = null;
@@ -274,7 +285,8 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     fail('SCENARIO_PENDING', 'Concludi l’incontro prima di proseguire nel turno.');
   if (
     cycle.version === 2 &&
-    ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'END_RALLY', 'START_RALLY_SCOUT'].includes(c.type)
+    ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'END_RALLY', 'START_RALLY_SCOUT'].includes(c.type) &&
+    !state.scenario!.pack.manifest.rounds
   )
     fail('SCENARIO_CAPABILITY', 'La fonte originale della Fase di Ombra non è ancora disponibile.');
   if (round.id !== c.roundId) fail('ROUND_CHANGED', 'Questo round è concluso o è cambiato.');
@@ -324,8 +336,26 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   } else if (c.type === 'BEGIN_SHADOW') {
     if (round.phase !== 'action' || round.activeHeroId || round.heroes.some((h) => !h.turnEnded))
       fail('TURNS_PENDING', 'Tutti gli eroi devono concludere il turno.');
-    round.phase = 'shadow';
-    round.shadowStep = 'enemies';
+    if (state.scenario!.rounds) {
+      beginSourceShadow(state, record.requestId);
+      const affected = darknessHeroes(state);
+      if (affected.length) {
+        const data = state.scenario!.pack.manifest.rounds!.darkness;
+        runId = runSource(state, record, [
+          {
+            kind: 'darkness',
+            hero: affected[0]!,
+            heroes: affected,
+            amount: data.amount,
+            face: data.face,
+            negate: data.negate,
+          },
+        ]);
+      } else finishSourceDarkness(state);
+    } else {
+      round.phase = 'shadow';
+      round.shadowStep = 'enemies';
+    }
     const loss = p.snapshot.lastStand?.lossDue;
     if (loss)
       cycle.terminal = {
@@ -337,7 +367,15 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   } else if (c.type === 'CONFIRM_SHADOW_STEP') {
     if (round.phase !== 'shadow' || round.shadowStep !== c.step)
       fail('SHADOW_STEP_CHANGED', 'Questo passaggio è cambiato.');
-    if (
+    if (state.scenario!.rounds) {
+      if (c.step !== 'threat')
+        fail(
+          'SHADOW_STEP_CHANGED',
+          'L’Ombra fonte non usa conferme manuali per nemici e oscurità.',
+        );
+      applySourceThreat(state);
+      runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
+    } else if (
       c.step === 'darkness' &&
       (darknessHeroes(state).length ||
         persistentEffects(p).some((e) => e.window === 'after-darkness-suffering-batch'))
@@ -346,9 +384,11 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
         'PHYSICAL_DARKNESS_CAPABILITY',
         'Le reazioni richiedono la vera fonte di oscurità. Una conferma manuale non la esegue.',
       );
-    if (c.step === 'enemies') round.shadowStep = 'darkness';
-    else if (c.step === 'darkness') round.shadowStep = 'threat';
-    else runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
+    if (!state.scenario!.rounds) {
+      if (c.step === 'enemies') round.shadowStep = 'darkness';
+      else if (c.step === 'darkness') round.shadowStep = 'threat';
+      else runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
+    }
   } else if (c.type === 'START_RALLY_SCOUT') {
     if (round.phase !== 'rally' || progress!.rallyDone)
       fail(
@@ -363,6 +403,7 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   } else {
     if (round.phase !== 'rally' || round.heroes.some((h) => !h.rallyDone))
       fail('RALLY_PENDING', 'Ogni eroe deve concludere Scoperta.');
+    if (state.scenario!.rounds) finishSourceRally(state);
     state.round = {
       id: uuid({ request: record.requestId, previous: round.id }),
       number: round.number + 1,
@@ -381,7 +422,10 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
   syncPhysicalDefeat(state);
   if (runId) {
     invariant(
-      c.type === 'END_TURN' || c.type === 'START_RALLY_SCOUT' || c.type === 'CONFIRM_SHADOW_STEP',
+      c.type === 'END_TURN' ||
+        c.type === 'START_RALLY_SCOUT' ||
+        c.type === 'CONFIRM_SHADOW_STEP' ||
+        c.type === 'BEGIN_SHADOW',
       'Continuazione senza comando.',
     );
     const task = { runId, type: c.type, heroId: hero?.heroId ?? p.heroes[0]!.heroId };
@@ -675,6 +719,9 @@ function originalSeedState(state: State): State {
       (!sc.pack.manifest.exploration
         ? !sc.explorations
         : sc.explorations?.active === null && sc.explorations.attempts.length === 0) &&
+      (!sc.pack.manifest.rounds
+        ? !sc.rounds
+        : sc.rounds?.active === null && sc.rounds.frames.length === 0) &&
       !sc.pending &&
       !sc.tasks.length,
     'Seed originale riscritto dopo lo startup.',

@@ -83,6 +83,14 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('darkness'),
+    hero: slot,
+    heroes: z.array(slot).min(1).max(5),
+    amount: z.int().min(1).max(56),
+    face: z.enum(['faceup', 'facedown']),
+    negate: StatSchema,
+  }),
   z.strictObject({ kind: z.literal('inspiration'), hero: slot, amount: z.literal(1) }),
   z.strictObject({
     kind: z.literal('test'),
@@ -230,6 +238,7 @@ export const PhysicalResultSchema = z.strictObject({
     'end-turn',
     'rally-reset',
     'rally-scout',
+    'darkness',
   ]),
   heroId: ContentIdSchema,
   successes: z.int().min(0).max(999).optional(),
@@ -265,7 +274,7 @@ export const PhysicalViewSchema = z.strictObject({
           runId: z.uuid(),
           pendingId: z.uuid(),
           sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-          type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP']),
+          type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP', 'BEGIN_SHADOW']),
         })
         .nullable(),
       heroes: z

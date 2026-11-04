@@ -865,13 +865,14 @@ class FrontReplay {
     path: string,
     negate?: 'might' | 'wisdom' | 'agility' | 'spirit' | 'wit',
   ) {
-    this.frame(
+    return this.frame(
       path,
       hero,
       null,
       'suffer',
       cards.reduce((n, c) => n + c.amount, 0),
       () => {
+        let suffered = 0;
         const remaining = empty();
         for (const c of cards) remaining[c.family] = c.amount;
         if (negate && total(remaining)) {
@@ -1075,11 +1076,13 @@ class FrontReplay {
                 this.s.areas[hero]![c.family].push(copy);
                 remaining[c.family]--;
                 this.result.transferred[c.family]++;
+                suffered++;
                 if ((c.family === 'fear' ? faceFear : face) === 'faceup')
                   this.front(hero, copy, `${path}/front-${this.r.operations}`);
               },
             );
           }
+        return suffered;
       },
     );
   }
@@ -1526,6 +1529,57 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'darkness': {
+              invariant(
+                run.spatial &&
+                  run.lastStandRules &&
+                  this.p.version === 3 &&
+                  new Set(child.heroes).size === child.heroes.length &&
+                  child.heroes.every(
+                    (n) =>
+                      run.program.profile === 'source-fronts-v1' &&
+                      run.program.darknessHeroes.includes(n),
+                  ),
+                'Oscurità senza contesto fonte e regole fisiche.',
+              );
+              const batches: { hero: number; suffered: number }[] = [];
+              this.ordered(child.hero, `${path}/darkness`, child.heroes, (hero, orderPath) => {
+                const suffered = this.suffer(
+                  hero,
+                  [{ family: 'fear', amount: child.amount }],
+                  child.face,
+                  orderPath,
+                  child.negate,
+                );
+                batches.push({ hero, suffered });
+              });
+              const result = this.result;
+              for (const batch of batches)
+                for (const [n, effect] of this.eventEffects(
+                  batch.hero,
+                  'after-darkness-suffering-batch',
+                  batch.suffered,
+                ).entries())
+                  reactions.push({
+                    id: `darkness:${index}:${batch.hero}:${n}`,
+                    hero: batch.hero,
+                    label: `Risolvi ${this.cards.get(effect.copy)!.name.value}`,
+                    available: () =>
+                      this.faceup.has(effect.copy) &&
+                      this.lastStand.active(effect.owner) &&
+                      this.lastStand.active(batch.hero),
+                    resolve: () => {
+                      this.result = result;
+                      this.eventEffect(
+                        batch.hero,
+                        effect,
+                        `${path}/darkness-${batch.hero}/trigger-${n}`,
+                        false,
+                      );
+                    },
+                  });
+              break;
+            }
             case 'inspiration':
               invariant(
                 run.spatial && run.lastStandRules && this.p.version === 3,

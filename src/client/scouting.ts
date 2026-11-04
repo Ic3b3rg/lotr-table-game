@@ -119,7 +119,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
       !!current.scenario || !mine || Boolean(pending) || Boolean(inRally);
     if (current.physical?.cycle && inRally)
       element('#scout-phase-help').textContent =
-        'La Scoperta ordinaria rivela le carte nel pannello dell’avventura. Il PC applica i vincoli di cima e i trigger della preparazione prima di concluderla.';
+        'Apri Scoperta per il tuo eroe. Disponi le carte nel pannello dell’avventura: i vincoli e gli effetti delle preparate si risolvono prima del completamento. Gli altri giocatori attendono.';
     const nextPrepared = `${current.generation}:${mine?.heroId}:${mine?.prepared.join(',')}`;
     if (preparedKey !== nextPrepared) {
       options(discardSelect, mine?.prepared ?? [], 'Scegli una carta preparata');

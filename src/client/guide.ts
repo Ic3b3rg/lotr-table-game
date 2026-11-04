@@ -53,7 +53,7 @@ const TOPICS = [
       'L’avventura usa la mappa salvata della compagnia. Leggete l’introduzione e seguite i piazzamenti: tessere, segnalini e posizioni compaiono soltanto quando richiesti dal copione.',
       'Ogni eroe effettua la propria Scoperta 2 iniziale e poi una prova di Spirito 1. Il proprietario rivela e risolve le carte dalla vista personale. Questo setup non spende azioni e non applica il bonus di Aragorn della Riorganizzazione. La ricompensa di ispirazione rispetta il limite dell’eroe.',
       'Ogni conferma, pesca e conversione è salvata sul PC. Ricaricare o ripristinare una copia riprende la stessa richiesta. Nel riepilogo dell’avventura puoi rileggere carte, risultati e ricompense completati.',
-      'Dopo l’obiettivo scegliete il primo turno. Potete ispezionare i segnalini e annullare gratuitamente. Interazioni successive, nuova esplorazione, combattimento e Ombra rimangono indisponibili finché i rispettivi effetti non saranno completi.',
+      'Dopo l’obiettivo scegliete il primo turno. Potete ispezionare i segnalini e annullare gratuitamente. Le esplorazioni e il passaggio a Ombra e Riorganizzazione dipendono dalle capacità incluse nell’avvio. Ulteriori incontri, combattimento e rami dell’avventura conservano i limiti indicati sul tavolo.',
     ],
   },
   {
@@ -137,12 +137,14 @@ const TOPICS = [
   },
   {
     id: 'shadow',
-    title: 'Ombra: cosa è ancora manuale',
+    title: 'Ombra e passaggio alla Riorganizzazione',
     target: '#rounds',
     action: 'Vai alla Fase di Ombra',
     paragraphs: [
-      'L’ordine è attivazione dei nemici, oscurità, minaccia. Prima di ogni conferma il gruppo deve risolvere il passaggio o verificare con le regole che non si applichi. Dopo la minaccia rendete pronti i nemici esauriti; la conferma finale ricompone i mazzi e apre Riorganizzazione.',
-      'Nella nuova avventura la Fase di Ombra rimane indisponibile finché nemici, oscurità, minaccia ed eventi non saranno eseguibili. Le vecchie conferme manuali restano soltanto nei tavoli precedenti senza scenario: non sostituiscono gli effetti della nuova avventura.',
+      'Negli avvii che comprendono il passaggio completo senza nemici, iniziare l’Ombra esegue gli effetti disponibili. L’oscurità segue la posizione di ogni eroe e le proprietà della mappa: quando si applica, il proprietario risolve la vera prova per negare e le conseguenze nel pannello dell’avventura. Timer ed eventi precedono l’aumento della minaccia. Leggete l’aumento, poi proseguite: il tavolo lo applica e ricompone i mazzi per la Riorganizzazione.',
+      'Ogni proprietario completa Scoperta del proprio eroe. Potete preparare al massimo una carta e ordinare le altre sopra o sotto il mazzo, rispettando gli effetti attivi. Il round successivo si apre quando tutti hanno concluso. Un evento o una capacità ancora mancante blocca il passaggio con i progressi salvati.',
+      'Nei tavoli precedenti e nelle prove sintetiche l’Ombra usa conferme manuali nell’ordine nemici, oscurità, minaccia. Il gruppo deve prima risolvere ogni passaggio o verificarne l’assenza. Dopo la minaccia rende pronti i nemici esauriti; la conferma finale ricompone i mazzi e apre Riorganizzazione.',
+      'Gli avvii precedenti senza questa capacità conservano il proprio limite. Le conferme manuali dei tavoli precedenti e delle prove sintetiche non eseguono gli effetti dell’avventura originale.',
     ],
   },
   {

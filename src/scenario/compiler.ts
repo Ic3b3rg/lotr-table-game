@@ -46,11 +46,18 @@ const certificate = z.strictObject({
 const CompilationSchema = z.strictObject({
   pack: ScenarioPackSchema,
   certificates: z.array(certificate).min(1).max(600),
+  roundsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.rounds
+      ? input.roundsCertificate?.instructionHash === digest(pack.manifest.rounds)
+      : !input.roundsCertificate,
+    'Fonte della fase assente o non attestata.',
+  );
   invariant(
     new Set(certificates.map((c) => c.source)).size === certificates.length,
     'Certificati duplicati.',
@@ -84,6 +91,22 @@ export function compileScenarioPack(raw: unknown) {
     for (const s of d.states) {
       const source = c.states.find((v) => v.index === s.index);
       invariant(source, 'Stato senza fonte.');
+      const deferredTransitions = Object.fromEntries(
+        Object.entries(source.transitions)
+          .filter(([event]) => s.transitions[event] === undefined)
+          .map(([event, to]) => {
+            const edge = c.deferredEdges.find(
+              (e) => e.from === s.index && e.event === event && e.to === to,
+            );
+            invariant(edge, 'Transizione omessa senza gate.');
+            return [event, edge.capability];
+          }),
+      );
+      if (Object.keys(s.deferredTransitions ?? {}).length || pack.manifest.rounds)
+        invariant(
+          digest(s.deferredTransitions ?? {}) === digest(deferredTransitions),
+          'Confine condizionale non corrispondente alla fonte.',
+        );
       invariant(
         digest(source.actions.map(({ instructionHash: _, ...a }) => a)) ===
           digest(

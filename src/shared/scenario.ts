@@ -4,6 +4,7 @@ import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
 import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
+import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
 
 export const SourceTextSchema = z
   .array(
@@ -47,10 +48,10 @@ export const VariableRefSchema = z.strictObject({
   scope: z.enum(['local', 'global']),
   name: z.string().min(1).max(150),
 });
-const scalar = z.union([Int32Schema, z.boolean(), VectorSchema]);
+const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
-  type: z.enum(['int', 'bool', 'vector']),
+  type: z.enum(['int', 'bool', 'vector', 'string']),
   value: scalar,
 });
 const intValue = z.union([
@@ -150,6 +151,14 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('revealNode', {}),
   action('hideNode', {}),
   action('addInt', { target: VariableRefSchema, value: intValue }),
+  action('subtractInt', { target: VariableRefSchema, left: intValue, right: intValue }),
+  action('compareInt', {
+    left: intValue,
+    right: intValue,
+    equalEvent: z.string().min(1).max(100),
+    lessEvent: z.string().min(1).max(100),
+    greaterEvent: z.string().min(1).max(100),
+  }),
 ]);
 export type ScenarioAction = z.infer<typeof ScenarioActionSchema>;
 export const ScenarioDefinitionSchema = z.strictObject({
@@ -163,6 +172,9 @@ export const ScenarioDefinitionSchema = z.strictObject({
       z.strictObject({
         index: z.int().nonnegative(),
         transitions: z.record(z.string().min(1).max(100), z.int().nonnegative()),
+        deferredTransitions: z
+          .record(z.string().min(1).max(100), z.string().min(1).max(100))
+          .optional(),
         actions: z.array(ScenarioActionSchema).max(100),
       }),
     )
@@ -206,6 +218,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    rounds: RoundSourceSchema.optional(),
     scope: z.enum([
       'startup-only',
       'synthetic-physical-p0',
@@ -364,6 +377,7 @@ const taskBase = {
   action: z.int().nonnegative(),
 };
 export const ScenarioSchema = z.strictObject({
+  rounds: SourceRoundStateSchema.optional(),
   explorations: z
     .strictObject({
       version: z.literal('source-exploration-v1'),

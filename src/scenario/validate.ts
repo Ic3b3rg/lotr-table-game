@@ -125,7 +125,10 @@ export function scenarioStateProblem(state: State): string | null {
           effect.entry <= i.entry,
         'Effetto fuori dalla fonte.',
       );
-      const set = (ref: VariableRef, value: number | boolean | [number, number, number]) => {
+      const set = (
+        ref: VariableRef,
+        value: string | number | boolean | [number, number, number],
+      ) => {
         const values = store(i, ref);
         invariant(
           ref.name in values && typeof values[ref.name] === typeof value,
