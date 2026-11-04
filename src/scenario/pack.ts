@@ -7,6 +7,8 @@ import { validateSourceHandler } from './handlers';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { verifyCombatClosure } from '../combat/compiler';
 import { validateShadowCapability } from './shadow-capability';
+import { validateClueCapability } from './clue-capability';
+import { playableScenarioPrefab } from '../shared/clues';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -15,6 +17,7 @@ export function parseScenarioPack(raw: unknown) {
     'Manifest originale incompleto o estraneo.',
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
+  validateClueCapability(pack);
   const exploration = pack.manifest.exploration;
   if (exploration) {
     invariant(original, 'Esplorazione fuori dal consumer originale.');
@@ -212,6 +215,14 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (
+          ['copyInt', 'switchInt', 'isExplored', 'focus'].includes(a.op) ||
+          (a.op === 'challenge' &&
+            (!('scope' in a.sum) || a.bounds.some((b) => typeof b.maximum !== 'number'))) ||
+          (a.op === 'message' && a.inspiration) ||
+          (a.op === 'explore' && a.intro)
+        )
+          invariant(pack.manifest.clues, 'Istruzione fuori dalla capacità indizi congelata.');
         if (a.op === 'objective' && a.bindings)
           invariant(
             followup &&
@@ -238,23 +249,30 @@ export function parseScenarioPack(raw: unknown) {
           );
         if (a.op === 'explore' && (!a.skipIntro || !a.skipOutro))
           invariant(
-            d.source === exploration?.definition,
+            d.source === exploration?.definition ||
+              (pack.manifest.clues && a.intro && !a.skipIntro && a.skipOutro && a.noInspiration),
             'Esplorazione senza presentazione certificata.',
           );
         if (
           ['confirm', 'sourceTest', 'challenge', 'choice', 'nullProduct', 'lore'].includes(a.op) ||
-          (a.op === 'message' && a.consequence)
+          (a.op === 'message' && (a.consequence || a.inspiration))
         )
           invariant(
             original &&
               ((a.op === 'confirm' && d.source === pack.manifest.exploration?.definition) ||
                 (a.op === 'lore' &&
+                  pack.manifest.clues &&
+                  (d.source === pack.principal ||
+                    pack.manifest.prefabs.some(
+                      (p) =>
+                        p.source === pack.manifest.clues!.fort.prefab && p.fsmSource === d.source,
+                    ))) ||
+                (a.op === 'lore' &&
                   followup?.instances.some(
                     (i) => i.definition === d.source && i.kind === 'logic',
                   )) ||
                 pack.manifest.prefabs.some(
-                  (p) =>
-                    pack.manifest.playablePrefabs!.includes(p.source) && p.fsmSource === d.source,
+                  (p) => playableScenarioPrefab(pack, p.source) && p.fsmSource === d.source,
                 )),
             'Istruzione incontro fuori dal manifest chiuso.',
           );
@@ -269,7 +287,11 @@ export function parseScenarioPack(raw: unknown) {
                   ? [...a.options, ...(a.cancel ? [a.cancel] : [])].map((o) => o.event)
                   : a.op === 'nullProduct'
                     ? [a.falseEvent]
-                    : [];
+                    : a.op === 'switchInt'
+                      ? a.cases.map((c) => c.event)
+                      : a.op === 'isExplored'
+                        ? [a.trueEvent, a.falseEvent]
+                        : [];
         invariant(
           events.every((e) => s.transitions[e] !== undefined),
           'Ramo incontro senza transizione fonte.',
@@ -289,11 +311,23 @@ export function parseScenarioPack(raw: unknown) {
         const refs = [
           ...('target' in a && typeof a.target === 'object' ? [a.target] : []),
           ...('ref' in a ? [a.ref] : []),
-          ...(a.op === 'challenge' ? [a.sum] : []),
+          ...(a.op === 'challenge'
+            ? [
+                ...('scope' in a.sum ? [a.sum] : []),
+                ...a.bounds.flatMap((b) => (typeof b.maximum === 'number' ? [] : [b.maximum])),
+              ]
+            : []),
           ...(a.op === 'spawnRandom' ? [a.points] : []),
           ...(a.op === 'objective' ? (a.bindings ?? []).map((b) => b.ref) : []),
           ...('tile' in a && a.tile.kind === 'variable' ? [a.tile.ref] : []),
           ...(a.op === 'addInt' && a.value.kind === 'variable' ? [a.value.ref] : []),
+          ...((a.op === 'copyInt' || a.op === 'switchInt') && a.value.kind === 'variable'
+            ? [a.value.ref]
+            : []),
+          ...(a.op === 'switchInt'
+            ? a.cases.flatMap((c) => (c.equals.kind === 'variable' ? [c.equals.ref] : []))
+            : []),
+          ...(a.op === 'focus' ? a.positions : []),
           ...('left' in a && a.left.kind === 'variable' ? [a.left.ref] : []),
           ...('right' in a && a.right.kind === 'variable' ? [a.right.ref] : []),
         ];
@@ -326,7 +360,10 @@ export function parseScenarioPack(raw: unknown) {
         d.states.some((s) =>
           s.actions.some(
             (a) =>
-              a.op === 'challenge' && a.sum.name === progress.total.name && a.sum.scope === 'local',
+              a.op === 'challenge' &&
+              'scope' in a.sum &&
+              a.sum.name === progress.total.name &&
+              a.sum.scope === 'local',
           ),
         ),
       'Progressi non legati alle variabili fonte.',
@@ -354,6 +391,11 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.clues)
+    invariant(
+      pack.manifest.clues.projectionFingerprint === p.fingerprint,
+      'Indizi di un’altra realizzazione.',
+    );
   if (pack.manifest.followup) {
     const cap = pack.manifest.followup;
     invariant(cap.projectionFingerprint === p.fingerprint, 'Seguito di un’altra realizzazione.');

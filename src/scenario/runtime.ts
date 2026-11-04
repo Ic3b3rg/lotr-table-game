@@ -1,4 +1,5 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
+import { playableScenarioPrefab } from '../shared/clues';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
@@ -68,6 +69,35 @@ function setValue(
   invariant(ref.name in store, 'Binding sconosciuto.');
   invariant(typeof store[ref.name] === typeof value, 'Tipo binding cambiato.');
   store[ref.name] = value;
+}
+function integerValue(
+  sc: Scenario,
+  i: ScenarioInstance,
+  value: Extract<ScenarioAction, { op: 'addInt' }>['value'],
+) {
+  const n = value.kind === 'literal' ? value.value : variable(sc, i, value.ref)[value.ref.name];
+  invariant(typeof n === 'number' && Number.isInteger(n), 'Binding intero non numerico.');
+  return n;
+}
+function challengeResult(
+  sc: Scenario,
+  i: ScenarioInstance,
+  a: Extract<ScenarioAction, { op: 'challenge' }>,
+  successes: number,
+) {
+  const prior = 'scope' in a.sum ? variable(sc, i, a.sum)[a.sum.name] : a.sum.value;
+  invariant(typeof prior === 'number', 'Somma non numerica.');
+  const total = Math.min(99, Math.max(0, prior + successes));
+  if ('scope' in a.sum) setValue(sc, i, a.sum, total);
+  const event = (
+    a.bounds.find(
+      (b) =>
+        (typeof b.maximum === 'number'
+          ? b.maximum
+          : (variable(sc, i, b.maximum)[b.maximum.name] as number)) >= total,
+    ) ?? a.bounds.at(-1)!
+  ).event;
+  return { total, event };
 }
 function resolveTile(
   state: State,
@@ -250,6 +280,31 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
     case 'set':
       setValue(sc, i, a.target, structuredClone(a.value));
       break;
+    case 'copyInt':
+      setValue(sc, i, a.target, integerValue(sc, i, a.value));
+      break;
+    case 'switchInt': {
+      const value = integerValue(sc, i, a.value),
+        match = a.cases.find((c) => integerValue(sc, i, c.equals) === value);
+      if (match) {
+        invariant(send(sc, i, match.event), 'Uguaglianza senza ramo fonte.');
+        return;
+      }
+      break;
+    }
+    case 'isExplored': {
+      const tile = resolveTile(state, i, a.tile),
+        marker = sc.explorationMarkers?.find((m) => m.tileSource === tile.source);
+      invariant(
+        send(sc, i, !marker || !marker.visible ? a.trueEvent : a.falseEvent),
+        'Esplorazione senza ramo fonte.',
+      );
+      return;
+    }
+    case 'focus':
+      for (const ref of a.positions)
+        invariant(Array.isArray(variable(sc, i, ref)[ref.name]), 'Posizione fonte non legata.');
+      break;
     case 'flip': {
       const v = variable(sc, i, a.target)[a.target.name];
       invariant(typeof v === 'boolean', 'BoolFlip richiede bool.');
@@ -370,7 +425,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       break;
     }
     case 'message':
-      if (a.consequence) {
+      if (a.consequence || a.inspiration) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
@@ -387,9 +442,10 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
           m.visible = false;
         });
       const ordinary = i.kind === 'exploration';
+      const presented = ordinary || !!a.intro;
       if (ordinary) i.visible = false;
       const adjacent: number[] = [];
-      if (ordinary && !a.skipAdjacentSectionEvent)
+      if (presented && !a.skipAdjacentSectionEvent)
         for (const s of cells(state, tile.source))
           for (const id of s.connected) {
             const section = p.spaces.find((s) => s.id === id)!.sectionId;
@@ -402,9 +458,9 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         action: a.index,
         tileSource: tile.source,
         spaceIndex: 0,
-        stage: ordinary ? 'intro' : 'pre',
+        stage: presented && !a.skipIntro ? 'intro' : 'pre',
         waiting: null,
-        ...(ordinary ? { adjacent, adjacentIndex: 0 } : {}),
+        ...(presented ? { adjacent, adjacentIndex: 0 } : {}),
       });
       return;
     }
@@ -448,6 +504,10 @@ function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
         synchronous &&
         ![
           'set',
+          'copyInt',
+          'switchInt',
+          'isExplored',
+          'focus',
           'flip',
           'addInt',
           'subtractInt',
@@ -637,11 +697,11 @@ function advanceTask(state: State) {
         const successes = parent.results.find((r) => r.kind === 'test')?.successes;
         invariant(successes !== undefined, 'Prova padre senza risultato.');
         let total: number | null = null;
+        let challengeEvent: string | undefined;
         if (a.op === 'challenge') {
-          const prior = variable(sc, owner, a.sum)[a.sum.name];
-          invariant(typeof prior === 'number', 'Somma non numerica.');
-          total = Math.min(99, Math.max(0, prior + successes));
-          setValue(sc, owner, a.sum, total);
+          const result = challengeResult(sc, owner, a, successes);
+          total = result.total;
+          challengeEvent = result.event;
         }
         const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
         sc.play!.tests.push({
@@ -659,7 +719,7 @@ function advanceTask(state: State) {
             ? successes >= a.target
               ? a.passEvent
               : a.failEvent
-            : (a.bounds.find((b) => b.maximum >= total!) ?? a.bounds.at(-1)!).event;
+            : challengeEvent!;
         invariant(send(sc, owner, event), 'Prova senza ramo compilato.');
       } else if (a.op === 'message') logMessage(sc, owner, a.index);
       return true;
@@ -765,7 +825,11 @@ function advanceTask(state: State) {
   } else {
     const frame = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     if (task.stage === 'intro' || task.stage === 'outro') {
-      invariant(frame && frame.instanceId === owner.id, 'Presentazione senza esploratore.');
+      const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      invariant(
+        (frame && frame.instanceId === owner.id) || (action.op === 'explore' && action.intro),
+        'Presentazione senza fonte.',
+      );
       const cap = sc.pack.manifest.exploration!;
       request(state, {
         instanceId: owner.id,
@@ -775,10 +839,12 @@ function advanceTask(state: State) {
         kind: task.stage === 'intro' ? 'exploration-intro' : 'exploration-outro',
         text:
           task.stage === 'intro'
-            ? cap.tiles.find((t) => t.source === task.tileSource)!.intros[frame.intro]!
+            ? action.op === 'explore' && action.intro
+              ? action.intro
+              : cap.tiles.find((t) => t.source === task.tileSource)!.intros[frame!.intro]!
             : cap.outro,
-        heroId: frame.heroId,
-        actorPlayerId: frame.playerId,
+        heroId: frame?.heroId ?? null,
+        actorPlayerId: frame?.playerId ?? null,
         stage: 'ready',
         tileSource: task.tileSource,
       });
@@ -804,7 +870,9 @@ function advanceTask(state: State) {
         task.waiting = principal.id;
         return true;
       }
-      task.stage = 'outro';
+      const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      invariant(action.op === 'explore', 'Suite fuori esplorazione.');
+      task.stage = action.skipOutro ? 'done' : 'outro';
       return true;
     }
     const spaces = cells(state, task.tileSource);
@@ -837,7 +905,7 @@ function advanceTask(state: State) {
         return true;
       }
     }
-    if (frame && owner.kind === 'exploration' && task.stage !== 'done') {
+    if (task.adjacent && task.stage !== 'done') {
       task.stage = 'adjacent';
       return true;
     }
@@ -1077,7 +1145,9 @@ export function resumeScenario(
       task?.kind === 'explore' && task.instanceId === i.id && task.action === q.action,
       'Callback esplorazione scaduto.',
     );
-    if (q.kind === 'exploration-intro') rewardExploration(state);
+    const action = current(sc, i).actions.find((a) => a.index === task.action)!;
+    invariant(action.op === 'explore', 'Presentazione senza esplorazione.');
+    if (q.kind === 'exploration-intro' && !action.noInspiration) rewardExploration(state);
     sc.messageLog.push({
       id: `${actionKey(i, q.action)}:${task.stage}`,
       text: structuredClone(q.text),
@@ -1277,12 +1347,7 @@ export function interactScenario(
     digest(i) !== c.sourceFingerprint
   )
     fail('SCENARIO_SOURCE_CHANGED', 'Il segnalino o la fonte sono cambiati.');
-  if (
-    !sc.pack.manifest.playablePrefabs?.includes(i!.prefab!) ||
-    !i!.visible ||
-    i!.stopped ||
-    !i!.settled
-  )
+  if (!playableScenarioPrefab(sc.pack, i!.prefab!) || !i!.visible || i!.stopped || !i!.settled)
     fail('SCENARIO_CAPABILITY', 'Questo segnalino non ha una continuazione disponibile.');
   if (sc.pending || sc.play!.active || state.physical!.snapshot.active)
     fail('SCENARIO_PENDING', 'Concludi la richiesta corrente.');

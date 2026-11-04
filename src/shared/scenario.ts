@@ -95,9 +95,17 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('challenge', {
     text: SourceTextSchema,
     stat: StatSchema,
-    sum: VariableRefSchema,
+    sum: z.union([
+      VariableRefSchema,
+      z.strictObject({ kind: z.literal('literal'), value: z.int().min(0).max(99) }),
+    ]),
     bounds: z
-      .array(z.strictObject({ maximum: z.int().min(0).max(99), event: z.string().min(1).max(100) }))
+      .array(
+        z.strictObject({
+          maximum: z.union([z.int().min(0).max(99), VariableRefSchema]),
+          event: z.string().min(1).max(100),
+        }),
+      )
       .min(1)
       .max(20),
   }),
@@ -118,6 +126,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
+    inspiration: z.literal(1).optional(),
     consequence: z
       .strictObject({
         family: z.enum(['damage', 'fear']),
@@ -135,6 +144,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     skipIntro: z.boolean(),
     skipOutro: z.boolean(),
     skipAdjacentSectionEvent: z.boolean().optional(),
+    intro: SourceTextSchema.optional(),
   }),
   action('section', { sectionId: z.int().min(0).max(3), text: SourceTextSchema }),
   action('objective', {
@@ -199,6 +209,20 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     lessEvent: z.string().min(1).max(100),
     greaterEvent: z.string().min(1).max(100),
   }),
+  action('copyInt', { target: VariableRefSchema, value: intValue }),
+  action('switchInt', {
+    value: intValue,
+    cases: z
+      .array(z.strictObject({ equals: intValue, event: z.string().min(1).max(100) }))
+      .min(1)
+      .max(100),
+  }),
+  action('isExplored', {
+    tile,
+    trueEvent: z.string().min(1).max(100),
+    falseEvent: z.string().min(1).max(100),
+  }),
+  action('focus', { positions: z.array(VariableRefSchema).min(1).max(20) }),
 ]);
 export type ScenarioAction = z.infer<typeof ScenarioActionSchema>;
 export const ScenarioDefinitionSchema = z.strictObject({
@@ -258,6 +282,22 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    clues: z
+      .strictObject({
+        version: z.literal('source-clues-v1'),
+        projectionFingerprint: HashSchema,
+        encounters: z.array(SourceSchema).length(4),
+        counter: VariableRefSchema,
+        event: z.string().min(1).max(100),
+        fortEvent: z.string().min(1).max(100),
+        fort: z.strictObject({
+          prefab: SourceSchema,
+          tile: VariableRefSchema,
+          position: VariableRefSchema,
+        }),
+        evidenceHash: HashSchema,
+      })
+      .optional(),
     combat: CombatClosureArtifactSchema.optional(),
     rounds: RoundSourceSchema.optional(),
     followup: z
