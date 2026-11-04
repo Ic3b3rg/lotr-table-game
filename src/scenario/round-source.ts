@@ -8,7 +8,7 @@ import { groupTrialProgram } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { validatePhysical } from '../physical-resolution/runtime';
 import { livingEnemyGroups } from './deployment';
-import { combatArtifact, startSourceActivation } from '../combat/controller';
+import { combatArtifact, startSourceActivation, advanceCombat } from '../combat/controller';
 import { preflightCombatOperation } from '../combat/preflight';
 import { activeCompany, activationTargets } from '../combat/movement';
 import { effectiveGroup } from '../combat/group';
@@ -213,7 +213,8 @@ function preflightActivations(state: State) {
     fail(
       'Questo terreno richiede effetti di attivazione ulteriori. Nessun effetto dell’Ombra è stato applicato.',
     );
-  for (const g of livingEnemyGroups(state)) {
+  const work = structuredClone(state);
+  for (const g of livingEnemyGroups(work)) {
     if (g.logic)
       fail(
         'Il seguito e il refresh di questo gruppo non sono ancora disponibili. Nessun effetto dell’Ombra è stato applicato.',
@@ -224,13 +225,16 @@ function preflightActivations(state: State) {
     const canAttack = effective.model.instructions
       .filter((i) => i.minimum <= size && i.maximum >= 1)
       .some((i) =>
-        activationTargets(state, g.spaceId, i.activation!, null, effective.ranged ? 1 : 0).some(
+        activationTargets(work, g.spaceId, i.activation!, null, effective.ranged ? 1 : 0).some(
           (p) => p.branch === 'primary',
         ),
       );
-    if (!canAttack) continue;
-    for (const h of activeCompany(state)) {
-      const missing = preflightCombatOperation(state, a, g, h.heroId, 'activation');
+    if (!canAttack) {
+      g.exhausted = true;
+      continue;
+    }
+    for (const h of activeCompany(work)) {
+      const missing = preflightCombatOperation(work, a, g, h.heroId, 'activation');
       if (missing.length)
         fail(
           missing.includes('boon-quantities-57')
@@ -238,6 +242,7 @@ function preflightActivations(state: State) {
             : 'Una possibile conseguenza dell’attivazione non è ancora disponibile. Nessun effetto dell’Ombra è stato applicato.',
         );
     }
+    g.exhausted = true;
   }
 }
 /** Rescan after the complete physical frontier, never after a mere acknowledgement. */
@@ -252,7 +257,11 @@ export function advanceSourceActivations(state: State) {
     state.physical!.snapshot.active
   )
     return false;
-  if (startSourceActivation(state, frame.id)) return false;
+  while (startSourceActivation(state, frame.id)) {
+    advanceCombat(state);
+    if (state.combat!.active || state.scenario.pending || state.physical!.snapshot.active)
+      return false;
+  }
   frame.stage = 'darkness';
   frame.darknessHeroes = sourceDarknessHeroes(state).map(
     (n) => state.preparation!.heroes[n]!.heroId,

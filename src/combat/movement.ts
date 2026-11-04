@@ -53,6 +53,9 @@ function activationDistances(state: State, to: string) {
       }
   return distances;
 }
+export function activationDistance(state: State, from: string, to: string) {
+  return activationDistances(state, to).get(from);
+}
 export function activeCompany(state: State) {
   return state.preparation!.heroes.filter(
     (h) =>
@@ -68,7 +71,7 @@ export function activationTargets(
   range: number,
 ) {
   const heroes = activeCompany(state).flatMap((h) => {
-    const distance = activationDistances(state, heroSourceSpace(state, h.heroId)).get(from);
+    const distance = activationDistance(state, from, heroSourceSpace(state, h.heroId));
     return distance === undefined ? [] : [{ heroId: h.heroId, distance }];
   });
   const attackable = heroes.filter((h) => h.distance <= policy.movement + range);

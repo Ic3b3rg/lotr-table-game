@@ -862,7 +862,7 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
           expectedRevision: state.revision,
           mapId: state.journey!.id,
           roundId: state.round!.id,
-          turnId: state.round!.turnId!,
+          turnId: state.round!.turnId,
           heroId: a.heroId,
           fromSpaceId: from,
           destinationSpaceId: destination,

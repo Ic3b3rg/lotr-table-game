@@ -2,7 +2,7 @@ import type { State } from '../server/state';
 import type { DeployedGroup } from '../shared/deployment';
 import type { CombatClosure } from './compiler';
 import { preflightCombatGroup, effectiveGroup } from './group';
-import { nearestThreatSteps, groupInRange } from './movement';
+import { nearestThreatSteps, groupInRange, activationDistance } from './movement';
 import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
 
@@ -74,17 +74,41 @@ export function preflightCombatOperation(
           )
             missing.add('forced-exploration');
         }
-    for (const g of groups)
+    for (const g of groups) {
       if (
-        moves &&
-        !g.exhausted &&
-        !(cause === 'counterattack' && g.id === first.id) &&
-        [...positions.get(g.id)!].some((p) => heroSpaces.has(p)) &&
-        !triggered.has(g.id)
-      ) {
+        !moves ||
+        g.exhausted ||
+        (cause === 'counterattack' && g.id === first.id) ||
+        triggered.has(g.id)
+      )
+        continue;
+      const provokes = [...positions.get(g.id)!].some((p) => heroSpaces.has(p));
+      const effect = effectiveGroup(a, g),
+        size = g.figures.filter((f) => f.health > 0).length;
+      // A forced hero step can enable a later primary without provoking that
+      // group. Include its complete attack closure before the phase begins.
+      const laterActivation =
+        cause === 'activation' &&
+        groups.indexOf(g) > groups.indexOf(first) &&
+        [...positions.get(g.id)!].some((from) =>
+          [...heroSpaces].some((to) => {
+            const distance = activationDistance(state, from, to);
+            return (
+              distance !== undefined &&
+              effect.model.instructions.some(
+                (i) =>
+                  i.minimum <= size &&
+                  i.maximum >= 1 &&
+                  distance <= i.activation!.movement + (effect.ranged ? 1 : 0),
+              )
+            );
+          }),
+        );
+      if (provokes || laterActivation) {
         triggered.add(g.id);
         changed = true;
       }
+    }
   }
   return [...missing];
 }
