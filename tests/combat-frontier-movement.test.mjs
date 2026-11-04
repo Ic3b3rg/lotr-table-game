@@ -14,7 +14,7 @@ const built = buildSync({
   format: 'esm',
   target: 'node24',
 });
-const { advanceCombat, combatPending, answerCombat } = await import(
+const { advanceCombat, combatPending, answerCombat, combatView } = await import(
   `data:text/javascript;base64,${Buffer.from(built.outputFiles[0].contents).toString('base64')}`
 );
 
@@ -158,6 +158,9 @@ for (const kind of ['hero-attack', 'activation'])
     if (kind === 'activation') {
       assert.deepEqual(state.scenario.rounds.frames[0].activated, [group.id]);
       assert.equal(group.exhausted, true);
+      state.round = { phase: 'action', activeHeroId: null };
+      state.combat.grants = [];
+      assert.match(combatView(state).last.returnLabel, /nuovo round/);
     }
     advanceCombat(state);
     assert.equal(group.spaceId, 'target-space');

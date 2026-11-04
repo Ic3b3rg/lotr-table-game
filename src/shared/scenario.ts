@@ -32,6 +32,7 @@ export const SourceTextSchema = z
           'inspiration',
           'action',
           'attack',
+          'ranged',
           'damage',
           'fear',
           'lore',
@@ -660,6 +661,33 @@ export const ScenarioSchema = z.strictObject({
   handoffCount: z.int().min(0).max(1),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
+const publicExplorations = ScenarioSchema.shape.explorations.unwrap();
+export const ScenarioViewSchema = ScenarioSchema.extend({
+  enemies: DeploymentStateSchema.omit({ entropy: true }).optional(),
+  explorations: publicExplorations
+    .extend({
+      attempts: z.array(publicExplorations.shape.attempts.element.omit({ entropy: true })).max(200),
+    })
+    .optional(),
+});
+export type ScenarioView = z.infer<typeof ScenarioViewSchema>;
+export function scenarioView(sc: Scenario | null): ScenarioView | null {
+  if (!sc) return null;
+  const { enemies, explorations, ...visible } = sc;
+  const publicEnemies = enemies ? (({ entropy: _entropy, ...rest }) => rest)(enemies) : null;
+  return {
+    ...visible,
+    ...(publicEnemies ? { enemies: publicEnemies } : {}),
+    ...(explorations
+      ? {
+          explorations: {
+            ...explorations,
+            attempts: explorations.attempts.map(({ entropy: _entropy, ...attempt }) => attempt),
+          },
+        }
+      : {}),
+  };
+}
 export type ScenarioInstance = z.infer<typeof ScenarioInstanceSchema>;
 export type ScenarioRequest = z.infer<typeof ScenarioRequestSchema>;
 export const ScenarioOfferSchema = z.strictObject({

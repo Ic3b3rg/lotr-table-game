@@ -11,6 +11,7 @@ export const ICON_LABELS: Record<Extract<SourceText[number], { kind: 'icon' }>['
   inspiration: 'Ispirazione',
   action: 'Interazione',
   attack: 'Attacco',
+  ranged: 'A distanza',
   damage: 'Danno',
   fear: 'Paura',
   lore: 'Sapienza',

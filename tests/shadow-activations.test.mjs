@@ -19,14 +19,19 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 const built = buildSync({
-  entryPoints: [fileURLToPath(new URL('../src/scenario/round-source.ts', import.meta.url))],
+  stdin: {
+    contents:
+      "export { preflightSourceShadow } from './src/scenario/round-source'; export { SessionSchema } from './src/shared/protocol';",
+    resolveDir: fileURLToPath(new URL('../', import.meta.url)),
+    loader: 'ts',
+  },
   bundle: true,
   write: false,
   platform: 'node',
   format: 'esm',
   target: 'node24',
 });
-const { preflightSourceShadow } = await import(
+const { preflightSourceShadow, SessionSchema } = await import(
   `data:text/javascript;base64,${Buffer.from(Buffer.from(built.outputFiles[0].contents).toString() + '\n//# sourceURL=shadow-phase-test.mjs').toString('base64')}`
 );
 
@@ -74,7 +79,10 @@ test('whole source shadow activates live ready groups in order, resolves physica
   }
   await endTurns(ready);
   const before = await readSession(ready.host);
+  assert.doesNotThrow(() => SessionSchema.parse(before));
+  assert.equal('entropy' in before.scenario.enemies, false);
   const raw = (await (await fetch(ready.host.url + '/api/backups')).json()).payload.state;
+  assert.equal(typeof raw.scenario.enemies.entropy, 'string');
   const badPack = structuredClone(raw.scenario.pack);
   badPack.manifest.combat.source.shadow.controller.bodyHash = 'a'.repeat(64);
   badPack.manifest.combat = compileCombatClosure(badPack.manifest.combat.source);

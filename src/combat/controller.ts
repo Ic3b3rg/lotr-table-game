@@ -1094,6 +1094,13 @@ export function combatView(state: State): CombatView | undefined {
   );
   const last = state.combat.attempts.filter((a) => a.returned).at(-1);
   const returnLabel = (a: CombatAttempt) => {
+    if (a.activation && a.returned) {
+      if (state.round?.phase === 'action')
+        return 'L’Ombra è conclusa. Riprendete i turni nel nuovo round.';
+      if (state.round?.phase === 'rally')
+        return 'L’attivazione è conclusa. Proseguite con le Scoperte della compagnia.';
+      return 'L’attivazione è conclusa. Proseguite con gli altri passaggi dell’Ombra.';
+    }
     if (a.activation)
       return 'Riprende l’Ombra con il prossimo gruppo pronto, poi oscurità e minaccia.';
     const op = a.operationId ? state.combat!.operations.find((o) => o.id === a.operationId) : null;

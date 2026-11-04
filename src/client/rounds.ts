@@ -65,7 +65,9 @@ export function createRounds(sync: () => Promise<void>) {
             ? 'Tutti gli eroi hanno concluso. Il gruppo può passare all’Ombra.'
             : 'Scegliete insieme quale eroe agisce adesso.'
         : round.phase === 'shadow'
-          ? `${SHADOW_LABELS[round.shadowStep!]} · da confermare insieme.`
+          ? sourcePhases
+            ? `${SHADOW_LABELS[round.shadowStep!]} · ${round.shadowStep === 'threat' ? 'controllate l’aumento, poi proseguite insieme.' : 'risolvete le scelte e le carte sul posto indicato.'}`
+            : `${SHADOW_LABELS[round.shadowStep!]} · da confermare insieme.`
           : allScouted
             ? 'Tutti gli eroi hanno concluso Scoperta. Il prossimo round è pronto.'
             : 'Tutti i mazzi sono ricomposti. Ogni eroe effettua Scoperta 2 con l’eventuale bonus di Aragorn, una volta.';
@@ -83,7 +85,9 @@ export function createRounds(sync: () => Promise<void>) {
           : round.phase === 'action'
             ? 'Ogni eroe svolge un turno completo: da zero a due azioni, anche ripetute. Puoi interagire con una prova o aprire la mappa per viaggiare. Gli attacchi seguiranno con il combattimento.'
             : round.phase === 'shadow'
-              ? 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
+              ? sourcePhases
+                ? 'Completate le attivazioni e le conseguenze indicate. Poi si risolvono oscurità, eventi e minaccia. Al termine i nemici tornano pronti e ogni eroe effettua Scoperta.'
+                : 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
               : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
     form.hidden =
       !player ||
