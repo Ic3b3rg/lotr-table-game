@@ -5,7 +5,7 @@ nuova capacità esplicita in schema17. Spec e piano sono stati committati prima
 del codice. Le slice verificano compiler, stock, finestre, controller HTTP,
 integrazione fonte e recovery ai confini pubblici reali.
 
-Esito finale: `npm test`688/688, zero saltati,294320.702292ms. Typecheck,
+Esito della consegna locale: `npm test`688/688, zero saltati,294320.702292ms. Typecheck,
 formato, diff e privacy della nuova storia sono passati.
 
 ## Fixture e prove positive
@@ -68,3 +68,27 @@ Il report privato e il sigillo nella scratch propria raccolgono comandi,
 input/byte/hash, replay, tentativi, processi chiusi e commit locali. Review
 Standards/Spec e integrazione spettano al root. #57, #89, #33 e #65 restano
 aperte; altre famiglie o capacità non compilate restano gated.
+
+## Integrazione root
+
+Review indipendenti Standards/Spec completate. Due P2 del reviewer e un
+ulteriore P2 trovato dal root sono corretti con regressioni RED→GREEN:
+dipendenza positiva impossibile, ritorno certo riutilizzabile nella catena
+e riserva del seguito obbligatorio prima di un Riposo facoltativo col titolo.
+Il controllo condiviso conserva popolazioni, copie e gate storici.
+
+Suite completa finale sul codice corretto: **691/691**, zero fail/skip/todo,
+452475.12675ms. Due passaggi precedenti con il default di11 file simultanei
+fallivano soltanto il limite di avvio host8s; il recovery isolato passava.
+`npm test` ora esegue quattro file simultanei, conservando casi, asserzioni,
+deadline e concorrenza HTTP interna. Un primo passaggio completo690/690
+precede l'ultima correzione; non è usato come prova del codice finale.
+Tentativi e log rimangono distinti nella
+[review dell'integrazione](../reviews/2026-11-04-boons.md).
+
+Il root ricostruisce il validator finale e verifica485/485 payload pertinenti,
+17 snapshot sintetici con viste pubbliche complete e l'export nativo.
+Il checkpoint originale156 resta interamente invariato e bloccato57.
+Ricompilazione, oracle3/3 e primaria app coincidono byte per byte; quantità
+null, zero copie, runtimeReady falso. Typecheck, formato, diff e controllo
+privacy257 needle sulla storia passano. Nessuna nuova partita originale.
