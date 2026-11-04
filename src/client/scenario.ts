@@ -66,6 +66,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     const turnsEnded =
       sc?.pack.manifest.scope === 'original-encounter-v1' &&
       current.round?.heroes.every((h) => h.turnEnded);
+    const sourcePhases = !!sc?.pack.manifest.rounds;
     const explorer = sc?.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
@@ -85,9 +86,15 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                   ? 'Un partecipante conferma per il gruppo.'
                   : activeHero
                     ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                    : turnsEnded
-                      ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
-                      : 'Avvio completato · scegliete il prossimo eroe di turno.';
+                    : sourcePhases && current.round?.phase === 'rally'
+                      ? 'Riorganizzazione · ogni proprietario completa Scoperta. Il nuovo round attende tutti gli eroi.'
+                      : sourcePhases && current.round?.phase === 'shadow'
+                        ? 'Ombra · leggete il prossimo passo nella sezione del round.'
+                        : sourcePhases && turnsEnded
+                          ? 'I turni sono conclusi. Il gruppo può iniziare l’Ombra nella sezione del round.'
+                          : turnsEnded
+                            ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                            : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -96,8 +103,12 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       q?.kind === 'scout' ? '#scouting' : '#skill-tests';
     element('#scenario-turn-link').hidden = sc?.phase !== 'action';
     const turnLink = element<HTMLAnchorElement>('#scenario-turn-link');
-    turnLink.hidden ||= !!turnsEnded;
-    turnLink.textContent = active ? 'Apri la mappa del turno' : 'Scegli il prossimo turno';
+    turnLink.hidden ||= !!turnsEnded && !sourcePhases;
+    turnLink.textContent = active
+      ? 'Apri la mappa del turno'
+      : sourcePhases && turnsEnded
+        ? 'Apri il round'
+        : 'Scegli il prossimo turno';
     turnLink.href = active ? '#journey-map' : '#rounds';
     element('#scenario-limit').hidden = sc?.phase !== 'action';
     if (current.physical?.cycle)
@@ -107,6 +118,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       element('#scenario-limit').textContent = sc.pack.manifest.exploration
         ? 'Puoi esplorare le tessere abilitate e rivelarne i segnalini. Il segnalino iniziale è giocabile; gli altri incontri, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.'
         : 'Il segnalino iniziale certificato è giocabile. Ulteriori incontri ed esplorazioni, combattimento, Ombra e seguito dell’avventura richiedono ancora i loro effetti.';
+    if (sourcePhases)
+      element('#scenario-limit').textContent =
+        'Il passaggio senza nemici a Ombra e Riorganizzazione è disponibile. Altri incontri, combattimento ed eventi successivi mantengono i propri limiti: l’avventura completa è ancora in sviluppo.';
     refreshActions();
   }
   agreed.oninput = () => {

@@ -324,6 +324,45 @@ export function createGuidedStart(sync: () => Promise<void>) {
                 : 'L’incontro disponibile è concluso. Gli eroi che devono ancora agire possono completare il turno; la Fase di Ombra originale richiede ancora i suoi effetti.';
             }
           }
+          if (
+            session.scenario.pack.manifest.rounds &&
+            !q &&
+            !session.physical?.cycle?.pending &&
+            session.round
+          ) {
+            const round = session.round;
+            if (round.phase === 'rally') {
+              const done = round.heroes.every((h) => h.rallyDone);
+              heading = `Round ${round.number} · Riorganizzazione`;
+              message = done
+                ? 'Ogni eroe ha completato Scoperta. Il gruppo può iniziare il nuovo round.'
+                : 'I mazzi sono ricomposti. Ogni proprietario apre Scoperta e prepara o ordina le proprie carte; gli altri giocatori attendono il suo completamento.';
+              target = done ? '#rounds' : '#scouting';
+              label = done ? 'Inizia il nuovo round' : 'Apri Scoperta';
+              topic = 'scout';
+            } else if (round.phase === 'shadow') {
+              heading = `Round ${round.number} · Ombra`;
+              message =
+                'Gli effetti dell’Ombra e gli eventi sono risolti nell’ordine dell’avventura. Leggete l’aumento della minaccia e proseguite alla Riorganizzazione.';
+              target = '#rounds';
+              label = 'Continua l’Ombra';
+              topic = 'shadow';
+            } else if (round.heroes.every((h) => h.turnEnded)) {
+              heading = 'I turni sono conclusi';
+              message =
+                'Il gruppo può iniziare l’Ombra: il tavolo controlla e risolve gli effetti dell’avventura prima della Riorganizzazione.';
+              target = '#rounds';
+              label = 'Inizia l’Ombra';
+              topic = 'shadow';
+            } else if (!round.activeHeroId) {
+              heading = `Round ${round.number} · Scegliete il prossimo eroe`;
+              message =
+                'Concordate l’ordine. Il proprietario inizia il turno del proprio eroe; gli altri giocatori attendono.';
+              target = '#rounds';
+              label = 'Scegli il turno';
+              topic = 'turn';
+            }
+          }
         }
       } else if (session.mapGeneration || generationOffer.kind !== 'legacy') {
         step = 5;

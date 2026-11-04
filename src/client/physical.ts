@@ -9,6 +9,7 @@ import { STAT_LABELS } from '../shared/skill-tests';
 import { compileSourceText } from '../scenario/text';
 import { sourceText } from './source-text';
 import { cardButton, type CardReader } from './cards';
+import { findSkillCard } from '../shared/skill-cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
@@ -286,6 +287,21 @@ export function createPhysicalControls(
             );
         } else if (active.kind === 'decision') {
           root.append(text('p', active.title, 'company-help'));
+          if (active.mode === 'scout' && catalog && reader) {
+            const cards = text('ul', '', 'physical-scout-cards test-revealed');
+            for (const option of active.options) {
+              const card = findSkillCard(
+                catalog,
+                option.id,
+                view.lastStand?.titles.map((t) => t.skill),
+              );
+              if (!card) continue;
+              const row = text('li', '');
+              row.append(cardButton(card, (caller) => reader.card(card, caller)));
+              cards.append(row);
+            }
+            root.append(cards);
+          }
           if (
             player?.id === active.actorPlayerId &&
             (q?.kind === 'physical' || view.cycle?.pending)

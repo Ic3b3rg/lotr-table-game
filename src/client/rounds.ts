@@ -48,6 +48,7 @@ export function createRounds(sync: () => Promise<void>) {
     );
     const cycle = !!current.physical?.cycle;
     const original = current.scenario?.pack.manifest.scope === 'original-encounter-v1';
+    const sourcePhases = original && !!current.scenario?.pack.manifest.rounds;
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
     const allScouted = round?.heroes.every((hero) => hero.rallyDone);
     const active = round?.heroes.find((hero) => hero.heroId === round.activeHeroId);
@@ -83,7 +84,8 @@ export function createRounds(sync: () => Promise<void>) {
     form.hidden =
       !player ||
       Boolean(round?.activeHeroId) ||
-      (!!current.scenario && !!allEnded && (!cycle || original));
+      (!!current.scenario && !!allEnded && (!cycle || (original && !sourcePhases))) ||
+      (sourcePhases && round?.phase === 'shadow' && round.shadowStep !== 'threat');
     const choosing = Boolean(round?.phase === 'action' && !allEnded);
     element('#round-hero-field').hidden = !choosing;
     select.disabled = !choosing;
@@ -146,6 +148,38 @@ export function createRounds(sync: () => Promise<void>) {
       if (allEnded)
         status.textContent =
           'I turni sono conclusi. La Fase di Ombra originale richiede ancora i suoi effetti.';
+    }
+    if (sourcePhases && round) {
+      const frame = current.scenario!.rounds?.frames.find(
+        (f) => f.id === current!.scenario!.rounds?.active,
+      );
+      const acting = current.players.find((p) => p.id === current!.physical?.active?.actorPlayerId);
+      element('#round-phase-help').textContent =
+        round.phase === 'action'
+          ? 'Concordate l’ordine degli eroi. Quando tutti hanno concluso, il passaggio all’Ombra risolve gli effetti disponibili e controlla gli eventi dell’avventura.'
+          : round.phase === 'shadow'
+            ? 'L’Ombra risolve nemici, oscurità ed eventi prima dell’aumento della minaccia. Le conseguenze e le carte sono salvate a ogni decisione.'
+            : 'I mazzi sono ricomposti senza le preparate. Ogni proprietario apre Scoperta qui sotto e dispone le proprie carte nel pannello dell’avventura. Il nuovo round attende tutti gli eroi.';
+      if (round.phase === 'shadow') {
+        status.textContent =
+          round.shadowStep === 'darkness'
+            ? `${acting?.name ?? 'Il proprietario indicato'} risolve l’oscurità nel pannello dell’avventura. Gli altri giocatori attendono.`
+            : frame?.threat
+              ? `Minaccia: ${frame.threat.before} → ${frame.threat.after}. Aumento ${frame.threat.delta}: ${frame.threat.heroes} eroi, ${frame.threat.tokens.length} segnalini minaccia attivi, ${frame.threat.tiles.length} tessere visibili inesplorate. Il gruppo può proseguire.`
+              : 'Concludete la richiesta dell’Ombra.';
+        confirm.textContent = 'Applica la minaccia e riorganizza';
+        element('#round-agreement').textContent =
+          'Il gruppo ha letto l’aumento della minaccia ed è pronto a proseguire.';
+      } else if (round.phase === 'rally') {
+        const remaining = round.heroes.filter((h) => !h.rallyDone).map((h) => name(h.heroId));
+        status.textContent = pending
+          ? `${acting?.name ?? 'Il proprietario indicato'} completa Scoperta nel pannello dell’avventura. Gli altri giocatori attendono.`
+          : allScouted
+            ? `Ogni Scoperta è conclusa. Il gruppo può iniziare il round ${round.number + 1}.`
+            : `Scoperta da completare: ${remaining.join(', ')}. Ogni proprietario agisce per il proprio eroe.`;
+      } else if (allEnded)
+        status.textContent =
+          'Tutti i turni sono conclusi. Il gruppo può iniziare la Fase di Ombra.';
     }
     end.dataset.blocked = String(!ownActive || pending);
     element('#round-observer').hidden = Boolean(player);

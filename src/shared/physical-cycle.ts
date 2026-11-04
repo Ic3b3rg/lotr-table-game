@@ -43,7 +43,7 @@ export const CycleIntentSchema = z.discriminatedUnion('type', [
 ]);
 export const CyclePendingSchema = z.strictObject({
   runId: z.uuid(),
-  type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP']),
+  type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP', 'BEGIN_SHADOW']),
   heroId: ContentIdSchema,
 });
 export const CycleStateSchema = z.strictObject({

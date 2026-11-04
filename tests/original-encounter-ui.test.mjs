@@ -9,6 +9,7 @@ const bundle = buildSync({
       export {createExplorationInspection} from './src/client/exploration-inspection';
       export {createGuidedStart} from './src/client/guided-start';
       export {createJourneyMap} from './src/client/journey-map';
+      export {createPhysicalControls} from './src/client/physical';
       export {setOnline} from './src/client/actions';`,
     resolveDir: process.cwd(),
   },
@@ -219,6 +220,82 @@ test('the original guide and map preserve concluded turns without suggesting ano
   assert.match(b.document.querySelector('#map-status').textContent, /turni sono conclusi/);
   assert.doesNotMatch(b.document.querySelector('#map-status').textContent, /Inizia un turno/);
   assert.equal(b.document.querySelector('#map-personal-controls').hidden, true);
+});
+
+test('a frozen original phase source guides Shadow, owner scouting and the next round', () => {
+  const b = browser(),
+    s = session(),
+    ui = b.createGuidedStart(async () => {});
+  s.scenario.pack.manifest.rounds = { version: 'source-rounds-v1' };
+  s.scenario.rounds = { active: 'phase', frames: [{ id: 'phase', stage: 'threat' }] };
+  s.round.activeHeroId = null;
+  s.round.heroes.forEach((h) => {
+    h.turnEnded = true;
+    h.rallyDone = false;
+  });
+  ui.update(s, player, { kind: 'available' });
+  assert.match(b.document.querySelector('#start-instruction').textContent, /Ombra/);
+  assert.equal(b.document.querySelector('#start-action').href, '#rounds');
+  s.round.phase = 'shadow';
+  ui.update(s, player, { kind: 'available' });
+  assert.match(b.document.querySelector('#start-title').textContent, /Ombra/);
+  assert.doesNotMatch(
+    b.document.querySelector('#start-instruction').textContent,
+    /manuale|non è ancora disponibile/,
+  );
+  s.round.phase = 'rally';
+  ui.update(s, player, { kind: 'available' });
+  assert.match(b.document.querySelector('#start-title').textContent, /Riorganizzazione/);
+  assert.equal(b.document.querySelector('#start-action').href, '#scouting');
+  s.round.heroes.forEach((h) => (h.rallyDone = true));
+  ui.update(s, player, { kind: 'available' });
+  assert.match(b.document.querySelector('#start-instruction').textContent, /nuovo round/);
+  assert.equal(b.document.querySelector('#start-action').href, '#rounds');
+});
+
+test('a source scouting request shows only its revealed skill faces with reader access', () => {
+  const b = browser(),
+    s = session();
+  const skill = {
+    id: 'skill-invented',
+    number: 1,
+    kind: 'basic',
+    name: { text: 'Carta rivelata' },
+    text: { text: 'Testo visibile inventato' },
+  };
+  s.physical = {
+    synthetic: false,
+    decks: { damage: 10, fear: 10 },
+    heroes: [],
+    parents: [],
+    cycle: { pending: { type: 'START_RALLY_SCOUT' } },
+    active: {
+      kind: 'decision',
+      mode: 'scout',
+      heroId: hero.heroId,
+      actorHeroId: hero.heroId,
+      actorPlayerId: player.id,
+      title: 'Scoperta inventata',
+      options: [{ id: 'skill-invented:1', label: 'Carta rivelata' }],
+    },
+  };
+  b.createPhysicalControls(() => {}, { openSkill() {} }).update(s, null, {
+    heroes: [],
+    skills: [skill],
+  });
+  assert.equal(b.nodes.filter((n) => n.className === 'physical-card').length, 1);
+  assert.ok(b.nodes.some((n) => n.textContent === 'Testo visibile inventato'));
+  s.physical.active = null;
+  b.createPhysicalControls(() => {}, { openSkill() {} }).update(s, null, {
+    heroes: [],
+    skills: [skill],
+  });
+  assert.equal(
+    b.document
+      .querySelector('#physical-resolution')
+      .children.some((n) => n.className?.includes('physical-scout-cards')),
+    false,
+  );
 });
 
 test('exploration remains the guided next step with its owner, paid movement and residual budget', () => {
