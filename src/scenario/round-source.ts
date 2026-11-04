@@ -11,10 +11,9 @@ import { livingEnemyGroups } from './deployment';
 import { combatArtifact, startSourceActivation, advanceCombat } from '../combat/controller';
 import { preflightCombatOperation } from '../combat/preflight';
 import { activeCompany, activationTargets } from '../combat/movement';
-import { effectiveGroup } from '../combat/group';
+import { effectiveGroup, reachableBoonKinds } from '../combat/group';
 import { beginHeroFailure, validateFailureParty } from './conclusion';
 import { preflightBoonRequests, type BoonRequest } from '../physical-resolution/boon-stock';
-import { BoonKindSchema } from '../shared/combat';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -269,13 +268,7 @@ function preflightActivations(state: State) {
       const candidates = effective.model.instructions.filter(
         (i) => i.minimum <= size && i.maximum >= 1,
       );
-      const kinds = candidates.flatMap((i) =>
-        i.addition?.effect.op === 'gain-boon'
-          ? i.addition.effect.boon
-            ? [i.addition.effect.boon]
-            : BoonKindSchema.options
-          : [],
-      );
+      const kinds = reachableBoonKinds(a, g);
       const reaches =
         forcedMoves ||
         candidates.some((i) =>

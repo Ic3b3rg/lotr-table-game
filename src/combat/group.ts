@@ -42,6 +42,36 @@ export function applyGroupHits(
     suppressed: modifiers.filter((m) => effective.blocked.includes(m)),
   };
 }
+
+/** Dependency reachability only; the complete instruction population stays unchanged. */
+export function reachableBoonKinds(a: CombatClosure, group: DeployedGroup) {
+  const { model, bonuses } = effectiveGroup(a, group);
+  const size = group.figures.filter((f) => f.health > 0).length;
+  return [
+    ...new Set(
+      model.instructions
+        .filter((i) => i.minimum <= size && i.maximum >= 1)
+        .flatMap((i) => {
+          const extra = i.addition;
+          if (extra?.effect.op !== 'gain-boon') return [];
+          const family =
+            extra.predicate === 'damage-positive'
+              ? 'damage'
+              : extra.predicate === 'fear-positive'
+                ? 'fear'
+                : null;
+          if (
+            family &&
+            bonuses.every((b) => b[family] === 0) &&
+            i.damage.every((row) => row.size > size || row[family] === 0)
+          )
+            return [];
+          return extra.effect.boon ? [extra.effect.boon] : BoonKindSchema.options;
+        }),
+    ),
+  ];
+}
+
 export function preflightCombatGroup(
   a: CombatClosure,
   group: DeployedGroup,
@@ -53,6 +83,12 @@ export function preflightCombatGroup(
     heroIds?: string[] | undefined;
   },
 ) {
+  if (supply.artifact) {
+    const kinds = reachableBoonKinds(a, group);
+    return kinds.length
+      ? boonAcquisitionProblems(supply.artifact, supply.custody ?? [], kinds, supply.heroIds)
+      : [];
+  }
   const { model } = effectiveGroup(a, group);
   const size = group.figures.filter((f) => f.health > 0).length;
   // All positive sizes reachable by the parent attack, in source order; no dependency filtering.
@@ -60,19 +96,7 @@ export function preflightCombatGroup(
   const missing: string[] = [];
   for (const i of candidates) {
     if (i.addition?.effect.op === 'gain-boon') {
-      if (supply.artifact)
-        missing.push(
-          ...boonAcquisitionProblems(
-            supply.artifact,
-            supply.custody ?? [],
-            i.addition.effect.boon ? [i.addition.effect.boon] : BoonKindSchema.options,
-            supply.heroIds,
-          ),
-        );
-      else
-        missing.push(
-          supply.quantities === null ? 'boon-quantities-57' : 'boon-acquisition-consumer',
-        );
+      missing.push(supply.quantities === null ? 'boon-quantities-57' : 'boon-acquisition-consumer');
     }
   }
   return [...new Set(missing)];

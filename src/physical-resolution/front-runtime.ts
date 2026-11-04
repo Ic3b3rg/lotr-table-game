@@ -21,6 +21,7 @@ import { validateLastStandArtifact } from './last-stand-program';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { validateBoonArtifact } from './boon-program';
 import { boonAvailability, boonAcquisitionProblems, validateBoonCustody } from './boon-stock';
+import { boonProgramProblems } from './boon-continuation';
 import type { BoonKind } from '../shared/boons';
 import { BoonKindSchema } from '../shared/combat';
 import type {
@@ -239,6 +240,34 @@ class FrontReplay {
       source: path,
       reason: 'source-grant',
     });
+  }
+  private titleRestProblems(hero: number, copy: string, kind: BoonKind, returns: string[]) {
+    const missing = boonAcquisitionProblems(
+      this.p.boons,
+      this.resources.boonCustody ?? [],
+      [kind],
+      [this.hero(hero).heroId],
+    );
+    if (missing.length || this.run.program.profile !== 'source-fronts-v1') return missing;
+    const context = structuredClone(this.resources),
+      held = context.boonCustody!,
+      heroId = this.hero(hero).heroId;
+    if (!held.some((b) => b.heroId === heroId && b.kind === kind)) {
+      const copyId = boonAvailability(this.p.boons, held, kind).copies[0];
+      invariant(copyId, 'Preflight del titolo senza copia disponibile.');
+      held.push({ copyId, heroId, kind, face: 'faceup', source: 'title-rest-preflight' });
+    }
+    context.boonCustody = held.filter((b) => !returns.includes(b.copyId));
+    context.boons = context.boonCustody.map(({ heroId, kind }) => ({ heroId, kind }));
+    const h = context.preparation.heroes[hero]!;
+    h.prepared = h.prepared.filter((c) => c !== copy);
+    h.discard = h.discard.filter((c) => c !== copy);
+    return boonProgramProblems(
+      { ...this.p, snapshot: this.s },
+      { ...this.run.program, children: this.run.program.children.slice(this.child + 1) },
+      context,
+      this.run.spatial,
+    );
   }
   private get artifact() {
     return this.p.fronts!.artifact;
@@ -1062,21 +1091,15 @@ class FrontReplay {
         })),
         ...titleRests.map(({ copy, effect: e, index }) => {
           const missing =
-            e.op === 'rest'
-              ? boonAcquisitionProblems(
-                  this.p.boons,
-                  this.resources.boonCustody ?? [],
-                  [e.after.boon],
-                  [this.hero(hero).heroId],
-                )
-              : [];
+            e.op === 'rest' ? this.titleRestProblems(hero, copy, e.after.boon, boonLeft) : [];
           return {
             id: `title-rest:${index}:${copy}`,
             label: `Riposo ${e.op === 'rest' ? e.n : 0} · ${this.skillName(copy)}${this.p.boons ? ' · poi rimuovi il titolo e acquisisci il beneficio' : ' · seguito con beneficio da verificare'}`,
             ...(this.p.boons && missing.length
               ? {
-                  unavailable:
-                    'La riserva del beneficio necessario non è disponibile. Titolo e Riposo restano intatti.',
+                  unavailable: missing.includes('boon-quantities-57')
+                    ? 'La riserva dei benefici non è ancora verificata. Titolo e Riposo restano intatti.'
+                    : 'La riserva non copre questo effetto e il suo seguito. Titolo e Riposo restano intatti.',
                 }
               : {}),
           };
@@ -1110,12 +1133,7 @@ class FrontReplay {
         const title = titleRests.find((t) => selected === `title-rest:${t.index}:${t.copy}`)!;
         invariant(
           title.effect.op === 'rest' &&
-            !boonAcquisitionProblems(
-              this.p.boons,
-              this.resources.boonCustody ?? [],
-              [title.effect.after.boon],
-              [this.hero(hero).heroId],
-            ).length,
+            !this.titleRestProblems(hero, title.copy, title.effect.after.boon, boonLeft).length,
           'Seguito del Riposo non disponibile prima del costo.',
         );
         this.payPrepared(hero, title.copy);

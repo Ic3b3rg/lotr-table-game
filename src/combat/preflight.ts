@@ -1,12 +1,11 @@
 import type { State } from '../server/state';
 import type { DeployedGroup } from '../shared/deployment';
 import type { CombatClosure } from './compiler';
-import { preflightCombatGroup, effectiveGroup } from './group';
+import { preflightCombatGroup, effectiveGroup, reachableBoonKinds } from './group';
 import { nearestThreatSteps, groupInRange, activationDistance } from './movement';
 import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
 import { preflightBoonRequests } from '../physical-resolution/boon-stock';
-import { BoonKindSchema } from '../shared/combat';
 
 /** Finite mandatory closure, including ready groups reachable through forced moves. No pool is filtered. */
 export function preflightCombatOperation(
@@ -119,17 +118,7 @@ export function preflightCombatOperation(
     const requests = groups
       .filter((g) => triggered.has(g.id))
       .flatMap((g) => {
-        const model = effectiveGroup(a, g).model,
-          size = g.figures.filter((f) => f.health > 0).length;
-        const kinds = model.instructions
-          .filter((i) => i.minimum <= size && i.maximum >= 1)
-          .flatMap((i) =>
-            i.addition?.effect.op === 'gain-boon'
-              ? i.addition.effect.boon
-                ? [i.addition.effect.boon]
-                : BoonKindSchema.options
-              : [],
-          );
+        const kinds = reachableBoonKinds(a, g);
         return kinds.length ? [{ heroes: [heroId], kinds }] : [];
       });
     for (const dep of preflightBoonRequests(

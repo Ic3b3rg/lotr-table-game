@@ -4,7 +4,7 @@ import { replayFronts } from './front-runtime';
 import { validateFrontArtifact } from './front-program';
 import { validateBoonArtifact } from './boon-program';
 import type { BoonArtifact } from '../shared/boons';
-import { BoonKindSchema } from '../shared/combat';
+import { boonProgramProblems } from './boon-continuation';
 import { validateLastStandArtifact, type LastStandArtifact } from './last-stand-program';
 import type { FrontResources } from './front-state';
 import type { z } from 'zod';
@@ -372,56 +372,11 @@ export function openPhysical(
 ) {
   validatePhysical(p);
   validatePhysicalProgram(program, p.heroes.length);
-  if (p.boons && program.profile === 'source-fronts-v1') {
-    const possible = new Map(
-      BoonKindSchema.options.map((kind) => [
-        kind,
-        new Set((context?.boonCustody ?? []).filter((b) => b.kind === kind).map((b) => b.heroId)),
-      ]),
-    );
-    let uncertainSurvival = false;
-    for (const child of program.children) {
-      if (['suffer', 'group-test', 'darkness', 'enemy-attack', 'end-turn'].includes(child.kind))
-        uncertainSurvival = true;
-      if (child.kind !== 'combat-addition' && child.kind !== 'enemy-attack') continue;
-      const addition = child.addition;
-      if (!addition) continue;
-      if (
-        child.kind === 'enemy-attack' &&
-        ((addition.predicate === 'damage-positive' && !child.outcome.offered.damage) ||
-          (addition.predicate === 'fear-positive' && !child.outcome.offered.fear) ||
-          (addition.predicate === 'recipient-in-darkness' &&
-            !program.darknessHeroes.includes(child.hero)))
-      )
-        continue;
-      if (child.kind === 'combat-addition') {
-        const suffered = child.outcome.suffered,
-          predicate = addition.predicate;
-        if (
-          (predicate === 'damage-positive' && !suffered.damage) ||
-          (predicate === 'fear-positive' && !suffered.fear) ||
-          (predicate === 'zero-damage-and-fear' && total(suffered)) ||
-          (predicate === 'recipient-in-darkness' && !program.darknessHeroes.includes(child.hero))
-        )
-          continue;
-      }
-      const heroId = p.heroes[child.hero]!.heroId;
-      if (addition.effect.op === 'lose-boon-or-weakness' && !uncertainSurvival)
-        possible.get(addition.effect.boon)!.delete(heroId);
-      if (addition.effect.op !== 'gain-boon') continue;
-      invariant(
-        p.boons.runtimeReady,
-        'Continuazione benefici non disponibile: boon-quantities-57.',
-      );
-      for (const kind of addition.effect.boon ? [addition.effect.boon] : BoonKindSchema.options) {
-        possible.get(kind)!.add(heroId);
-        invariant(
-          possible.get(kind)!.size <= p.boons.stock.quantities![kind],
-          'Continuazione benefici non disponibile: boon-supply-exhaustion-rule.',
-        );
-      }
-    }
-  }
+  const boonProblems = boonProgramProblems(p, program, context, spatial);
+  invariant(
+    !boonProblems.length,
+    'Continuazione benefici non disponibile: ' + boonProblems.join(', ') + '.',
+  );
   const copy = structuredClone(p),
     id = runId;
   copy.runs.push({
