@@ -87,8 +87,9 @@ Startup, seguito del timer, rivelazione della sezione 2 e prime esplorazioni
 sono stati giocati con costi, provocazioni e carte effettive.
 
 **La prova definitiva si arresta prima degli indizi:** un eroe fallisce
-l'Ultima Resistenza. L'inizio dell'Ombra del round 3 viene rifiutato perché
-richiede il consumer della perdita dell'avventura, confine 64. Nessun
+l'Ultimo Sforzo. L'inizio dell'Ombra del round 3 viene rifiutato perché
+richiede il consumer della perdita dell'avventura. La minaccia è21, sotto il
+limite64: il blocco è dovuto all'eroe sconfitto. Nessun
 avanzamento viene applicato. Non è stata ripetuta la partita per cambiare
 questo esito. I tre indizi e il ricevitore del covo sono pertanto verificati
 con fixture; non viene dichiarata accettazione UI autentica del loro seguito.
@@ -119,3 +120,8 @@ rimangono confini successivi. Nessun terminale viene sostituito con un ritorno
 ordinario. Nessuna chiusura 33/65/57, parità Unity/JIT/RNG o partita completa
 viene dichiarata. Il ritorno al software precedente richiede un backup
 antecedente al nuovo startup.
+
+[Review Standards/Spec e verifica del root](../reviews/2026-11-04-clue-progression.md):
+corretta una carenza nel controllo della riserva fisica prima dei costi,
+con regressione RED→GREEN; suite integrata647/647. Il codice verificato viene
+integrato come avanzamento, mantenendo89 aperta per l'accettazione UI mancante.
