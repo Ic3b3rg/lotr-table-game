@@ -12,3 +12,4 @@ export { bindPhysicalAnswer, physicalAllocationProblem } from '../shared/physica
 export { compilePhysicalFronts } from './front-program';
 export { compileLastStand } from './last-stand-program';
 export { bindPhysicalDecision } from '../shared/physical-actions';
+export { compileBoons, validateBoonArtifact } from './boon-program';

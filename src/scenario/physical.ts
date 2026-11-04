@@ -1,6 +1,8 @@
 import { dirname, join } from 'node:path';
 import { validatePhysicalCycle } from '../server/physical-cycle';
 import { FrontArtifactSchema } from '../physical-resolution/front-program';
+import { BoonArtifactSchema } from '../shared/boons';
+import { validateBoonArtifact } from '../physical-resolution/boon-program';
 import {
   LastStandArtifactSchema,
   validateLastStandArtifact,
@@ -48,7 +50,23 @@ export function loadPhysicalSource(path: string) {
     : undefined;
   const lastStandPath = join(dirname(path), 'physical-last-stand.json');
   const lastStand = existsSync(lastStandPath) ? loadLastStandSource(path, raw) : undefined;
-  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex'), fronts, lastStand };
+  const boonPath = join(dirname(path), 'physical-boons.json');
+  let boons;
+  if (existsSync(boonPath)) {
+    invariant(
+      statSync(boonPath).size <= PHYSICAL_CONTENT_LIMITS.bytes,
+      'Artifact benefici troppo grande.',
+    );
+    boons = BoonArtifactSchema.parse(JSON.parse(readFileSync(boonPath, 'utf8')));
+    validateBoonArtifact(raw, boons);
+  }
+  return {
+    raw,
+    rawSha256: createHash('sha256').update(bytes).digest('hex'),
+    fronts,
+    lastStand,
+    boons,
+  };
 }
 export function loadLastStandSource(path: string, raw: unknown) {
   const artifactPath = join(dirname(path), 'physical-last-stand.json');
@@ -79,6 +97,10 @@ export function initializeScenarioPhysical(
   }
   invariant(source && !state.physical, 'Materiale fisico assente o inizializzazione duplicata.');
   const sc = state.scenario!;
+  invariant(
+    !sc.pack.manifest.boons || source.boons?.fingerprint === sc.pack.manifest.boons.fingerprint,
+    'Le regole dei benefici non corrispondono al freeze ante-startup.',
+  );
   state.physical = freezePhysical(
     source.raw,
     {
@@ -97,6 +119,7 @@ export function initializeScenarioPhysical(
       ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
       : undefined,
     source.lastStand,
+    sc.pack.manifest.boons ? source.boons : undefined,
   );
 }
 export function beginPhysicalAction(
@@ -259,6 +282,10 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  invariant(
+    p.boons?.fingerprint === sc.pack.manifest.boons?.fingerprint,
+    'Benefici non legati alla capacità congelata prima dello startup.',
+  );
   if (p.lastStandActivation?.kind === 'legacy-continuation') {
     const id = p.lastStandActivation.runId;
     invariant(

@@ -19,6 +19,7 @@ import { canResolveAlternative } from './front-feasibility';
 import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
 import { STAT_LABELS } from '../shared/skill-tests';
+import { validateBoonArtifact } from './boon-program';
 import type {
   AttackTestChild,
   CompanyClause,
@@ -67,6 +68,7 @@ class FrontReplay {
   constructor(private readonly p: Omit<PhysicalState, 'snapshot'>) {
     invariant(p.version !== 1 && p.fronts, 'Runtime fronti senza freeze versione2.');
     validateFrontArtifact(p.raw, p.fronts.artifact, p.fronts.catalog);
+    if (p.boons) validateBoonArtifact(p.raw, p.boons);
     this.rng = new PhysicalRandom(p.entropy);
     this.s = {
       decks: { damage: [], fear: [] },
@@ -1781,6 +1783,10 @@ class FrontReplay {
       sources.add(run.source.effectId);
       runIds.add(run.id);
       this.run = run;
+      invariant(
+        run.boonRules === this.p.boons?.fingerprint,
+        'Regole benefici introdotte dopo il freeze o modificate.',
+      );
       this.answer = 0;
       const activation = this.p.lastStandActivation;
       const cutover =

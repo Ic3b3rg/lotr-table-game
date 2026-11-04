@@ -324,6 +324,9 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    boons: z
+      .strictObject({ version: z.literal('source-boons-v1'), fingerprint: HashSchema })
+      .optional(),
     failure: AdventureFailureCapabilitySchema.optional(),
     clues: z
       .strictObject({
