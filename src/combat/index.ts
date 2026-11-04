@@ -11,3 +11,8 @@ export type {
 export { combatCapability } from './capability';
 export { compileSourceDeployment, verifySourceDeployment } from './deployment-compiler';
 export { generateDeployment } from './deployment';
+export { compileCombatClosure, verifyCombatClosure, type CombatClosure } from './compiler';
+export { selectGroupInstruction, groupAttackPacket } from './selection';
+export { applyGroupHits, preflightCombatGroup, effectiveGroup, boonSupply } from './group';
+
+export { threatMovements, moveEnemyOneSpace } from './movement';

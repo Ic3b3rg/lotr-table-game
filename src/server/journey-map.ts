@@ -13,6 +13,27 @@ export function journeyBudgetProblem(state: State, receipts: Receipt[]): string 
   let moved = 0;
   for (const receipt of receipts) {
     if (
+      (receipt.type === 'CYCLE_INPUT' ||
+        receipt.type === 'COMBAT_INPUT' ||
+        receipt.type === 'SCENARIO_INPUT') &&
+      receipt.resumedJourney
+    ) {
+      const r = receipt.resumedJourney;
+      if (
+        r.mapId === journey.id &&
+        r.roundId === travel.roundId &&
+        r.turnId === travel.turnId &&
+        r.heroId === travel.heroId
+      )
+        moved++;
+    }
+    if (
+      'completed' in receipt &&
+      receipt.completed === false &&
+      (receipt.type === 'MOVE_HERO' || receipt.type === 'EXPLORE_SCENARIO')
+    )
+      continue;
+    if (
       (receipt.type === 'START_TRAVEL' ||
         receipt.type === 'MOVE_HERO' ||
         receipt.type === 'EXPLORE_SCENARIO') &&
@@ -162,4 +183,49 @@ export function applyJourneyCommand(
     roundId: round.id,
     turnId: round.turnId,
   };
+}
+
+/** Host-only source movement. The selected adjacency and completed provocations authorize one hop. */
+export function applyGrantedMove(
+  state: State,
+  grantId: string,
+  heroId: string,
+  fromSpaceId: string,
+  destinationSpaceId: string,
+) {
+  const a = state.combat?.attempts.find((a) => a.id === grantId && state.combat!.active === a.id),
+    selection = a?.movement?.selected;
+  const sc = state.scenario!,
+    j = state.journey!;
+  const source = sc.spaceBindings.find((b) => b.id === fromSpaceId)?.sourceId,
+    destination = sc.spaceBindings.find((b) => b.id === destinationSpaceId)?.sourceId;
+  const position = j.heroes.find((h) => h.heroId === heroId);
+  if (
+    !a ||
+    a.stage !== 'movement' ||
+    a.heroId !== heroId ||
+    selection?.actor !== 'hero' ||
+    selection.from !== source ||
+    selection.destination !== destination ||
+    !position ||
+    position.removed ||
+    position.spaceId !== fromSpaceId ||
+    !adjacent(j.definition, fromSpaceId, destinationSpaceId)
+  )
+    throw new ApiError(409, 'GRANTED_MOVEMENT_CHANGED', 'Il movimento concesso non è più legale.');
+  const unprovoked = sc.enemies!.groups.some(
+    (g) =>
+      g.placed &&
+      !g.exhausted &&
+      g.figures.some((f) => f.health > 0) &&
+      g.spaceId === source &&
+      !a.movement!.provoked.includes(g.id),
+  );
+  if (unprovoked)
+    throw new ApiError(
+      409,
+      'PROVOCATIONS_PENDING',
+      'Completa le provocazioni prima del movimento concesso.',
+    );
+  position.spaceId = destinationSpaceId;
 }

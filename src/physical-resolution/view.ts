@@ -53,6 +53,8 @@ export function physicalView(p: PhysicalState | null, original = false): Physica
     };
   }
   if (p.version !== 1) {
+    if (p.snapshot.resolution!.attackTest !== undefined)
+      view.attackTest = structuredClone(p.snapshot.resolution!.attackTest);
     if (p.snapshot.resolution!.sourceTest !== undefined)
       view.sourceTest = structuredClone(p.snapshot.resolution!.sourceTest);
     view.cycle = {

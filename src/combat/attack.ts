@@ -18,6 +18,7 @@ import {
   type ScenarioCallback,
 } from './kernel-model';
 import { selectInstruction } from './selection';
+import { resolveFigureHits } from './figures';
 
 function inRange(a: CombatArtifact, from: string, to: string, ranged: boolean): boolean {
   return (
@@ -191,27 +192,13 @@ function physicalContinuation(
 }
 
 export function applyHits(a: CombatArtifact, state: KernelState, hits: number, pierce: boolean) {
-  const removed: string[] = [];
-  let residual = hits;
-  for (const f of state.group!.figures) {
-    if (f.health === 0) continue;
-    if (!pierce) residual -= Math.min(residual, f.armor);
-    residual -= Math.min(residual, f.sorcery);
-    const suffered = Math.min(residual, f.health);
-    f.health -= suffered;
-    residual -= suffered;
-    if (f.health === 0) {
-      f.armor = 0;
-      f.sorcery = 0;
-      removed.push(f.id);
-    }
-    // Defense absorption is temporary; surviving printed defenses remain intact.
-  }
+  const { removed, unusedHits } = resolveFigureHits(state.group!.figures, hits, pierce);
   state.availability.inPlay -= removed.length;
   state.availability.available += removed.length;
   if (state.group!.figures.every((f) => f.health === 0)) state.group!.status = 'defeated';
-  return { removed, unusedHits: residual };
+  return { removed, unusedHits };
 }
+
 function defeated(
   state: KernelState,
   id: string,

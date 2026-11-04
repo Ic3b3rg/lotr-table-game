@@ -1,3 +1,4 @@
+import { createCombat } from './combat';
 import { createScenario } from './scenario';
 import type { ScenarioOfferSchema } from '../shared/scenario';
 import type { z } from 'zod';
@@ -17,6 +18,7 @@ import type { GenerationOffer } from '../shared/generated-map';
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
   const scenario = createScenario(sync, reader);
+  const combat = createCombat(sync, reader);
   const preparation = createPreparation(sync, reader);
   const skillTests = createSkillTests(sync, reader);
   const scouting = createScouting(sync, reader);
@@ -97,6 +99,7 @@ export function createCompany(sync: () => Promise<void>) {
       const nextKey = `${session.generation}:${session.catalog?.id ?? ''}`;
       if (key !== nextKey && !loading) void load(session);
       preparation.update(session, location.pathname === '/join' ? player : null, catalog);
+      combat.update(session, location.pathname === '/join' ? player : null, catalog);
       rounds.update(session, location.pathname === '/join' ? player : null, catalog);
       journeyMap.update(session, location.pathname === '/join' ? player : null, catalog);
       skillTests.update(session, location.pathname === '/join' ? player : null, catalog);

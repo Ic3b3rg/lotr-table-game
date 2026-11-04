@@ -1,3 +1,4 @@
+import { initialCombat } from '../combat/controller';
 import { objectiveText } from './objective';
 import { sectionOrder } from './section-order';
 import { validateSourcePlayReceipts } from './play-receipts';
@@ -21,7 +22,18 @@ import { validatePhysicalCycle, validateCycleReceipts } from '../server/physical
 export function scenarioStateProblem(state: State): string | null {
   try {
     const sc = state.scenario;
-    if (!sc) return state.physical ? 'Consumer fisico senza scenario fonte.' : null;
+    if (!sc) return state.physical || state.combat ? 'Consumer fisico senza scenario fonte.' : null;
+    if (state.combat) {
+      invariant(
+        sc.pack.manifest.combat,
+        'Controller combattimento fuori dalla capacità congelata.',
+      );
+      if (!state.physical?.cycle)
+        invariant(
+          digest(state.combat) === digest(initialCombat(state)),
+          'Controller introdotto dopo il confine iniziale.',
+        );
+    }
     if (state.physical?.cycle?.version === 2) {
       validatePhysicalCycle(state);
       return null;

@@ -99,7 +99,7 @@ export function createPhysicalControls(
         root.append(
           text(
             'h4',
-            `Prova ${session.round?.phase === 'shadow' ? 'dell’Ombra' : 'dell’incontro'} · ${name(t.heroId)} · ${STAT_LABELS[t.stat]}${t.target === null ? ' · conta i successi' : ` ${t.target}`}`,
+            `Prova ${session.combat?.current ? 'di combattimento' : session.round?.phase === 'shadow' ? 'dell’Ombra' : 'dell’incontro'} · ${name(t.heroId)} · ${STAT_LABELS[t.stat]}${t.target === null ? ' · conta i successi' : ` ${t.target}`}`,
           ),
         );
         const cards = text('ul', '', 'physical-test-cards');
@@ -120,6 +120,32 @@ export function createPhysicalControls(
         );
         status.setAttribute('role', 'status');
         root.append(cards, status);
+      }
+      if (view.attackTest) {
+        const attack = view.attackTest;
+        root.append(
+          text(
+            'h4',
+            `Attacco di ${name(attack.heroId)} · ${attack.stage === 'spending' ? 'spendi i successi' : 'prova e capacità'}`,
+          ),
+        );
+        const tally = text(
+          'p',
+          `${attack.successes} successi totali · ${attack.spent} spesi · ${attack.remaining} disponibili. Anteprima: ${attack.hits} colpi, inclusi ${attack.addedHits} aggiunti dalle capacità.`,
+          'physical-test-total',
+        );
+        tally.setAttribute('role', 'status');
+        root.append(tally);
+        const slots = document.createElement('ul');
+        slots.className = 'combat-slots';
+        for (const slot of attack.slots)
+          slots.append(
+            text(
+              'li',
+              `${slot.label}${attack.allocations.some((a) => a.slotId === slot.id) ? ' · pagato' : ''}`,
+            ),
+          );
+        root.append(slots);
       }
       if (view.lastStand) {
         const lastStand = view.lastStand;

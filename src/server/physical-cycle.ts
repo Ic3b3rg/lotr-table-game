@@ -1,4 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { CombatIntentSchema, CombatOperationSchema } from '../shared/combat-controller';
+import {
+  initialCombat,
+  startHeroAttack,
+  answerCombat,
+  advanceCombat,
+  nextProvocation,
+} from '../combat/controller';
 import { CycleIntentSchema, type CycleIntent, type CycleState } from '../shared/physical-cycle';
 import type { Command, Receipt } from '../shared/protocol';
 import { CommandSchema } from '../shared/protocol';
@@ -14,6 +22,7 @@ import { invariant } from '../map-freeze/validate';
 import { ApiError } from './errors';
 import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
+import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
 import { interactScenario, exploreScenario } from '../scenario/runtime';
@@ -32,9 +41,13 @@ import {
 const originalIntents = z.discriminatedUnion('type', [
   ...CycleIntentSchema.options,
   ...EncounterIntentSchema.options,
+  ...CombatIntentSchema.options,
 ]);
 
-const ordinary = new Set(CycleIntentSchema.options.map((o) => o.shape.type.value));
+const ordinary = new Set<string>([
+  ...CycleIntentSchema.options.map((o) => o.shape.type.value),
+  ...CombatIntentSchema.options.map((o) => o.shape.type.value),
+]);
 import { cycleUUID as uuid, cycleRequest } from '../physical-resolution/cycle-request';
 export function isPhysicalCycle(state: State, command: Command) {
   return (
@@ -71,6 +84,10 @@ function darknessHeroes(state: State) {
   });
 }
 function finish(state: State, task: NonNullable<CycleState['pending']>) {
+  if (task.type === 'START_ATTACK') {
+    advanceCombat(state);
+    return;
+  }
   const round = state.round!,
     progress = round.heroes.find((h) => h.heroId === task.heroId)!;
   if (task.type === 'END_TURN') {
@@ -149,7 +166,12 @@ function runSource(
   state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
   return id;
 }
-function execute(state: State, cycle: CycleState, record: CycleState['records'][number]): Receipt {
+function execute(
+  state: State,
+  cycle: CycleState,
+  record: CycleState['records'][number],
+  returning = false,
+): Receipt {
   const c = record.intent,
     round = state.round!,
     p = state.physical!;
@@ -176,6 +198,89 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
       !!record.shadowEntropy,
     'Entropia Ombra fuori dal suo intento.',
   );
+  if (
+    !returning &&
+    state.combat &&
+    (c.type === 'MOVE_HERO' || c.type === 'INTERACT_SCENARIO' || c.type === 'EXPLORE_SCENARIO') &&
+    requiresProvocation(state, c.heroId)
+  ) {
+    // Validate the complete original command on a disposable copy before opening any provocation.
+    const work = structuredClone(state),
+      ledger = work.physical!.cycle!;
+    execute(work, ledger, record, true);
+    const { expectedRevision: _, type: __, ...fields } = c;
+    const origin = CombatOperationSchema.shape.origin.parse(
+      c.type === 'INTERACT_SCENARIO'
+        ? { ...fields, kind: 'interaction' as const }
+        : c.type === 'EXPLORE_SCENARIO'
+          ? { ...fields, kind: 'exploration' as const, entropy: record.explorationEntropy! }
+          : { ...fields, kind: 'movement' as const },
+    );
+    const op: NonNullable<State['combat']>['operations'][number] = {
+      id: uuid({ request: record.requestId, kind: 'provocation-return' }),
+      playerId: record.playerId,
+      requestId: record.requestId,
+      origin,
+      provoked: [],
+      status: 'provoking',
+      reason: null,
+    };
+    state.combat.operation = op;
+    nextProvocation(state);
+    return c.type === 'MOVE_HERO'
+      ? {
+          ...base,
+          type: 'MOVE_HERO',
+          mapId: c.mapId,
+          heroId: c.heroId,
+          spaceId: state.journey!.heroes.find((h) => h.heroId === c.heroId)!.spaceId,
+          movesRemaining: state.journey!.travel!.remaining,
+          roundId: c.roundId,
+          turnId: c.turnId,
+          completed: false,
+        }
+      : c.type === 'INTERACT_SCENARIO'
+        ? {
+            ...base,
+            type: c.type,
+            scenarioId: c.scenarioId,
+            pendingId: null,
+            source: c.sourceFingerprint,
+            kind: 'provoking',
+            phase: 'action',
+            completed: false,
+          }
+        : {
+            ...base,
+            type: c.type,
+            scenarioId: c.scenarioId,
+            pendingId: null,
+            source: c.sourceFingerprint,
+            kind: 'explore',
+            phase: 'action',
+            mapId: c.mapId,
+            heroId: c.heroId,
+            spaceId: state.journey!.heroes.find((h) => h.heroId === c.heroId)!.spaceId,
+            movesRemaining: state.journey!.travel!.remaining,
+            roundId: c.roundId,
+            turnId: c.turnId,
+            completed: false,
+          };
+  }
+  if (c.type === 'START_ATTACK' || c.type === 'COMBAT_INPUT') {
+    const attempt =
+      c.type === 'START_ATTACK'
+        ? startHeroAttack(state, record.playerId, c, record.requestId)
+        : answerCombat(state, record.playerId, c, record.requestId);
+    const resumedJourney = resumeProvocation(state, cycle, record);
+    return {
+      ...(resumedJourney ? { resumedJourney } : {}),
+      ...base,
+      type: c.type,
+      combatId: attempt.id,
+      completed: attempt.returned,
+    };
+  }
   if (c.type === 'EXPLORE_SCENARIO') {
     invariant(cycle.version === 2, 'Esplorazione in un ledger storico.');
     exploreScenario(
@@ -224,7 +329,14 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
         if (p.snapshot.active) cycle.pending = task;
         else finish(state, task);
       }
-      return { ...base, type: command.type, ...result };
+      if (state.combat?.active && !state.scenario!.pending) advanceCombat(state);
+      const resumedJourney = state.combat ? resumeProvocation(state, cycle, record) : undefined;
+      return {
+        ...(resumedJourney ? { resumedJourney } : {}),
+        ...base,
+        type: command.type,
+        ...result,
+      };
     }
     interactScenario(state, record.playerId, command);
     const sc = state.scenario!;
@@ -281,14 +393,27 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
         'La scelta non rispetta carte, vincoli, costi o quantità della richiesta. Nessun effetto è stato applicato.',
       );
     }
+    p.cycle = cycle;
     state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
     syncPhysicalDefeat(state);
     const completed = !p.snapshot.active;
+    let resumedJourney:
+      | import('zod').infer<typeof import('../shared/combat-controller').ResumedJourneySchema>
+      | undefined;
     if (completed) {
-      finish(state, cycle.pending!);
+      const task = cycle.pending!;
       cycle.pending = null;
+      finish(state, task);
+      if (task.type === 'START_ATTACK') resumedJourney = resumeProvocation(state, cycle, record);
     }
-    return { ...base, type: 'CYCLE_INPUT', runId: c.runId, source: c.sourceFingerprint, completed };
+    return {
+      ...(resumedJourney ? { resumedJourney } : {}),
+      ...base,
+      type: 'CYCLE_INPUT',
+      runId: c.runId,
+      source: c.sourceFingerprint,
+      completed,
+    };
   }
   if (cycle.pending || p.snapshot.active)
     fail('PHYSICAL_PENDING', 'Concludi la conseguenza corrente prima di proseguire nel round.');
@@ -471,6 +596,77 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     completed: !cycle.pending && !state.scenario!.pending,
   };
 }
+function resumeProvocation(state: State, cycle: CycleState, record: CycleState['records'][number]) {
+  const cs = state.combat,
+    op = cs?.operation;
+  if (!cs || !op || cs.active) return;
+  if (nextProvocation(state)) return;
+  let resumed:
+    | import('zod').infer<typeof import('../shared/combat-controller').ResumedJourneySchema>
+    | undefined;
+  if (defeatedHeroes(state).includes(op.origin.heroId)) {
+    op.status = 'cancelled';
+    op.reason = 'L’eroe è sconfitto: il comando sospeso termina.';
+  } else {
+    const origin = op.origin;
+    const { kind: _, ...fields } = origin;
+    const type =
+      origin.kind === 'movement'
+        ? 'MOVE_HERO'
+        : origin.kind === 'exploration'
+          ? 'EXPLORE_SCENARIO'
+          : 'INTERACT_SCENARIO';
+    const { entropy: __, ...intentFields } = fields as typeof fields & { entropy?: string };
+    const intent = { ...intentFields, type, expectedRevision: state.revision };
+    // A child may have changed legality. A failed return keeps all prior consequences and pays nothing new.
+    const work = structuredClone(state);
+    work.combat!.operation = null;
+    try {
+      const receipt = execute(
+        work,
+        work.physical!.cycle!,
+        {
+          ...record,
+          playerId: op.playerId,
+          requestId: op.requestId,
+          intent: originalIntents.parse(intent),
+          ...(origin.kind === 'exploration' ? { explorationEntropy: origin.entropy } : {}),
+        },
+        true,
+      );
+      if (receipt.type === 'MOVE_HERO' || receipt.type === 'EXPLORE_SCENARIO')
+        resumed = {
+          mapId: receipt.mapId,
+          roundId: receipt.roundId!,
+          turnId: receipt.turnId!,
+          heroId: receipt.heroId!,
+          spaceId: receipt.spaceId!,
+          movesRemaining: receipt.movesRemaining,
+        };
+      Object.assign(state.physical!, work.physical);
+      state.physical!.cycle = cycle;
+      for (const key of [
+        'preparation',
+        'round',
+        'journey',
+        'scenario',
+        'skillTest',
+        'scout',
+        'combat',
+      ] as const)
+        Object.assign(state, { [key]: work[key] });
+      op.status = 'returned';
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      op.status = 'cancelled';
+      op.reason =
+        'Dopo le conseguenze, il comando sospeso non è più legale. Nessun nuovo costo è stato applicato.';
+    }
+  }
+  state.combat!.operations.push(structuredClone(op));
+  state.combat!.operation = null;
+  return resumed;
+}
 type Replay = { work: State; receipts: Receipt[] };
 let lastReplay: { context: string; records: string; result: Replay } | null = null;
 
@@ -481,6 +677,7 @@ function replay(state: State, cycle: CycleState): Replay {
     preparation: __,
     round: ___,
     journey: ____,
+    combat: _combat,
     revision: _____,
     updatedAt: ______,
     ...environment
@@ -498,6 +695,7 @@ function replay(state: State, cycle: CycleState): Replay {
             scenario: cycle.seed.scenario,
             skillTest: cycle.seed.skillTest,
             scout: null,
+            combat: cycle.seed.combat,
           }
         : environment,
     origin: { ...origin, runs: prefix },
@@ -541,6 +739,7 @@ function replay(state: State, cycle: CycleState): Replay {
               scenario: structuredClone(cycle.seed.scenario!),
               skillTest: structuredClone(cycle.seed.skillTest!),
               scout: null,
+              ...(cycle.seed.combat ? { combat: structuredClone(cycle.seed.combat) } : {}),
             }
           : {}),
       },
@@ -613,7 +812,16 @@ export function applyPhysicalCycle(
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
   for (const key of cycle.version === 2
-    ? (['physical', 'preparation', 'round', 'journey', 'scenario', 'skillTest', 'scout'] as const)
+    ? ([
+        'physical',
+        'preparation',
+        'round',
+        'journey',
+        'scenario',
+        'skillTest',
+        'scout',
+        'combat',
+      ] as const)
     : (['physical', 'preparation', 'round', 'journey'] as const))
     Object.assign(state, { [key]: work[key] });
   return receipts.at(-1)!;
@@ -641,10 +849,19 @@ export function validatePhysicalCycle(state: State) {
     );
   const { work } = replay(state, p.cycle);
   for (const key of p.cycle.version === 2
-    ? (['physical', 'preparation', 'round', 'journey', 'scenario', 'skillTest', 'scout'] as const)
+    ? ([
+        'physical',
+        'preparation',
+        'round',
+        'journey',
+        'scenario',
+        'skillTest',
+        'scout',
+        'combat',
+      ] as const)
     : (['physical', 'preparation', 'round', 'journey'] as const))
     invariant(
-      digest(work[key]) === digest(state[key]),
+      digest(work[key] ?? null) === digest(state[key] ?? null),
       `Ledger ordinario non riconciliato: ${key}.`,
     );
 }
@@ -702,6 +919,7 @@ export function initializeOriginalCycle(state: State) {
       !p.runs.length,
     'Confine originale duplicato o non iniziale.',
   );
+  if (sc.pack.manifest.combat) state.combat = initialCombat(state);
   p.version = 3;
   p.cycle = {
     version: 2,
@@ -712,6 +930,7 @@ export function initializeOriginalCycle(state: State) {
       preparation: structuredClone(state.preparation!),
       scenario: structuredClone(sc),
       skillTest: structuredClone(state.skillTest),
+      ...(state.combat ? { combat: structuredClone(state.combat) } : {}),
     },
     records: [],
     pending: null,
@@ -725,6 +944,12 @@ function originalSeedState(state: State): State {
   invariant(
     cycle.version === 2 && sc && seed.preparation && seed.skillTest !== undefined,
     'Ledger originale senza confine completo.',
+  );
+  invariant(
+    sc.pack.manifest.combat
+      ? digest(seed.combat ?? null) === digest(initialCombat({ ...state, scenario: sc }))
+      : seed.combat === undefined && state.combat === undefined,
+    'Origine combattimento riscritta o introdotta dopo lo startup.',
   );
   invariant(
     sc.pack.manifest.scope === 'original-encounter-v1' &&
@@ -781,5 +1006,6 @@ function originalSeedState(state: State): State {
     journey: structuredClone(seed.journey),
     skillTest: structuredClone(seed.skillTest),
     scout: null,
+    ...(seed.combat ? { combat: structuredClone(seed.combat) } : {}),
   };
 }

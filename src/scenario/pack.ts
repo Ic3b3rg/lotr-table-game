@@ -5,6 +5,7 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { validateSourceHandler } from './handlers';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
+import { verifyCombatClosure } from '../combat/compiler';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -106,6 +107,33 @@ export function parseScenarioPack(raw: unknown) {
           followup.instances.some((i) => i.definition === t.definition && i.kind === 'threat'),
           'Soglia senza istanza statica.',
         );
+  }
+  if (pack.manifest.combat) {
+    const combat = verifyCombatClosure(pack.manifest.combat);
+    invariant(original && followup && rounds, 'Combattimento senza capacità originale precedente.');
+    const deployment = verifySourceDeployment(followup.deployment);
+    invariant(
+      combat.source.deploymentFingerprint === deployment.fingerprint &&
+        combat.source.projectionFingerprint === followup.projectionFingerprint,
+      'Combattimento non legato al deployment congelato.',
+    );
+    invariant(
+      digest(combat.source.models) === digest(deployment.compiled.models.map((m) => m.source)),
+      'Pool modelli combattimento incompleto.',
+    );
+    for (const asset of combat.source.assets.filter((a) => a.cls !== 'EnemyActivationModel')) {
+      const deployed = deployment.source.assets.find((a) => a.source === asset.source);
+      invariant(
+        deployed && digest(deployed) === digest(asset),
+        'Statistica/bonus combattimento diverso dal deployment.',
+      );
+    }
+    invariant(
+      combat.source.files.every((f) =>
+        pack.sources.some((s) => s.file === f.file && s.sha256 === f.sha256),
+      ),
+      'Fonte combattimento fuori dal pack.',
+    );
   }
   if (rounds) {
     invariant(original, 'Fonte delle fasi fuori dal consumer originale.');

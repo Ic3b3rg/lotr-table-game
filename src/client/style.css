@@ -1955,3 +1955,51 @@ body[data-scenario='setup'] #scout-discard-controls {
   color: #254b3a;
   z-index: 3;
 }
+
+.combat {
+  border-left: 3px solid var(--gold, #a78043);
+}
+.combat summary {
+  cursor: pointer;
+  padding: 0.8rem 0;
+  font-weight: 700;
+}
+.combat fieldset {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.combat select {
+  width: 100%;
+  max-width: 100%;
+}
+.combat-preview {
+  padding: 1rem;
+  background: #f4efe2;
+  border-radius: 0.35rem;
+  margin-block: 1rem;
+}
+.combat-slots {
+  padding-left: 1.25rem;
+}
+.combat-slots li {
+  margin-block: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.combat-instruction {
+  white-space: pre-wrap;
+}
+.combat-summary {
+  font-weight: 600;
+}
+.combat-choices {
+  margin-top: 1rem;
+}
+@media (max-width: 480px) {
+  .combat-preview {
+    padding: 0.65rem;
+  }
+  .combat .company-action {
+    width: 100%;
+  }
+}

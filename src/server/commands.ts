@@ -1,3 +1,5 @@
+import { boundPhysicalInput } from '../physical-content/validation';
+import { CommandSchema } from '../shared/protocol';
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { applyPhysicalCycle, isPhysicalCycle } from './physical-cycle';
 import { loadLastStandSource } from '../scenario/physical';
@@ -15,6 +17,8 @@ import { applyGroup } from './group';
 import { generationReceipt } from './map-generation';
 
 export function performCommand(store: Store, playerId: string, command: Command) {
+  boundPhysicalInput(command);
+  command = CommandSchema.parse(command);
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
@@ -46,6 +50,12 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return result;
     }
+    if (command.type === 'START_ATTACK' || command.type === 'COMBAT_INPUT')
+      throw new ApiError(
+        409,
+        'COMBAT_UNAVAILABLE',
+        'Il combattimento non è disponibile in questa avventura salvata.',
+      );
     if (command.type === 'INTERACT_SCENARIO' || command.type === 'EXPLORE_SCENARIO')
       throw new ApiError(
         409,

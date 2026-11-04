@@ -440,6 +440,15 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : 'Concordate un eroe che non ha ancora agito. Il proprietario seleziona il suo eroe, conferma l’accordo e inizia il turno: fino a due azioni.';
         }
       }
+      if (session.combat?.current) {
+        const combat = session.combat.current,
+          actor = session.combat.pending?.actorPlayerId ?? session.physical?.active?.actorPlayerId;
+        heading = combat.kind === 'provocation' ? 'Risolvi la provocazione' : 'Completa l’attacco';
+        message = `${session.players.find((p) => p.id === actor)?.name ?? 'Il proprietario indicato'} completa la scelta corrente. ${combat.returnLabel}`;
+        target = session.physical?.active ? '#physical-resolution' : '#combat';
+        label = 'Apri il prossimo passo';
+        topic = 'physical';
+      }
       if (personal && !identity && session.players.length) {
         step = 1;
         heading =

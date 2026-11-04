@@ -52,6 +52,11 @@ export function decisionForm(
       b.type = 'button';
       b.dataset.write = '';
       b.dataset.option = option.id;
+      if (option.unavailable) {
+        b.dataset.blocked = 'true';
+        b.disabled = true;
+        b.title = option.unavailable;
+      }
       b.onclick = () => submit({ kind: 'physical-choice', option: option.id });
       fields.append(b);
     }

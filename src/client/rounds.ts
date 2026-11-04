@@ -40,7 +40,8 @@ export function createRounds(sync: () => Promise<void>) {
         ),
     );
     const pending = Boolean(
-      current.scenario?.pending ||
+      current.combat?.current ||
+        current.scenario?.pending ||
         current.physical?.active ||
         current.physical?.lastStand?.terminal ||
         current.scout ||
@@ -72,15 +73,18 @@ export function createRounds(sync: () => Promise<void>) {
       ? 'La Compagnia ha perso. La conseguenza finale è salvata.'
       : message + (pending ? ' Concludi prima la conseguenza corrente.' : '');
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
-    element('#round-phase-help').textContent = !round
-      ? current.group && !current.journey
-        ? 'Aprite prima la mappa e collocate gli eroi. Poi potete iniziare i round.'
-        : 'Avviate i round quando siete pronti. Le prove e Scoperta già risolte restano salvate.'
-      : round.phase === 'action'
-        ? 'Ogni eroe svolge un turno completo: da zero a due azioni, anche ripetute. Puoi interagire con una prova o aprire la mappa per viaggiare. Gli attacchi seguiranno con il combattimento.'
-        : round.phase === 'shadow'
-          ? 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
-          : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
+    element('#round-phase-help').textContent =
+      current.combat && round?.phase === 'action'
+        ? 'Ogni eroe può usare fino a due azioni. Attacca dalla sezione dei nemici o apri la mappa per viaggiare e interagire; completa le conseguenze prima di continuare.'
+        : !round
+          ? current.group && !current.journey
+            ? 'Aprite prima la mappa e collocate gli eroi. Poi potete iniziare i round.'
+            : 'Avviate i round quando siete pronti. Le prove e Scoperta già risolte restano salvate.'
+          : round.phase === 'action'
+            ? 'Ogni eroe svolge un turno completo: da zero a due azioni, anche ripetute. Puoi interagire con una prova o aprire la mappa per viaggiare. Gli attacchi seguiranno con il combattimento.'
+            : round.phase === 'shadow'
+              ? 'Risoluzione manuale: il gruppo risolve o verifica che non si applichi questo passaggio. Nemici, oscurità e minaccia non sono ancora calcolati dal tavolo. Dopo minaccia, rendete pronti i nemici esauriti e confermate: tutti i mazzi saranno ricomposti.'
+              : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
     form.hidden =
       !player ||
       Boolean(round?.activeHeroId) ||

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CombatClosureArtifactSchema } from './combat';
 import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
@@ -256,6 +257,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    combat: CombatClosureArtifactSchema.optional(),
     rounds: RoundSourceSchema.optional(),
     followup: z
       .strictObject({

@@ -2,6 +2,7 @@ import { ScenarioSchema, EncounterIntentSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
+import { CombatIntentSchema, CombatViewSchema, ResumedJourneySchema } from './combat-controller';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
 import { SkillTestViewSchema, StatSchema } from './skill-tests';
@@ -60,6 +61,7 @@ export const SessionSchema = z.strictObject({
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
   scenario: ScenarioSchema.nullable().default(null),
+  combat: CombatViewSchema.optional(),
   encounterFingerprints: z.record(z.string().max(200), HashSchema).default({}),
   explorationFingerprints: z.record(z.string().max(100), HashSchema).default({}),
   physical: PhysicalViewSchema.nullable().default(null),
@@ -89,6 +91,8 @@ const CommandBase = { requestId: IntentIdSchema, generation: z.uuid() };
 const RoundBase = { ...CommandBase, expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const MapTurnBase = { ...RoundBase, mapId: z.uuid(), turnId: z.uuid(), heroId: ContentIdSchema };
 export const CommandSchema = z.discriminatedUnion('type', [
+  CombatIntentSchema.options[0].extend(CommandBase),
+  CombatIntentSchema.options[1].extend(CommandBase),
   EncounterIntentSchema.options[0].extend(CommandBase),
   EncounterIntentSchema.options[2].extend(CommandBase),
   CycleAnswerSchema.extend(CommandBase),
@@ -289,7 +293,16 @@ const DemoReceiptSchema = z.strictObject({
 export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
+    type: z.enum(['START_ATTACK', 'COMBAT_INPUT']),
+    appliedRevision: z.int().nonnegative(),
+    combatId: z.uuid(),
+    completed: z.boolean(),
+    resumedJourney: ResumedJourneySchema.optional(),
+  }),
+  z.strictObject({
+    requestId: IntentIdSchema,
     type: z.literal('EXPLORE_SCENARIO'),
+    completed: z.boolean().optional(),
     appliedRevision: z.int().nonnegative(),
     scenarioId: z.uuid(),
     pendingId: z.uuid().nullable(),
@@ -306,6 +319,7 @@ export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.literal('CYCLE_INPUT'),
+    resumedJourney: ResumedJourneySchema.optional(),
     appliedRevision: z.int().nonnegative(),
     runId: z.uuid(),
     source: HashSchema,
@@ -314,11 +328,13 @@ export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
+    resumedJourney: ResumedJourneySchema.optional(),
     appliedRevision: z.int().nonnegative(),
     scenarioId: z.uuid(),
     pendingId: z.uuid().nullable(),
     source: z.string().max(300),
     kind: z.string().max(50),
+    completed: z.boolean().optional(),
     phase: z.enum(['setup', 'action']),
   }),
   z.strictObject({
@@ -338,6 +354,7 @@ export const ReceiptSchema = z.union([
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.enum(['OPEN_JOURNEY_MAP', 'START_TRAVEL', 'MOVE_HERO']),
+    completed: z.boolean().optional(),
     appliedRevision: z.int().nonnegative(),
     mapId: z.uuid(),
     heroId: ContentIdSchema.nullable(),

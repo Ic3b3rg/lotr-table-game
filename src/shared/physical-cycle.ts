@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CombatIntentSchema, CombatStateSchema } from './combat-controller';
 import { ContentIdSchema } from './catalog';
 import { RoundSchema } from './rounds';
 import { JourneySchema } from './journey-map';
@@ -43,7 +44,13 @@ export const CycleIntentSchema = z.discriminatedUnion('type', [
 ]);
 export const CyclePendingSchema = z.strictObject({
   runId: z.uuid(),
-  type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP', 'BEGIN_SHADOW']),
+  type: z.enum([
+    'END_TURN',
+    'START_RALLY_SCOUT',
+    'CONFIRM_SHADOW_STEP',
+    'BEGIN_SHADOW',
+    'START_ATTACK',
+  ]),
   heroId: ContentIdSchema,
 });
 export const CycleStateSchema = z.strictObject({
@@ -53,6 +60,7 @@ export const CycleStateSchema = z.strictObject({
     round: RoundSchema,
     journey: JourneySchema,
     preparation: PreparationSchema.optional(),
+    combat: CombatStateSchema.optional(),
     scenario: ScenarioSchema.optional(),
     skillTest: SkillTestSchema.nullable().optional(),
   }),
@@ -63,6 +71,7 @@ export const CycleStateSchema = z.strictObject({
         requestId: z.string().min(24).max(80),
         intent: z.discriminatedUnion('type', [
           ...CycleIntentSchema.options,
+          ...CombatIntentSchema.options,
           ...EncounterIntentSchema.options,
         ]),
         lastStandRules: z.literal('source-last-stand-v1').optional(),
