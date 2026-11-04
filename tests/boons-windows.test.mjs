@@ -222,3 +222,40 @@ test('exchange recycles only discarded cards and keeps every revealed and prepar
   assert.equal(new Set([...h.deck, ...h.prepared]).size, 15);
   assert.doesNotThrow(() => validatePhysical(f.p));
 });
+
+test('conditional acquisition reads direct suffering even when a front returns the card and a child suffers separately', () => {
+  const f = runtimeBoons((f) => {
+    f.catalog.skills.forEach((s) => {
+      s.success = 0;
+      s.fate = 0;
+    });
+    for (const d of f.ir.definitions.filter((d) => d.cardId.includes('damage')))
+      d.body = [
+        { op: 'suffer', hero: 'self', family: 'fear', n: 1, face: 'down' },
+        { op: 'discard-self' },
+      ];
+  });
+  const outcome = inventedOutcome('hero-1', { damage: 1, fear: 0 });
+  outcome.sealed = false;
+  const addition = boonGrant(0, 'hidden').addition;
+  addition.predicate = 'zero-damage-and-fear';
+  f.open([
+    boonGrant(0, 'emboldened'),
+    { kind: 'enemy-attack', hero: 0, negate: 'might', outcome, addition },
+  ]);
+  finish(f);
+  const result = f.p.snapshot.parents[0].results.at(-1).enemyOutcome;
+  assert.equal(result.suffered.damage, 1);
+  assert.equal(result.suffered.fear, 0);
+  assert.equal(result.childSources[0].family, 'fear');
+  assert.equal(f.p.snapshot.areas[0].damage.length, 0);
+  assert.equal(f.p.snapshot.areas[0].fear.length, 1);
+  assert.equal(f.p.snapshot.resolution.resources.boonCustody.length, 0);
+  const grant = boonGrant(0, 'hidden');
+  grant.addition.predicate = 'zero-damage-and-fear';
+  grant.outcome.childSources = [
+    { source: 'invented-child', recipientHeroId: 'hero-1', family: 'fear', amount: 1 },
+  ];
+  f.open([grant]);
+  assert.equal(f.p.snapshot.resolution.resources.boonCustody[0].kind, 'hidden');
+});

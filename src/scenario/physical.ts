@@ -145,6 +145,20 @@ export function beginPhysicalAction(
             state.physical.snapshot.resolution?.resources?.depletion ?? [],
           ),
           boons: structuredClone(state.physical.snapshot.resolution?.resources?.boons ?? []),
+          ...(state.physical.boons
+            ? {
+                boonCustody: structuredClone(
+                  state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
+                ),
+                ...(state.physical.snapshot.resolution?.resources?.combatUses
+                  ? {
+                      combatUses: structuredClone(
+                        state.physical.snapshot.resolution.resources.combatUses,
+                      ),
+                    }
+                  : {}),
+              }
+            : {}),
         }
       : undefined;
   const parentId = openPhysical(

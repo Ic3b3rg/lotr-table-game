@@ -23,6 +23,7 @@ export async function readyBoonCombat(t, verified = true, edit = () => {}) {
         .filter((a) => a.cls === 'EnemyActivationModel')
         .forEach((a) => {
           a.data.MinGroupSize = 1;
+          a.data.KeyAttackAdditionalEffect = 'extra';
           a.dataHash = digest(a.data);
         });
       pack.manifest.boons = { version: artifact.version, fingerprint: artifact.fingerprint };
@@ -60,7 +61,7 @@ export async function attackToBoon(ready) {
   assert.equal(r.status, 200, await r.text());
   return drainCombat(
     ready,
-    () => null,
+    (q) => (q.options?.some((o) => o.id === 'addition') ? 'addition' : null),
     (s) => s.physical.active?.options?.some((o) => o.id === 'hidden'),
   );
 }

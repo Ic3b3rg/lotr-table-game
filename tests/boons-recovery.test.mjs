@@ -8,9 +8,18 @@ import { answerCycle } from './original-round-helper.mjs';
 import { readBackup, readSession, signBackup } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { startHost } from './host-helper.mjs';
+import { digest } from '../dist/map-freeze-library.mjs';
 
 test('boon concession, use, discard, test and parent return survive SIGKILL and packless restores; signed alterations fail', async (t) => {
-  const ready = await readyBoonCombat(t);
+  const ready = await readyBoonCombat(t, true, (src) => {
+    for (const a of src.assets.filter((a) => a.cls === 'EnemyActivationModel')) {
+      for (const row of a.data.Damage) {
+        row.Physical = 6;
+        row.Fear = 0;
+      }
+      a.dataHash = digest(a.data);
+    }
+  });
   let host = ready.host;
   t.after(() => host.stop());
   await attackToBoon(ready);
@@ -51,43 +60,26 @@ test('boon concession, use, discard, test and parent return survive SIGKILL and 
     }
   }
   await checkpoint('concession');
-  let r = await answerCycle(ready, { kind: 'physical-choice', option: 'hidden' });
+  let r = await answerCycle(ready, { kind: 'physical-choice', option: 'determined' });
   assert.equal(r.status, 200, await r.text());
-  await drainCombat(ready);
-  await checkpoint('acquired-return');
-  let s = await readSession(host),
-    offer = s.combat.attacks.find((o) => !o.reason);
-  r = await command(
-    host,
-    ready.player,
-    {
-      type: 'START_ATTACK',
-      roundId: s.round.id,
-      turnId: s.round.turnId,
-      heroId: offer.heroId,
-      groupId: offer.groupId,
-      itemCopies: offer.itemCopies,
-      stat: offer.stat,
-      replaceCopy: null,
-      grantId: null,
-    },
-    s,
-  );
+  await checkpoint('acquired-before-mandatory-child-test');
+  r = await answerCycle(ready, { kind: 'physical-choice', option: 'reveal' });
   assert.equal(r.status, 200, await r.text());
   await checkpoint('revealed-test');
-  s = await readSession(host);
-  const option = s.physical.active.options.find((o) => o.id.includes('add-success'));
+  let s = await readSession(host);
+  const option = s.physical.active.options.find((o) => o.id.includes('exchange-test-cards'));
   assert.ok(option);
   r = await answerCycle(ready, { kind: 'physical-choice', option: option.id });
   assert.equal(r.status, 200, await r.text());
   await checkpoint('use-discard');
+  s = await readSession(host);
+  r = await answerCycle(ready, { kind: 'physical-select', ids: [s.physical.active.options[0].id] });
+  assert.equal(r.status, 200, await r.text());
+  await checkpoint('replacement-revealed');
   r = await answerCycle(ready, { kind: 'physical-choice', option: 'resolve' });
   assert.equal(r.status, 200, await r.text());
-  await checkpoint('test-result');
-  await drainCombat(ready, (q) =>
-    q.options?.some((o) => o.id === 'hidden') ? 'emboldened' : null,
-  );
-  await checkpoint('parent-return');
+  await drainCombat(ready);
+  await checkpoint('test-result-and-parent-return');
   const before = await readBackup(host);
   for (const edit of [
     (b) => {
