@@ -33,3 +33,18 @@ test('failure operations cannot be smuggled into a legacy pack or point to anoth
   raw.pack.manifest.failure.next.id++;
   assert.throws(() => parseScenarioPack(raw.pack), /destinazione|modello/);
 });
+
+test('the failure capability permits lore only in its certified reward state without opening unrelated principal rewards', async () => {
+  const { scenarioFixture } = await import('./fixtures/scenario.mjs');
+  const { attachEncounter } = await import('./original-encounter-helper.mjs');
+  const { native } = await import('./fixtures/clue-progression.mjs');
+  const pack = scenarioFixture();
+  attachEncounter(pack);
+  attachFailure(pack);
+  assert.ok(parseScenarioPack(pack));
+  pack.definitions
+    .find((d) => d.source === pack.principal)
+    .states.find((s) => s.index === 0)
+    .actions.push(native(99, 'lore', 'FFG.JIME.Actions.AddLore', { amount: 2 }));
+  assert.throws(() => parseScenarioPack(pack), /manifest chiuso/);
+});

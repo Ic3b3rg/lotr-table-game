@@ -1,6 +1,13 @@
 import type { ScenarioPack } from '../shared/scenario';
 import { invariant } from '../map-freeze/validate';
 
+export function isFailureReward(pack: ScenarioPack, source: string, state: number) {
+  const cap = pack.manifest.failure;
+  if (!cap || source !== pack.principal) return false;
+  const d = pack.definitions.find((d) => d.source === source)!;
+  return d.states.find((s) => s.index === d.handlers[cap.event])?.transitions.FINISHED === state;
+}
+
 /** Only this certified principal path may use campaign mutation instructions. */
 export function validateFailureCapability(pack: ScenarioPack) {
   const cap = pack.manifest.failure;

@@ -9,7 +9,7 @@ import { verifyCombatClosure } from '../combat/compiler';
 import { validateShadowCapability } from './shadow-capability';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
-import { validateFailureCapability } from './failure-capability';
+import { validateFailureCapability, isFailureReward } from './failure-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -291,7 +291,7 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             original &&
               ((a.op === 'confirm' && d.source === pack.manifest.exploration?.definition) ||
-                (a.op === 'lore' && pack.manifest.failure && d.source === pack.principal) ||
+                (a.op === 'lore' && isFailureReward(pack, d.source, s.index)) ||
                 (a.op === 'lore' &&
                   pack.manifest.clues &&
                   (d.source === pack.principal ||
