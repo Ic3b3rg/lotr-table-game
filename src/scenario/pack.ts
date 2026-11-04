@@ -7,6 +7,7 @@ import { validateSourceHandler } from './handlers';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { verifyCombatClosure } from '../combat/compiler';
 import { validateShadowCapability } from './shadow-capability';
+import { validateThreatCapability } from './threat-capability';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isFailureReward } from './failure-capability';
@@ -82,6 +83,7 @@ export function parseScenarioPack(raw: unknown) {
   const globals = new Map(pack.globals.map((v) => [v.name, v]));
   const rounds = pack.manifest.rounds;
   const followup = pack.manifest.followup;
+  validateThreatCapability(pack);
   if (followup) {
     invariant(original && rounds, 'Seguito senza fase originale.');
     const deployment = verifySourceDeployment(followup.deployment);

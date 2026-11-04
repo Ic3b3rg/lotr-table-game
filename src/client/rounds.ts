@@ -176,13 +176,24 @@ export function createRounds(sync: () => Promise<void>) {
               ? `Minaccia: ${frame.threat.before} → ${frame.threat.after}. Aumento ${frame.threat.delta}: ${frame.threat.heroes} eroi, ${frame.threat.tokens.length} segnalini minaccia attivi, ${frame.threat.tiles.length} tessere visibili inesplorate. Il gruppo può proseguire.`
               : 'Concludete la richiesta dell’Ombra.';
         if (current.scenario?.pending)
-          status.textContent =
-            'L’Ombra continua nel pannello dell’avventura. Leggete le istruzioni, completate le prove e confermate i piazzamenti; la Riorganizzazione attende il seguito.';
+          status.textContent +=
+            ' L’Ombra continua nel pannello dell’avventura. Leggete le istruzioni, completate le prove e confermate i piazzamenti; il prossimo passaggio attende il seguito.';
         confirm.textContent = current.scenario?.pack.manifest.followup
           ? 'Applica la minaccia e risolvi gli eventi'
           : 'Applica la minaccia e riorganizza';
         element('#round-agreement').textContent =
           'Il gruppo ha letto l’aumento della minaccia ed è pronto a proseguire.';
+        if (frame?.threshold) {
+          const threshold = current.scenario!.threats.find((t) => t.source === frame.threshold);
+          status.textContent += ` Soglia ${threshold?.threshold ?? ''} in corso: completate messaggio e collocazioni nel pannello dell’avventura; il prossimo passaggio attende il loro ritorno.`;
+        }
+        if (
+          current.scenario?.pack.manifest.threatContinuations &&
+          current.scenario.globals[current.scenario.pack.manifest.rounds!.bindings.darkness] ===
+            true
+        )
+          status.textContent +=
+            ' L’oscurità globale è attiva per le prossime conseguenze; la fase già conclusa non viene ripetuta.';
       } else if (round.phase === 'rally') {
         const remaining = round.heroes.filter((h) => !h.rallyDone).map((h) => name(h.heroId));
         status.textContent = pending

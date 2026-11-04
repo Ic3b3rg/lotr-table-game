@@ -68,6 +68,7 @@ export const SourceRoundStateSchema = z.strictObject({
           'reset',
           'rally',
           'complete',
+          'conclusion',
         ]),
         activated: z.array(z.string().max(350)).max(100).optional(),
         refreshed: z.array(z.string().max(350)).max(100).optional(),
@@ -80,6 +81,7 @@ export const SourceRoundStateSchema = z.strictObject({
           })
           .nullable()
           .optional(),
+        threatRequestId: z.string().min(24).max(80).optional(),
         threshold: z.string().max(160).nullable().optional(),
         handled: z.array(z.string().max(160)).max(100).optional(),
         darknessHeroes: z.array(ContentIdSchema).max(5),
