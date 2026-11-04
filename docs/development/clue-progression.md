@@ -125,3 +125,8 @@ antecedente al nuovo startup.
 corretta una carenza nel controllo della riserva fisica prima dei costi,
 con regressione RED→GREEN; suite integrata647/647. Il codice verificato viene
 integrato come avanzamento, mantenendo89 aperta per l'accettazione UI mancante.
+
+[Ripresa UI sulla base PR92](clue-ui-acceptance.md): un solo nuovo episodio,
+tre proprietari e pack corrente identico. Due indizi ispezionati, nessuno
+completato; il gate57 delle attivazioni ferma la prossima Ombra prima degli
+effetti. Il criterio originale UI rimane mancante.
