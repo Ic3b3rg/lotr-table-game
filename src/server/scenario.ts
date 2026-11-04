@@ -1,3 +1,4 @@
+import { validateCombatParty } from '../combat/party';
 import { validatePreparedPolicies } from '../scenario/prepared-effects';
 import { definitionId } from '../shared/preparation';
 import type { Command, ScenarioCommand } from '../shared/protocol';
@@ -24,6 +25,7 @@ export function scenarioOffer(state: State, path: string) {
     const { pack, fingerprint } = loadScenarioPack(path);
     validateScenarioBinding(pack, state.mapGeneration.projection);
     validatePreparedPolicies(pack, state.content);
+    validateCombatParty(state, pack);
     return {
       ...base,
       available: true,
@@ -136,6 +138,15 @@ export function allowScenarioPlay(state: State, command: Command) {
   const original =
     sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;
   if (original && command.type === 'SCENARIO_INPUT' && sc.pending) return;
+  if (original && command.type === 'COMBAT_INPUT' && state.combat?.active) return;
+  if (
+    original &&
+    command.type === 'START_ATTACK' &&
+    sc.pack.manifest.combat &&
+    (!state.combat?.active ||
+      state.combat?.grants.some((g) => g.id === command.grantId && g.status === 'offered'))
+  )
+    return;
   if (original && command.type === 'CYCLE_INPUT' && state.physical!.cycle!.pending) return;
   if (sc.pending)
     throw new ApiError(
@@ -155,6 +166,12 @@ export function allowScenarioPlay(state: State, command: Command) {
       'PHYSICAL_INTERACTION_CAPABILITY',
       'L’interazione richiede il proprio consumer fonte, compresi i costi prima di interagire. La prova libera non lo sostituisce e nessuna azione è stata consumata.',
     );
+  if (state.combat?.active || state.combat?.operation)
+    throw new ApiError(
+      409,
+      'COMBAT_PENDING',
+      'Concludi il combattimento e il suo ritorno prima delle altre azioni.',
+    );
   const allowed =
     // Enemy checks precede the ordinary action's cost and movement.
     sc.phase === 'action' &&
@@ -170,7 +187,8 @@ export function allowScenarioPlay(state: State, command: Command) {
     'heroId' in command &&
     command.heroId &&
     ['START_TRAVEL', 'MOVE_HERO', 'INTERACT_SCENARIO', 'EXPLORE_SCENARIO'].includes(command.type) &&
-    requiresProvocation(state, command.heroId)
+    requiresProvocation(state, command.heroId) &&
+    !sc.pack.manifest.combat
   )
     throw new ApiError(
       409,

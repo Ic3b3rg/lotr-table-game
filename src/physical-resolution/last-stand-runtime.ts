@@ -65,7 +65,12 @@ export class LastStandRuntime {
       test: null,
     });
   }
-  settle(run: Run, reactions: LastStandReaction[] = []) {
+  settle(
+    run: Run,
+    reactions: LastStandReaction[] = [],
+    only?: { hero: number; family: Family | null },
+    single = false,
+  ) {
     const artifact = this.p.lastStand;
     invariant(
       artifact && run.lastStandRules?.artifactFingerprint === artifact.fingerprint,
@@ -75,10 +80,12 @@ export class LastStandRuntime {
       doneReactions = new Set<string>();
     let completed = 0;
     while (true) {
+      if (single && completed) return;
       const obligations = this.p.heroes.flatMap((h, hero) =>
         this.active(hero)
           ? (['damage', 'fear'] as const).flatMap((family) =>
-              this.s.areas[hero]![family].length >= this.host.limits(hero)[family]
+              this.s.areas[hero]![family].length >= this.host.limits(hero)[family] &&
+              (!only || (only.hero === hero && (!only.family || only.family === family)))
                 ? [
                     {
                       hero,

@@ -14,7 +14,17 @@ import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
 
 type GameCommand =
-  | Extract<Command, { type: 'CYCLE_INPUT' | 'INTERACT_SCENARIO' | 'EXPLORE_SCENARIO' }>
+  | Extract<
+      Command,
+      {
+        type:
+          | 'CYCLE_INPUT'
+          | 'INTERACT_SCENARIO'
+          | 'EXPLORE_SCENARIO'
+          | 'START_ATTACK'
+          | 'COMBAT_INPUT';
+      }
+    >
   | ScenarioCommand
   | MapGenerationCommand
   | GroupCommand

@@ -1,6 +1,7 @@
 import { scenarioStateProblem } from '../scenario/validate';
 import { PhysicalStateSchema } from '../physical-resolution/model';
 import { z } from 'zod';
+import { CombatStateSchema } from '../shared/combat-controller';
 import { IntentIdSchema, PlayerSchema, SessionSchema } from '../shared/protocol';
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema, PreparedHeroSchema, preparationProblem } from '../shared/preparation';
@@ -18,6 +19,7 @@ const PrivatePlayerSchema = PlayerSchema.extend({
 });
 const BaseStateSchema = SessionSchema.omit({
   catalog: true,
+  combat: true,
   preparation: true,
   skillTest: true,
   scout: true,
@@ -26,6 +28,7 @@ const BaseStateSchema = SessionSchema.omit({
   explorationFingerprints: true,
 }).extend({
   content: CatalogSchema.nullable(),
+  combat: CombatStateSchema.optional(),
   preparation: PreparationSchema.nullable().default(null),
   skillTest: SkillTestSchema.nullable(),
   scout: ScoutingSchema.nullable(),

@@ -1,7 +1,7 @@
 import type { CombatClosure } from './compiler';
 import type { DeployedGroup } from '../shared/deployment';
-import type { AttackModifier } from '../shared/combat';
-import { check, integer } from './model';
+import { BoonKindSchema, type AttackModifier } from '../shared/combat';
+import { bounded, check, integer } from './model';
 import { resolveFigureHits } from './figures';
 export function effectiveGroup(a: CombatClosure, group: DeployedGroup) {
   const model = a.compiled.models.find((m) => m.source === group.source);
@@ -51,8 +51,41 @@ export function preflightCombatGroup(
   const candidates = model.instructions.filter((i) => i.minimum <= size && i.maximum >= 1);
   const missing: string[] = [];
   for (const i of candidates) {
-    if (i.addition?.effect.op === 'gain-boon') missing.push('boon-quantities-57');
+    if (i.addition?.effect.op === 'gain-boon') {
+      missing.push(supply.quantities === null ? 'boon-quantities-57' : 'boon-acquisition-consumer');
+    }
   }
-  if (supply.quantities !== null && missing.length) missing.push('boon-acquisition-consumer');
   return [...new Set(missing)];
+}
+
+/** Availability is independent of whether this hero currently holds a boon. */
+export function boonSupply(
+  quantities: null | Record<string, number>,
+  held: { heroId: string; kind: string }[],
+  kind: string,
+): { status: 'unknown'; available: null } | { status: 'empty' | 'available'; available: number } {
+  bounded({ quantities, held, kind });
+  BoonKindSchema.parse(kind);
+  check(Array.isArray(held) && held.length <= 10000, 'Benefici posseduti fuori limite.');
+  for (const boon of held) {
+    check(
+      typeof boon.heroId === 'string' && boon.heroId.length > 0 && boon.heroId.length <= 200,
+      'Proprietario del beneficio non valido.',
+    );
+    BoonKindSchema.parse(boon.kind);
+  }
+  if (quantities === null) return { status: 'unknown', available: null };
+  check(
+    Object.keys(quantities).length === BoonKindSchema.options.length,
+    'Quantità dei benefici incomplete.',
+  );
+  for (const name of BoonKindSchema.options) {
+    integer(quantities[name], 'Quantità del beneficio');
+    check(
+      held.filter((b) => b.kind === name).length <= quantities[name]!,
+      'Benefici posseduti oltre la riserva verificata.',
+    );
+  }
+  const available = quantities[kind]! - held.filter((b) => b.kind === kind).length;
+  return { status: available === 0 ? 'empty' : 'available', available };
 }

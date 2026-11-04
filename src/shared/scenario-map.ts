@@ -43,9 +43,12 @@ export function scenarioMapView(session: Pick<Session, 'scenario' | 'journey' | 
       });
       return {
         ...g,
+        figures: g.figures.filter((f) => f.health > 0),
         spaceId: sc.spaceBindings.find((b) => b.sourceId === g.spaceId)!.id,
         name: cap!.deployment.source.texts[
-          String(g.figures.length > 1 ? model.KeyPlural : model.KeySingular)
+          String(
+            g.figures.filter((f) => f.health > 0).length > 1 ? model.KeyPlural : model.KeySingular,
+          )
         ]!,
         bonuses,
       };

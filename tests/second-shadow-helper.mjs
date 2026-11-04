@@ -13,11 +13,16 @@ export async function rally(ready) {
   const r = await cycleCommand(ready, 'END_RALLY');
   assert.equal(r.status, 200, await r.text());
 }
-export async function atSecondShadow(t, edit = () => {}) {
-  const ready = await readyRounds(t, (pack, frozen) => {
-    attachFollowup(pack, frozen);
-    edit(pack, frozen);
-  });
+export async function atSecondShadow(t, edit = () => {}, catalogEdit, frontEdit) {
+  const ready = await readyRounds(
+    t,
+    (pack, frozen) => {
+      attachFollowup(pack, frozen);
+      edit(pack, frozen);
+    },
+    catalogEdit,
+    frontEdit,
+  );
   await endTurns(ready);
   let r = await cycleCommand(ready, 'BEGIN_SHADOW');
   assert.equal(r.status, 200, await r.text());

@@ -4,6 +4,20 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'combat',
+    title: 'Attaccare e provocare: costi, successi e ritorno',
+    target: '#combat',
+    action: 'Torna al combattimento',
+    paragraphs: [
+      'Nel tuo turno apri Attacca, scegli un nemico vivo a portata e gli oggetti equipaggiati compatibili. La caratteristica deve essere comune agli oggetti scelti. Anteprima e annullamento sono gratuiti; confermare paga un’azione, salvo un attacco concesso da una capacità.',
+      'La prova rivela le vere carte abilità. Usa le conversioni e le preparate disponibili pagando i costi indicati. Ogni successo può pagare una sola spesa; ciascuno slot stampato della singola copia si usa al massimo una volta. Puoi applicare anche zero colpi. Le carte rivelate e le reazioni dopo la prova si chiudono prima di applicare l’attacco.',
+      'Il tavolo applica colpi e modificatori alle difese delle figure nell’ordine previsto. Le immunità sono indicate nell’esito; un modificatore ignorato non annulla i colpi pagati. Un gruppo sconfitto viene rimosso una volta e la ricompensa va a un eroe vivo entro il suo limite.',
+      'Se è dovuto, il contrattacco torna allo stesso attaccante prima delle reazioni dopo attacco. Segui la prova per negare, ripartisci i successi fra danni e paure e completa ogni conseguenza. Le scelte simultanee indicano chi deve decidere. Le capacità non ancora disponibili riportano il limite prima del proprio costo.',
+      'Prima di uscire da una casella o interagire, ogni gruppo pronto presente provoca un attacco. La provocazione non esaurisce il gruppo e non usa la riduzione degli elite. Dopo tutti i figli, il comando originario riprende con costo e movimenti applicati una volta, se è ancora legale. Anche i movimenti aggiunti dalle istruzioni seguono adiacenze, provocazioni ed esplorazioni.',
+      'La vista personale mostra chi agisce e chi attende fino al ritorno al turno o al viaggio. Salvataggio, riavvio e ripristino conservano la stessa prova e la stessa istruzione. Le acquisizioni di benefici richiedono una riserva verificata; consumare un beneficio realmente assente segue invece il ripiego stampato.',
+    ],
+  },
+  {
     id: 'exploration',
     title: 'Esplorare durante il viaggio',
     target: '#journey-map',
@@ -107,7 +121,7 @@ const TOPICS = [
     action: 'Vai al round',
     paragraphs: [
       'Un round comprende Azione, Ombra e Riorganizzazione. Nella Fase di Azione concordate l’ordine. Il proprietario seleziona il proprio eroe e inizia il turno; quell’eroe lo completa prima che ne inizi un altro.',
-      'Ogni eroe può svolgere fino a due azioni, anche uguali. Il tavolo gestisce viaggio e interazione con prova. Negli incontri originali l’interazione consuma l’azione alla conferma della ricerca, anche se la prova successiva fallisce. Gli attacchi richiedono il combattimento, ancora in sviluppo.',
+      'Ogni eroe può svolgere fino a due azioni, anche uguali. Il tavolo gestisce viaggio e interazione con prova. Negli incontri originali l’interazione consuma l’azione alla conferma della ricerca, anche se la prova successiva fallisce. Negli avvii che comprendono il combattimento, “Attacca” esegue la prova, gli slot delle armi e il contrattacco dovuto; il pannello indica gli eventuali limiti prima dei costi.',
       '“Concludi il turno” è disponibile anche con azioni non usate. Prima concludi ogni prova o Scoperta in corso. Quando tutti gli eroi hanno terminato, un partecipante conferma il passaggio all’Ombra.',
     ],
   },
@@ -119,7 +133,7 @@ const TOPICS = [
     paragraphs: [
       'Si usano carte abilità, non dadi. Scegli la caratteristica e la soglia indicate dalla prova. Riveli dal mazzo un numero di carte pari alla caratteristica, con l’eventuale modificatore già determinato dal gruppo; almeno una carta. Nelle carte rivelate conta solo i simboli: ignora il testo.',
       'Ogni simbolo successo vale un successo. Puoi spendere un’ispirazione per trasformare un fato in un successo, una conversione alla volta. Senza ispirazione, il fato non vale un successo. Se raggiungi la soglia superi la prova; nelle prove senza soglia confermi soltanto il numero dei successi.',
-      'La pesca è salvata prima che appaia sugli schermi. L’animazione mostra quelle stesse carte; ricaricare o convertire fato non pesca di nuovo. Concludi la prova per scartare le carte rivelate. Le capacità speciali non sono ancora automatizzate: consultate le carte e i limiti prima di procedere.',
+      'La pesca è salvata prima che appaia sugli schermi. L’animazione mostra quelle stesse carte; ricaricare o convertire fato non pesca di nuovo. Concludi la prova per scartare le carte rivelate. Le prove originali mostrano le capacità eseguibili e i loro costi. Le prove libere mantengono i propri limiti: consultate le carte prima di procedere.',
       'Durante un round, scegli “Interazione” per consumare un’azione. “Effetto già determinato” è riservato a una prova richiesta da un effetto effettivo e non consuma azioni. Registra ispirazione ottenuta soltanto quando una regola o una capacità la assegna.',
     ],
   },
@@ -142,7 +156,7 @@ const TOPICS = [
     action: 'Vai alla Fase di Ombra',
     paragraphs: [
       'Negli avvii che comprendono il passaggio completo senza nemici, iniziare l’Ombra esegue gli effetti disponibili. L’oscurità segue la posizione di ogni eroe e le proprietà della mappa: quando si applica, il proprietario risolve la vera prova per negare e le conseguenze nel pannello dell’avventura. Timer ed eventi precedono l’aumento della minaccia. Leggete l’aumento, poi proseguite: il tavolo lo applica e ricompone i mazzi per la Riorganizzazione.',
-      'Negli avvii con il seguito del timer, risolvete i messaggi e i piazzamenti nell’ordine proposto. La soglia di minaccia può richiedere prove per tutti gli eroi e collocare gruppi nemici: completate la prova con il proprietario indicato, poi consultate i gruppi sulla mappa. I gruppi comparsi dopo le attivazioni non agiscono retroattivamente. L’obiettivo aggiornato resta nel pannello dell’avventura. Combattimento, provocazione e le attivazioni successive mantengono il proprio limite.',
+      'Negli avvii con il seguito del timer, risolvete i messaggi e i piazzamenti nell’ordine proposto. La soglia di minaccia può richiedere prove per tutti gli eroi e collocare gruppi nemici: completate la prova con il proprietario indicato, poi consultate i gruppi sulla mappa. I gruppi comparsi dopo le attivazioni non agiscono retroattivamente. L’obiettivo aggiornato resta nel pannello dell’avventura. Gli avvii con combattimento permettono attacchi e provocazioni contro i gruppi disponibili. Le vere attivazioni dell’Ombra e il seguito dell’avventura conservano il limite prima dell’intera fase.',
       'Ogni proprietario completa Scoperta del proprio eroe. Potete preparare al massimo una carta e ordinare le altre sopra o sotto il mazzo, rispettando gli effetti attivi. Il round successivo si apre quando tutti hanno concluso. Un evento o una capacità ancora mancante blocca il passaggio con i progressi salvati.',
       'Nei tavoli precedenti e nelle prove sintetiche l’Ombra usa conferme manuali nell’ordine nemici, oscurità, minaccia. Il gruppo deve prima risolvere ogni passaggio o verificarne l’assenza. Dopo la minaccia rende pronti i nemici esauriti; la conferma finale ricompone i mazzi e apre Riorganizzazione.',
       'Gli avvii precedenti senza questa capacità conservano il proprio limite. Le conferme manuali dei tavoli precedenti e delle prove sintetiche non eseguono gli effetti dell’avventura originale.',

@@ -93,9 +93,9 @@ export function compileCombatClosure(raw: unknown) {
       const max = integer(i.MaxGroupSize, 'Massimo istruzione', minimum, 3);
       const flavor = text(i.KeyAttackFlavor);
       const icons = [
-        ['\uf464', 'might'],
-        ['\uf463', 'agility'],
-        ['\uf462', 'spirit'],
+        ['\uf463', 'might'],
+        ['\uf462', 'agility'],
+        ['\uf461', 'spirit'],
         ['\uf460', 'wisdom'],
         ['\uf472', 'wit'],
       ] as const;

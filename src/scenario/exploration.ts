@@ -7,7 +7,7 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { PhysicalRandom } from '../physical-resolution/random';
 import { openPhysical } from '../physical-resolution/runtime';
-import { applyJourneyCommand } from '../server/journey-map';
+import { applyGrantedMove, applyJourneyCommand } from '../server/journey-map';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { ApiError } from '../server/errors';
 
@@ -16,6 +16,7 @@ export function prepareExploration(
   playerId: string,
   c: Extract<Command, { type: 'EXPLORE_SCENARIO' }>,
   entropy: string,
+  grantId?: string,
 ): ScenarioInstance {
   const sc = state.scenario!,
     p = state.mapGeneration;
@@ -55,7 +56,8 @@ export function prepareExploration(
     fail('SCENARIO_PENDING', 'Concludi la richiesta corrente prima di esplorare.');
   if (defeatedHeroes(state).includes(c.heroId)) fail('HERO_DEFEATED', 'Questo eroe è sconfitto.');
   // The existing journey interface owns position, adjacency, player, turn and budget checks.
-  applyJourneyCommand(state, playerId, { ...c, type: 'MOVE_HERO' }, null);
+  if (grantId) applyGrantedMove(state, grantId, c.heroId, c.fromSpaceId, c.destinationSpaceId);
+  else applyJourneyCommand(state, playerId, { ...c, type: 'MOVE_HERO' }, null);
   const d = sc.pack.definitions.find((d) => d.source === sc.pack.manifest.exploration!.definition)!;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId, kind: 'exploration' });
   const instance: ScenarioInstance = {
@@ -90,7 +92,7 @@ export function prepareExploration(
     requestId: c.requestId,
     fromSpaceId: c.fromSpaceId,
     destinationSpaceId: c.destinationSpaceId,
-    movesRemaining: state.journey!.travel!.remaining,
+    movesRemaining: state.journey!.travel?.remaining ?? 0,
     movementCost: 1,
     actionCost: 0,
     entropy,

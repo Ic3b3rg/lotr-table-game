@@ -1,10 +1,21 @@
 import { z } from 'zod';
+import { AttackTestViewSchema } from '../shared/combat';
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema } from '../shared/preparation';
 import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
 export const FrontResourcesSchema = z.strictObject({
   preparation: PreparationSchema,
+  combatUses: z
+    .array(
+      z.strictObject({
+        roundId: z.uuid(),
+        heroId: z.string().max(100),
+        effectId: z.string().max(350),
+      }),
+    )
+    .max(1000)
+    .optional(),
   depletion: z
     .array(z.strictObject({ copy: z.string().max(120), remaining: z.int().min(0).max(10) }))
     .max(15),
@@ -22,6 +33,7 @@ export const FrozenFrontsSchema = z.strictObject({
   catalog: CatalogSchema,
 });
 export const FrontSnapshotSchema = z.strictObject({
+  attackTest: AttackTestViewSchema.nullable().optional(),
   sourceTest: SourceTestViewSchema.nullable().optional(),
   resources: FrontResourcesSchema.nullable(),
   faceup: z.array(z.string().max(100)).max(56),

@@ -13,4 +13,6 @@ export { compileSourceDeployment, verifySourceDeployment } from './deployment-co
 export { generateDeployment } from './deployment';
 export { compileCombatClosure, verifyCombatClosure, type CombatClosure } from './compiler';
 export { selectGroupInstruction, groupAttackPacket } from './selection';
-export { applyGroupHits, preflightCombatGroup, effectiveGroup } from './group';
+export { applyGroupHits, preflightCombatGroup, effectiveGroup, boonSupply } from './group';
+
+export { threatMovements, moveEnemyOneSpace } from './movement';

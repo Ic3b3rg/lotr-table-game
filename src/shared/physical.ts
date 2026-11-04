@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  AttackTestChildSchema,
+  AttackTestViewSchema,
+  AttackTestResultSchema,
+  AttackOutcomeSchema,
+  CombatAdditionSchema,
+  CombatPhysicalContextSchema,
+} from './combat';
 import { ContentIdSchema } from './catalog';
 import { LastStandViewSchema } from './last-stand';
 import { StatSchema } from './skill-tests';
@@ -83,6 +91,32 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  AttackTestChildSchema,
+  z.strictObject({
+    kind: z.literal('last-stand-one'),
+    hero: slot,
+    family: PhysicalFamilySchema.nullable(),
+  }),
+  z.strictObject({
+    kind: z.literal('combat-addition'),
+    hero: slot,
+    addition: CombatAdditionSchema,
+    outcome: AttackOutcomeSchema,
+  }),
+  z.strictObject({
+    kind: z.literal('pay-attack-grant'),
+    hero: slot,
+    recipient: slot,
+    copy: z.string().max(120),
+    clauseHash: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
+  z.strictObject({
+    kind: z.literal('enemy-attack'),
+    hero: slot,
+    negate: StatSchema,
+    outcome: AttackOutcomeSchema,
+    addition: CombatAdditionSchema.nullable(),
+  }),
   z.strictObject({
     kind: z.literal('group-test'),
     hero: slot,
@@ -147,6 +181,8 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 ]);
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
+  combat: CombatPhysicalContextSchema.optional(),
+  deferFrontier: z.literal('combat-frontier-v1').optional(),
   children: z.array(FrontChildSchema).min(1).max(32),
   darknessHeroes: z.array(slot).max(5),
 });
@@ -194,7 +230,13 @@ export const PhysicalDecisionSchema = z.strictObject({
   mode: z.enum(['choose', 'select', 'allocate', 'scout']),
   title: z.string().min(1).max(1000),
   options: z
-    .array(z.strictObject({ id: z.string().min(1).max(200), label: z.string().min(1).max(1000) }))
+    .array(
+      z.strictObject({
+        id: z.string().min(1).max(200),
+        label: z.string().min(1).max(1000),
+        unavailable: z.string().max(1000).optional(),
+      }),
+    )
     .max(100),
   minimum: z.int().min(0).max(56),
   maximum: z.int().min(0).max(56),
@@ -237,9 +279,16 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 export const PhysicalResultSchema = z.strictObject({
+  attack: AttackTestResultSchema.optional(),
+  enemyOutcome: AttackOutcomeSchema.optional(),
   child: z.int().min(0).max(31),
   kind: z.enum([
     'inspiration',
+    'attack-test',
+    'pay-attack-grant',
+    'last-stand-one',
+    'combat-addition',
+    'enemy-attack',
     'test',
     'suffer',
     'discard',
@@ -288,6 +337,7 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  attackTest: AttackTestViewSchema.nullable().optional(),
   sourceTest: SourceTestViewSchema.nullable().optional(),
   lastStand: LastStandViewSchema.optional(),
   cycle: z
@@ -297,7 +347,13 @@ export const PhysicalViewSchema = z.strictObject({
           runId: z.uuid(),
           pendingId: z.uuid(),
           sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-          type: z.enum(['END_TURN', 'START_RALLY_SCOUT', 'CONFIRM_SHADOW_STEP', 'BEGIN_SHADOW']),
+          type: z.enum([
+            'END_TURN',
+            'START_RALLY_SCOUT',
+            'CONFIRM_SHADOW_STEP',
+            'BEGIN_SHADOW',
+            'START_ATTACK',
+          ]),
         })
         .nullable(),
       heroes: z

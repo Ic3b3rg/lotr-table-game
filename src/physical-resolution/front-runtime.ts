@@ -19,6 +19,13 @@ import { canResolveAlternative } from './front-feasibility';
 import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
 import { STAT_LABELS } from '../shared/skill-tests';
+import type {
+  AttackTestChild,
+  CompanyClause,
+  AttackOutcome,
+  CombatAddition,
+  CombatPhysicalContext,
+} from '../shared/combat';
 
 type Family = 'damage' | 'fear';
 type Decision = Extract<PhysicalActive, { kind: 'decision' }>;
@@ -55,6 +62,7 @@ class FrontReplay {
   private run!: Run;
   private child = 0;
   private answer = 0;
+  private directOutcome: AttackOutcome | null = null;
   private result!: PhysicalSnapshot['parents'][number]['results'][number];
   constructor(private readonly p: Omit<PhysicalState, 'snapshot'>) {
     invariant(p.version !== 1 && p.fronts, 'Runtime fronti senza freeze versione2.');
@@ -296,7 +304,7 @@ class FrontReplay {
     if (!this.lastStand.active(hero)) return [];
     const h = resources.preparation.heroes[hero]!,
       sources = [h.heroId, ...h.prepared, ...h.itemCopies];
-    return sources.flatMap((copy) => {
+    const policies = sources.flatMap((copy) => {
       if (resources.depletion.some((d) => d.copy === copy && d.remaining === 0)) return [];
       const id = copy === h.heroId ? copy : definitionId(copy);
       return (this.artifact.policies.find((p) => p.id === id)?.effects ?? []).map(
@@ -307,6 +315,134 @@ class FrontReplay {
         }),
       );
     });
+    if (this.combat)
+      for (const copy of h.prepared) {
+        for (const clause of this.combat.clauses.filter((c) => c.cardId === definitionId(copy))) {
+          const e = clause.effect;
+          const effect: PolicyEffect | null =
+            e.op === 'guard'
+              ? { op: 'guard', n: e.n }
+              : e.op === 'convert-all'
+                ? { op: 'convert-all', noPrintedSuccess: e.noPrintedSuccess, scout: 0 }
+                : e.op === 'convert-one-then-scout'
+                  ? { op: 'convert-one-scout', scout: 1 }
+                  : null;
+          if (
+            effect &&
+            !policies.some((p) => p.copy === copy && digest(p.effect) === digest(effect))
+          )
+            policies.push({ copy, effect, effectIndex: 100 + clause.clause });
+        }
+      }
+    return policies;
+  }
+  private get combat(): CombatPhysicalContext | null {
+    return this.run.program.profile === 'source-fronts-v1'
+      ? (this.run.program.combat ?? null)
+      : null;
+  }
+  private company(hero: number, window: CompanyClause['window']) {
+    if (!this.combat || !this.lastStand.active(hero)) return [];
+    return this.hero(hero).prepared.flatMap((copy) =>
+      this.combat!.clauses.filter(
+        (c) => c.cardId === definitionId(copy) && c.window === window,
+      ).map((clause) => ({ copy, clause, id: `company:${clause.clause}:${copy}` })),
+    );
+  }
+  private payPrepared(hero: number, copy: string) {
+    const h = this.hero(hero),
+      index = h.prepared.indexOf(copy);
+    invariant(index >= 0, 'La copia da pagare non è preparata.');
+    h.prepared.splice(index, 1);
+    h.discard.push(copy);
+  }
+  private beforeTest(
+    hero: number,
+    stat: keyof typeof STAT_LABELS,
+    path: string,
+    preselected?: string | null,
+  ) {
+    const offers = this.company(hero, 'before-test').filter(
+      (c) => c.clause.effect.op === 'replace-stat',
+    );
+    let selected = preselected;
+    if (preselected === undefined && offers.length)
+      selected = this.choose(
+        hero,
+        `${path}/before-test`,
+        'Prima della prova puoi sostituire la caratteristica pagando la carta indicata.',
+        [
+          { id: 'keep', label: `Usa ${STAT_LABELS[stat]}` },
+          ...offers.map((o) => ({
+            id: o.copy,
+            label: `Scarta ${this.skillName(o.copy)}: usa ${STAT_LABELS[o.clause.effect.op === 'replace-stat' ? o.clause.effect.stat : stat]}`,
+          })),
+        ],
+      );
+    if (!selected || selected === 'keep') return stat;
+    const offer = offers.find((o) => o.copy === selected);
+    invariant(offer?.clause.effect.op === 'replace-stat', 'Sostituzione prova non disponibile.');
+    this.payPrepared(hero, offer.copy);
+    for (let n = 0; n < offer.clause.effect.inspiration; n++) this.inspiration(hero);
+    return offer.clause.effect.stat;
+  }
+  private afterStrike(hero: number, path: string) {
+    const hook = this.combat?.heroes.find(
+      (h) => h.heroId === this.hero(hero).heroId && h.effect === 'after-strike-scout-once',
+    );
+    if (!hook) return;
+    const key = `${hook.heroId}:after-strike-scout-once`;
+    if (
+      this.resources.combatUses?.some(
+        (u) => u.roundId === this.combat!.roundId && u.heroId === hook.heroId && u.effectId === key,
+      )
+    )
+      return;
+    if (
+      this.choose(
+        hero,
+        `${path}/hero-reaction`,
+        'Dopo Assalto puoi usare la tua capacità una volta per round.',
+        [
+          { id: 'keep', label: 'Conserva la capacità per questo round' },
+          { id: 'scout', label: 'Usa la capacità: Scoperta 1' },
+        ],
+      ) === 'scout'
+    ) {
+      (this.resources.combatUses ??= []).push({
+        roundId: this.combat!.roundId,
+        heroId: hook.heroId,
+        effectId: key,
+      });
+      this.scout(hero, 1, `${path}/hero-scout`);
+    }
+  }
+  private afterTest(hero: number, path: string) {
+    const unavailable = this.company(hero, 'after-test').filter(
+      (o) => o.clause.effect.op === 'requires-capability',
+    );
+    if (!unavailable.length) return;
+    const options = [
+      { id: 'close', label: 'Prosegui dopo la prova' },
+      ...unavailable.map((o) => ({
+        id: o.id,
+        label: `${this.skillName(o.copy)} · beneficio non disponibile`,
+        unavailable:
+          'La riserva dei benefici non è ancora verificata. Nessuna carta viene scartata.',
+      })),
+    ];
+    const input = this.ask(hero, `${path}/after-test`, {
+      mode: 'choose',
+      title: 'Dopo la prova: le carte rivelate sono state scartate.',
+      options,
+      minimum: 1,
+      maximum: 1,
+      remaining: empty(),
+    });
+    invariant(
+      input.kind === 'physical-choice' && input.option === 'close',
+      'Capacità opzionale non disponibile prima del costo.',
+    );
   }
   private persist(hero: number): { copy: string; effect: PersistentOp }[] {
     if (!this.lastStand.active(hero)) return [];
@@ -864,6 +1000,7 @@ class FrontReplay {
     face: 'facedown' | 'faceup',
     path: string,
     negate?: 'might' | 'wisdom' | 'agility' | 'spirit' | 'wit',
+    direct = false,
   ) {
     return this.frame(
       path,
@@ -908,6 +1045,10 @@ class FrontReplay {
                 (!cannotDamage || !input.damage),
               'Negazione non legale.',
             );
+            if (direct && this.directOutcome) {
+              this.directOutcome.negated.damage += input.damage;
+              this.directOutcome.negated.fear += input.fear;
+            }
             remaining.damage -= input.damage;
             remaining.fear -= input.fear;
             this.result.prevented.damage += input.damage;
@@ -1057,6 +1198,10 @@ class FrontReplay {
             this.resources.depletion.find((d) => d.copy === offer.copy)!.remaining--;
             faceFear = 'facedown';
           } else used.add(offer.id);
+          if (direct && this.directOutcome) {
+            this.directOutcome.prevented.damage += input.damage;
+            this.directOutcome.prevented.fear += input.fear;
+          }
           remaining.damage -= input.damage;
           remaining.fear -= input.fear;
           this.result.prevented.damage += input.damage;
@@ -1076,6 +1221,16 @@ class FrontReplay {
                 this.s.areas[hero]![c.family].push(copy);
                 remaining[c.family]--;
                 this.result.transferred[c.family]++;
+                if (this.directOutcome && !this.directOutcome.sealed) {
+                  if (direct) this.directOutcome.suffered[c.family]++;
+                  else
+                    this.directOutcome.childSources.push({
+                      source: path,
+                      recipientHeroId: this.hero(hero).heroId,
+                      family: c.family,
+                      amount: 1,
+                    });
+                }
                 suffered++;
                 if ((c.family === 'fear' ? faceFear : face) === 'faceup')
                   this.front(hero, copy, `${path}/front-${this.r.operations}`);
@@ -1160,13 +1315,17 @@ class FrontReplay {
     negate = false,
     lastStand = false,
     sourceTarget?: number | null,
+    attack?: AttackTestChild,
   ): number {
     return this.frame(path, hero, null, 'test', 0, () => {
+      const visibleSource = sourceTarget !== undefined || (!!this.combat && !lastStand);
+      stat = this.beforeTest(hero, stat, path, attack?.replaceCopy);
       const h = this.hero(hero),
         definition = this.catalog.heroes.find((h) => h.id === this.hero(hero).heroId)!;
       const modifier =
         this.persist(hero).reduce(
-          (n, { effect: e }) => n + (e.op === 'stat-modifier' ? e.n : 0),
+          (n, { effect: e }) =>
+            n + (e.op === 'stat-modifier' || (attack && e.op === 'test-reveal-modifier') ? e.n : 0),
           0,
         ) +
         this.policy(hero).reduce(
@@ -1178,7 +1337,10 @@ class FrontReplay {
       let successes = cards.reduce((n, c) => n + this.skillSymbols(c).success, 0),
         fate = cards.reduce((n, c) => n + this.skillSymbols(c).fate, 0),
         n = 0,
-        spentTrigger = false;
+        spentTrigger = false,
+        addedHits = attack
+          ? this.persist(hero).reduce((n, { effect: e }) => n + (e.op === 'add-hits' ? e.n : 0), 0)
+          : 0;
       const declinedTitles = new Set<string>();
       const printed = successes;
       successes += this.persist(hero).reduce(
@@ -1191,11 +1353,24 @@ class FrontReplay {
           0,
         );
       const updateTest = () => {
-        if (sourceTarget !== undefined)
+        if (attack)
+          this.r.attackTest = {
+            heroId: h.heroId,
+            groupId: attack.groupId,
+            stage: 'converting',
+            slots: attack.slots,
+            successes,
+            spent: 0,
+            remaining: successes,
+            addedHits,
+            hits: addedHits,
+            allocations: [],
+          };
+        if (visibleSource)
           this.r.sourceTest = {
             heroId: h.heroId,
             stat,
-            target: sourceTarget,
+            target: sourceTarget ?? null,
             successes,
             fateRemaining: fate,
             cards: cards.map((c) => ({
@@ -1245,7 +1420,18 @@ class FrontReplay {
               fate >= 2 &&
               !this.scope(hero, 'each-nearby-excluding-self').length),
         );
+        const company = this.company(hero, 'test-convert').filter(
+          (o) => o.clause.effect.op === 'add-success' && o.clause.effect.stat === stat,
+        );
+        if (attack)
+          company.push(
+            ...this.company(hero, 'attack-test').filter((o) => o.clause.effect.op === 'strike'),
+          );
         const options = [
+          ...company.map((o) => ({
+            id: o.id,
+            label: `Scarta ${this.skillName(o.copy)}: ${o.clause.effect.op === 'strike' ? `Assalto ${o.clause.effect.n}` : `aggiungi ${o.clause.effect.op === 'add-success' ? o.clause.effect.n : 0} successo`}`,
+          })),
           {
             id: 'resolve',
             label: `Concludi la prova: ${successes} successi, ${fate} fati non spesi`,
@@ -1268,7 +1454,7 @@ class FrontReplay {
         const title = `Prova: ${cards.map((c) => this.skillName(c)).join(', ')}. ${successes} successi.`;
         const decisionPath = `${path}/convert-${n++}`;
         let selected: string;
-        if (lastStand || sourceTarget !== undefined) {
+        if (lastStand || visibleSource) {
           const input = this.ask(hero, decisionPath, {
             mode: 'choose',
             title,
@@ -1284,6 +1470,17 @@ class FrontReplay {
           selected = input.option;
         } else selected = this.choose(hero, decisionPath, title, options);
         if (selected === 'resolve') break;
+        const prepared = company.find((o) => o.id === selected);
+        if (prepared) {
+          this.payPrepared(hero, prepared.copy);
+          if (prepared.clause.effect.op === 'add-success') successes += prepared.clause.effect.n;
+          else if (prepared.clause.effect.op === 'strike') {
+            addedHits += prepared.clause.effect.n;
+            updateTest();
+            this.afterStrike(hero, `${path}/strike-${n}`);
+          }
+          continue;
+        }
         const help = titleHelp.find((t) => t.id === selected);
         if (help) {
           if (
@@ -1354,12 +1551,151 @@ class FrontReplay {
           }
         }
       }
+      if (attack) this.spendAttackSlots(hero, attack, successes, addedHits, `${path}/slots`);
       this.r.revealed.pop();
       h.discard.push(...cards);
+      if (this.combat) this.afterTest(hero, path);
+      if (attack) this.r.attackTest = null;
       if (lastStand) this.s.lastStand!.test = null;
-      if (sourceTarget !== undefined) this.r.sourceTest = null;
+      if (visibleSource) this.r.sourceTest = null;
       return successes;
     });
+  }
+  private spendAttackSlots(
+    hero: number,
+    attack: AttackTestChild,
+    successes: number,
+    addedHits: number,
+    path: string,
+  ) {
+    invariant(
+      new Set(attack.slots.map((s) => s.id)).size === attack.slots.length,
+      'Slot duplicati.',
+    );
+    const allocations: NonNullable<typeof this.result.attack>['allocations'] = [];
+    let spent = 0,
+      hits = addedHits;
+    const modifiers: NonNullable<typeof this.result.attack>['modifiers'] = [];
+    while (true) {
+      this.r.attackTest = {
+        heroId: this.hero(hero).heroId,
+        groupId: attack.groupId,
+        stage: 'spending',
+        slots: attack.slots,
+        successes,
+        spent,
+        remaining: successes - spent,
+        addedHits,
+        hits,
+        allocations: structuredClone(allocations),
+      };
+      const choices = attack.slots.filter(
+        (s) => !allocations.some((a) => a.slotId === s.id) && s.cost <= successes - spent,
+      );
+      const input = this.ask(hero, `${path}/${allocations.length}`, {
+        mode: 'choose',
+        title: `${successes - spent} successi disponibili; ${spent} spesi. Anteprima: ${hits} colpi. Ogni slot può essere pagato una sola volta.`,
+        options: [
+          { id: 'apply', label: `Conferma ${hits} colpi e prosegui` },
+          ...choices.map((s) => ({
+            id: `slot:${s.id}`,
+            label: `${s.label} · spendi ${s.cost} successi`,
+          })),
+        ],
+        minimum: 1,
+        maximum: 1,
+        remaining: empty(),
+      });
+      invariant(input.kind === 'physical-choice', 'Scelta slot richiesta.');
+      if (input.option === 'apply') break;
+      const slot = choices.find((s) => `slot:${s.id}` === input.option);
+      invariant(slot, 'Slot già speso/estraneo o successi insufficienti.');
+      allocations.push({
+        slotId: slot.id,
+        successes: Array.from({ length: slot.cost }, (_, n) => spent + n),
+      });
+      spent += slot.cost;
+      hits += slot.hits;
+      modifiers.push(...slot.modifiers);
+    }
+    this.result.attack = {
+      successes,
+      addedHits,
+      allocations,
+      unspent: successes - spent,
+      hits,
+      modifiers: [...new Set(modifiers)],
+    };
+  }
+  private additionEligible(hero: number, addition: CombatAddition, outcome: AttackOutcome) {
+    const p = addition.predicate;
+    return (
+      p === 'always' ||
+      (p === 'damage-positive' && outcome.suffered.damage > 0) ||
+      (p === 'fear-positive' && outcome.suffered.fear > 0) ||
+      (p === 'zero-damage-and-fear' && !total(outcome.suffered)) ||
+      (p === 'recipient-in-darkness' && this.condition(hero, 'self-space-in-darkness'))
+    );
+  }
+  private addition(hero: number, addition: CombatAddition, outcome: AttackOutcome, path: string) {
+    if (!this.additionEligible(hero, addition, outcome)) return;
+    const e = addition.effect;
+    const dummy = '';
+    switch (e.op) {
+      case 'discard-prepared':
+        this.operation(hero, dummy, { op: 'discard-prepared', hero: 'self', n: e.amount }, path);
+        break;
+      case 'discard-inspiration':
+        this.operation(hero, dummy, { op: 'discard-inspiration', hero: 'self', n: e.amount }, path);
+        break;
+      case 'gain-inspiration':
+        for (let n = 0; n < e.amount; n++) this.inspiration(hero);
+        break;
+      case 'gain-weakness':
+        for (let n = 0; n < e.amount; n++)
+          this.operation(
+            hero,
+            dummy,
+            {
+              op: 'gain-weakness',
+              hero: 'self',
+              n: 1,
+              destination: 'shuffle-into-current-skill-deck',
+            },
+            `${path}/${n}`,
+          );
+        break;
+      case 'flip-random':
+        this.flip(hero, e.family, e.amount, path);
+        break;
+      case 'suffer':
+        this.suffer(hero, [{ family: e.family, amount: e.amount }], e.face, path);
+        break;
+      case 'lose-boon-or-weakness': {
+        const boon = this.resources.boons.findIndex(
+          (b) => b.heroId === this.hero(hero).heroId && b.kind === e.boon,
+        );
+        if (boon >= 0) this.resources.boons.splice(boon, 1);
+        else
+          this.operation(
+            hero,
+            dummy,
+            {
+              op: 'gain-weakness',
+              hero: 'self',
+              n: 1,
+              destination: 'shuffle-into-current-skill-deck',
+            },
+            `${path}/known-absent-fallback`,
+          );
+        break;
+      }
+      case 'gain-boon':
+        this.gate(hero, 'boon-quantity-unconfirmed');
+        break;
+      case 'move-pair-toward-threat':
+        throw new Error('Movimento aggiuntivo richiede il ritorno del controller.');
+    }
   }
   private eventEffects(hero: number, event: string, sufferedFear: number) {
     return this.p.heroes.flatMap((_, owner) =>
@@ -1471,6 +1807,26 @@ class FrontReplay {
               digest(this.p.heroes.map(({ heroId, playerId }) => ({ heroId, playerId }))),
           'Contesto spaziale di un’altra compagnia o versione.',
         );
+      invariant(
+        run.program.profile !== 'source-fronts-v1' ||
+          !run.program.deferFrontier ||
+          !!run.program.combat,
+        'Frontiera differita senza capacità.',
+      );
+      if (run.program.profile === 'source-fronts-v1' && run.program.combat) {
+        const combat = run.program.combat;
+        for (const clause of combat.clauses)
+          invariant(
+            digest(this.catalog.skills.find((s) => s.id === clause.cardId)) ===
+              clause.definitionHash,
+            'Clausola senza carta fonte congelata.',
+          );
+        for (const hero of combat.heroes)
+          invariant(
+            digest(this.catalog.heroes.find((h) => h.id === hero.heroId)) === hero.definitionHash,
+            'Capacità eroe senza fonte congelata.',
+          );
+      }
       const context = FrontResourcesSchema.parse(run.context);
       invariant(
         context.preparation.heroes.length === this.p.heroes.length &&
@@ -1529,6 +1885,97 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'last-stand-one':
+              invariant(
+                this.combat &&
+                  run.program.profile === 'source-fronts-v1' &&
+                  run.program.deferFrontier &&
+                  run.lastStandRules,
+                'Obbligo P2 senza frontiera autorevole.',
+              );
+              this.lastStand.settle(run, [], { hero: child.hero, family: child.family }, true);
+              break;
+            case 'combat-addition':
+              invariant(
+                this.combat && child.outcome.sealed,
+                'Aggiunta prima della chiusura della fonte.',
+              );
+              this.addition(child.hero, child.addition, child.outcome, path);
+              break;
+            case 'pay-attack-grant': {
+              const clause = this.combat?.clauses.find(
+                (c) =>
+                  c.cardId === definitionId(child.copy) &&
+                  c.window === 'after-attack-after-counterattack' &&
+                  c.effect.op === 'granted-attack' &&
+                  digest(c) === child.clauseHash,
+              );
+              invariant(
+                clause?.effect.op === 'granted-attack' &&
+                  this.lastStand.active(child.recipient) &&
+                  this.nearby(child.hero, child.recipient),
+                'Concessione senza costo, destinatario o fonte legali.',
+              );
+              this.payPrepared(child.hero, child.copy);
+              for (let n = 0; n < clause.effect.inspiration; n++) this.inspiration(child.hero);
+              break;
+            }
+            case 'attack-test':
+              invariant(this.combat, 'Attacco senza finestre congelate.');
+              this.result.successes = this.test(
+                child.hero,
+                child.stat,
+                `${path}/attack-test`,
+                false,
+                false,
+                null,
+                child,
+              );
+              break;
+            case 'enemy-attack': {
+              invariant(
+                this.combat &&
+                  !child.outcome.sealed &&
+                  !total(child.outcome.negated) &&
+                  !total(child.outcome.prevented) &&
+                  !total(child.outcome.suffered) &&
+                  !child.outcome.childSources.length,
+                'Esito nemico senza origine intatta.',
+              );
+              const outcome = structuredClone(child.outcome);
+              this.result.enemyOutcome = outcome;
+              this.directOutcome = outcome;
+              this.suffer(
+                child.hero,
+                [
+                  { family: 'damage', amount: outcome.offered.damage },
+                  { family: 'fear', amount: outcome.offered.fear },
+                ],
+                'faceup',
+                path,
+                child.negate,
+                true,
+              );
+              outcome.sealed = true;
+              this.directOutcome = null;
+              if (child.addition && this.additionEligible(child.hero, child.addition, outcome)) {
+                const addition = child.addition,
+                  result = this.result;
+                const reaction = {
+                  id: `addition:${index}`,
+                  hero: child.hero,
+                  label: 'Risolvi la conseguenza aggiuntiva dell’attacco',
+                  available: () => this.lastStand.active(child.hero),
+                  resolve: () => {
+                    this.result = result;
+                    this.addition(child.hero, addition, outcome, `${path}/addition`);
+                  },
+                };
+                if (run.lastStandRules) reactions.push(reaction);
+                else reaction.resolve();
+              }
+              break;
+            }
             case 'darkness': {
               invariant(
                 run.spatial &&
@@ -1751,7 +2198,10 @@ class FrontReplay {
             lastStandEnabled = true;
             break;
           }
-        if (lastStandEnabled) {
+        if (
+          lastStandEnabled &&
+          !(run.program.profile === 'source-fronts-v1' && run.program.deferFrontier)
+        ) {
           for (const [hero, limit] of run.program.limits.entries())
             if (
               limit.kind === 'requires-capability' &&

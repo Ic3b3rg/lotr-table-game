@@ -1,3 +1,4 @@
+import { combatView } from '../combat/controller';
 import { scenarioReceiptProblem } from '../scenario/validate';
 import { explorationProblem, explorationSource } from '../shared/exploration';
 import { digest } from '../map-freeze/hash';
@@ -387,6 +388,7 @@ export function publicSession(state: State) {
     group: state.group,
     mapGeneration: state.mapGeneration,
     scenario: state.scenario,
+    ...(state.combat ? { combat: combatView(state) } : {}),
     encounterFingerprints: Object.fromEntries(
       (state.scenario?.instances ?? [])
         .filter((i) => state.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!))

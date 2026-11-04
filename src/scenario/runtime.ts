@@ -1239,8 +1239,9 @@ export function exploreScenario(
   playerId: string,
   c: Extract<Command, { type: 'EXPLORE_SCENARIO' }>,
   entropy: string,
+  grantId?: string,
 ) {
-  const i = prepareExploration(state, playerId, c, entropy),
+  const i = prepareExploration(state, playerId, c, entropy, grantId),
     sc = state.scenario!;
   runInstance(state, i);
   sc.events.push({ id: eventId(sc, 'NODE CLICKED'), event: 'NODE CLICKED', receivers: [i.id] });

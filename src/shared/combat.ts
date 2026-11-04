@@ -240,3 +240,25 @@ export const CombatPhysicalContextSchema = z.strictObject({
   heroes: CombatClosureSourceSchema.shape.heroes,
 });
 export type CombatPhysicalContext = z.infer<typeof CombatPhysicalContextSchema>;
+
+export const AttackTestViewSchema = z.strictObject({
+  heroId: ContentIdSchema,
+  groupId: id,
+  stage: z.enum(['converting', 'spending', 'after-test']),
+  slots: z.array(SuccessSlotSchema).max(32),
+  successes: z.int().min(0).max(999),
+  spent: z.int().min(0).max(999),
+  remaining: z.int().min(0).max(999),
+  addedHits: z.int().min(0).max(1000),
+  hits: z.int().min(0).max(10000),
+  allocations: AttackTestResultSchema.shape.allocations,
+});
+export const AttackTestChildSchema = z.strictObject({
+  kind: z.literal('attack-test'),
+  hero: z.int().min(0).max(4),
+  stat: StatSchema,
+  groupId: id,
+  slots: z.array(SuccessSlotSchema).max(32),
+  replaceCopy: id.nullable(),
+});
+export type AttackTestChild = z.infer<typeof AttackTestChildSchema>;

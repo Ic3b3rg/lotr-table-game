@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import * as combat from '../dist/combat-library.mjs';
 import { closureFixture, groupFixture } from './fixtures/combat-closure.mjs';
@@ -113,4 +114,44 @@ test('untrusted accessor rejected before execution and closure omission refused'
   const missing = closureFixture();
   missing.assets = missing.assets.filter((a) => a.source !== 'fixture.assets:51');
   assert.throws(() => combat.compileCombatClosure(missing));
+});
+
+test('native stat symbols share the existing compiler namespace, including Might and Spirit', () => {
+  for (const [icon, stat] of [
+    ['\uf463', 'might'],
+    ['\uf462', 'agility'],
+    ['\uf461', 'spirit'],
+  ]) {
+    const source = closureFixture();
+    const t = source.texts[0];
+    t.value = `Invented instruction (${icon} negates).`;
+    t.sha256 = createHash('sha256').update(t.value).digest('hex');
+    assert.equal(
+      combat.compileCombatClosure(source).compiled.models[0].instructions[0].negate,
+      stat,
+    );
+  }
+});
+
+test('boon supply keeps unknown availability distinct from an empty verified supply and known absent possession', () => {
+  assert.deepEqual(combat.boonSupply(null, [], 'hidden'), { status: 'unknown', available: null });
+  assert.deepEqual(combat.boonSupply({ hidden: 0, determined: 0, emboldened: 0 }, [], 'hidden'), {
+    status: 'empty',
+    available: 0,
+  });
+  assert.deepEqual(
+    combat.boonSupply(
+      { hidden: 2, determined: 0, emboldened: 0 },
+      [{ heroId: 'invented-owner', kind: 'hidden' }],
+      'hidden',
+    ),
+    { status: 'available', available: 1 },
+  );
+  assert.throws(() =>
+    combat.boonSupply(
+      { hidden: 0, determined: 0, emboldened: 0 },
+      [{ heroId: 'invented-owner', kind: 'hidden' }],
+      'hidden',
+    ),
+  );
 });
