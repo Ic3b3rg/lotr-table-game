@@ -22,6 +22,7 @@ export function boonFixture(verified = true) {
   cards.forEach((c, i) => {
     c.name.value = `Favore sintetico ${i + 1}`;
     c.text.value = `Programma immaginario ${i + 1}, senza testo originale.`;
+    c.mechanics.timing.value = effects[i].map((_, n) => `Finestra sintetica ${n + 1}`);
     c.mechanics.values.value = i
       ? [{ label: 'Valore inventato', value: i + 3, unit: 'punti' }]
       : [];
@@ -72,7 +73,7 @@ export function runtimeBoons(edit = () => {}, verified = true) {
     '1'.repeat(64),
     undefined,
     { artifact: api.compilePhysicalFronts(f.raw, f.ir, f.catalog), catalog: f.catalog },
-    undefined,
+    f.lastStandInput ? api.compileLastStand(f.raw, f.lastStandInput) : undefined,
     a,
   );
   let revision = 0;

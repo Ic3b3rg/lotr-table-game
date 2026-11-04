@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { runtimeBoons, boonGrant, inventedOutcome } from './fixtures/boons.mjs';
 import { validatePhysical } from '../dist/physical-resolution-library.mjs';
 import { suffer } from './fixtures/physical-resolution.mjs';
+import { inventedLastStand } from './fixtures/last-stand.mjs';
 
 const attack = {
   kind: 'attack-test',
@@ -149,4 +150,75 @@ test('exchange removes the selected converted symbols, preserves paid resources 
   const h = f.p.snapshot.resolution.resources.preparation.heroes[0];
   assert.equal(new Set([...h.deck, ...h.discard, ...h.prepared]).size, 15);
   assert.doesNotThrow(() => validatePhysical(JSON.parse(JSON.stringify(f.p))));
+});
+
+test('reachable title Rest checks its boon continuation before the prepared cost, then returns through the same consumer', () => {
+  for (const verified of [false, true]) {
+    const f = runtimeBoons((f) => {
+      f.lastStandInput = inventedLastStand(f.raw);
+      f.lastStandInput.awards[1].minimum = 1;
+      f.catalog.heroes[0].stats.damage = 1;
+      f.catalog.skills.forEach((s) => {
+        s.success = 1;
+        s.fate = 0;
+      });
+    }, verified);
+    f.p.version = 3;
+    const spatial = { heroes: f.heroes, connections: [], enemies: [] };
+    f.open([suffer(0, 1, 0)], spatial);
+    f.answer('reveal');
+    f.answer('resolve');
+    assert.equal(f.p.snapshot.active, null);
+    const title = f.p.snapshot.lastStand.titles[0];
+    assert.ok(title && !title.removed);
+    f.open([{ kind: 'end-turn', hero: 0 }], spatial);
+    const option = f.p.snapshot.active.options.find((o) => o.id.startsWith('title-rest:'));
+    assert.ok(option);
+    if (verified) {
+      assert.equal(option.unavailable, undefined);
+      f.answer(option.id);
+      finish(f);
+      assert.equal(f.p.snapshot.lastStand.titles[0].removed, true);
+      assert.equal(f.p.snapshot.resolution.resources.boonCustody[0].kind, 'determined');
+      assert.ok(
+        !f.p.snapshot.resolution.resources.preparation.heroes[0].discard.includes(title.copy),
+      );
+    } else {
+      assert.match(option.unavailable, /riserva/i);
+      const before = structuredClone(f.p);
+      assert.throws(() => f.answer(option.id));
+      assert.deepEqual(f.p, before);
+      assert.ok(
+        f.p.snapshot.resolution.resources.preparation.heroes[0].prepared.includes(title.copy),
+      );
+      f.answer('close-rest');
+      assert.equal(f.p.snapshot.lastStand.titles[0].removed, false);
+    }
+    assert.doesNotThrow(() => validatePhysical(f.p));
+  }
+});
+
+test('exchange recycles only discarded cards and keeps every revealed and prepared identity conserved', () => {
+  const f = runtimeBoons((f) => {
+    f.catalog.heroes[0].stats.might = 14;
+    f.catalog.skills.forEach((s) => {
+      s.success = 0;
+      s.fate = 0;
+    });
+  });
+  f.open([boonGrant(0), attack]);
+  assert.equal(f.p.snapshot.resolution.revealed[0].cards.length, 14);
+  f.answer(f.p.snapshot.active.options.find((o) => o.id.includes('exchange-test-cards')).id);
+  const selected = f.p.snapshot.active.options.map((o) => o.id);
+  f.answer({ kind: 'physical-select', ids: selected });
+  const held = f.p.snapshot.resolution.revealed[0].cards;
+  assert.deepEqual(new Set(held), new Set(selected));
+  assert.equal(new Set(held).size, 14);
+  assert.ok(!held.includes(f.context.preparation.heroes[0].prepared[0]));
+  finish(f);
+  const h = f.p.snapshot.resolution.resources.preparation.heroes[0];
+  assert.equal(h.deck.length, 14);
+  assert.equal(h.discard.length, 0);
+  assert.equal(new Set([...h.deck, ...h.prepared]).size, 15);
+  assert.doesNotThrow(() => validatePhysical(f.p));
 });

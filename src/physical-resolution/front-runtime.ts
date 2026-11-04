@@ -20,7 +20,7 @@ import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { validateBoonArtifact } from './boon-program';
-import { boonAvailability, validateBoonCustody } from './boon-stock';
+import { boonAvailability, boonAcquisitionProblems, validateBoonCustody } from './boon-stock';
 import type { BoonKind } from '../shared/boons';
 import { BoonKindSchema } from '../shared/combat';
 import type {
@@ -328,11 +328,11 @@ class FrontReplay {
     hero: number,
     path: string,
     title: string,
-    options: { id: string; label: string }[],
+    options: { id: string; label: string; unavailable?: string }[],
     recipient = hero,
   ) {
     invariant(options.length > 0, 'Scelta senza alternative lecite.');
-    if (options.length === 1) return options[0]!.id;
+    if (options.length === 1 && !options[0]!.unavailable) return options[0]!.id;
     const input = this.ask(
       hero,
       path,
@@ -347,7 +347,8 @@ class FrontReplay {
       recipient,
     );
     invariant(
-      input.kind === 'physical-choice' && options.some((o) => o.id === input.option),
+      input.kind === 'physical-choice' &&
+        options.some((o) => o.id === input.option && !o.unavailable),
       'Alternativa non disponibile.',
     );
     return input.option;
@@ -528,8 +529,9 @@ class FrontReplay {
       ...unavailable.map((o) => ({
         id: o.id,
         label: `${this.skillName(o.copy)} · beneficio non disponibile`,
-        unavailable:
-          'La riserva dei benefici non è ancora verificata. Nessuna carta viene scartata.',
+        unavailable: this.p.boons?.runtimeReady
+          ? 'Il seguito completo di questa capacità non è incluso nel salvataggio. Nessuna carta viene scartata.'
+          : 'La riserva dei benefici non è ancora verificata. Nessuna carta viene scartata.',
       })),
     ];
     const input = this.ask(hero, `${path}/after-test`, {
@@ -1058,10 +1060,27 @@ class FrontReplay {
           id: `rest:${effectIndex}:${copy}`,
           label: `Riposo ${e.op === 'rest' ? e.n : 0} · scarta ${this.skillName(copy)}`,
         })),
-        ...titleRests.map(({ copy, effect: e, index }) => ({
-          id: `title-rest:${index}:${copy}`,
-          label: `Riposo ${e.op === 'rest' ? e.n : 0} · ${this.skillName(copy)} · seguito con beneficio da verificare`,
-        })),
+        ...titleRests.map(({ copy, effect: e, index }) => {
+          const missing =
+            e.op === 'rest'
+              ? boonAcquisitionProblems(
+                  this.p.boons,
+                  this.resources.boonCustody ?? [],
+                  [e.after.boon],
+                  [this.hero(hero).heroId],
+                )
+              : [];
+          return {
+            id: `title-rest:${index}:${copy}`,
+            label: `Riposo ${e.op === 'rest' ? e.n : 0} · ${this.skillName(copy)}${this.p.boons ? ' · poi rimuovi il titolo e acquisisci il beneficio' : ' · seguito con beneficio da verificare'}`,
+            ...(this.p.boons && missing.length
+              ? {
+                  unavailable:
+                    'La riserva del beneficio necessario non è disponibile. Titolo e Riposo restano intatti.',
+                }
+              : {}),
+          };
+        }),
         ...(!closed && (rests.length || titleRests.length)
           ? [{ id: 'close-rest', label: 'Non usare altro Riposo' }]
           : []),
@@ -1086,7 +1105,61 @@ class FrontReplay {
       if (selected.startsWith('title-rest:')) {
         // Acquisition is independent; this use needs the still-unconfirmed supply.
         // Gate the whole activation before discarding its prepared cost or resting.
-        this.gate(hero, 'boon-quantity-unconfirmed', empty(), null, 'P4:title-rest-boon');
+        if (!this.p.boons)
+          this.gate(hero, 'boon-quantity-unconfirmed', empty(), null, 'P4:title-rest-boon');
+        const title = titleRests.find((t) => selected === `title-rest:${t.index}:${t.copy}`)!;
+        invariant(
+          title.effect.op === 'rest' &&
+            !boonAcquisitionProblems(
+              this.p.boons,
+              this.resources.boonCustody ?? [],
+              [title.effect.after.boon],
+              [this.hero(hero).heroId],
+            ).length,
+          'Seguito del Riposo non disponibile prima del costo.',
+        );
+        this.payPrepared(hero, title.copy);
+        this.physicalSelection(
+          hero,
+          ['damage', 'fear'],
+          'down',
+          `${path}/title-rest-${step}`,
+          title.effect.n,
+          true,
+        );
+        const effects = this.eventEffects(hero, 'after-rest', 0);
+        const remaining = ['title', ...effects.map((_, i) => String(i))];
+        while (remaining.length) {
+          const next = this.choose(
+            hero,
+            `${path}/after-title-rest-${step}-${remaining.length}`,
+            'Dopo Riposo: scegli l’ordine degli effetti obbligatori.',
+            remaining.map((id) => ({
+              id,
+              label:
+                id === 'title'
+                  ? 'Rimuovi il titolo e acquisisci il beneficio'
+                  : this.cards.get(effects[Number(id)]!.copy)!.name.value,
+            })),
+          );
+          remaining.splice(remaining.indexOf(next), 1);
+          if (next === 'title') {
+            const ownership = this.s.lastStand!.titles.find((t) => t.copy === title.copy)!;
+            const h = this.hero(hero),
+              at = h.discard.indexOf(title.copy);
+            invariant(!ownership.removed && at >= 0, 'Titolo di Riposo già rimosso o senza costo.');
+            h.discard.splice(at, 1);
+            ownership.removed = true;
+            this.gainBoon(hero, title.effect.after.boon, `${path}/title-rest-${step}/benefit`);
+          } else
+            this.eventEffect(
+              hero,
+              effects[Number(next)]!,
+              `${path}/title-rest-${step}/effect-${next}`,
+              false,
+            );
+        }
+        continue;
       }
       if (selected.startsWith('effect:')) {
         const n = Number(selected.slice(7));
@@ -1785,6 +1858,10 @@ class FrontReplay {
       if (attack) this.spendAttackSlots(hero, attack, successes, addedHits, `${path}/slots`);
       this.r.revealed.pop();
       h.discard.push(...cards);
+      if (this.p.boons && !h.deck.length && h.discard.length) {
+        h.deck = this.random(`${path}/after-test-refill`, h.discard, h.discard.length);
+        h.discard = [];
+      }
       if (this.combat) this.afterTest(hero, path);
       if (attack) this.r.attackTest = null;
       if (lastStand) this.s.lastStand!.test = null;

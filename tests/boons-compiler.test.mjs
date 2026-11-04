@@ -62,6 +62,9 @@ test('boon compiler rejects missing definitions, fields, provenance, foreign cop
       x.boonInput.definitions[1].effects[0].n = 2;
     },
     (x) => {
+      x.boonInput.definitions[1].effects.pop();
+    },
+    (x) => {
       x.raw.cards.find((c) => c.family === 'boon').text.status = 'unresolved';
     },
   ]) {
@@ -115,5 +118,6 @@ test('boon rules freeze before any run and survive serialization; retrofits and 
   assert.throws(() => api.validatePhysical(changed));
   const legacy = api.freezePhysical(f.raw, binding, f.heroes, '1'.repeat(64), undefined, fronts);
   assert.equal(legacy.boons, undefined);
-  assert.deepEqual(api.physicalView(legacy).boons, undefined);
+  assert.equal(api.physicalView(legacy).boons.stock, 'unverified');
+  assert.equal(api.physicalView(legacy).boons.definitions.length, 3);
 });

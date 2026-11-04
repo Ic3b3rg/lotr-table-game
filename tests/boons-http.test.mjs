@@ -4,6 +4,11 @@ import { readyBoonCombat, attackToBoon } from './boons-http-helper.mjs';
 import { drainCombat } from './combat-controller-helper.mjs';
 import { readBackup, readSession } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
+import { endTurns } from './original-round-helper.mjs';
+import {
+  attachActivationSource,
+  attachActivationThreshold,
+} from './fixtures/shadow-activations.mjs';
 
 test('real combat controller acquires once through the ordinary ledger with receiver, retry and stale protection', async (t) => {
   const ready = await readyBoonCombat(t);
@@ -56,4 +61,20 @@ test('real combat controller acquires once through the ordinary ledger with rece
   assert.deepEqual((await readBackup(ready.host)).payload, after.payload);
   await drainCombat(ready);
   assert.equal((await readSession(ready.host)).combat.current, null);
+});
+
+test('unverified source stock exposes the known next-Shadow blocker without spending, drawing or changing a payload', async (t) => {
+  const ready = await readyBoonCombat(t, false, (src, pack, frozen) => {
+    attachActivationSource(src, [
+      ...new Set(frozen.mapGeneration.projection.spaces.map((s) => s.tileSource)),
+    ]);
+    src.shadow.controller = { ...src.shadow.controller, ...pack.manifest.rounds.controller };
+    attachActivationThreshold(src, pack);
+  });
+  await endTurns(ready);
+  const before = await readBackup(ready.host),
+    s = await readSession(ready.host);
+  assert.equal(s.physical.nextShadow.enabled, false);
+  assert.match(s.physical.nextShadow.reason, /riserva.*verificat/i);
+  assert.deepEqual((await readBackup(ready.host)).payload, before.payload);
 });

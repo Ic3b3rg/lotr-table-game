@@ -59,6 +59,7 @@ export function decisionForm(
       }
       b.onclick = () => submit({ kind: 'physical-choice', option: option.id });
       fields.append(b);
+      if (option.unavailable) fields.append(text('p', option.unavailable, 'company-help'));
     }
     form.append(fields, status);
     return form;

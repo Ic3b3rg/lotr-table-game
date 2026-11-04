@@ -59,6 +59,10 @@ export function compileBoons(raw: unknown, input: unknown): BoonArtifact {
       new Set(d.effects.map((e) => e.op)).size === d.effects.length,
       'Finestre beneficio duplicate.',
     );
+    invariant(
+      d.effects.length === c.mechanics.timing.value.length,
+      'Finestre beneficio non interamente coperte dal programma.',
+    );
     const effects = d.effects.map((e) => {
       if (e.op === 'add-hits' || e.op === 'add-success') {
         const n = c.mechanics.values.value[e.valueIndex]?.value;

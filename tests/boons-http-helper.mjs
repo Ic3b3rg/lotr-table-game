@@ -14,7 +14,7 @@ export async function readyBoonCombat(t, verified = true, edit = () => {}) {
     artifact = compileBoons(f.raw, f.boonInput);
   const ready = await readyCombat(
     t,
-    (src, pack) => {
+    (src, pack, frozen) => {
       src.additions.forEach((a) => {
         a.predicate = 'always';
         a.effect = { op: 'gain-boon', boon: null };
@@ -26,7 +26,7 @@ export async function readyBoonCombat(t, verified = true, edit = () => {}) {
           a.dataHash = digest(a.data);
         });
       pack.manifest.boons = { version: artifact.version, fingerprint: artifact.fingerprint };
-      edit(src, pack);
+      edit(src, pack, frozen);
     },
     undefined,
     (_fronts, _catalog, raw, ready) => {

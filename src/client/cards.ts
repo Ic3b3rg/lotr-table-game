@@ -84,6 +84,21 @@ export function createCardReader() {
     });
   }
   return {
+    boon(card: { name: string; text: string }, target: HTMLElement) {
+      show(
+        card.name,
+        [
+          text('p', 'Beneficio · carta scoperta, separata dalle abilità preparate', 'card-type'),
+          text('p', card.text, 'card-full-text'),
+          text(
+            'p',
+            'Quando viene scartato, il beneficio torna alla propria riserva.',
+            'company-help',
+          ),
+        ],
+        target,
+      );
+    },
     hero(hero: HeroDefinition, catalog: Catalog, target: HTMLElement) {
       const stats = text('dl', '', 'hero-stats');
       const names = {

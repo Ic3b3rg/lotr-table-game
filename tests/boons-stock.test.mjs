@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runtimeBoons, boonGrant } from './fixtures/boons.mjs';
-import { validatePhysical } from '../dist/physical-resolution-library.mjs';
+import { validatePhysical, physicalView } from '../dist/physical-resolution-library.mjs';
 import { compileCombatClosure, preflightCombatGroup } from '../dist/combat-library.mjs';
 import { closureFixture, groupFixture } from './fixtures/combat-closure.mjs';
 
@@ -105,4 +105,21 @@ test('mandatory continuation finds unknown or exhaustible stock before any previ
     );
     assert.deepEqual(f.p, before);
   }
+});
+
+test('public boon reader shows faceup custody and stock without programs, original fields or fabricated quantities', () => {
+  const f = runtimeBoons();
+  f.open([boonGrant(0)]);
+  const view = physicalView(f.p).boons;
+  assert.equal(view.stock, 'verified');
+  assert.equal(view.definitions.find((d) => d.kind === 'determined').available, 1);
+  assert.equal(view.held[0].name, 'Favore sintetico 1');
+  assert.equal(view.held[0].heroId, 'hero-1');
+  assert.ok(view.held[0].sourceLabel);
+  const encoded = JSON.stringify(view);
+  assert.ok(
+    !encoded.includes('originalHash') &&
+      !encoded.includes('valueIndex') &&
+      !encoded.includes('exchange-test-cards'),
+  );
 });
