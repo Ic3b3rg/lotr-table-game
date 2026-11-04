@@ -19,6 +19,30 @@ test('deployment compiler derives the complete owned pool and refuses missing so
   }
 });
 
+test('deployment verification refuses accessors and inherited input without executing getters', () => {
+  for (const location of ['source', 'compiled', 'inherited']) {
+    const artifact = combat.compileSourceDeployment(deploymentSource());
+    const source = artifact.source;
+    let reads = 0;
+    const getter = {
+      enumerable: true,
+      get() {
+        reads++;
+        return location === 'compiled' ? 1 : source;
+      },
+    };
+    if (location === 'source') Object.defineProperty(artifact, 'source', getter);
+    else if (location === 'compiled')
+      Object.defineProperty(artifact.compiled.preferences, 'bonus', getter);
+    else {
+      delete artifact.source;
+      Object.setPrototypeOf(artifact, Object.defineProperty({}, 'source', getter));
+    }
+    assert.throws(() => combat.verifySourceDeployment(artifact), location);
+    assert.equal(reads, 0, location);
+  }
+});
+
 test('deployment uses real budget, figures, modifiers, frozen positions and replayable randomness', () => {
   const a = combat.compileSourceDeployment(deploymentSource());
   const context = deploymentContext();

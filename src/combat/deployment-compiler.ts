@@ -135,6 +135,7 @@ export function compileSourceDeployment(raw: unknown) {
 }
 export type DeploymentArtifact = ReturnType<typeof compileSourceDeployment>;
 export function verifySourceDeployment(raw: unknown): DeploymentArtifact {
+  bounded(raw);
   const a = object(raw),
     result = compileSourceDeployment(a.source);
   check(digest(result) === digest(raw), 'Deployment diverso dalla fonte compilata.');
