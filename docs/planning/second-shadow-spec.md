@@ -1,8 +1,8 @@
 # Seconda Ombra originale — #81
 
 Base `177e97aff7d5f00481f869deec5a0a07e4c58ffa`, schema15. Autorità:
-issue81 e chiarimento del proprietario, issue79 corretta, ADR1–3 e contratti
-principal/startup38, realizzato55, fisica61/P0/P1/P1b/P2, incontro71,
+issue81 e correzione del brief da parte del root, issue79 corretta, ADR1–3 e
+contratti principal/startup38, realizzato55, fisica61/P0/P1/P1b/P2, incontro71,
 esplorazione73, combattimento75 e round79. Nessuna delega, installazione,
 nuovo checkout o scrittura GitHub. Review e integrazione spettano al root.
 
@@ -72,4 +72,3 @@ UI nello stile esistente: prossimo passo, attore/attesa, istruzioni ordinate,
 gruppi sulla mappa, obiettivo, guida/lettore, focus/tastiera e quattro viewport
 320/768/1024/1440. Solo input nativi per l'accettazione, nessuna API/SQL write.
 Processi, profili, dati e prove propri; fonti e backup altrui solo lettura.
-

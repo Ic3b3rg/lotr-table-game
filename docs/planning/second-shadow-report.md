@@ -80,3 +80,18 @@ I comandi privati e gli input puntuali sono nel README del sigillo.
 #33/#65/#57 restano aperte. Il seguito oltre il primo spawn, le attivazioni,
 combattimento, campo/A2, perdita finale e partita completa restano fuori da
 questa consegna. Nessuna quantità dei benefici è stata assunta.
+
+## Integrazione root
+
+Review indipendenti: Standards ha rilevato un P2 nel confine JSON del verifier
+deployment, corretto direttamente dal root con regressione RED→GREEN per
+accessor diretti, annidati e proprietà ereditate. Spec non ha rilevato difetti
+funzionali; corretta la provenienza del chiarimento di scope. Separata anche
+l'etichetta dell'obiettivo dal testo con due punti e spazio.
+
+Sul codice integrato: **598/598 test**, zero fail/skip/todo, typecheck,
+format:check e diff check verdi. Il root ha ricompilato il pack ottenendo gli
+stessi byte, ripetuto l'oracle e riconvalidato 51 backup UI con nove alterazioni
+respinte e tutti i 129 backup storici. Sigillo ricevuto e otto primarie
+ricontrollati; nessuna nuova corsa browser necessaria per queste correzioni.
+[Review e limiti dell'integrazione](../reviews/2026-11-04-second-shadow.md).
