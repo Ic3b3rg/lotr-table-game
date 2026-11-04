@@ -21,7 +21,7 @@ import { definitionId } from '../shared/preparation';
 import { ApiError } from '../server/errors';
 import { verifySourceDeployment } from './deployment-compiler';
 import { preflightCombatOperation } from './preflight';
-import { threatMovements, moveEnemyOneSpace } from './movement';
+import { threatMovements, moveEnemyOneSpace, groupInRange } from './movement';
 import { physicalLimits } from '../physical-resolution/effects';
 import { applyGrantedMove } from '../server/journey-map';
 import { exploreScenario } from '../scenario/runtime';
@@ -94,20 +94,7 @@ function name(state: State, id: string) {
   return g.figures.filter((f) => f.health > 0).length > 1 ? d.plural : d.name;
 }
 function inRange(state: State, heroId: string, groupId: string, ranged: boolean) {
-  const g = group(state, groupId),
-    ordinary = state.journey!.heroes.find((h) => h.heroId === heroId)!.spaceId;
-  const from = state.scenario!.spaceBindings.find((b) => b.id === ordinary)?.sourceId;
-  invariant(
-    from && state.mapGeneration?.status === 'frozen',
-    'Posizione di combattimento non riconciliata.',
-  );
-  return (
-    g.spaceId === from ||
-    (ranged &&
-      state.mapGeneration.projection.movementGraph.edges.some(
-        (e) => (e.a === from && e.b === g.spaceId) || (e.b === from && e.a === g.spaceId),
-      ))
-  );
+  return groupInRange(state, heroId, group(state, groupId), ranged);
 }
 export function attackOffers(state: State, heroId: string): CombatAttackOffer[] {
   const a = combatArtifact(state),
@@ -538,7 +525,7 @@ export function advanceCombat(state: State) {
         attempt.runId = null;
         attempt.frontier!.physicalRole = null;
       }
-      if (!alive(state, attempt.heroId)) attempt.frontier!.addition = 'not-due';
+      if (!additionCanResolve(state, attempt)) attempt.frontier!.addition = 'not-due';
       const choices = frontierOptions(state, attempt);
       if (choices.length === 1) {
         beginFrontier(state, attempt, choices[0]!.id);
@@ -571,6 +558,11 @@ function selectedAddition(state: State, a: CombatAttempt) {
   return combatArtifact(state)
     .compiled.models.find((m) => m.source === a.selection!.model)!
     .instructions.find((i) => i.source === a.selection!.source)!.addition;
+}
+function additionCanResolve(state: State, a: CombatAttempt) {
+  return (
+    alive(state, a.heroId) || selectedAddition(state, a)?.effect.op === 'move-pair-toward-threat'
+  );
 }
 function additionDue(state: State, a: CombatAttempt) {
   const addition = selectedAddition(state, a),
@@ -608,7 +600,7 @@ function frontierOptions(state: State, a: CombatAttempt) {
           label: `${label} · Ultimo Sforzo ${family === 'damage' ? 'danni' : 'paure'}`,
         }));
   });
-  if (a.frontier?.addition === 'pending' && alive(state, a.heroId))
+  if (a.frontier?.addition === 'pending' && additionCanResolve(state, a))
     obligations.push({ id: 'addition', label: 'Risolvi la conseguenza aggiuntiva dell’attacco' });
   return obligations;
 }
@@ -835,7 +827,10 @@ export function combatPending(state: State): CombatView['pending'] {
     actorPlayerId = actor.playerId;
     title = 'Il gruppo è stato sconfitto. Scegli l’eroe che ottiene 1 ispirazione.';
     options = state
-      .preparation!.heroes.filter((h) => alive(state, h.heroId))
+      .preparation!.heroes.filter(
+        (h) =>
+          alive(state, h.heroId) && (h.heroId === a.heroId || nearby(state, a.heroId, h.heroId)),
+      )
       .map((h) => ({
         id: `reward:${h.heroId}`,
         label: state.content!.heroes.find((x) => x.id === h.heroId)!.name.text,

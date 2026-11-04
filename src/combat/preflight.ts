@@ -1,8 +1,8 @@
 import type { State } from '../server/state';
 import type { DeployedGroup } from '../shared/deployment';
 import type { CombatClosure } from './compiler';
-import { preflightCombatGroup } from './group';
-import { nearestThreatSteps } from './movement';
+import { preflightCombatGroup, effectiveGroup } from './group';
+import { nearestThreatSteps, groupInRange } from './movement';
 import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
 
@@ -14,6 +14,11 @@ export function preflightCombatOperation(
   heroId: string,
   cause: 'counterattack' | 'provocation',
 ) {
+  if (cause === 'counterattack') {
+    const effect = effectiveGroup(a, first);
+    if ((!effect.elite && first.exhausted) || !groupInRange(state, heroId, first, effect.ranged))
+      return [];
+  }
   const sc = state.scenario!,
     groups = sc.enemies!.groups.filter((g) => g.placed && g.figures.some((f) => f.health > 0));
   const heroSpace = sc.spaceBindings.find(

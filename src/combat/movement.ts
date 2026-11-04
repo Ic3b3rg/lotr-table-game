@@ -1,9 +1,26 @@
 import type { State } from '../server/state';
 import type { CombatAttempt } from '../shared/combat-controller';
+import type { DeployedGroup } from '../shared/deployment';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { f, plus } from '../map-assembly/physical';
 import { defeatedHeroes } from '../server/physical-defeat';
+
+export function groupInRange(state: State, heroId: string, group: DeployedGroup, ranged: boolean) {
+  const ordinary = state.journey!.heroes.find((h) => h.heroId === heroId)!.spaceId;
+  const from = state.scenario!.spaceBindings.find((b) => b.id === ordinary)?.sourceId;
+  invariant(
+    from && state.mapGeneration?.status === 'frozen',
+    'Posizione di combattimento non riconciliata.',
+  );
+  return (
+    group.spaceId === from ||
+    (ranged &&
+      state.mapGeneration.projection.movementGraph.edges.some(
+        (e) => (e.a === from && e.b === group.spaceId) || (e.b === from && e.a === group.spaceId),
+      ))
+  );
+}
 
 export function nearestThreatSteps(state: State, from: string) {
   invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza grafo congelato.');
