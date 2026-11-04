@@ -115,3 +115,20 @@ Prove, comandi, input/byte/hash e limiti sono sigillati in
 `.scratch/issue85/evidence-lock.json`, con indice
 `.scratch/issue85/README.private.md`. La review Standards/Spec e l’integrazione
 spettano al root. Nessun push, PR o aggiornamento GitHub dal checkout assegnato.
+
+## Integrazione root
+
+Le review indipendenti hanno rilevato tre P2, corretti direttamente dal root:
+premio limitato all'attaccante o a un eroe vicino; gate dei benefici escluso
+quando il contrattacco non può eseguire; movimento del gruppo conservato dopo
+la sconfitta del destinatario. Tre regressioni RED→GREEN verificano destinatari
+e scelta forgiata, normale pronto/esaurito/elite e portata, movimento ancora
+dovuto e ritorno unico. Popolazioni e selezione fonte restano conservate.
+
+Sul codice integrato: **621/621 test**, zero fail/skip/todo, typecheck, formato
+e diff verdi. Il root ha verificato il sigillo e riconvalidato 61 backup UI,
+sette SIGKILL, sette restore, dieci alterazioni risignate respinte e tutti i
+180 backup storici. Artefatto e metadati del pack ricompilati identici, matrice
+fonte riprodotta. Nessuna nuova corsa browser: client eseguibile e CSS identici
+alle prove ricevute, salvo commenti di percorso prodotti da esbuild.
+[Review, disposizione e limiti](../reviews/2026-11-04-combat-controller.md).
