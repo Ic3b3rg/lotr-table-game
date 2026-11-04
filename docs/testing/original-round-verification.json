@@ -1,0 +1,81 @@
+{
+  "issue": 79,
+  "base": "6efeb876a839d3f57c47045b6c16901de89ac2c0",
+  "codeCommit": "c70d7a911043d0333de819706301559bf3d082f2",
+  "schemaVersion": 15,
+  "capability": "source-rounds-v1",
+  "pack": {
+    "bytes": 64996,
+    "sha256": "ee88ca2d537e5b50c64e69f4d46ff6556783bd9663b5c6e97bd7d1734f6ec1c9",
+    "fingerprint": "8cb1b4ac3572f0066bcda9685fa7f50e9cdb283c181f404036e661d3820bf9d1",
+    "definitions": 31,
+    "states": 91,
+    "actions": 66,
+    "deferredEdges": 61
+  },
+  "source": {
+    "nativeRecords": 42,
+    "nativeBytes": 1261136,
+    "liveFSMs": 17,
+    "initializedPrefabs": 15,
+    "spaces": 22,
+    "selectedILFilesPresent": 14,
+    "selectedILCodeBytes": 5314,
+    "staticAnalysisOnly": true,
+    "effectiveStartupDiscrepancyDeclared": true
+  },
+  "verification": {
+    "tests": 582,
+    "fail": 0,
+    "skip": 0,
+    "todo": 0,
+    "fullSuiteRunsFinal": 1,
+    "durationMs": 145957.71825,
+    "compatibilityBackups": 111,
+    "uiBackups": 18,
+    "uiRestores": 5,
+    "sigkillExactPayloadComparisons": 6,
+    "rejectedOriginalResignedBackups": 7,
+    "beforeCommitSigkillCases": 2,
+    "nativeOwners": 3,
+    "finalRevision": 58,
+    "finalRound": 2,
+    "firstTurnStarted": true,
+    "acceptedScreenshots": 16,
+    "excludedInitialRenderScreenshots": 4,
+    "viewports": [320, 768, 1024, 1440],
+    "sameMacIPv4HTTP": true,
+    "webCryptoAbsent": true,
+    "javascriptExceptions": 0,
+    "consoleErrorWarning": 0,
+    "startup409Observed": 1,
+    "intentionalRestartConnectionRefused": 37,
+    "browserContentURLsLoaded": 6,
+    "configuredPNGReadOnlyGET200": 26,
+    "availablePDFReadOnlyGET200": 3,
+    "createdPIDsClosed": 10,
+    "completeGame": false
+  },
+  "originFingerprint": "35b77cdf5e90583983467267fcbb06b2198ccde4cf33e4e39bed9f5bba9e915c",
+  "build": {
+    "host": {
+      "bytes": 526756,
+      "sha256": "6826d76e4b8bfc6eee44032312aaaec1fa442bb316a9025fc699616ed39eae97"
+    },
+    "app": {
+      "bytes": 1068902,
+      "sha256": "51b5145950b187f8d53443d81be0128dac19ccd5d920e25ed895492056114fb1"
+    },
+    "css": {
+      "bytes": 35047,
+      "sha256": "4beb9482fadcd00b79c5e560ab5123475be707e09a475be6695518f6aef2d897"
+    }
+  },
+  "seal": {
+    "relativePath": ".scratch/first-round/manifest.json",
+    "files": 318,
+    "bytes": 133815008,
+    "manifestBytes": 54853,
+    "sha256": "f7ba6b1b2e2b611fbc0bad6227c4491f4353f198ebd9ea086287967586a4ed2d"
+  }
+}
