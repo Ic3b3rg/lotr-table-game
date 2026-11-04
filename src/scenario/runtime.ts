@@ -1,4 +1,5 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
+import { applyConclusionAction } from './conclusion';
 import { playableScenarioPrefab } from '../shared/clues';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
@@ -207,7 +208,9 @@ function messageRequest(
       : null;
   invariant((kind !== 'scout' && kind !== 'test') || hero, 'Completamenti setup incoerenti.');
   const visible = sc.tiles.filter((t) => t.visible);
-  const explorer = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
+  const explorer = sc.conclusion
+    ? undefined
+    : sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
   request(state, {
     instanceId: i.id,
     state: i.state,
@@ -421,6 +424,11 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: S
     case 'lore':
       invariant(sc.play && sc.phase === 'action', 'Premio fuori incontro.');
       sc.play.lore += a.amount;
+      break;
+    case 'awardXP':
+    case 'nextAdventure':
+    case 'proceed':
+      applyConclusionAction(state, a, actionKey(i, a.index));
       break;
     case 'physical':
       beginPhysicalAction(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
@@ -1075,8 +1083,10 @@ function pump(state: State, probe?: SourceProbe) {
   const sc = state.scenario!;
   for (let n = 0; n < 2000; n++) {
     let progress = false;
-    for (const i of sc.instances) progress = runInstance(state, i, false, probe) || progress;
+    for (const i of sc.instances.filter((i) => !sc.conclusion || i.kind === 'principal'))
+      progress = runInstance(state, i, false, probe) || progress;
     if (sc.pending) return;
+    if (sc.conclusion) return;
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
       if (

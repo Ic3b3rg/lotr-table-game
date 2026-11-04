@@ -22,6 +22,7 @@ export function performCommand(store: Store, playerId: string, command: Command)
   const { generation, requestId, ...intent } = command;
   const fingerprint = createHash('sha256').update(JSON.stringify(intent)).digest('hex');
   return store.once(playerId, requestId, generation, fingerprint, (state) => {
+    if (state.scenario?.conclusion) allowScenarioPlay(state, command);
     if (
       'heroId' in command &&
       typeof command.heroId === 'string' &&

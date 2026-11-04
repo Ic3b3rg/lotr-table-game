@@ -1,5 +1,6 @@
 import { createCombat } from './combat';
 import { createScenario } from './scenario';
+import { createConclusion } from './conclusion';
 import type { ScenarioOfferSchema } from '../shared/scenario';
 import type { z } from 'zod';
 import { CatalogSchema, type Catalog } from '../shared/catalog';
@@ -18,6 +19,7 @@ import type { GenerationOffer } from '../shared/generated-map';
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
   const scenario = createScenario(sync, reader);
+  const conclusion = createConclusion(sync, reader);
   const combat = createCombat(sync, reader);
   const preparation = createPreparation(sync, reader);
   const skillTests = createSkillTests(sync, reader);
@@ -111,6 +113,7 @@ export function createCompany(sync: () => Promise<void>) {
         catalog,
         scenarioOffer,
       );
+      conclusion.update(session, location.pathname === '/join' ? player : null, catalog);
       if (session.scenario) {
         element('#rounds').hidden = session.scenario.phase !== 'action';
         element('#journey-map').hidden = !session.journey;
@@ -121,6 +124,17 @@ export function createCompany(sync: () => Promise<void>) {
           session.scenario.pending.stage !== 'revealed';
       } else if (session.mapGeneration || generationOffer.kind !== 'legacy')
         for (const id of ['#journey-map', '#rounds', '#skill-tests', '#scouting'])
+          element(id).hidden = true;
+      if (session.scenario?.conclusion)
+        for (const id of [
+          '#scenario',
+          '#rounds',
+          '#journey-map',
+          '#scouting',
+          '#skill-tests',
+          '#combat',
+          '#company-preparation',
+        ])
           element(id).hidden = true;
     },
   };

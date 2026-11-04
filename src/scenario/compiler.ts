@@ -50,11 +50,18 @@ const CompilationSchema = z.strictObject({
   followupCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   shadowCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.failure
+      ? input.failureCertificate?.instructionHash === digest(pack.manifest.failure)
+      : !input.failureCertificate,
+    'Conclusione assente o non attestata.',
+  );
   invariant(
     pack.manifest.clues
       ? input.cluesCertificate?.instructionHash === digest(pack.manifest.clues)

@@ -12,6 +12,7 @@ import { combatArtifact, startSourceActivation, advanceCombat } from '../combat/
 import { preflightCombatOperation } from '../combat/preflight';
 import { activeCompany, activationTargets } from '../combat/movement';
 import { effectiveGroup } from '../combat/group';
+import { beginHeroFailure, validateFailureParty } from './conclusion';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -73,10 +74,15 @@ function threatBoundary(state: State, after: number) {
 /** Inspect the entire deterministic continuation on a disposable state, before any game effect. */
 export function preflightSourceShadow(state: State, entropy?: string) {
   const data = source(state);
-  if (defeatedHeroes(state).length || state.physical!.snapshot.lastStand?.lossDue)
+  if (defeatedHeroes(state).length || state.physical!.snapshot.lastStand?.lossDue) {
+    if (state.scenario!.pack.manifest.failure) {
+      validateFailureParty(state);
+      return;
+    }
     fail(
       'Un eroe è sconfitto: l’inizio dell’Ombra richiede il seguito della perdita dell’avventura. Nessun avanzamento è stato applicato.',
     );
+  }
   invariant(!data.configuration.initialEnemyGroups.length, 'Attivazioni nemiche non disponibili.');
   const shadow = state.scenario!.pack.manifest.combat?.source.shadow;
   if (livingEnemyGroups(state).length && !shadow)
@@ -285,11 +291,13 @@ function refreshSourceGroups(state: State) {
 }
 export function beginSourceShadow(state: State, requestId: string, entropy?: string) {
   preflightSourceShadow(state, entropy);
+  if (beginHeroFailure(state, 'shadow-start', requestId)) return false;
   initializeShadow(state, requestId);
   if (state.scenario!.pack.manifest.followup) {
     invariant(entropy, 'Entropia della fase assente.');
     state.scenario!.enemies!.entropy ??= entropy;
   }
+  return true;
 }
 function activeFrame(state: State) {
   const sc = state.scenario!;
