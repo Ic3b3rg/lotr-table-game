@@ -122,3 +122,18 @@ sigillo `.scratch/threat96/evidence-lock.json`.
 Solo vendor già presente e checkout assegnato; nessuna installazione, altro
 agente/checkout, scrittura GitHub, push o PR. Host, browser e contesti propri
 sono chiusi e verificati. Nessun accesso alle superfici protette.
+
+## Integrazione root
+
+Review Standards/Spec indipendenti completate. Un difetto comune(P2 Standards,
+P1 Spec) è corretto: la nuova conseguenza collettiva risolve tutti i superstiti
+anche con slot0 già sconfitto, esclude destinatari sconfitti e mantiene un
+chooser valido dopo i discendenti. Regressione RED→GREEN sui due slot e
+suite completa finale **705/705**, zero skip/fail; typecheck/formato/diff verdi.
+
+Il root riproduce fonti/oracle e tre output identici, riconvalida503 file con
+398 payload distinti e17 viste94, altri18 snapshot/viste, export e restore
+finale. Privacy della nuova storia260/0. Il limite analogo del precedente
+`group-test`, già nella base, richiede un seguito versionato per preservare
+i pack congelati: resta esplicito e prioritario. Nessuna accettazione originale
+89/33 o quantità57 verificate. [Review e prove root](../reviews/2026-11-05-threat-continuations.md).
