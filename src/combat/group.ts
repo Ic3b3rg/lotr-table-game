@@ -3,6 +3,8 @@ import type { DeployedGroup } from '../shared/deployment';
 import { BoonKindSchema, type AttackModifier } from '../shared/combat';
 import { bounded, check, integer } from './model';
 import { resolveFigureHits } from './figures';
+import type { BoonArtifact, BoonCustody } from '../shared/boons';
+import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
 export function effectiveGroup(a: CombatClosure, group: DeployedGroup) {
   const model = a.compiled.models.find((m) => m.source === group.source);
   check(model, 'Modello non congelato per il combattimento.');
@@ -40,11 +42,53 @@ export function applyGroupHits(
     suppressed: modifiers.filter((m) => effective.blocked.includes(m)),
   };
 }
+
+/** Dependency reachability only; the complete instruction population stays unchanged. */
+export function reachableBoonKinds(a: CombatClosure, group: DeployedGroup) {
+  const { model, bonuses } = effectiveGroup(a, group);
+  const size = group.figures.filter((f) => f.health > 0).length;
+  return [
+    ...new Set(
+      model.instructions
+        .filter((i) => i.minimum <= size && i.maximum >= 1)
+        .flatMap((i) => {
+          const extra = i.addition;
+          if (extra?.effect.op !== 'gain-boon') return [];
+          const family =
+            extra.predicate === 'damage-positive'
+              ? 'damage'
+              : extra.predicate === 'fear-positive'
+                ? 'fear'
+                : null;
+          if (
+            family &&
+            bonuses.every((b) => b[family] === 0) &&
+            i.damage.every((row) => row.size > size || row[family] === 0)
+          )
+            return [];
+          return extra.effect.boon ? [extra.effect.boon] : BoonKindSchema.options;
+        }),
+    ),
+  ];
+}
+
 export function preflightCombatGroup(
   a: CombatClosure,
   group: DeployedGroup,
-  supply: { boons: { heroId: string; kind: string }[]; quantities: null | Record<string, number> },
+  supply: {
+    boons: { heroId: string; kind: string }[];
+    quantities: null | Record<string, number>;
+    artifact?: BoonArtifact | undefined;
+    custody?: BoonCustody | undefined;
+    heroIds?: string[] | undefined;
+  },
 ) {
+  if (supply.artifact) {
+    const kinds = reachableBoonKinds(a, group);
+    return kinds.length
+      ? boonAcquisitionProblems(supply.artifact, supply.custody ?? [], kinds, supply.heroIds)
+      : [];
+  }
   const { model } = effectiveGroup(a, group);
   const size = group.figures.filter((f) => f.health > 0).length;
   // All positive sizes reachable by the parent attack, in source order; no dependency filtering.

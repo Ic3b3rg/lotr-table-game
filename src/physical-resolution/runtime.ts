@@ -2,6 +2,9 @@ import { validatePhysicalProgram } from './program';
 export { validatePhysicalProgram } from './program';
 import { replayFronts } from './front-runtime';
 import { validateFrontArtifact } from './front-program';
+import { validateBoonArtifact } from './boon-program';
+import type { BoonArtifact } from '../shared/boons';
+import { boonProgramProblems } from './boon-continuation';
 import { validateLastStandArtifact, type LastStandArtifact } from './last-stand-program';
 import type { FrontResources } from './front-state';
 import type { z } from 'zod';
@@ -45,6 +48,7 @@ export function replayPhysical(p: Omit<PhysicalState, 'snapshot'>): PhysicalSnap
   invariant(p.runs.length <= 32, 'Budget padri P0 superato.');
   invariant(
     !p.fronts &&
+      !p.boons &&
       !p.lastStand &&
       !p.lastStandActivation &&
       p.runs.every((r) => !r.context && r.program.profile === 'synthetic-no-abilities-v1'),
@@ -324,9 +328,14 @@ export function freezePhysical(
   rawSha256 = digest(raw),
   fronts?: z.infer<typeof FrozenFrontsSchema>,
   lastStand?: LastStandArtifact,
+  boons?: BoonArtifact,
 ): PhysicalState {
   const families = physicalFamilies(raw);
   if (fronts) validateFrontArtifact(raw, fronts.artifact, fronts.catalog);
+  if (boons) {
+    invariant(fronts, 'Benefici senza consumer fronti.');
+    validateBoonArtifact(raw, boons);
+  }
   if (lastStand) {
     invariant(fronts, 'Ultimo Sforzo richiede risorse e fronti verificati.');
     validateLastStandArtifact(raw, lastStand);
@@ -334,6 +343,7 @@ export function freezePhysical(
   const base = {
     version: fronts ? (2 as const) : (1 as const),
     ...(fronts ? { fronts } : {}),
+    ...(boons ? { boons: structuredClone(boons) } : {}),
     ...(lastStand
       ? {
           lastStand: structuredClone(lastStand),
@@ -362,12 +372,18 @@ export function openPhysical(
 ) {
   validatePhysical(p);
   validatePhysicalProgram(program, p.heroes.length);
+  const boonProblems = boonProgramProblems(p, program, context, spatial);
+  invariant(
+    !boonProblems.length,
+    'Continuazione benefici non disponibile: ' + boonProblems.join(', ') + '.',
+  );
   const copy = structuredClone(p),
     id = runId;
   copy.runs.push({
     id,
     source: PhysicalSourceSchema.parse(source),
     program: PhysicalProgramSchema.parse(program),
+    ...(p.boons ? { boonRules: p.boons.fingerprint } : {}),
     // Unmarked, non-spatial version2 runs retain their published replay rules.
     // Ordinary spatial runs already identify the version3 continuation rules.
     ...(p.version === 2 ? { executionRules: 'retained-paid-effects-v1' as const } : {}),

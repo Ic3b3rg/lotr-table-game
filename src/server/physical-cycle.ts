@@ -12,6 +12,7 @@ import type { Command, Receipt } from '../shared/protocol';
 import { CommandSchema } from '../shared/protocol';
 import type { State } from './state';
 import type { PhysicalState } from '../physical-resolution/model';
+import { boonEnemyPositions } from './physical-spatial';
 import type { PhysicalProgram } from '../shared/physical';
 import { answerPhysical, openPhysical, replayPhysical } from '../physical-resolution/runtime';
 import { persistentEffects, travelMoves } from '../physical-resolution/effects';
@@ -154,6 +155,7 @@ function runSource(
     'Risorse ordinarie fuori dal ledger fisico.',
   );
   const spatial = {
+    ...boonEnemyPositions(state),
     heroes: state.preparation!.heroes.map((h) => ({
       heroId: h.heroId,
       playerId: h.playerId,

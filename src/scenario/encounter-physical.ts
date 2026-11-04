@@ -1,4 +1,5 @@
 import type { State } from '../server/state';
+import { boonEnemyPositions } from '../server/physical-spatial';
 import type { ScenarioAction } from '../shared/scenario';
 import type { PhysicalProgram } from '../shared/physical';
 import type { SourceEffect } from './source-cursor';
@@ -108,6 +109,7 @@ export function openSourcePhysical(
     ? structuredClone(resources)
     : { preparation: structuredClone(state.preparation!), depletion: [], boons: [] };
   const spatial = {
+    ...boonEnemyPositions(state),
     heroes: p.heroes.map((h) => ({
       ...h,
       spaceId: state.journey!.heroes.find((j) => j.heroId === h.heroId)!.spaceId,

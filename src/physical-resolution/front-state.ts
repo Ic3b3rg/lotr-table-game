@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { BoonCustodySchema } from '../shared/boons';
 import { AttackTestViewSchema } from '../shared/combat';
 import { CatalogSchema } from '../shared/catalog';
 import { PreparationSchema } from '../shared/preparation';
 import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
 export const FrontResourcesSchema = z.strictObject({
+  boonCustody: BoonCustodySchema.optional(),
   preparation: PreparationSchema,
   combatUses: z
     .array(
@@ -33,6 +35,19 @@ export const FrozenFrontsSchema = z.strictObject({
   catalog: CatalogSchema,
 });
 export const FrontSnapshotSchema = z.strictObject({
+  boonEvents: z
+    .array(
+      z.strictObject({
+        operation: z.enum(['gain', 'duplicate', 'discard']),
+        copyId: z.string().min(1).max(100),
+        heroId: z.string().min(1).max(100),
+        kind: z.enum(['emboldened', 'determined', 'hidden']),
+        source: z.string().min(1).max(3000),
+        reason: z.string().min(1).max(100),
+      }),
+    )
+    .max(10000)
+    .optional(),
   attackTest: AttackTestViewSchema.nullable().optional(),
   sourceTest: SourceTestViewSchema.nullable().optional(),
   resources: FrontResourcesSchema.nullable(),

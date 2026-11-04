@@ -271,6 +271,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
       'required-deck-empty',
       'weakness-deck-empty',
       'boon-quantity-unconfirmed',
+      'boon-supply-empty',
       'adventure-loss-consumer-unavailable',
     ]),
     remaining: PhysicalCountsSchema,
@@ -337,6 +338,36 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  nextShadow: z
+    .strictObject({ enabled: z.boolean(), reason: z.string().max(2000).nullable() })
+    .optional(),
+  boons: z
+    .strictObject({
+      stock: z.enum(['unverified', 'verified', 'unavailable']),
+      definitions: z
+        .array(
+          z.strictObject({
+            kind: z.string().max(100),
+            name: z.string().max(1000),
+            text: z.string().max(16384),
+            available: z.int().min(0).max(15).nullable(),
+          }),
+        )
+        .max(3),
+      held: z
+        .array(
+          z.strictObject({
+            copyId: z.string().max(100),
+            heroId: ContentIdSchema,
+            kind: z.string().max(100),
+            name: z.string().max(1000),
+            text: z.string().max(16384),
+            sourceLabel: z.string().max(1000),
+          }),
+        )
+        .max(15),
+    })
+    .optional(),
   attackTest: AttackTestViewSchema.nullable().optional(),
   sourceTest: SourceTestViewSchema.nullable().optional(),
   lastStand: LastStandViewSchema.optional(),

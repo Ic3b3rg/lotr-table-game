@@ -194,6 +194,13 @@ export function createRounds(sync: () => Promise<void>) {
         status.textContent =
           'Tutti i turni sono conclusi. Il gruppo può iniziare la Fase di Ombra.';
     }
+    const shadowBlock = current.physical?.nextShadow;
+    if (round?.phase === 'action' && allEnded && shadowBlock && !shadowBlock.enabled) {
+      status.textContent = `L’Ombra è in attesa. ${shadowBlock.reason} I progressi sono salvati.`;
+      confirm.dataset.blocked = 'true';
+      element('#round-phase-help').textContent =
+        'Per proseguire occorre completare la riserva o l’effetto indicato. Potete consultare carte e guida; ripetere la conferma non cambia il blocco.';
+    }
     end.dataset.blocked = String(!ownActive || pending);
     element('#round-observer').hidden = Boolean(player);
     refreshActions();

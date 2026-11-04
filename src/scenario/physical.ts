@@ -1,6 +1,8 @@
 import { dirname, join } from 'node:path';
 import { validatePhysicalCycle } from '../server/physical-cycle';
 import { FrontArtifactSchema } from '../physical-resolution/front-program';
+import { BoonArtifactSchema } from '../shared/boons';
+import { validateBoonArtifact } from '../physical-resolution/boon-program';
 import {
   LastStandArtifactSchema,
   validateLastStandArtifact,
@@ -24,10 +26,12 @@ import {
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from '../server/errors';
+import { boonEnemyPositions } from '../server/physical-spatial';
 import { sourceCursor, type SourceEffect } from './source-cursor';
 
 export function needsPhysical(pack: ScenarioPack) {
   return (
+    !!pack.manifest.boons ||
     pack.manifest.scope === 'original-encounter-v1' ||
     pack.definitions.some((d) => d.states.some((s) => s.actions.some((a) => a.op === 'physical')))
   );
@@ -48,7 +52,23 @@ export function loadPhysicalSource(path: string) {
     : undefined;
   const lastStandPath = join(dirname(path), 'physical-last-stand.json');
   const lastStand = existsSync(lastStandPath) ? loadLastStandSource(path, raw) : undefined;
-  return { raw, rawSha256: createHash('sha256').update(bytes).digest('hex'), fronts, lastStand };
+  const boonPath = join(dirname(path), 'physical-boons.json');
+  let boons;
+  if (existsSync(boonPath)) {
+    invariant(
+      statSync(boonPath).size <= PHYSICAL_CONTENT_LIMITS.bytes,
+      'Artifact benefici troppo grande.',
+    );
+    boons = BoonArtifactSchema.parse(JSON.parse(readFileSync(boonPath, 'utf8')));
+    validateBoonArtifact(raw, boons);
+  }
+  return {
+    raw,
+    rawSha256: createHash('sha256').update(bytes).digest('hex'),
+    fronts,
+    lastStand,
+    boons,
+  };
 }
 export function loadLastStandSource(path: string, raw: unknown) {
   const artifactPath = join(dirname(path), 'physical-last-stand.json');
@@ -79,6 +99,12 @@ export function initializeScenarioPhysical(
   }
   invariant(source && !state.physical, 'Materiale fisico assente o inizializzazione duplicata.');
   const sc = state.scenario!;
+  if (sc.pack.manifest.boons && source.boons?.fingerprint !== sc.pack.manifest.boons.fingerprint)
+    throw new ApiError(
+      409,
+      'BOON_SOURCE_REQUIRED',
+      'Le regole verificate dei benefici non sono disponibili per questo avvio. Occorrono i dati corrispondenti prima di iniziare.',
+    );
   state.physical = freezePhysical(
     source.raw,
     {
@@ -97,6 +123,7 @@ export function initializeScenarioPhysical(
       ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
       : undefined,
     source.lastStand,
+    sc.pack.manifest.boons ? source.boons : undefined,
   );
 }
 export function beginPhysicalAction(
@@ -114,6 +141,12 @@ export function beginPhysicalAction(
     'La prova fisica richiede lo startup fonte completato.',
   );
   validatePhysicalProgram(action.program, state.preparation!.heroes.length);
+  if (state.physical.boons && (sc.phase !== 'setup' || state.physical.cycle))
+    throw new ApiError(
+      409,
+      'BOON_SOURCE_CONTEXT',
+      'Questa fonte richiede un contesto spaziale ulteriore. La continuazione resta salvata prima degli effetti.',
+    );
   const context =
     action.program.profile === 'source-fronts-v1'
       ? {
@@ -122,6 +155,20 @@ export function beginPhysicalAction(
             state.physical.snapshot.resolution?.resources?.depletion ?? [],
           ),
           boons: structuredClone(state.physical.snapshot.resolution?.resources?.boons ?? []),
+          ...(state.physical.boons
+            ? {
+                boonCustody: structuredClone(
+                  state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
+                ),
+                ...(state.physical.snapshot.resolution?.resources?.combatUses
+                  ? {
+                      combatUses: structuredClone(
+                        state.physical.snapshot.resolution.resources.combatUses,
+                      ),
+                    }
+                  : {}),
+              }
+            : {}),
         }
       : undefined;
   const parentId = openPhysical(
@@ -129,6 +176,16 @@ export function beginPhysicalAction(
     physicalOrigin(effect, action),
     action.program,
     context,
+    state.physical.boons && action.program.children.some((c) => c.kind === 'end-turn')
+      ? {
+          heroes: state.physical.heroes.map((h) => ({
+            ...h,
+            spaceId: state.journey!.heroes.find((j) => j.heroId === h.heroId)!.spaceId,
+          })),
+          connections: structuredClone(state.journey!.definition.connections),
+          ...boonEnemyPositions(state),
+        }
+      : undefined,
   );
   syncPhysicalResources(state);
   sc.tasks.push({
@@ -259,6 +316,10 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  invariant(
+    p.boons?.fingerprint === sc.pack.manifest.boons?.fingerprint,
+    'Benefici non legati alla capacità congelata prima dello startup.',
+  );
   if (p.lastStandActivation?.kind === 'legacy-continuation') {
     const id = p.lastStandActivation.runId;
     invariant(
@@ -330,7 +391,14 @@ export function validateScenarioPhysical(state: State) {
       parent = p.snapshot.parents[n]!;
     invariant(
       action.op === 'physical' &&
-        !run.spatial &&
+        (p.boons && action.program.children.some((c) => c.kind === 'end-turn')
+          ? digest(run.spatial) ===
+            digest({
+              heroes: p.heroes,
+              connections: state.journey!.definition.connections,
+              enemies: [],
+            })
+          : !run.spatial) &&
         digest(run.source) === digest(physicalOrigin(effect, action)) &&
         digest(run.program) === digest(action.program),
       'Origine/programma fisico estranei alla fonte.',

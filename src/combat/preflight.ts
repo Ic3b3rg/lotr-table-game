@@ -1,10 +1,11 @@
 import type { State } from '../server/state';
 import type { DeployedGroup } from '../shared/deployment';
 import type { CombatClosure } from './compiler';
-import { preflightCombatGroup, effectiveGroup } from './group';
+import { preflightCombatGroup, effectiveGroup, reachableBoonKinds } from './group';
 import { nearestThreatSteps, groupInRange, activationDistance } from './movement';
 import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
+import { preflightBoonRequests } from '../physical-resolution/boon-stock';
 
 /** Finite mandatory closure, including ready groups reachable through forced moves. No pool is filtered. */
 export function preflightCombatOperation(
@@ -38,6 +39,9 @@ export function preflightCombatOperation(
       for (const dep of preflightCombatGroup(a, g, {
         boons: state.physical!.snapshot.resolution!.resources?.boons ?? [],
         quantities: null,
+        artifact: state.physical?.boons,
+        custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
+        heroIds: [heroId],
       }))
         missing.add(dep);
       if (g.logic) missing.add('scenario-combat-continuation');
@@ -109,6 +113,20 @@ export function preflightCombatOperation(
         changed = true;
       }
     }
+  }
+  if (state.physical?.boons) {
+    const requests = groups
+      .filter((g) => triggered.has(g.id))
+      .flatMap((g) => {
+        const kinds = reachableBoonKinds(a, g);
+        return kinds.length ? [{ heroes: [heroId], kinds }] : [];
+      });
+    for (const dep of preflightBoonRequests(
+      state.physical.boons,
+      state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
+      requests,
+    ))
+      missing.add(dep);
   }
   return [...missing];
 }

@@ -1,5 +1,6 @@
 import { FrozenFrontsSchema, FrontResourcesSchema, FrontSnapshotSchema } from './front-state';
 import { z } from 'zod';
+import { BoonArtifactSchema } from '../shared/boons';
 import { LastStandArtifactSchema } from './last-stand-program';
 import { LastStandSnapshotSchema } from '../shared/last-stand';
 import { CycleStateSchema } from '../shared/physical-cycle';
@@ -68,6 +69,7 @@ export const PhysicalStateSchema = z.strictObject({
   version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   cycle: CycleStateSchema.optional(),
   fronts: FrozenFrontsSchema.optional(),
+  boons: BoonArtifactSchema.optional(),
   lastStand: LastStandArtifactSchema.optional(),
   lastStandActivation: z
     .discriminatedUnion('kind', [
@@ -89,6 +91,7 @@ export const PhysicalStateSchema = z.strictObject({
         source: PhysicalSourceSchema,
         program: PhysicalProgramSchema,
         executionRules: z.literal('retained-paid-effects-v1').optional(),
+        boonRules: HashSchema.optional(),
         lastStandRules: z
           .strictObject({
             version: z.literal('source-last-stand-v1'),
@@ -100,6 +103,15 @@ export const PhysicalStateSchema = z.strictObject({
           .strictObject({
             heroes: z.array(PhysicalHeroSchema).min(1).max(5),
             connections: z.array(z.tuple([z.string().max(200), z.string().max(200)])).max(1000),
+            enemies: z
+              .array(
+                z.strictObject({
+                  id: z.string().min(1).max(350),
+                  spaceId: z.string().min(1).max(200),
+                }),
+              )
+              .max(100)
+              .optional(),
           })
           .optional(),
         answers: z

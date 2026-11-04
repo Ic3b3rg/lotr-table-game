@@ -13,6 +13,8 @@ import { findSkillCard } from '../shared/skill-cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
+  'boon-supply-empty':
+    'Il beneficio richiesto è esaurito nella riserva verificata. Manca una regola attestata per questa situazione: la continuazione resta salvata.',
   'adventure-loss-consumer-unavailable':
     'La Compagnia ha perso. La conseguenza finale è salvata; il seguito originale dell’avventura non è ancora disponibile.',
   'weakness-deck-empty':
@@ -94,6 +96,47 @@ export function createPhysicalControls(
         areas.append(row);
       }
       root.append(areas);
+      if (view.boons) {
+        const section = document.createElement('details');
+        section.className = 'physical-boons';
+        section.append(text('summary', 'Benefici e riserva'));
+        section.append(
+          text(
+            'p',
+            view.boons.stock === 'verified'
+              ? 'Le copie disponibili provengono dalla riserva verificata. Ogni eroe può possedere un solo beneficio per tipo.'
+              : view.boons.stock === 'unverified'
+                ? 'Le quantità della riserva sono ancora da verificare. Le acquisizioni restano in attesa; potete leggere le tre carte.'
+                : 'Questo salvataggio conserva le regole precedenti: le acquisizioni dei benefici non sono disponibili.',
+            'company-help',
+          ),
+        );
+        const cards = text('div', '', 'card-grid');
+        for (const boon of view.boons.definitions) {
+          const row = text('div', '', 'physical-area');
+          const button = text('button', `Leggi ${boon.name}`, 'physical-card') as HTMLButtonElement;
+          button.type = 'button';
+          button.onclick = () => reader?.boon(boon, button);
+          row.append(
+            button,
+            text(
+              'p',
+              boon.available === null
+                ? 'Disponibilità da verificare'
+                : `${boon.available} ${boon.available === 1 ? 'copia disponibile' : 'copie disponibili'}`,
+              'company-help',
+            ),
+          );
+          const held = view.boons.held.filter((b) => b.kind === boon.kind);
+          for (const b of held)
+            row.append(
+              text('p', `${name(b.heroId)} · scoperto · ${b.sourceLabel}`, 'company-help'),
+            );
+          cards.append(row);
+        }
+        section.append(cards);
+        root.append(section);
+      }
       if (view.sourceTest) {
         const t = view.sourceTest;
         root.append(

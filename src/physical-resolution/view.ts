@@ -5,6 +5,8 @@ import { frontToken } from './front-runtime';
 import { cycleRequest } from './cycle-request';
 import { travelMoves, persistentEffects } from './effects';
 import { physicalTitleSkills } from './title-skills';
+import type { PhysicalCard } from '../physical-content/catalog';
+import { boonAvailability } from './boon-stock';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
 export function physicalView(p: PhysicalState | null, original = false): PhysicalView | null {
@@ -23,6 +25,52 @@ export function physicalView(p: PhysicalState | null, original = false): Physica
     active: structuredClone(p.snapshot.active),
     parents: structuredClone(p.snapshot.parents),
   };
+  const boonCards = (p.raw as { cards: PhysicalCard[] }).cards.filter(
+    (c) => c.family === 'boon' && c.name.status === 'verified' && c.text.status === 'verified',
+  );
+  if (boonCards.length) {
+    const held = p.snapshot.resolution?.resources?.boonCustody ?? [];
+    view.boons = {
+      stock:
+        p.boons?.stock.status ??
+        (boonCards.some((c) => c.quantity.value === null || c.quantity.status !== 'verified')
+          ? 'unverified'
+          : 'unavailable'),
+      definitions: boonCards.map((card, i) => {
+        const d = p.boons?.definitions.find((d) => d.cardId === card.id);
+        return {
+          kind: d?.kind ?? `entry-${i}`,
+          name: card.name.value,
+          text: card.text.value,
+          available: d ? boonAvailability(p.boons, held, d.kind).available : null,
+        };
+      }),
+      held: held.map((b) => {
+        const card = boonCards.find(
+          (c) => c.id === p.boons!.definitions.find((d) => d.kind === b.kind)!.cardId,
+        )!;
+        const run = p.runs.find((r) => b.source.startsWith(`${r.id}/`));
+        return {
+          copyId: b.copyId,
+          heroId: b.heroId,
+          kind: b.kind,
+          name: card.name.value,
+          text: card.text.value,
+          sourceLabel: b.source.includes('/title-rest-')
+            ? 'Conseguito dopo Riposo con un titolo'
+            : run?.source.instanceId === 'combat-controller'
+              ? `Conseguenza dell’attacco nemico · round ${run.source.state}`
+              : 'Concessione della fonte corrente',
+        };
+      }),
+    };
+  }
+  if (view.active?.kind === 'decision')
+    for (const option of view.active.options) {
+      if (option.id.startsWith('title-rest:') && !p.boons)
+        option.unavailable =
+          'Il seguito del titolo richiede la riserva verificata dei benefici. Nessun Riposo o costo è stato applicato.';
+    }
   const ls = p.snapshot.lastStand;
   if (ls) {
     const terminal = p.cycle?.terminal ?? ls.terminal;

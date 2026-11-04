@@ -114,6 +114,11 @@ export function parseScenarioPack(raw: unknown) {
           'Soglia senza istanza statica.',
         );
   }
+  if (pack.manifest.boons)
+    invariant(
+      ['original-encounter-v1', 'synthetic-physical-p1'].includes(pack.manifest.scope),
+      'Benefici senza consumer fisico fonte.',
+    );
   if (pack.manifest.combat) {
     const combat = verifyCombatClosure(pack.manifest.combat);
     invariant(original && followup && rounds, 'Combattimento senza capacità originale precedente.');

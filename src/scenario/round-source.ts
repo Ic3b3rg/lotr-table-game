@@ -11,8 +11,9 @@ import { livingEnemyGroups } from './deployment';
 import { combatArtifact, startSourceActivation, advanceCombat } from '../combat/controller';
 import { preflightCombatOperation } from '../combat/preflight';
 import { activeCompany, activationTargets } from '../combat/movement';
-import { effectiveGroup } from '../combat/group';
+import { effectiveGroup, reachableBoonKinds } from '../combat/group';
 import { beginHeroFailure, validateFailureParty } from './conclusion';
+import { preflightBoonRequests, type BoonRequest } from '../physical-resolution/boon-stock';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -249,6 +250,67 @@ function preflightActivations(state: State) {
         );
     }
     g.exhausted = true;
+  }
+  if (state.physical?.boons) {
+    const groups = livingEnemyGroups(state).filter((g) => g.placed && !g.exhausted);
+    const heroes = activeCompany(state).map((h) => h.heroId);
+    const forcedMoves = groups.some((g) =>
+      effectiveGroup(a, g).model.instructions.some(
+        (i) =>
+          i.minimum <= g.figures.filter((f) => f.health > 0).length &&
+          i.maximum >= 1 &&
+          i.addition?.effect.op === 'move-pair-toward-threat',
+      ),
+    );
+    const requests: BoonRequest[] = groups.flatMap((g) => {
+      const effective = effectiveGroup(a, g),
+        size = g.figures.filter((f) => f.health > 0).length;
+      const candidates = effective.model.instructions.filter(
+        (i) => i.minimum <= size && i.maximum >= 1,
+      );
+      const kinds = reachableBoonKinds(a, g);
+      const reaches =
+        forcedMoves ||
+        candidates.some((i) =>
+          activationTargets(state, g.spaceId, i.activation!, null, effective.ranged ? 1 : 0).some(
+            (p) => p.branch === 'primary',
+          ),
+        );
+      // Forced moves can also provoke groups; each hero can hold only one copy.
+      return kinds.length && reaches
+        ? Array.from({ length: forcedMoves ? heroes.length : 1 }, () => ({ heroes, kinds }))
+        : [];
+    });
+    const missing = preflightBoonRequests(
+      state.physical.boons,
+      state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
+      requests,
+    );
+    if (missing.length)
+      fail(
+        'La continuazione può esaurire la riserva verificata di un beneficio, senza una regola attestata per l’esaurimento. Nessun effetto dell’Ombra è stato applicato.',
+      );
+  }
+}
+
+/** Read-only availability: exposes a known blocker, never a future instruction or draw. */
+export function sourceShadowAvailability(state: State) {
+  if (state.scenario?.conclusion || state.physical?.snapshot.lastStand?.lossDue) return undefined;
+  if (
+    !state.scenario?.pack.manifest.combat?.source.shadow ||
+    state.round?.phase !== 'action' ||
+    state.round.activeHeroId ||
+    !state.round.heroes.every((h) => h.turnEnded) ||
+    state.physical?.snapshot.active ||
+    state.scenario.pending
+  )
+    return undefined;
+  try {
+    preflightActivations(state);
+    return { enabled: true, reason: null };
+  } catch (e) {
+    if (!(e instanceof ApiError)) throw e;
+    return { enabled: false, reason: e.message };
   }
 }
 /** Rescan after the complete physical frontier, never after a mere acknowledgement. */

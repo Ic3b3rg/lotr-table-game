@@ -5,6 +5,7 @@ import { scenarioReceiptProblem } from '../scenario/validate';
 import { explorationProblem, explorationSource } from '../shared/exploration';
 import { digest } from '../map-freeze/hash';
 import { physicalView } from '../physical-resolution/view';
+import { sourceShadowAvailability } from '../scenario/round-source';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -57,7 +58,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 16,
+      schemaVersion: 17,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -370,6 +371,12 @@ export function advance(state: State) {
 export function publicSession(state: State) {
   const projection =
     state.mapGeneration?.status === 'frozen' ? state.mapGeneration.projection : null;
+  const physical = physicalView(
+    state.physical,
+    state.scenario?.pack.manifest.scope === 'original-encounter-v1',
+  );
+  const nextShadow = sourceShadowAvailability(state);
+  if (physical && nextShadow) physical.nextShadow = nextShadow;
   return {
     schemaVersion: state.schemaVersion,
     id: state.id,
@@ -414,10 +421,7 @@ export function publicSession(state: State) {
           })
         : [],
     ),
-    physical: physicalView(
-      state.physical,
-      state.scenario?.pack.manifest.scope === 'original-encounter-v1',
-    ),
+    physical,
     skillTest: skillTestView(state.content, state.skillTest, physicalTitleSkills(state.physical)),
     catalog: state.content ? { id: state.content.id, label: state.content.label } : null,
   };
