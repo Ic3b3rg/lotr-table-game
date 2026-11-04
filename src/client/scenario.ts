@@ -247,7 +247,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         objective.replaceChildren(
           ...(sc?.objective
             ? [
-                text('strong', 'Obiettivo attuale'),
+                text('strong', 'Obiettivo attuale: '),
                 sourceText(sc.objective.text),
                 ...(sc.pack.manifest.followup && sc.objective.id > 0
                   ? [
