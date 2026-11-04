@@ -46,6 +46,7 @@ export function validateShadowCapability(pack: ScenarioPack, combat: CombatClosu
         digest(spawn.points) === digest(multiply.target) &&
         !spawn.excludeGameEnemyPoints &&
         !spawn.trial &&
+        !spawn.suffering &&
         spawn.sections === null &&
         Object.values(spawn.filter).every((n) => n === 0),
       'Budget o popolazione della soglia non corrispondenti alla fonte.',

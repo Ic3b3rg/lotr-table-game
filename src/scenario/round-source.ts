@@ -4,7 +4,7 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { processRoundEvent, startPhaseEvent, pumpPhaseEvent, resumeScenario } from './runtime';
 import { defeatedHeroes } from '../server/physical-defeat';
-import { groupTrialProgram } from './encounter-physical';
+import { spawnPhysicalProgram } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { validatePhysical } from '../physical-resolution/runtime';
 import { livingEnemyGroups } from './deployment';
@@ -108,15 +108,16 @@ export function preflightSourceShadow(state: State, entropy?: string) {
   for (const d of work.scenario!.pack.definitions)
     for (const s of d.states)
       for (const a of s.actions)
-        if (a.op === 'spawnRandom' && a.trial) {
+        if (a.op === 'spawnRandom' && (a.trial || a.suffering)) {
           const p = state.physical!;
           if (!(p.version === 3 && p.fronts && p.lastStand))
             fail(
               'La prova della soglia richiede le capacità fisiche complete. Nessun effetto è stato applicato.',
             );
           validatePhysical(p);
-          validatePhysicalProgram(groupTrialProgram(state, a), p.heroes.length);
+          validatePhysicalProgram(spawnPhysicalProgram(state, a), p.heroes.length);
           delete a.trial;
+          delete a.suffering;
         }
   // This closure's spawn has no result-dependent branches: all new groups wait
   // until the next Shadow. Inspect the certified pool structurally, not a draw.
@@ -323,7 +324,8 @@ export function sourceShadowAvailability(state: State) {
   )
     return undefined;
   try {
-    preflightActivations(state);
+    if (state.scenario.pack.manifest.threatContinuations) preflightSourceShadow(state);
+    else preflightActivations(state);
     return { enabled: true, reason: null };
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;

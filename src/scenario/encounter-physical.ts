@@ -7,6 +7,7 @@ import { openPhysical } from '../physical-resolution/runtime';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { sourceDarknessHeroes } from './darkness';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
@@ -65,15 +66,17 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
     profile: 'source-fronts-v1',
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
-    darknessHeroes,
+    darknessHeroes: sc.pack.manifest.threatContinuations
+      ? sourceDarknessHeroes(state)
+      : darknessHeroes,
     children,
   };
 }
-export function groupTrialProgram(
+export function spawnPhysicalProgram(
   state: State,
   a: Extract<ScenarioAction, { op: 'spawnRandom' }>,
 ): PhysicalProgram {
-  invariant(a.trial, 'Spawn senza prova fonte.');
+  invariant(!!a.trial !== !!a.suffering, 'Spawn senza singola conseguenza fonte.');
   return {
     profile: 'source-fronts-v1',
     initialCredits: state.physical!.heroes.map(() => 0),
@@ -81,9 +84,21 @@ export function groupTrialProgram(
       kind: 'requires-capability',
       capability: 'source-derived',
     })),
-    darknessHeroes: [],
+    darknessHeroes: a.suffering ? sourceDarknessHeroes(state) : [],
     children: [
-      { kind: 'group-test', hero: 0, heroes: state.physical!.heroes.map((_, n) => n), ...a.trial },
+      a.suffering
+        ? {
+            kind: 'group-suffer',
+            hero: 0,
+            heroes: state.physical!.heroes.map((_, n) => n),
+            ...a.suffering,
+          }
+        : {
+            kind: 'group-test',
+            hero: 0,
+            heroes: state.physical!.heroes.map((_, n) => n),
+            ...a.trial!,
+          },
     ],
   };
 }

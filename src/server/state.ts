@@ -182,6 +182,7 @@ export function parseState(raw: unknown): State {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
     if (typeof version === 'number' && version <= 17) {
       const old = raw as {
+        physical?: { runs?: { program?: { children?: { kind?: string }[] } }[] };
         scenario?: {
           pack?: { manifest?: { threatContinuations?: unknown } };
           conclusion?: { cause?: { kind?: string }; timing?: string };
@@ -189,6 +190,9 @@ export function parseState(raw: unknown): State {
         };
       };
       if (
+        old.physical?.runs?.some((r) =>
+          r.program?.children?.some((c) => c.kind === 'group-suffer'),
+        ) ||
         old.scenario?.pack?.manifest?.threatContinuations ||
         old.scenario?.conclusion?.cause?.kind === 'threat' ||
         old.scenario?.rounds?.frames.some((f) => f.stage === 'conclusion' || f.threatRequestId)

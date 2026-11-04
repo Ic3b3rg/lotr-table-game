@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NegatedSufferingSchema } from './negated-suffering';
 import { HashSchema, SourceSchema } from './generated-map';
 
 const method = z.strictObject({
@@ -32,6 +33,7 @@ export const ThreatContinuationsSchema = z.strictObject({
       z.strictObject({
         ...receiver,
         form: z.enum(['spawn-register', 'darkness-spawn-register', 'spawn-terminal']),
+        suffering: NegatedSufferingSchema.optional(),
         multiplier: z.int().positive().max(100),
         next: z.strictObject(receiver).nullable(),
         definitionHash: HashSchema,

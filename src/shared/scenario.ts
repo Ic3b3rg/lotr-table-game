@@ -7,6 +7,7 @@ import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
 import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
 import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
+import { NegatedSufferingSchema } from './negated-suffering';
 import { ThreatContinuationsSchema, ThreatCauseSchema } from './threat-continuations';
 
 export const SourceTextSchema = z
@@ -217,6 +218,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('broadcast', { event: z.string().min(1).max(100) }),
   action('send', { definition: SourceSchema, event: z.string().min(1).max(100) }),
   action('spawnRandom', {
+    suffering: NegatedSufferingSchema.optional(),
     points: VariableRefSchema,
     text: SourceTextSchema,
     excludeGameEnemyPoints: z.boolean(),

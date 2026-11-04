@@ -49,6 +49,18 @@ Forme certificate separatamente: spawn/registrazione, oscurità/spawn/
 registrazione e spawn terminale. Nessun ampliamento del certificato storico
 con intervalli di conteggi. Parametri dai campi e dagli owner, mai dai nomi.
 
+La localizzazione primaria del messaggio della prima nuova forma contiene
+anche una conseguenza fisica per ciascun eroe, con negazione e faccia indicate.
+Il controllo statico del solo array di azioni non la esaurisce. Una rilettura
+bounded del TextAsset con due reader concordi congela testo, icone e quantità
+nella capacità, senza confonderli con le quantità dei benefici57.
+Prima del deployment il consumer fisico risolve il gruppo con ordine scelto
+dalla UI, prova per negare, subito effettivo ed eventuali figli/Ultimo Sforzo.
+Un nuovo figlio tipizzato riusa la stessa primitiva ordinata e il medesimo
+consumer di subire; non attribuisce gli effetti alla fase di oscurità.
+L'oracle confronta anche questi parametri testuali. Le prove positive usano
+caratteristica e importo esplicitamente inventati.
+
 ## Contratto tecnico
 
 `source-threat-continuations-v1` nel manifest attesta i tre receiver, default,

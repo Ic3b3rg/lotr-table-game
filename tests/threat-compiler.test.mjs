@@ -21,6 +21,14 @@ test('coherently attested threat mutations cannot broaden historical shapes or l
   for (const edit of [
     (p) => p.manifest.threatContinuations.thresholds.pop(),
     (p) => {
+      delete p.definitions
+        .find((d) => d.source === p.manifest.threatContinuations.thresholds[0].definition)
+        .states.find((s) => s.index === 1).actions[1].suffering;
+    },
+    (p) => {
+      p.manifest.threatContinuations.thresholds[0].suffering.amount++;
+    },
+    (p) => {
       p.manifest.threatContinuations.thresholds[0].owner = 'example.assets:99999';
     },
     (p) => {

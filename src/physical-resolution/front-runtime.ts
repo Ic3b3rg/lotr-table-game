@@ -2391,6 +2391,18 @@ class FrontReplay {
               );
               this.inspiration(child.hero);
               break;
+            case 'group-suffer': {
+              this.ordered(child.hero, `${path}/group-suffer`, child.heroes, (hero, orderPath) => {
+                this.suffer(
+                  hero,
+                  [{ family: child.family, amount: child.amount }],
+                  child.face,
+                  orderPath,
+                  child.negate,
+                );
+              });
+              break;
+            }
             case 'group-test': {
               this.result.tests = [];
               this.ordered(child.hero, `${path}/group-test`, child.heroes, (hero, orderPath) => {

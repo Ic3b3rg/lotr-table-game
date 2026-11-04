@@ -4,6 +4,7 @@ import { readyThreats, drainThreats, runtime, endTurns } from './threat-helper.m
 import { cycleCommand } from './physical-cycle-helper.mjs';
 import { readBackup, readSession } from './skill-test-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
+import { action } from './fixtures/scenario.mjs';
 
 test('legal cap continuation preflights the actual terminal path before effects and concludes after every reached callback', async (t) => {
   const r = await readyThreats(t);
@@ -110,6 +111,18 @@ test('an exact synthetic threshold registers the next callback and refreshes onc
     [0, 1],
     'next consumer observes the shared global immediately',
   );
+  const context = structuredClone(raw);
+  context.scenario.play.active = 'invented-context';
+  context.scenario.play.attempts.push({
+    id: 'invented-context',
+    heroId: context.preparation.heroes[0].heroId,
+  });
+  const instruction = { op: 'sourceTest', stat: 'wisdom', target: 1 };
+  assert.deepEqual(
+    runtime.encounterProgram(context, instruction).darknessHeroes,
+    [0, 1],
+    'ordinary source encounters share the newly active global',
+  );
   assert.deepEqual(frame.darknessHeroes, [], 'the earlier darkness phase is not replayed');
   assert.deepEqual(frame.activated, []);
   assert.equal(new Set(frame.refreshed).size, frame.refreshed.length);
@@ -133,4 +146,62 @@ test('cap already reached at Shadow start concludes before enemy, darkness, time
   assert.deepEqual(s.scenario.rounds, before.payload.state.scenario.rounds);
   assert.deepEqual(s.physical.runs, before.payload.state.physical.runs);
   assert.deepEqual(s.scenario.enemies, before.payload.state.scenario.enemies);
+});
+
+test('cap overshoot sorts the live list and duplicate registrations in nested callbacks execute each receiver and spawn once', async (t) => {
+  const r = await readyThreats(t, {
+    before: 61,
+    edit(pack) {
+      const principal = pack.definitions.find((d) => d.source === pack.principal);
+      const entry = principal.states.find((s) => s.actions.some((a) => a.op === 'threat'));
+      const rows = pack.manifest.threatContinuations.thresholds;
+      for (const row of [rows[2], rows[1], rows[1]]) {
+        const index = Math.max(...entry.actions.map((a) => a.index)) + 1;
+        entry.actions.push(
+          action(index, 'threat', { source: row.source, threshold: row.threshold }),
+        );
+      }
+    },
+  });
+  await endTurns(r);
+  const before = await readSession(r.host);
+  assert.deepEqual(
+    before.scenario.threats.map((t) => t.threshold),
+    [15, 61, 46],
+  );
+  for (const [type, fields] of [
+    ['BEGIN_SHADOW', {}],
+    ['CONFIRM_SHADOW_STEP', { step: 'threat' }],
+  ]) {
+    const response = await cycleCommand(r, type, fields);
+    assert.equal(response.status, 200, await response.text());
+  }
+  const s = await drainThreats(r),
+    sc = s.scenario,
+    frame = sc.rounds.frames.at(-1);
+  assert.equal(sc.conclusion.cause.after, 63);
+  assert.ok(sc.conclusion.cause.after > sc.conclusion.cause.limit);
+  assert.deepEqual(frame.handled, [
+    'example.assets:999',
+    'example.assets:1000',
+    ...sc.pack.manifest.threatContinuations.thresholds.map((t) => t.source),
+  ]);
+  assert.equal(new Set(frame.handled).size, 5);
+  assert.equal(sc.enemies.attempts.length, 5, 'all spawn callbacks run even at or above the cap');
+  assert.equal(new Set(sc.enemies.attempts.map((a) => a.effectId)).size, 5);
+  const raw = (await readBackup(r.host)).payload.state;
+  const model = raw.scenario.pack.manifest.followup.deployment.compiled.models[0];
+  assert.ok(
+    sc.enemies.groups.flatMap((g) => g.figures.filter((f) => f.health > 0)).length <=
+      model.capacity,
+  );
+  for (const row of sc.pack.manifest.threatContinuations.thresholds) {
+    const receiver = sc.instances.find((i) => i.definition === row.definition);
+    assert.equal(
+      receiver.variables.points,
+      row.multiplier * s.preparation.heroes.length,
+      'each source budget is recomputed independently of the previous residual',
+    );
+    assert.equal(receiver.stopped, true);
+  }
 });

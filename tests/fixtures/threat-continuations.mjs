@@ -39,6 +39,7 @@ export function attachThreats(pack, values = [37, 46, 61]) {
     form: ['spawn-register', 'darkness-spawn-register', 'spawn-terminal'][n],
     evidenceHash: hash(['invented receiver', n]),
   }));
+  rows[0].suffering = { negate: 'wisdom', family: 'fear', amount: 2, face: 'facedown' };
   for (const [n, row] of rows.entries()) {
     const next = rows[n + 1];
     row.next = next
@@ -51,6 +52,8 @@ export function attachThreats(pack, values = [37, 46, 61]) {
       : null;
     const copy = structuredClone(pack.definitions.find((d) => d.source === previous.definition));
     copy.source = row.definition;
+    if (row.suffering)
+      copy.states.find((s) => s.index === 1).actions[1].suffering = structuredClone(row.suffering);
     copy.states.find((s) => s.index === 1).actions[0].right.value = row.multiplier;
     copy.states.find((s) => s.index === 1).actions[1].text = text(
       `Seguito sintetico ${n + 1}: colloca i gruppi offerti.`,

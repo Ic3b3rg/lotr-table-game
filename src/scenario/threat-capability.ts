@@ -107,6 +107,13 @@ export function validateThreatCapability(pack: ScenarioPack) {
         Object.values(spawn.filter).every((n) => n === 0),
       'Aritmetica, budget o popolazione della soglia non certificati.',
     );
+    invariant(
+      spawn.op === 'spawnRandom' &&
+        (row.form === 'spawn-register'
+          ? row.suffering && spawn.suffering && digest(spawn.suffering) === digest(row.suffering)
+          : !row.suffering && !spawn.suffering),
+      'Conseguenza fisica della soglia assente o non attestata.',
+    );
     if (terminal) invariant(row.next === null, 'Soglia terminale con registrazione inventata.');
     else {
       const a = path[dark ? 2 : 1]!.actions[0]!,

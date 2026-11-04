@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NegatedSufferingSchema } from './negated-suffering';
 import {
   AttackTestChildSchema,
   AttackTestViewSchema,
@@ -116,6 +117,11 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
     negate: StatSchema,
     outcome: AttackOutcomeSchema,
     addition: CombatAdditionSchema.nullable(),
+  }),
+  NegatedSufferingSchema.extend({
+    kind: z.literal('group-suffer'),
+    hero: slot,
+    heroes: z.array(slot).min(1).max(5),
   }),
   z.strictObject({
     kind: z.literal('group-test'),
@@ -302,6 +308,7 @@ export const PhysicalResultSchema = z.strictObject({
     'rally-scout',
     'darkness',
     'group-test',
+    'group-suffer',
   ]),
   heroId: ContentIdSchema,
   successes: z.int().min(0).max(999).optional(),

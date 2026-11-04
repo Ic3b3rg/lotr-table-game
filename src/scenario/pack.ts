@@ -272,6 +272,13 @@ export function parseScenarioPack(raw: unknown) {
               ),
             'Argomenti obiettivo non legati alla fonte.',
           );
+        if (a.op === 'spawnRandom' && a.suffering)
+          invariant(
+            pack.manifest.threatContinuations?.thresholds.some(
+              (t) => t.definition === d.source && t.form === 'spawn-register',
+            ),
+            'Conseguenza di soglia fuori dalla capacità attestata.',
+          );
         if (a.op === 'send' || a.op === 'multiplyInt' || a.op === 'spawnRandom')
           invariant(followup, 'Azione fuori dalla capacità seguito.');
         if (a.op === 'send')

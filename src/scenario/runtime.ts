@@ -29,7 +29,7 @@ import { cycleUUID } from '../physical-resolution/cycle-request';
 import {
   beginEncounterPhysical,
   openSourcePhysical,
-  groupTrialProgram,
+  spawnPhysicalProgram,
   encounterProgram,
 } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
@@ -807,9 +807,9 @@ function advanceTask(state: State) {
   if (task.kind === 'spawnRandom') {
     const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
     invariant(a.op === 'spawnRandom', 'Spawn senza istruzione fonte.');
-    if (task.stage === 'intro' && a.trial) {
+    if (task.stage === 'intro' && (a.trial || a.suffering)) {
       const effect = sc.effects.find((e) => e.id === task.effectId)!;
-      task.parentId ??= openSourcePhysical(state, effect, a, groupTrialProgram(state, a));
+      task.parentId ??= openSourcePhysical(state, effect, a, spawnPhysicalProgram(state, a));
       const parent = state.physical!.snapshot.parents.find((p) => p.id === task.parentId)!;
       if (parent.status !== 'completed') {
         const active = state.physical!.snapshot.active;

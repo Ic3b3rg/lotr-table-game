@@ -173,7 +173,7 @@ export function createRounds(sync: () => Promise<void>) {
           round.shadowStep === 'darkness'
             ? `${acting?.name ?? 'Il proprietario indicato'} risolve l’oscurità nel pannello dell’avventura. Gli altri giocatori attendono.`
             : frame?.threat
-              ? `Minaccia: ${frame.threat.before} → ${frame.threat.after}. Aumento ${frame.threat.delta}: ${frame.threat.heroes} eroi, ${frame.threat.tokens.length} segnalini minaccia attivi, ${frame.threat.tiles.length} tessere visibili inesplorate. Il gruppo può proseguire.`
+              ? `${frame.stage === 'threat' ? 'Minaccia da applicare' : 'Minaccia applicata'}: ${frame.threat.before} → ${frame.threat.after}. Aumento ${frame.threat.delta}: ${frame.threat.heroes} eroi, ${frame.threat.tokens.length} segnalini minaccia attivi, ${frame.threat.tiles.length} tessere visibili inesplorate. Il gruppo può proseguire.`
               : 'Concludete la richiesta dell’Ombra.';
         if (current.scenario?.pending)
           status.textContent +=
