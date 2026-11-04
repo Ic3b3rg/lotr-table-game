@@ -4,3 +4,5 @@ export { compileScenarioPack } from './compiler';
 export { compileSourceText } from './text';
 export { bindScenarioCards } from '../shared/scenario-cards';
 export { scenarioMapView } from '../shared/scenario-map';
+export { sectionOrder } from './section-order';
+export { deploymentText } from './deployment';

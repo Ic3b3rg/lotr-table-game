@@ -1,3 +1,5 @@
+import { objectiveText } from './objective';
+import { sectionOrder } from './section-order';
 import { validateSourcePlayReceipts } from './play-receipts';
 import { validateSourceRequest, validateMessageLog } from './request-state';
 import { validatePreparedRewards } from './prepared-effects';
@@ -66,6 +68,13 @@ export function scenarioStateProblem(state: State): string | null {
         prefab: null,
         spaceId: null,
       })),
+      ...(sc.pack.manifest.followup?.instances ?? []).map((row) => ({
+        id: `static:${row.gameObject}`,
+        kind: row.kind,
+        definition: row.definition,
+        prefab: null,
+        spaceId: null,
+      })),
       ...p.spawnOrder.map((spaceId) => {
         const a = p.assignments.find((a) => a.spaceId === spaceId)!,
           m = sc.pack.manifest.prefabs.find((m) => m.source === a.prefab.source)!;
@@ -93,6 +102,8 @@ export function scenarioStateProblem(state: State): string | null {
     const globals = Object.fromEntries(
       sc.pack.globals.map((v) => [v.name, structuredClone(v.value)]),
     );
+    if (sc.pack.manifest.followup)
+      globals[sc.pack.manifest.followup.playerCountBinding] = state.preparation.heroes.length;
     const locals = new Map(
       sc.instances.map((i) => [
         i.id,
@@ -193,11 +204,20 @@ export function scenarioStateProblem(state: State): string | null {
             task?.kind === 'section'
               ? task.tileIndex + (sc.pending?.tileSource ? 1 : 0)
               : tiles.length;
-          tiles.slice(0, count).forEach((t) => visibleTiles.add(t.source));
+          if (sc.pack.manifest.followup) {
+            const order = sectionOrder(p, a.sectionId, visibleTiles);
+            const prefix = order.slice(0, Math.min(count, order.length));
+            if (task?.kind === 'section')
+              invariant(
+                digest(task.order) === digest(prefix),
+                'Ordine ricalcolato dei piazzamenti incoerente.',
+              );
+            prefix.forEach((source) => visibleTiles.add(source));
+          } else tiles.slice(0, count).forEach((t) => visibleTiles.add(t.source));
           break;
         }
         case 'objective':
-          objective = { id: a.id, text: a.text };
+          objective = { id: a.id, text: objectiveText(a, (ref) => store(i, ref)[ref.name]) };
           break;
       }
     }
@@ -329,6 +349,41 @@ export function scenarioStateProblem(state: State): string | null {
           'Esito/reward setup non valido.',
         );
       }
+    }
+    if (sc.pack.manifest.followup) {
+      const nodes = sc.pack.manifest.followup.explorationNodes;
+      invariant(
+        digest(sc.explorationMarkers) ===
+          digest(
+            nodes.map((n) => ({
+              source: n.source,
+              tileSource: n.tileSource,
+              visible:
+                sc.tiles.some((t) => t.source === n.tileSource && t.visible && !t.explored) &&
+                sc.effects.some((e) => {
+                  const a = sc.pack.definitions
+                    .find(
+                      (d) =>
+                        d.source === sc.instances.find((i) => i.id === e.instanceId)!.definition,
+                    )!
+                    .states.find((s) => s.index === e.state)!
+                    .actions.find((a) => a.index === e.action)!;
+                  const task = sc.tasks.find(
+                    (t) =>
+                      t.instanceId === e.instanceId && t.entry === e.entry && t.action === e.action,
+                  );
+                  return (
+                    a.op === 'section' &&
+                    p.sections
+                      .find((s) => s.id === a.sectionId)!
+                      .tiles.some((t) => t.source === n.tileSource) &&
+                    (!task || (task.kind === 'section' && task.markers !== 'unrevealed'))
+                  );
+                }),
+            })),
+          ),
+        'Visibilità dei segnalini senza reveal fonte.',
+      );
     }
     validateInstanceFlags(sc);
     validateSourceTasks(state);

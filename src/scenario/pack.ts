@@ -4,6 +4,7 @@ import type { Projection } from '../shared/generated-map';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { validateSourceHandler } from './handlers';
+import { verifySourceDeployment } from '../combat/deployment-compiler';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -73,6 +74,39 @@ export function parseScenarioPack(raw: unknown) {
   );
   const globals = new Map(pack.globals.map((v) => [v.name, v]));
   const rounds = pack.manifest.rounds;
+  const followup = pack.manifest.followup;
+  if (followup) {
+    invariant(original && rounds, 'Seguito senza fase originale.');
+    const deployment = verifySourceDeployment(followup.deployment);
+    invariant(
+      deployment.source.adventure === pack.identity.adventureSource,
+      'Deployment di un’altra avventura.',
+    );
+    invariant(
+      deployment.source.files.every((f) =>
+        pack.sources.some((s) => s.file === f.file && s.sha256 === f.sha256),
+      ),
+      'Fonte deployment non legata al pack.',
+    );
+    for (const name of [followup.playerCountBinding, followup.enemyPointsBinding])
+      invariant(globals.get(name)?.type === 'int', 'Binding seguito assente.');
+    invariant(
+      new Set(followup.instances.map((i) => i.definition)).size === followup.instances.length,
+      'Istanze statiche duplicate.',
+    );
+    for (const i of followup.instances)
+      invariant(definitions.has(i.definition), 'Lifecycle senza definizione.');
+    invariant(
+      new Set(followup.thresholds.map((t) => t.source)).size === followup.thresholds.length,
+      'Soglie duplicate.',
+    );
+    for (const t of followup.thresholds)
+      if (t.definition)
+        invariant(
+          followup.instances.some((i) => i.definition === t.definition && i.kind === 'threat'),
+          'Soglia senza istanza statica.',
+        );
+  }
   if (rounds) {
     invariant(original, 'Fonte delle fasi fuori dal consumer originale.');
     invariant(
@@ -148,6 +182,21 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        if (a.op === 'objective' && a.bindings)
+          invariant(
+            followup &&
+              new Set(a.bindings.map((b) => b.placeholder)).size === a.bindings.length &&
+              a.bindings.every(
+                (b) =>
+                  (b.ref.scope === 'local' ? locals : globals).get(b.ref.name)?.type === 'int' &&
+                  a.text.some((t) => t.kind === 'text' && t.text.includes(b.placeholder)),
+              ),
+            'Argomenti obiettivo non legati alla fonte.',
+          );
+        if (a.op === 'send' || a.op === 'multiplyInt' || a.op === 'spawnRandom')
+          invariant(followup, 'Azione fuori dalla capacità seguito.');
+        if (a.op === 'send')
+          invariant(definitions.has(a.definition), 'Receiver indirizzato mancante.');
         if (a.op === 'compareInt' || a.op === 'subtractInt')
           invariant(rounds, 'Operatore della fase fuori dalla capacità congelata.');
         if (a.op === 'compareInt')
@@ -169,6 +218,10 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             original &&
               ((a.op === 'confirm' && d.source === pack.manifest.exploration?.definition) ||
+                (a.op === 'lore' &&
+                  followup?.instances.some(
+                    (i) => i.definition === d.source && i.kind === 'logic',
+                  )) ||
                 pack.manifest.prefabs.some(
                   (p) =>
                     pack.manifest.playablePrefabs!.includes(p.source) && p.fsmSource === d.source,
@@ -207,6 +260,8 @@ export function parseScenarioPack(raw: unknown) {
           ...('target' in a && typeof a.target === 'object' ? [a.target] : []),
           ...('ref' in a ? [a.ref] : []),
           ...(a.op === 'challenge' ? [a.sum] : []),
+          ...(a.op === 'spawnRandom' ? [a.points] : []),
+          ...(a.op === 'objective' ? (a.bindings ?? []).map((b) => b.ref) : []),
           ...('tile' in a && a.tile.kind === 'variable' ? [a.tile.ref] : []),
           ...(a.op === 'addInt' && a.value.kind === 'variable' ? [a.value.ref] : []),
           ...('left' in a && a.left.kind === 'variable' ? [a.left.ref] : []),
@@ -269,6 +324,29 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.followup) {
+    const cap = pack.manifest.followup;
+    invariant(cap.projectionFingerprint === p.fingerprint, 'Seguito di un’altra realizzazione.');
+    invariant(
+      new Set(cap.explorationNodes.map((n) => n.source)).size === cap.explorationNodes.length &&
+        new Set(cap.explorationNodes.map((n) => n.tileSource)).size ===
+          cap.explorationNodes.length &&
+        cap.explorationNodes.every((n) =>
+          p.sections.some((s) => s.tiles.some((t) => t.source === n.tileSource)),
+        ),
+      'Binding segnalini esplorazione incoerenti.',
+    );
+    const source = cap.deployment.source;
+    invariant(
+      source.products.length === p.context.ownedProductIds.length &&
+        source.products.every((s) =>
+          source.assets.some(
+            (a) => a.source === s && p.context.ownedProductIds.includes(Number(a.data._id)),
+          ),
+        ),
+      'Pool deployment di un altro prodotto.',
+    );
+  }
   if (pack.manifest.rounds) {
     const source = pack.manifest.rounds;
     invariant(

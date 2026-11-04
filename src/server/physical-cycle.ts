@@ -26,6 +26,7 @@ import {
   applySourceThreat,
   finishSourceReset,
   finishSourceRally,
+  advanceSourceShadow,
 } from '../scenario/round-source';
 
 const originalIntents = z.discriminatedUnion('type', [
@@ -170,6 +171,11 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     (c.type === 'EXPLORE_SCENARIO') === !!record.explorationEntropy,
     'Entropia esplorazione fuori dal suo intento.',
   );
+  invariant(
+    (c.type === 'BEGIN_SHADOW' && !!state.scenario!.pack.manifest.followup) ===
+      !!record.shadowEntropy,
+    'Entropia Ombra fuori dal suo intento.',
+  );
   if (c.type === 'EXPLORE_SCENARIO') {
     invariant(cycle.version === 2, 'Esplorazione in un ledger storico.');
     exploreScenario(
@@ -208,6 +214,16 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     const command = { ...c, requestId: record.requestId, generation: state.generation };
     if (command.type === 'SCENARIO_INPUT') {
       const result = applyScenario(state, record.playerId, command, '', '');
+      if (advanceSourceShadow(state)) {
+        const id = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
+        const task = {
+          runId: id,
+          type: 'CONFIRM_SHADOW_STEP' as const,
+          heroId: p.heroes[0]!.heroId,
+        };
+        if (p.snapshot.active) cycle.pending = task;
+        else finish(state, task);
+      }
       return { ...base, type: command.type, ...result };
     }
     interactScenario(state, record.playerId, command);
@@ -337,7 +353,7 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     if (round.phase !== 'action' || round.activeHeroId || round.heroes.some((h) => !h.turnEnded))
       fail('TURNS_PENDING', 'Tutti gli eroi devono concludere il turno.');
     if (state.scenario!.rounds) {
-      beginSourceShadow(state, record.requestId);
+      beginSourceShadow(state, record.requestId, record.shadowEntropy);
       const affected = darknessHeroes(state);
       if (affected.length) {
         const data = state.scenario!.pack.manifest.rounds!.darkness;
@@ -373,8 +389,8 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
           'SHADOW_STEP_CHANGED',
           'L’Ombra fonte non usa conferme manuali per nemici e oscurità.',
         );
-      applySourceThreat(state);
-      runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
+      if (applySourceThreat(state))
+        runId = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
     } else if (
       c.step === 'darkness' &&
       (darknessHeroes(state).length ||
@@ -452,7 +468,7 @@ function execute(state: State, cycle: CycleState, record: CycleState['records'][
     heroId: hero?.heroId ?? null,
     sourceTurnId: c.type === 'END_TURN' ? c.turnId : state.round!.turnId,
     continuation: runId,
-    completed: !cycle.pending,
+    completed: !cycle.pending && !state.scenario!.pending,
   };
 }
 type Replay = { work: State; receipts: Receipt[] };
@@ -590,6 +606,9 @@ export function applyPhysicalCycle(
     ...(c.type === 'EXPLORE_SCENARIO'
       ? { explorationEntropy: randomBytes(32).toString('hex') }
       : {}),
+    ...(c.type === 'BEGIN_SHADOW' && state.scenario!.pack.manifest.followup
+      ? { shadowEntropy: randomBytes(32).toString('hex') }
+      : {}),
   });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
@@ -722,6 +741,12 @@ function originalSeedState(state: State): State {
       (!sc.pack.manifest.rounds
         ? !sc.rounds
         : sc.rounds?.active === null && sc.rounds.frames.length === 0) &&
+      (!sc.pack.manifest.followup
+        ? !sc.enemies
+        : sc.enemies?.entropy === null &&
+          sc.enemies.cursor === 0 &&
+          sc.enemies.groups.length === 0 &&
+          sc.enemies.attempts.length === 0) &&
       !sc.pending &&
       !sc.tasks.length,
     'Seed originale riscritto dopo lo startup.',

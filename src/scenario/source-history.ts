@@ -1,5 +1,6 @@
 import type { State } from '../server/state';
 import { HANDOFF_TEXT, type Scenario, type ScenarioRequest } from '../shared/scenario';
+import { sectionOrder } from './section-order';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { sourceCursor, sourceTile } from './source-cursor';
@@ -48,8 +49,13 @@ export function validateSourceHistory(state: State) {
           t.instanceId === instance.id && t.entry === effect.entry && t.action === effect.action,
       );
       invariant(!task || task.kind === 'section', 'Cronologia sezione senza continuazione.');
-      const tiles = projection.sections.find((s) => s.id === action.sectionId)!.tiles;
-      const end = task?.kind === 'section' ? task.tileIndex : tiles.length;
+      const original = projection.sections.find((s) => s.id === action.sectionId)!.tiles;
+      const tiles = sc.pack.manifest.followup
+        ? sectionOrder(projection, action.sectionId, visible).map(
+            (source) => original.find((t) => t.source === source)!,
+          )
+        : original;
+      const end = task?.kind === 'section' ? Math.min(task.tileIndex, tiles.length) : tiles.length;
       for (const [index, tile] of tiles.entries()) {
         if (index < end && !visible.has(tile.source))
           expected.push({
@@ -65,6 +71,18 @@ export function validateSourceHistory(state: State) {
           });
         if (index < end || current?.tileSource === tile.source) visible.add(tile.source);
       }
+      if (completed && sc.pack.manifest.followup)
+        expected.push({
+          kind: 'ack',
+          request: {
+            ...base,
+            kind: 'exploration-markers',
+            text:
+              tiles.length <= 1
+                ? sc.pack.manifest.followup.explorationText.single
+                : sc.pack.manifest.followup.explorationText.plural,
+          },
+        });
     }
     if (action.op !== 'message') continue;
     if (action.mode === 'scout' || action.mode === 'spirit') {

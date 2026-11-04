@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as combat from '../dist/combat-library.mjs';
+import { hash } from './fixtures/map-freeze.mjs';
 import { deploymentSource, deploymentContext } from './fixtures/source-deployment.mjs';
 
 test('deployment compiler derives the complete owned pool and refuses missing source dependencies', () => {
@@ -54,4 +55,32 @@ test('deployment failure settles without a fabricated group; availability and po
   const noBudget = combat.generateDeployment(a, deploymentContext({ points: 4 }));
   assert.deepEqual(noBudget.groups, []);
   assert.equal(noBudget.reason, 'no-eligible-model');
+});
+
+test('deployment keeps first-match repeated bonus costs and excludes only the source language flag', () => {
+  const source = deploymentSource();
+  const bonus = source.assets.find((a) => a.cls === 'EnemyBonusModel');
+  bonus.data.Costs = [
+    { Num: 1, Cost: 2 },
+    { Num: 1, Cost: 8 },
+    { Num: 1, Cost: 12 },
+  ];
+  // Re-attest this entirely invented fixture after changing the native-shaped table.
+  bonus.dataHash = hash(bonus.data);
+  const a = combat.compileSourceDeployment(source);
+  assert.deepEqual(a.compiled.bonuses[0].costs, [
+    { size: 1, points: 2 },
+    { size: 1, points: 8 },
+    { size: 1, points: 12 },
+  ]);
+  bonus.data.UnsupportedLanguage.Italian = true;
+  bonus.dataHash = hash(bonus.data);
+  const b = combat.compileSourceDeployment(source);
+  assert.equal(b.compiled.bonuses.length, 1);
+  for (let n = 0; n < 8; n++)
+    assert.ok(
+      combat
+        .generateDeployment(b, deploymentContext({ entropy: String(n).repeat(64) }))
+        .groups.every((g) => g.bonuses.length === 0),
+    );
 });
