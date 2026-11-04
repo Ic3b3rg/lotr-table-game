@@ -530,6 +530,19 @@ export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
         }),
       ),
   );
+  if (pack.manifest.clues && pack.manifest.followup)
+    invariant(
+      p.sections
+        .flatMap((section) => section.tiles)
+        .every(
+          (tile) =>
+            startupSources.has(tile.source) ||
+            pack.manifest.followup!.explorationNodes.some(
+              (node) => node.tileSource === tile.source,
+            ),
+        ),
+      'Binding di esplorazione incompleto per le tessere successive della missione.',
+    );
   for (const a of p.assignments) {
     const m = pack.manifest.prefabs.find((m) => m.source === a.prefab.source);
     if (m && startupSources.has(p.spaces.find((s) => s.id === a.spaceId)!.tileSource)) {

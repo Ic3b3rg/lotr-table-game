@@ -5,6 +5,7 @@ import { readSession, readBackup } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
 import { randomUUID } from 'node:crypto';
+import { validateScenarioBinding } from '../dist/scenario-library.mjs';
 test('a real-card clue costs once, preserves travel and updates the mission and only its due section', async (t) => {
   const r = await readyClues(t),
     at = await atClue(r),
@@ -61,5 +62,14 @@ test('a real-card clue costs once, preserves travel and updates the mission and 
     p.sections
       .find((x) => x.id === 2)
       .tiles.every((t) => !s.scenario.tiles.find((v) => v.source === t.source).visible),
+  );
+  const incomplete = structuredClone(s.scenario.pack);
+  const futureTile = p.sections.find((section) => section.id === 3).tiles[0].source;
+  incomplete.manifest.followup.explorationNodes =
+    incomplete.manifest.followup.explorationNodes.filter((n) => n.tileSource !== futureTile);
+  assert.throws(
+    () => validateScenarioBinding(incomplete, p),
+    /esplorazione/i,
+    'a missing future marker cannot masquerade as an explored fort',
   );
 });
