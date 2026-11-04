@@ -9,6 +9,7 @@ import { ApiError } from './errors';
 import { needsPhysical, loadPhysicalSource } from '../scenario/physical';
 import { initializeOriginalCycle } from './physical-cycle';
 import { requiresProvocation } from '../scenario/deployment';
+import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -26,6 +27,7 @@ export function scenarioOffer(state: State, path: string) {
     validateScenarioBinding(pack, state.mapGeneration.projection);
     validatePreparedPolicies(pack, state.content);
     validateCombatParty(state, pack);
+    validateFailureParty(state, pack);
     return {
       ...base,
       available: true,
@@ -112,7 +114,9 @@ export function applyScenario(
       }
     }
     beginScenario(state, parsed, physical);
-  } else resumeScenario(state, playerId, command, physicalPath);
+  } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
+    answerCampaign(state, playerId, command);
+  else resumeScenario(state, playerId, command, physicalPath);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
   const kind = command.type === 'START_SCENARIO' ? 'start' : command.input.kind;
@@ -135,6 +139,14 @@ export function applyScenario(
 }
 export function allowScenarioPlay(state: State, command: Command) {
   const sc = state.scenario!;
+  if (sc.conclusion) {
+    if (command.type === 'SCENARIO_INPUT') return;
+    throw new ApiError(
+      409,
+      'ADVENTURE_ENDED',
+      'L’avventura è conclusa. Proseguite insieme verso il campo; turni, esplorazioni e attacchi sono terminati.',
+    );
+  }
   const original =
     sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;
   if (original && command.type === 'SCENARIO_INPUT' && sc.pending) return;

@@ -20,6 +20,7 @@ import { rallyScoutCount } from '../shared/rally-scout';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from './errors';
+import { beginHeroFailure, advanceConclusion } from '../scenario/conclusion';
 import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
 import { requiresProvocation } from '../scenario/deployment';
@@ -204,6 +205,18 @@ function execute(
   record: CycleState['records'][number],
   returning = false,
 ): Receipt {
+  const receipt = executeIntent(state, cycle, record, returning);
+  if (state.physical?.snapshot.lastStand?.terminal)
+    beginHeroFailure(state, 'no-active-heroes', record.requestId);
+  advanceConclusion(state);
+  return receipt;
+}
+function executeIntent(
+  state: State,
+  cycle: CycleState,
+  record: CycleState['records'][number],
+  returning = false,
+): Receipt {
   const c = record.intent,
     round = state.round!,
     p = state.physical!;
@@ -212,6 +225,18 @@ function execute(
     type: c.type,
     appliedRevision: c.expectedRevision + 1,
   };
+  if (state.scenario!.conclusion && c.type === 'SCENARIO_INPUT') {
+    if (c.expectedRevision !== state.revision)
+      fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla il passaggio e riprova.');
+    const result = applyScenario(
+      state,
+      record.playerId,
+      { ...c, requestId: record.requestId, generation: state.generation },
+      '',
+      '',
+    );
+    return { ...base, type: c.type, ...result };
+  }
   if (cycle.terminal || p.snapshot.lastStand?.terminal)
     fail(
       'ADVENTURE_LOSS_PENDING',
@@ -512,15 +537,17 @@ function execute(
     if (round.phase !== 'action' || round.activeHeroId || round.heroes.some((h) => !h.turnEnded))
       fail('TURNS_PENDING', 'Tutti gli eroi devono concludere il turno.');
     if (state.scenario!.rounds) {
-      beginSourceShadow(state, record.requestId, record.shadowEntropy);
-      if (state.scenario!.pack.manifest.combat?.source.shadow) continueActivations(state, record);
-      else runId = openSourceDarkness(state, record);
+      const started = beginSourceShadow(state, record.requestId, record.shadowEntropy);
+      if (started) {
+        if (state.scenario!.pack.manifest.combat?.source.shadow) continueActivations(state, record);
+        else runId = openSourceDarkness(state, record);
+      }
     } else {
       round.phase = 'shadow';
       round.shadowStep = 'enemies';
     }
     const loss = p.snapshot.lastStand?.lossDue;
-    if (loss)
+    if (loss && !state.scenario!.conclusion)
       cycle.terminal = {
         ...loss,
         kind: 'adventure-loss',

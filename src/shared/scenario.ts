@@ -51,6 +51,45 @@ export const VariableRefSchema = z.strictObject({
   scope: z.enum(['local', 'global']),
   name: z.string().min(1).max(150),
 });
+const methodEvidence = z.strictObject({
+  assemblyHash: HashSchema,
+  method: z.string().regex(/^06[0-9a-f]{6}$/),
+  bodyHash: HashSchema,
+});
+export const AdventureFailureCapabilitySchema = z.strictObject({
+  version: z.literal('source-adventure-failure-v1'),
+  event: z.string().min(1).max(100),
+  evidenceHash: HashSchema,
+  methods: z.strictObject(
+    Object.fromEntries(
+      ['signal', 'next', 'proceed', 'reset', 'loader', 'map', 'camp', 'xp'].map((k) => [
+        k,
+        methodEvidence,
+      ]),
+    ) as Record<
+      'signal' | 'next' | 'proceed' | 'reset' | 'loader' | 'map' | 'camp' | 'xp',
+      typeof methodEvidence
+    >,
+  ),
+  next: z.strictObject({
+    source: SourceSchema,
+    id: Int32Schema,
+    modelHash: HashSchema,
+    type: z.enum(['journey', 'battle']),
+    name: SourceTextSchema,
+    location: SourceTextSchema,
+    story: SourceTextSchema,
+    restArea: z.int().nonnegative().max(100),
+  }),
+  partyBonus: z.strictObject({
+    requiredSkillId: Int32Schema,
+    amount: z.int().nonnegative().max(99),
+    text: SourceTextSchema,
+    skills: z
+      .array(z.strictObject({ cardId: ContentIdSchema, modelId: Int32Schema.nullable() }))
+      .max(1000),
+  }),
+});
 const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
@@ -121,6 +160,9 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   }),
   action('nullProduct', { products: z.tuple([z.null()]), falseEvent: z.string().min(1).max(100) }),
   action('lore', { amount: z.int().min(1).max(99) }),
+  action('awardXP', { amount: z.int().min(0).max(99) }),
+  action('nextAdventure', { source: SourceSchema, id: Int32Schema }),
+  action('proceed', {}),
   action('physical', { text: SourceTextSchema, program: PhysicalProgramSchema }),
   action('message', {
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
@@ -282,6 +324,7 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    failure: AdventureFailureCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -405,6 +448,11 @@ export const EncounterInputSchema = z.discriminatedUnion('kind', [
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
+  z.strictObject({
+    kind: z.literal('camp-role'),
+    heroId: ContentIdSchema,
+    roleId: ContentIdSchema,
+  }),
 ]);
 const playBinding = {
   expectedRevision: z.int().nonnegative(),
@@ -478,6 +526,9 @@ export const ScenarioRequestSchema = z.strictObject({
     'deployment-intro',
     'deployment',
     'exploration-markers',
+    'campaign-map',
+    'campaign-story',
+    'camp',
   ]),
   options: z
     .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
@@ -536,6 +587,66 @@ const ShadowExplorationAttemptSchema = z.strictObject({
   }),
 });
 export const ScenarioSchema = z.strictObject({
+  conclusion: z
+    .strictObject({
+      version: z.literal('source-adventure-failure-v1'),
+      id: z.uuid(),
+      outcome: z.literal('failure'),
+      timing: z.enum(['no-active-heroes', 'shadow-start']),
+      cause: z.strictObject({
+        runId: z.uuid(),
+        heroId: ContentIdSchema,
+        instructionHash: HashSchema,
+      }),
+      triggerRequestId: z.string().min(24).max(80),
+      episodeHash: HashSchema,
+      suspendedRequest: ScenarioRequestSchema.nullable(),
+      suspendedPrincipal: ScenarioInstanceSchema,
+      stage: z.enum(['conclusion', 'campaign-map', 'campaign-story', 'camp']),
+      xp: z
+        .array(
+          z.strictObject({
+            heroId: ContentIdSchema,
+            roleId: ContentIdSchema,
+            amount: z.int().nonnegative().max(99),
+            source: z.string().max(300),
+          }),
+        )
+        .max(5),
+      bonusLore: z.int().nonnegative().max(99),
+      nextAdventureId: Int32Schema.nullable(),
+      alternatives: z.array(Int32Schema).max(100),
+      completedAdventureIds: z.array(Int32Schema).max(100),
+      transitionCount: z.int().min(0).max(1),
+      campEntryCount: z.int().min(0).max(1),
+      campaign: z
+        .strictObject({
+          heroes: z
+            .array(
+              z.strictObject({
+                heroId: ContentIdSchema,
+                roleId: ContentIdSchema.nullable(),
+                status: z.literal('active'),
+                lastStandDifficulty: z.literal(1),
+                itemCopies: z.array(CopyIdSchema).max(3),
+                titleCopies: z.array(CopyIdSchema).max(21),
+              }),
+            )
+            .max(5),
+          sceneGlobals: z.record(z.string(), scalar),
+          adventureRules: z.array(z.string().max(1000)).max(100),
+          next: z
+            .strictObject({
+              source: SourceSchema,
+              id: Int32Schema,
+              type: z.enum(['journey', 'battle']),
+              status: z.literal('requires-content'),
+            })
+            .nullable(),
+        })
+        .nullable(),
+    })
+    .optional(),
   rounds: SourceRoundStateSchema.optional(),
   enemies: DeploymentStateSchema.optional(),
   explorationMarkers: z

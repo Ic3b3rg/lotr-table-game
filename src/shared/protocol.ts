@@ -45,7 +45,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(15),
+  schemaVersion: z.literal(16),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -72,6 +72,11 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('camp-role'),
+    heroId: ContentIdSchema,
+    roleId: ContentIdSchema,
+  }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
