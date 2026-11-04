@@ -3,6 +3,8 @@ import type { DeployedGroup } from '../shared/deployment';
 import { BoonKindSchema, type AttackModifier } from '../shared/combat';
 import { bounded, check, integer } from './model';
 import { resolveFigureHits } from './figures';
+import type { BoonArtifact, BoonCustody } from '../shared/boons';
+import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
 export function effectiveGroup(a: CombatClosure, group: DeployedGroup) {
   const model = a.compiled.models.find((m) => m.source === group.source);
   check(model, 'Modello non congelato per il combattimento.');
@@ -43,7 +45,13 @@ export function applyGroupHits(
 export function preflightCombatGroup(
   a: CombatClosure,
   group: DeployedGroup,
-  supply: { boons: { heroId: string; kind: string }[]; quantities: null | Record<string, number> },
+  supply: {
+    boons: { heroId: string; kind: string }[];
+    quantities: null | Record<string, number>;
+    artifact?: BoonArtifact | undefined;
+    custody?: BoonCustody | undefined;
+    heroIds?: string[] | undefined;
+  },
 ) {
   const { model } = effectiveGroup(a, group);
   const size = group.figures.filter((f) => f.health > 0).length;
@@ -52,7 +60,19 @@ export function preflightCombatGroup(
   const missing: string[] = [];
   for (const i of candidates) {
     if (i.addition?.effect.op === 'gain-boon') {
-      missing.push(supply.quantities === null ? 'boon-quantities-57' : 'boon-acquisition-consumer');
+      if (supply.artifact)
+        missing.push(
+          ...boonAcquisitionProblems(
+            supply.artifact,
+            supply.custody ?? [],
+            i.addition.effect.boon ? [i.addition.effect.boon] : BoonKindSchema.options,
+            supply.heroIds,
+          ),
+        );
+      else
+        missing.push(
+          supply.quantities === null ? 'boon-quantities-57' : 'boon-acquisition-consumer',
+        );
     }
   }
   return [...new Set(missing)];

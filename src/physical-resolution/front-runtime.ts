@@ -20,6 +20,9 @@ import { LastStandRuntime, type LastStandReaction } from './last-stand-runtime';
 import { validateLastStandArtifact } from './last-stand-program';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { validateBoonArtifact } from './boon-program';
+import { boonAvailability, validateBoonCustody } from './boon-stock';
+import type { BoonKind } from '../shared/boons';
+import { BoonKindSchema } from '../shared/combat';
 import type {
   AttackTestChild,
   CompanyClause,
@@ -79,6 +82,7 @@ class FrontReplay {
       parents: [],
       active: null,
       resolution: {
+        ...(p.boons ? { boonEvents: [] } : {}),
         resources: null,
         faceup: [],
         frames: [],
@@ -140,6 +144,80 @@ class FrontReplay {
   }
   private hero(n: number) {
     return this.resources.preparation.heroes[n]!;
+  }
+  private boonName(kind: BoonKind) {
+    const id = this.p.boons!.definitions.find((d) => d.kind === kind)!.cardId;
+    return (this.p.raw as { cards: { id: string; name: { value: string } }[] }).cards.find(
+      (c) => c.id === id,
+    )!.name.value;
+  }
+  private returnBoon(hero: number, copyId: string, path: string, reason: string) {
+    const held = this.resources.boonCustody!;
+    const b = held.find((b) => b.copyId === copyId && b.heroId === this.hero(hero).heroId);
+    invariant(b, 'Scarto senza custodia del beneficio.');
+    this.r.boonEvents!.push({
+      operation: 'discard',
+      copyId,
+      heroId: b.heroId,
+      kind: b.kind,
+      source: path,
+      reason,
+    });
+    this.resources.boonCustody = held.filter((h) => h.copyId !== copyId);
+    this.resources.boons = this.resources.boons.filter(
+      (h) => h.heroId !== b.heroId || h.kind !== b.kind,
+    );
+  }
+  private gainBoon(hero: number, kind: BoonKind | null, path: string) {
+    const a = this.p.boons;
+    if (!a?.runtimeReady) this.gate(hero, 'boon-quantity-unconfirmed');
+    const held = this.resources.boonCustody!;
+    const kinds = kind ? [kind] : BoonKindSchema.options;
+    for (const k of kinds)
+      if (
+        !held.some((b) => b.heroId === this.hero(hero).heroId && b.kind === k) &&
+        boonAvailability(a, held, k).status === 'verified-empty'
+      )
+        this.gate(hero, 'boon-supply-empty', empty(), null, 'boon-supply-exhaustion-rule');
+    const selected = this.choose(
+      hero,
+      `${path}/kind`,
+      'La fonte concede un beneficio: scegli quale acquisire dalla riserva.',
+      kinds.map((k) => ({
+        id: k,
+        label: `${this.boonName(k)}${held.some((b) => b.heroId === this.hero(hero).heroId && b.kind === k) ? ' · già posseduto, nessuna seconda copia' : ''}`,
+      })),
+    ) as BoonKind;
+    const previous = held.find((b) => b.heroId === this.hero(hero).heroId && b.kind === selected);
+    if (previous) {
+      this.r.boonEvents!.push({
+        operation: 'duplicate',
+        copyId: previous.copyId,
+        heroId: previous.heroId,
+        kind: selected,
+        source: path,
+        reason: 'already-held',
+      });
+      return;
+    }
+    const copyId = boonAvailability(a, held, selected).copies[0];
+    invariant(copyId, 'Riserva senza copia risolta.');
+    held.push({
+      copyId,
+      heroId: this.hero(hero).heroId,
+      kind: selected,
+      face: 'faceup',
+      source: path,
+    });
+    this.resources.boons.push({ heroId: this.hero(hero).heroId, kind: selected });
+    this.r.boonEvents!.push({
+      operation: 'gain',
+      copyId,
+      heroId: this.hero(hero).heroId,
+      kind: selected,
+      source: path,
+      reason: 'source-grant',
+    });
   }
   private get artifact() {
     return this.p.fronts!.artifact;
@@ -664,6 +742,11 @@ class FrontReplay {
           return;
         }
         case 'discard-boons':
+          if (this.p.boons)
+            for (const b of [...this.resources.boonCustody!].filter(
+              (b) => b.heroId === this.hero(hero).heroId,
+            ))
+              this.returnBoon(hero, b.copyId, path, 'source-discard');
           this.resources.boons = this.resources.boons.filter(
             (b) => b.heroId !== this.hero(hero).heroId,
           );
@@ -1677,8 +1760,18 @@ class FrontReplay {
         const boon = this.resources.boons.findIndex(
           (b) => b.heroId === this.hero(hero).heroId && b.kind === e.boon,
         );
-        if (boon >= 0) this.resources.boons.splice(boon, 1);
-        else
+        if (boon >= 0) {
+          if (this.p.boons)
+            this.returnBoon(
+              hero,
+              this.resources.boonCustody!.find(
+                (b) => b.heroId === this.hero(hero).heroId && b.kind === e.boon,
+              )!.copyId,
+              path,
+              'source-loss',
+            );
+          else this.resources.boons.splice(boon, 1);
+        } else
           this.operation(
             hero,
             dummy,
@@ -1693,7 +1786,7 @@ class FrontReplay {
         break;
       }
       case 'gain-boon':
-        this.gate(hero, 'boon-quantity-unconfirmed');
+        this.gainBoon(hero, e.boon, path);
         break;
       case 'move-pair-toward-threat':
         throw new Error('Movimento aggiuntivo richiede il ritorno del controller.');
@@ -1835,6 +1928,10 @@ class FrontReplay {
       }
       const context = FrontResourcesSchema.parse(run.context);
       invariant(
+        this.p.boons || context.boonCustody === undefined,
+        'Copie beneficio in un pack storico.',
+      );
+      invariant(
         context.preparation.heroes.length === this.p.heroes.length &&
           context.preparation.heroes.every(
             (h, n) =>
@@ -1859,6 +1956,19 @@ class FrontReplay {
         );
       }
       this.r.resources = structuredClone(context);
+      if (this.p.boons) {
+        this.r.resources.boonCustody ??= [];
+        validateBoonCustody(
+          this.p.boons,
+          this.r.resources.boonCustody,
+          this.p.heroes.map((h) => h.heroId),
+        );
+        invariant(
+          digest(this.r.resources.boons) ===
+            digest(this.r.resources.boonCustody.map(({ heroId, kind }) => ({ heroId, kind }))),
+          'Custodia e vista benefici discordanti.',
+        );
+      }
       this.s.credits = [...run.program.initialCredits];
       const parent: PhysicalSnapshot['parents'][number] = {
         id: run.id,

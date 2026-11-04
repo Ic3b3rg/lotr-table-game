@@ -1,5 +1,8 @@
 // Entirely invented identities, names, quantities and values. Not acceptance89/33.
 import { frontFixture, hash } from './physical-fronts.mjs';
+import * as api from '../../dist/physical-resolution-library.mjs';
+import { binding, evidence } from './physical-fronts.mjs';
+import { source } from './physical-resolution.mjs';
 export function boonFixture(verified = true) {
   const f = frontFixture();
   const cards = f.raw.cards.filter((c) => c.family === 'boon');
@@ -49,4 +52,88 @@ export function boonFixture(verified = true) {
     })),
   };
   return { ...f, boonInput: input };
+}
+
+export function runtimeBoons(edit = () => {}, verified = true) {
+  const f = boonFixture(verified);
+  const combat = {
+    version: 'combat-windows-v1',
+    roundId: '00000000-0000-4000-8000-000000000099',
+    artifactFingerprint: hash('invented combat'),
+    clauses: [],
+    heroes: [],
+  };
+  edit(f, combat);
+  const a = api.compileBoons(f.raw, f.boonInput);
+  const p = api.freezePhysical(
+    f.raw,
+    binding,
+    f.heroes,
+    '1'.repeat(64),
+    undefined,
+    { artifact: api.compilePhysicalFronts(f.raw, f.ir, f.catalog), catalog: f.catalog },
+    undefined,
+    a,
+  );
+  let revision = 0;
+  return {
+    ...f,
+    p,
+    combat,
+    open(children, spatial) {
+      const n = p.runs.length;
+      return api.openPhysical(
+        p,
+        { ...source, effectId: `invented-source-${n}` },
+        { ...f.program(children), combat },
+        structuredClone(p.snapshot.resolution.resources ?? f.context),
+        spatial,
+      );
+    },
+    answer(input, playerId = p.snapshot.active.actorPlayerId) {
+      api.answerPhysical(
+        p,
+        p.snapshot.active.runId,
+        typeof input === 'string' ? { kind: 'physical-choice', option: input } : input,
+        evidence(revision++, playerId),
+      );
+    },
+  };
+}
+
+export function inventedOutcome(heroId = 'hero-1', offered = { damage: 0, fear: 0 }) {
+  return {
+    attackId: 'invented-attack',
+    groupId: 'invented-group',
+    instructionId: 'fixture.assets:20',
+    instructionHash: hash('invented instruction'),
+    recipientHeroId: heroId,
+    cause: 'activation',
+    rootSource: 'invented-root',
+    directSource: 'invented-direct',
+    returnTo: 'invented-return',
+    artifactFingerprint: hash('invented combat'),
+    projectionFingerprint: hash('invented map'),
+    figureIds: ['invented-figure'],
+    offered,
+    negated: { damage: 0, fear: 0 },
+    prevented: { damage: 0, fear: 0 },
+    suffered: { damage: 0, fear: 0 },
+    childSources: [],
+    sealed: true,
+  };
+}
+export function boonGrant(hero = 0, boon = 'determined') {
+  return {
+    kind: 'combat-addition',
+    hero,
+    addition: {
+      key: 'invented-addition',
+      textHash: hash('invented addition'),
+      predicate: 'always',
+      window: 'condition-known',
+      effect: { op: 'gain-boon', boon },
+    },
+    outcome: inventedOutcome(`hero-${hero + 1}`),
+  };
 }

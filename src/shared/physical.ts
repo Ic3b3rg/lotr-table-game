@@ -271,6 +271,7 @@ export const PhysicalActiveSchema = z.discriminatedUnion('kind', [
       'required-deck-empty',
       'weakness-deck-empty',
       'boon-quantity-unconfirmed',
+      'boon-supply-empty',
       'adventure-loss-consumer-unavailable',
     ]),
     remaining: PhysicalCountsSchema,

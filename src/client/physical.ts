@@ -13,6 +13,8 @@ import { findSkillCard } from '../shared/skill-cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
+  'boon-supply-empty':
+    'Il beneficio richiesto è esaurito nella riserva verificata. Manca una regola attestata per questa situazione: la continuazione resta salvata.',
   'adventure-loss-consumer-unavailable':
     'La Compagnia ha perso. La conseguenza finale è salvata; il seguito originale dell’avventura non è ancora disponibile.',
   'weakness-deck-empty':

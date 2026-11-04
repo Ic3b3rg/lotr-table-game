@@ -38,6 +38,9 @@ export function preflightCombatOperation(
       for (const dep of preflightCombatGroup(a, g, {
         boons: state.physical!.snapshot.resolution!.resources?.boons ?? [],
         quantities: null,
+        artifact: state.physical?.boons,
+        custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
+        heroIds: state.physical?.heroes.map((h) => h.heroId),
       }))
         missing.add(dep);
       if (g.logic) missing.add('scenario-combat-continuation');
