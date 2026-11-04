@@ -36,6 +36,7 @@ import { exploreScenario } from '../scenario/runtime';
 import { explorationSource, explorationProblem } from '../shared/exploration';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { combatDarknessHeroes } from '../scenario/darkness';
+import { boonEnemyPositions } from '../server/physical-spatial';
 
 const fail = (code: string, message: string): never => {
   throw new ApiError(409, code, message);
@@ -252,6 +253,7 @@ export function openCombatPhysical(
       program,
       context,
       {
+        ...boonEnemyPositions(state),
         heroes: p.heroes.map((h) => ({
           ...h,
           spaceId: state.journey!.heroes.find((j) => j.heroId === h.heroId)!.spaceId,

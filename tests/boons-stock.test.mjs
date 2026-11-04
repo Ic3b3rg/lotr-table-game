@@ -37,12 +37,14 @@ test('source acquisition keeps exact copies outside skill zones, rejects duplica
 
 test('unknown stock remains distinct from exhausted verified stock and never creates a copy', () => {
   const unknown = runtimeBoons(() => {}, false);
-  unknown.open([boonGrant()]);
-  assert.equal(unknown.p.snapshot.active.reason, 'boon-quantity-unconfirmed');
-  assert.deepEqual(unknown.p.snapshot.resolution.resources.boonCustody, []);
+  const beforeUnknown = structuredClone(unknown.p);
+  assert.throws(() => unknown.open([boonGrant()]), /boon-quantities-57/);
+  assert.deepEqual(unknown.p, beforeUnknown);
   const empty = runtimeBoons();
-  empty.open([boonGrant(0), boonGrant(1), boonGrant(2)]);
-  assert.equal(empty.p.snapshot.active.reason, 'boon-supply-empty');
+  empty.open([boonGrant(0), boonGrant(1)]);
+  const beforeEmpty = structuredClone(empty.p);
+  assert.throws(() => empty.open([boonGrant(2)]), /boon-supply-exhaustion-rule/);
+  assert.deepEqual(empty.p, beforeEmpty);
   assert.equal(empty.p.snapshot.resolution.resources.boonCustody.length, 2);
 });
 
@@ -84,4 +86,23 @@ test('real group preflight accepts the frozen consumer without changing the comp
   ]);
   supply.artifact = runtimeBoons(() => {}, false).p.boons;
   assert.deepEqual(preflightCombatGroup(a, groupFixture(), supply), ['boon-quantities-57']);
+});
+
+test('mandatory continuation finds unknown or exhaustible stock before any previous child can draw or spend', () => {
+  for (const verified of [false, true]) {
+    const f = runtimeBoons(() => {}, verified),
+      before = structuredClone(f.p);
+    const draw = {
+      kind: 'suffer',
+      hero: 0,
+      face: 'facedown',
+      cards: [{ family: 'fear', amount: 1 }],
+      prevention: [],
+    };
+    assert.throws(
+      () => f.open([draw, boonGrant(0), boonGrant(1), boonGrant(2)]),
+      verified ? /boon-supply-exhaustion-rule/ : /boon-quantities-57/,
+    );
+    assert.deepEqual(f.p, before);
+  }
 });

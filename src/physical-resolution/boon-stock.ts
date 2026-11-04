@@ -48,3 +48,34 @@ export function boonAcquisitionProblems(
     ? ['boon-supply-exhaustion-rule']
     : [];
 }
+
+export type BoonRequest = { heroes: string[]; kinds: BoonKind[] };
+/** Maximum distinct recipients per kind; a duplicate never needs another copy. */
+export function preflightBoonRequests(
+  a: BoonArtifact | undefined,
+  held: BoonCustody,
+  requests: BoonRequest[],
+) {
+  if (!requests.length) return [];
+  if (!a?.runtimeReady) return ['boon-quantities-57'];
+  for (const kind of a.definitions.map((d) => d.kind)) {
+    const grants = requests.filter((r) => r.kinds.includes(kind));
+    const assigned = new Map<string, number>();
+    const match = (index: number, seen: Set<string>): boolean => {
+      for (const hero of grants[index]!.heroes) {
+        if (seen.has(hero) || held.some((b) => b.heroId === hero && b.kind === kind)) continue;
+        seen.add(hero);
+        const previous = assigned.get(hero);
+        if (previous === undefined || match(previous, seen)) {
+          assigned.set(hero, index);
+          return true;
+        }
+      }
+      return false;
+    };
+    for (let i = 0; i < grants.length; i++) match(i, new Set());
+    if (assigned.size > boonAvailability(a, held, kind).copies.length)
+      return ['boon-supply-exhaustion-rule'];
+  }
+  return [];
+}

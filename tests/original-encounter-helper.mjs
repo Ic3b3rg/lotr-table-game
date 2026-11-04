@@ -207,9 +207,9 @@ export async function readyOriginal(
   const raw = diagnosticRaw(),
     catalog = catalogFixture();
   catalogEdit(catalog);
-  await writeFile(join(ready.host.dataDir, 'physical-content.json'), JSON.stringify(raw));
   const fronts = inventedFrontInput(raw);
-  frontEdit(fronts, catalog);
+  frontEdit(fronts, catalog, raw, ready);
+  await writeFile(join(ready.host.dataDir, 'physical-content.json'), JSON.stringify(raw));
   await writeFile(
     join(ready.host.dataDir, 'physical-fronts.json'),
     JSON.stringify(compilePhysicalFronts(raw, fronts, catalog)),

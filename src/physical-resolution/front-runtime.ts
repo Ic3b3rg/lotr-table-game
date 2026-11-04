@@ -151,6 +151,27 @@ class FrontReplay {
       (c) => c.id === id,
     )!.name.value;
   }
+  private boonEffects(hero: number) {
+    return (this.resources.boonCustody ?? [])
+      .filter((b) => b.heroId === this.hero(hero).heroId)
+      .flatMap((b) =>
+        this.p
+          .boons!.definitions.find((d) => d.kind === b.kind)!
+          .effects.map((effect) => ({ ...b, effect })),
+      );
+  }
+  private nearbyEnemy(hero: number) {
+    const spatial = this.run.spatial;
+    invariant(spatial?.enemies, 'Fine turno senza posizioni nemiche congelate.');
+    const from = spatial.heroes[hero]!.spaceId;
+    return spatial.enemies.some(
+      (e) =>
+        e.spaceId === from ||
+        spatial.connections.some(
+          ([a, b]) => (a === from && b === e.spaceId) || (b === from && a === e.spaceId),
+        ),
+    );
+  }
   private returnBoon(hero: number, copyId: string, path: string, reason: string) {
     const held = this.resources.boonCustody!;
     const b = held.find((b) => b.copyId === copyId && b.heroId === this.hero(hero).heroId);
@@ -1005,9 +1026,13 @@ class FrontReplay {
     // availability after every descendant; an imposed discard never activates Rest.
     const effects = this.persist(hero).filter(({ effect: e }) => e.window === 'end-own-turn');
     const left = effects.map((_, n) => n);
+    const boonEnds = this.boonEffects(hero).filter(
+      ({ effect }) => effect.op === 'discard-at-end-turn',
+    );
+    const boonLeft = boonEnds.filter(() => !this.nearbyEnemy(hero)).map((b) => b.copyId);
     let closed = false,
       step = 0;
-    while (left.length || !closed) {
+    while (left.length || boonLeft.length || !closed) {
       const rests = closed
         ? []
         : this.policy(hero).filter(
@@ -1017,6 +1042,12 @@ class FrontReplay {
         ? []
         : this.titleEffects(hero).filter((t) => t.effect.op === 'rest');
       const options = [
+        ...boonLeft
+          .filter((copy) => this.resources.boonCustody?.some((b) => b.copyId === copy))
+          .map((copy) => ({
+            id: `boon-end:${copy}`,
+            label: `Scarta ${this.boonName(boonEnds.find((b) => b.copyId === copy)!.kind)}: nessun nemico vicino`,
+          })),
         ...left
           .filter((n) => this.faceup.has(effects[n]!.copy))
           .map((n) => ({
@@ -1044,6 +1075,12 @@ class FrontReplay {
       );
       if (selected === 'close-rest') {
         closed = true;
+        continue;
+      }
+      if (selected.startsWith('boon-end:')) {
+        const copy = selected.slice('boon-end:'.length);
+        boonLeft.splice(boonLeft.indexOf(copy), 1);
+        this.returnBoon(hero, copy, `${path}/window-${step}`, 'end-turn-no-nearby-enemies');
         continue;
       }
       if (selected.startsWith('title-rest:')) {
@@ -1097,7 +1134,17 @@ class FrontReplay {
         let suffered = 0;
         const remaining = empty();
         for (const c of cards) remaining[c.family] = c.amount;
-        if (negate && total(remaining)) {
+        if (direct && this.p.boons)
+          for (const b of this.boonEffects(hero)) {
+            if (b.effect.op !== 'prevent-all-before-test') continue;
+            const family = b.effect.family;
+            const n = family === 'damage' && this.cannotPreventDamage(hero) ? 0 : remaining[family];
+            remaining[family] -= n;
+            this.result.prevented[family] += n;
+            this.directOutcome!.prevented[family] += n;
+            this.returnBoon(hero, b.copyId, `${path}/before-test`, 'before-attacked-test');
+          }
+        if (negate && (total(remaining) || (direct && this.p.boons))) {
           const allowed = [negate];
           if (
             ['wisdom', 'spirit', 'wit'].includes(negate) &&
@@ -1317,6 +1364,14 @@ class FrontReplay {
                     });
                 }
                 suffered++;
+                for (const b of this.boonEffects(hero))
+                  if (b.effect.op === 'discard-on-suffer' && b.effect.families.includes(c.family))
+                    this.returnBoon(
+                      hero,
+                      b.copyId,
+                      `${path}/suffer-${c.family}`,
+                      'actually-suffered',
+                    );
                 if ((c.family === 'fear' ? faceFear : face) === 'faceup')
                   this.front(hero, copy, `${path}/front-${this.r.operations}`);
               },
@@ -1424,10 +1479,13 @@ class FrontReplay {
         n = 0,
         spentTrigger = false,
         addedHits = attack
-          ? this.persist(hero).reduce((n, { effect: e }) => n + (e.op === 'add-hits' ? e.n : 0), 0)
+          ? [...this.persist(hero), ...this.boonEffects(hero)].reduce(
+              (n, { effect: e }) => n + (e.op === 'add-hits' ? e.n : 0),
+              0,
+            )
           : 0;
       const declinedTitles = new Set<string>();
-      const printed = successes;
+      let printed = successes;
       successes += this.persist(hero).reduce(
         (n, { effect: e }) => n + (e.op === 'add-success' && e.stats.includes(stat) ? e.n : 0),
         0,
@@ -1437,7 +1495,36 @@ class FrontReplay {
           (n, { effect: e }) => n + (e.op === 'negate-bonus' ? e.n : 0),
           0,
         );
+      // New boon runs retain fate identity. Replacing a card removes its converted
+      // symbols, while inspiration and independently paid abilities stay paid.
+      let bonusSuccesses = successes - printed,
+        serial = 0;
+      let icons: { id: string; copy: string; state: 'free' | 'converted' | 'spent' }[] = [];
+      const addIcons = (copies: string[]) => {
+        for (const copy of copies)
+          for (let i = 0; i < this.skillSymbols(copy).fate; i++)
+            icons.push({ id: `fate:${serial++}:${copy}`, copy, state: 'free' });
+      };
+      if (this.p.boons) addIcons(cards);
+      const useFates = (count: number, state: 'converted' | 'spent', suffix: string) => {
+        if (!this.p.boons) return;
+        const free = icons.filter((i) => i.state === 'free');
+        const chosen = this.select(
+          hero,
+          `${path}/${suffix}`,
+          'Scegli le icone fato da usare: le altre restano disponibili.',
+          free.map((i) => ({ id: i.id, label: `${this.skillName(i.copy)} · fato` })),
+          count,
+        );
+        for (const id of chosen) icons.find((i) => i.id === id)!.state = state;
+      };
       const updateTest = () => {
+        if (this.p.boons) {
+          printed = cards.reduce((n, c) => n + this.skillSymbols(c).success, 0);
+          successes =
+            printed + bonusSuccesses + icons.filter((i) => i.state === 'converted').length;
+          fate = icons.filter((i) => i.state === 'free').length;
+        }
         if (attack)
           this.r.attackTest = {
             heroId: h.heroId,
@@ -1513,6 +1600,18 @@ class FrontReplay {
             ...this.company(hero, 'attack-test').filter((o) => o.clause.effect.op === 'strike'),
           );
         const options = [
+          ...this.boonEffects(hero)
+            .filter(
+              (b) =>
+                (attack && b.effect.op === 'add-success') || b.effect.op === 'exchange-test-cards',
+            )
+            .map((b) => ({
+              id: `boon:${b.copyId}:${b.effect.op}`,
+              label:
+                b.effect.op === 'exchange-test-cards'
+                  ? `Scarta ${this.boonName(b.kind)}: scegli quante carte della prova sostituire`
+                  : `Scarta ${this.boonName(b.kind)}: aggiungi ${b.effect.op === 'add-success' ? b.effect.n : 0} successi all’attacco`,
+            })),
           ...company.map((o) => ({
             id: o.id,
             label: `Scarta ${this.skillName(o.copy)}: ${o.clause.effect.op === 'strike' ? `Assalto ${o.clause.effect.n}` : `aggiungi ${o.clause.effect.op === 'add-success' ? o.clause.effect.n : 0} successo`}`,
@@ -1555,11 +1654,49 @@ class FrontReplay {
           selected = input.option;
         } else selected = this.choose(hero, decisionPath, title, options);
         if (selected === 'resolve') break;
+        const boon = this.boonEffects(hero).find(
+          (b) => selected === `boon:${b.copyId}:${b.effect.op}`,
+        );
+        if (boon?.effect.op === 'add-success') {
+          this.returnBoon(hero, boon.copyId, `${path}/convert-${n}`, 'attack-success');
+          successes += boon.effect.n;
+          bonusSuccesses += boon.effect.n;
+          continue;
+        }
+        if (boon?.effect.op === 'exchange-test-cards') {
+          this.returnBoon(hero, boon.copyId, `${path}/convert-${n}`, 'test-exchange');
+          const selected = this.select(
+            hero,
+            `${path}/exchange-${n}`,
+            'Scarta un qualsiasi numero di carte dalla prova e rivela altrettante carte.',
+            cards.map((copy) => ({
+              id: copy,
+              label: `${this.skillName(copy)}${icons.some((i) => i.copy === copy && i.state === 'converted') ? ' · fato già convertito' : ''}`,
+            })),
+            0,
+            cards.length,
+          );
+          const kept = cards.filter((c) => !selected.includes(c));
+          cards.splice(0, cards.length, ...kept);
+          icons = icons.filter((i) => !selected.includes(i.copy));
+          h.discard.push(...selected);
+          const additional = this.reveal(hero, selected.length, `${path}/exchange-${n}`);
+          invariant(
+            additional.length === selected.length,
+            'Sostituzione senza pari numero di carte.',
+          );
+          cards.push(...additional);
+          addIcons(additional);
+          this.r.revealed.at(-1)!.cards = [...cards];
+          continue;
+        }
         const prepared = company.find((o) => o.id === selected);
         if (prepared) {
           this.payPrepared(hero, prepared.copy);
-          if (prepared.clause.effect.op === 'add-success') successes += prepared.clause.effect.n;
-          else if (prepared.clause.effect.op === 'strike') {
+          if (prepared.clause.effect.op === 'add-success') {
+            successes += prepared.clause.effect.n;
+            bonusSuccesses += prepared.clause.effect.n;
+          } else if (prepared.clause.effect.op === 'strike') {
             addedHits += prepared.clause.effect.n;
             updateTest();
             this.afterStrike(hero, `${path}/strike-${n}`);
@@ -1587,9 +1724,11 @@ class FrontReplay {
           invariant(help.effect.op === 'last-stand-success', 'Aiuto senza capacità Ultimo Sforzo.');
           this.removeTitle(help.owner, help.copy);
           successes += help.effect.n;
+          bonusSuccesses += help.effect.n;
           continue;
         }
         if (selected === 'inspiration') {
+          useFates(1, 'converted', `inspiration-fate-${n}`);
           h.inspiration--;
           fate--;
           successes++;
@@ -1619,12 +1758,19 @@ class FrontReplay {
         } else {
           const ability = abilities.find((a) => a.copy === selected)!;
           if (ability.effect.op === 'convert-pair-alone') {
+            useFates(2, 'spent', `spent-fates-${n}`);
             fate -= 2;
             successes++;
+            bonusSuccesses++;
           } else if (
             ability.effect.op === 'convert-all' ||
             ability.effect.op === 'convert-one-scout'
           ) {
+            useFates(
+              ability.effect.op === 'convert-all' ? fate : 1,
+              'converted',
+              `ability-fates-${n}`,
+            );
             h.prepared.splice(h.prepared.indexOf(selected), 1);
             h.discard.push(selected);
             const converted = ability.effect.op === 'convert-all' ? fate : 1;
