@@ -10,6 +10,7 @@ import {
   InstructionSelectionSchema,
   SuccessSlotSchema,
   AttackModifierSchema,
+  ActivationHeroSelectionSchema,
 } from './combat';
 const id = z.string().min(1).max(350);
 const binding = { expectedRevision: z.int().nonnegative() };
@@ -75,7 +76,7 @@ export const CombatAttemptSchema = z.strictObject({
   id: z.uuid(),
   parentId: z.uuid().nullable(),
   operationId: z.uuid().nullable(),
-  kind: z.enum(['hero-attack', 'provocation']),
+  kind: z.enum(['hero-attack', 'provocation', 'activation']),
   heroId: ContentIdSchema,
   playerId: z.uuid(),
   groupId: id,
@@ -84,6 +85,7 @@ export const CombatAttemptSchema = z.strictObject({
   cost: z.enum(['action', 'grant', 'none']),
   grantId: z.uuid().nullable(),
   stage: z.enum([
+    'activation-choice',
     'attack-test',
     'counterattack',
     'enemy-frontier',
@@ -145,6 +147,18 @@ export const CombatAttemptSchema = z.strictObject({
     })
     .nullable(),
   reward: z.strictObject({ heroId: ContentIdSchema, amount: z.int().min(0).max(1) }).nullable(),
+  activation: z
+    .strictObject({
+      frameId: z.uuid(),
+      target: ActivationHeroSelectionSchema.nullable(),
+      branch: z.enum(['primary', 'alternative']).nullable(),
+      recipient: ContentIdSchema.nullable(),
+      movesRemaining: z.int().min(0).max(8),
+      stop: z.int().min(0).max(1),
+      interrupted: z.boolean(),
+      positions: z.array(z.string().max(200)).max(100),
+    })
+    .optional(),
   returned: z.boolean(),
 });
 export type CombatAttempt = z.infer<typeof CombatAttemptSchema>;
@@ -200,7 +214,7 @@ export const CombatViewSchema = z.strictObject({
     .strictObject({
       id: z.uuid(),
       heroId: ContentIdSchema,
-      kind: z.enum(['hero-attack', 'provocation']),
+      kind: CombatAttemptSchema.shape.kind,
       groupId: id,
       name: z.string().max(1000),
       stage: CombatAttemptSchema.shape.stage,
@@ -210,6 +224,14 @@ export const CombatViewSchema = z.strictObject({
       packet: CombatAttemptSchema.shape.packet,
       result: CombatAttemptSchema.shape.result,
       applied: CombatAttemptSchema.shape.applied,
+      activation: z
+        .strictObject({
+          initialHeroId: ContentIdSchema.nullable(),
+          recipientHeroId: ContentIdSchema.nullable(),
+          branch: z.enum(['primary', 'alternative']).nullable(),
+          movesRemaining: z.int().min(0).max(8),
+        })
+        .optional(),
     })
     .nullable(),
   pending: z
@@ -236,7 +258,7 @@ export const CombatViewSchema = z.strictObject({
     .strictObject({
       heroId: ContentIdSchema,
       name: z.string().max(1000),
-      kind: z.enum(['hero-attack', 'provocation']),
+      kind: CombatAttemptSchema.shape.kind,
       hits: z.int().min(0).max(10000).nullable(),
       returnLabel: z.string().max(1000),
     })

@@ -36,6 +36,7 @@ import {
   finishSourceReset,
   finishSourceRally,
   advanceSourceShadow,
+  advanceSourceActivations,
 } from '../scenario/round-source';
 
 const originalIntents = z.discriminatedUnion('type', [
@@ -83,9 +84,14 @@ function darknessHeroes(state: State) {
     return space.hasDarkness ? [n] : [];
   });
 }
-function finish(state: State, task: NonNullable<CycleState['pending']>) {
+function finish(
+  state: State,
+  task: NonNullable<CycleState['pending']>,
+  record: CycleState['records'][number],
+) {
   if (task.type === 'START_ATTACK') {
     advanceCombat(state);
+    continueActivations(state, record);
     return;
   }
   const round = state.round!,
@@ -102,6 +108,32 @@ function finish(state: State, task: NonNullable<CycleState['pending']>) {
     round.phase = 'rally';
     round.shadowStep = null;
   }
+}
+function openSourceDarkness(state: State, record: CycleState['records'][number]) {
+  const affected = darknessHeroes(state);
+  if (!affected.length) {
+    finishSourceDarkness(state);
+    return null;
+  }
+  const data = state.scenario!.pack.manifest.rounds!.darkness;
+  return runSource(state, record, [
+    {
+      kind: 'darkness',
+      hero: affected[0]!,
+      heroes: affected,
+      amount: data.amount,
+      face: data.face,
+      negate: data.negate,
+    },
+  ]);
+}
+function continueActivations(state: State, record: CycleState['records'][number]) {
+  if (!advanceSourceActivations(state)) return;
+  const runId = openSourceDarkness(state, record);
+  if (!runId) return;
+  const task = { runId, type: 'BEGIN_SHADOW' as const, heroId: state.physical!.heroes[0]!.heroId };
+  if (state.physical!.snapshot.active) state.physical!.cycle!.pending = task;
+  else finish(state, task, record);
 }
 function runSource(
   state: State,
@@ -272,6 +304,7 @@ function execute(
       c.type === 'START_ATTACK'
         ? startHeroAttack(state, record.playerId, c, record.requestId)
         : answerCombat(state, record.playerId, c, record.requestId);
+    continueActivations(state, record);
     const resumedJourney = resumeProvocation(state, cycle, record);
     return {
       ...(resumedJourney ? { resumedJourney } : {}),
@@ -327,9 +360,10 @@ function execute(
           heroId: p.heroes[0]!.heroId,
         };
         if (p.snapshot.active) cycle.pending = task;
-        else finish(state, task);
+        else finish(state, task, record);
       }
       if (state.combat?.active && !state.scenario!.pending) advanceCombat(state);
+      continueActivations(state, record);
       const resumedJourney = state.combat ? resumeProvocation(state, cycle, record) : undefined;
       return {
         ...(resumedJourney ? { resumedJourney } : {}),
@@ -403,7 +437,7 @@ function execute(
     if (completed) {
       const task = cycle.pending!;
       cycle.pending = null;
-      finish(state, task);
+      finish(state, task, record);
       if (task.type === 'START_ATTACK') resumedJourney = resumeProvocation(state, cycle, record);
     }
     return {
@@ -479,20 +513,8 @@ function execute(
       fail('TURNS_PENDING', 'Tutti gli eroi devono concludere il turno.');
     if (state.scenario!.rounds) {
       beginSourceShadow(state, record.requestId, record.shadowEntropy);
-      const affected = darknessHeroes(state);
-      if (affected.length) {
-        const data = state.scenario!.pack.manifest.rounds!.darkness;
-        runId = runSource(state, record, [
-          {
-            kind: 'darkness',
-            hero: affected[0]!,
-            heroes: affected,
-            amount: data.amount,
-            face: data.face,
-            negate: data.negate,
-          },
-        ]);
-      } else finishSourceDarkness(state);
+      if (state.scenario!.pack.manifest.combat?.source.shadow) continueActivations(state, record);
+      else runId = openSourceDarkness(state, record);
     } else {
       round.phase = 'shadow';
       round.shadowStep = 'enemies';
@@ -571,7 +593,7 @@ function execute(
     );
     const task = { runId, type: c.type, heroId: hero?.heroId ?? p.heroes[0]!.heroId };
     if (p.snapshot.active) cycle.pending = task;
-    else finish(state, task);
+    else finish(state, task, record);
   }
   if (c.type === 'START_RALLY_SCOUT')
     return {

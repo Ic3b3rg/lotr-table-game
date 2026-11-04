@@ -59,7 +59,18 @@ export const SourceRoundStateSchema = z.strictObject({
         id: z.uuid(),
         roundId: z.uuid(),
         number: z.int().positive(),
-        stage: z.enum(['darkness', 'events', 'threat', 'thresholds', 'reset', 'rally', 'complete']),
+        stage: z.enum([
+          'enemies',
+          'darkness',
+          'events',
+          'threat',
+          'thresholds',
+          'reset',
+          'rally',
+          'complete',
+        ]),
+        activated: z.array(z.string().max(350)).max(100).optional(),
+        refreshed: z.array(z.string().max(350)).max(100).optional(),
         dispatch: z
           .strictObject({
             targets: z.array(z.string().max(200)).max(600),

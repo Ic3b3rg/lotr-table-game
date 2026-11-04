@@ -11,7 +11,7 @@ import type { PhysicalProgram } from '../shared/physical';
 import type { CombatClosure } from './compiler';
 import { verifyCombatClosure } from './compiler';
 import { effectiveGroup, preflightCombatGroup, applyGroupHits } from './group';
-import { selectGroupInstruction, groupAttackPacket } from './selection';
+import { selectGroupInstruction, groupAttackPacket, selectActivationHero } from './selection';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
@@ -21,12 +21,21 @@ import { definitionId } from '../shared/preparation';
 import { ApiError } from '../server/errors';
 import { verifySourceDeployment } from './deployment-compiler';
 import { preflightCombatOperation } from './preflight';
-import { threatMovements, moveEnemyOneSpace, groupInRange } from './movement';
+import {
+  threatMovements,
+  moveEnemyOneSpace,
+  groupInRange,
+  activeCompany,
+  activationTargets,
+  activationSteps,
+  placeEnemyInSpace,
+} from './movement';
 import { physicalLimits } from '../physical-resolution/effects';
 import { applyGrantedMove } from '../server/journey-map';
 import { exploreScenario } from '../scenario/runtime';
 import { explorationSource, explorationProblem } from '../shared/exploration';
 import { STAT_LABELS } from '../shared/skill-tests';
+import { combatDarknessHeroes } from '../scenario/darkness';
 
 const fail = (code: string, message: string): never => {
   throw new ApiError(409, code, message);
@@ -55,7 +64,7 @@ export function initialCombat(state: State): CombatState {
       entropy: state.physical!.entropy,
       artifact: a.fingerprint,
     }),
-    streams: { instruction: 0, reduction: 0 },
+    streams: { instruction: 0, reduction: 0, ...(a.source.shadow ? { target: 0 } : {}) },
     active: null,
     attempts: [],
     operation: null,
@@ -215,15 +224,7 @@ export function openCombatPhysical(
     profile: 'source-fronts-v1',
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
-    darknessHeroes: p.heroes.flatMap((h, n) => {
-      const source = state.scenario!.spaceBindings.find(
-        (b) => b.id === state.journey!.heroes.find((j) => j.heroId === h.heroId)!.spaceId,
-      )!.sourceId;
-      invariant(state.mapGeneration?.status === 'frozen', 'Mappa assente.');
-      return state.mapGeneration.projection.spaces.find((s) => s.id === source)!.hasDarkness
-        ? [n]
-        : [];
-    }),
+    darknessHeroes: combatDarknessHeroes(state),
     ...(deferFrontier ? { deferFrontier: 'combat-frontier-v1' as const } : {}),
     combat: {
       version: 'combat-windows-v1',
@@ -289,7 +290,7 @@ function newAttempt(
     kind,
     itemCopies: [],
     stat: null,
-    cost: kind === 'provocation' ? 'none' : 'action',
+    cost: kind === 'hero-attack' ? 'action' : 'none',
     grantId: null,
     stage: kind === 'provocation' ? 'counterattack' : 'attack-test',
     runId: null,
@@ -306,6 +307,100 @@ function newAttempt(
   cs.attempts.push(attempt);
   cs.active = attempt.id;
   return attempt;
+}
+/** Start only the first ready live group, preserving EnemiesInPlay order. */
+export function startSourceActivation(state: State, frameId: string) {
+  const cs = state.combat!,
+    artifact = combatArtifact(state);
+  invariant(artifact.source.shadow && !cs.active, 'Attivazione senza capacità o ritorno.');
+  const g = state.scenario!.enemies!.groups.find(
+    (g) => g.placed && !g.exhausted && g.figures.some((f) => f.health > 0),
+  );
+  if (!g) return false;
+  const heroes = activeCompany(state);
+  invariant(heroes.length, 'Attivazione senza eroi attivi.');
+  const a = newAttempt(state, frameId, heroes[0]!.heroId, heroes[0]!.playerId, g.id, 'activation');
+  a.stage = 'activation-choice';
+  a.selection = selectGroupInstruction(artifact, g, cs.entropy, cs.streams);
+  const instruction = selectedInstruction(state, a);
+  invariant(instruction.activation, 'Istruzione senza attivazione fonte.');
+  const target = instruction.activation.randomHero
+    ? selectActivationHero(
+        heroes.map((h) => h.heroId),
+        cs.entropy,
+        cs.streams,
+      )
+    : null;
+  a.activation = {
+    frameId,
+    target,
+    branch: null,
+    recipient: null,
+    movesRemaining: 0,
+    stop: 0,
+    interrupted: false,
+    positions: [g.spaceId],
+  };
+  if (target) {
+    a.heroId = target.heroId;
+    a.playerId = heroes.find((h) => h.heroId === target.heroId)!.playerId;
+  }
+  return true;
+}
+function selectedInstruction(state: State, a: CombatAttempt) {
+  return combatArtifact(state)
+    .compiled.models.find((m) => m.source === a.selection!.model)!
+    .instructions.find((i) => i.source === a.selection!.source)!;
+}
+function activationOptions(state: State, a: CombatAttempt) {
+  const activation = a.activation!,
+    g = group(state, a.groupId);
+  const label = (id: string) => state.content!.heroes.find((h) => h.id === id)!.name.text;
+  if (!activation.branch)
+    return activationTargets(
+      state,
+      g.spaceId,
+      selectedInstruction(state, a).activation!,
+      activation.interrupted ? null : (activation.target?.heroId ?? null),
+      effectiveGroup(combatArtifact(state), g).ranged ? 1 : 0,
+    ).map((target) => ({
+      ...target,
+      id: `target:${target.heroId}`,
+      label:
+        target.branch === 'primary'
+          ? `Raggiungi ${label(target.heroId)} e attacca`
+          : `Alternativa: avanza verso ${label(target.heroId)}`,
+    }));
+  if (activation.movesRemaining)
+    return activationSteps(state, g.spaceId, activation.recipient!).map((to) => {
+      const ordinary = state.scenario!.spaceBindings.find((b) => b.sourceId === to)!.id;
+      return {
+        id: `step:${digest({ attempt: a.id, from: g.spaceId, to, positions: activation.positions })}`,
+        destination: to,
+        label: `Muovi ${name(state, g.id)} in ${state.journey!.definition.spaces.find((s) => s.id === ordinary)!.label}`,
+      };
+    });
+  return [];
+}
+function advanceActivation(state: State, a: CombatAttempt) {
+  const activation = a.activation!,
+    g = group(state, a.groupId);
+  if (!g.placed || g.exhausted || !g.figures.some((f) => f.health > 0)) {
+    complete(state, a);
+    return true;
+  }
+  if (!activation.branch || activation.movesRemaining) {
+    if (activationOptions(state, a).length) return false;
+    complete(state, a);
+    return true;
+  }
+  if (activation.branch === 'primary' && alive(state, activation.recipient!)) {
+    a.heroId = activation.recipient!;
+    a.playerId = state.preparation!.heroes.find((h) => h.heroId === a.heroId)!.playerId;
+    if (enemyAttack(state, a)) return true;
+  }
+  complete(state, a);
+  return true;
 }
 export function startHeroAttack(
   state: State,
@@ -402,7 +497,11 @@ function enemyAttack(state: State, attempt: CombatAttempt) {
     a,
     g,
     attempt.selection,
-    attempt.kind === 'provocation' ? 'provocation' : 'counterattack',
+    attempt.kind === 'activation'
+      ? 'activation'
+      : attempt.kind === 'provocation'
+        ? 'provocation'
+        : 'counterattack',
     cs.entropy,
     cs.streams,
   );
@@ -416,6 +515,7 @@ function enemyAttack(state: State, attempt: CombatAttempt) {
     g.exhausted = true;
     if (effect.elite) g.attackReduction = (g.attackReduction ?? 0) + 1;
   }
+  if (attempt.kind === 'activation') g.attackReduction = (g.attackReduction ?? 0) + 1;
   attempt.stage = 'counterattack';
   const outcome = {
     attackId: attempt.id,
@@ -423,10 +523,15 @@ function enemyAttack(state: State, attempt: CombatAttempt) {
     instructionId: attempt.selection.source,
     instructionHash: attempt.selection.fingerprint,
     recipientHeroId: attempt.heroId,
-    cause: attempt.kind === 'provocation' ? ('provocation' as const) : ('counterattack' as const),
+    cause:
+      attempt.kind === 'activation'
+        ? ('activation' as const)
+        : attempt.kind === 'provocation'
+          ? ('provocation' as const)
+          : ('counterattack' as const),
     rootSource: `combat:${attempt.id}`,
     directSource: `combat:${attempt.id}:base`,
-    returnTo: attempt.operationId ?? attempt.parentId ?? attempt.id,
+    returnTo: attempt.activation?.frameId ?? attempt.operationId ?? attempt.parentId ?? attempt.id,
     artifactFingerprint: a.fingerprint,
     projectionFingerprint: a.source.projectionFingerprint,
     figureIds: g.figures.filter((f) => f.health > 0).map((f) => f.id),
@@ -454,6 +559,15 @@ function enemyAttack(state: State, attempt: CombatAttempt) {
   return true;
 }
 function complete(state: State, attempt: CombatAttempt) {
+  if (attempt.activation) {
+    group(state, attempt.groupId).exhausted = true;
+    const frame = state.scenario!.rounds!.frames.find((f) => f.id === attempt.activation!.frameId)!;
+    invariant(
+      frame.stage === 'enemies' && !frame.activated!.includes(attempt.groupId),
+      'Ritorno attivazione duplicato.',
+    );
+    frame.activated!.push(attempt.groupId);
+  }
   attempt.stage = 'completed';
   attempt.returned = true;
   attempt.runId = null;
@@ -469,6 +583,10 @@ export function advanceCombat(state: State) {
       p = state.physical!;
     if (p.snapshot.active || state.scenario!.pending) return;
     if (p.cycle?.pending?.type === 'START_ATTACK') p.cycle.pending = null;
+    if (attempt.stage === 'activation-choice') {
+      if (advanceActivation(state, attempt)) continue;
+      return;
+    }
     const results = attempt.runId
       ? p.snapshot.parents.find((r) => r.id === attempt.runId)?.results
       : undefined;
@@ -533,7 +651,7 @@ export function advanceCombat(state: State) {
         continue;
       }
       if (choices.length) return;
-      if (attempt.kind === 'provocation') {
+      if (attempt.kind === 'provocation' || attempt.kind === 'activation') {
         complete(state, attempt);
         continue;
       }
@@ -578,7 +696,11 @@ function additionDue(state: State, a: CombatAttempt) {
     (p === 'fear-positive' && o.suffered.fear > 0) ||
     (p === 'zero-damage-and-fear' && !o.suffered.damage && !o.suffered.fear) ||
     (p === 'recipient-in-darkness' &&
-      state.mapGeneration.projection.spaces.find((s) => s.id === source)!.hasDarkness)
+      (combatArtifact(state).source.shadow
+        ? combatDarknessHeroes(state).includes(
+            state.preparation!.heroes.findIndex((h) => h.heroId === a.heroId),
+          )
+        : state.mapGeneration.projection.spaces.find((s) => s.id === source)!.hasDarkness))
   );
 }
 function frontierOptions(state: State, a: CombatAttempt) {
@@ -813,7 +935,13 @@ export function combatPending(state: State): CombatView['pending'] {
     heroId = h.heroId,
     actorPlayerId = h.playerId;
   let options: NonNullable<CombatView['pending']>['options'] = [];
-  if (a.stage === 'enemy-frontier') {
+  if (a.stage === 'activation-choice') {
+    const target = a.activation!.target?.heroId;
+    title = a.activation!.branch
+      ? 'Scegli il prossimo passo del percorso minimo.'
+      : `Scegli il destinatario legale dell’istruzione.${target ? ` Destinatario iniziale: ${state.content!.heroes.find((h) => h.id === target)!.name.text}.` : ''}`;
+    options = activationOptions(state, a).map(({ id, label }) => ({ id, label }));
+  } else if (a.stage === 'enemy-frontier') {
     title = 'La fonte è conclusa. Scegli l’ordine di Ultimo Sforzo e delle conseguenze simultanee.';
     options = frontierOptions(state, a);
   } else if (a.stage === 'movement') {
@@ -890,7 +1018,22 @@ export function answerCombat(
   if (!option || option.unavailable)
     fail('COMBAT_OPTION', option?.unavailable ?? 'La scelta non è disponibile.');
   const a = current(state);
-  if (a.stage === 'enemy-frontier') beginFrontier(state, a, c.choice);
+  if (a.stage === 'activation-choice') {
+    const option = activationOptions(state, a).find((o) => o.id === c.choice)!,
+      activation = a.activation!;
+    if ('heroId' in option) {
+      activation.branch = option.branch;
+      activation.recipient = option.heroId;
+      a.heroId = option.heroId;
+      a.playerId = state.preparation!.heroes.find((h) => h.heroId === option.heroId)!.playerId;
+      activation.movesRemaining = option.moves;
+      activation.stop = option.stop;
+    } else {
+      placeEnemyInSpace(state, group(state, a.groupId), option.destination);
+      activation.positions.push(option.destination);
+      activation.movesRemaining--;
+    }
+  } else if (a.stage === 'enemy-frontier') beginFrontier(state, a, c.choice);
   else if (a.stage === 'movement') {
     const move = movementOptions(state, a).find((m) => m.id === c.choice)!;
     a.movement!.selected = {
@@ -951,6 +1094,8 @@ export function combatView(state: State): CombatView | undefined {
   );
   const last = state.combat.attempts.filter((a) => a.returned).at(-1);
   const returnLabel = (a: CombatAttempt) => {
+    if (a.activation)
+      return 'Riprende l’Ombra con il prossimo gruppo pronto, poi oscurità e minaccia.';
     const op = a.operationId ? state.combat!.operations.find((o) => o.id === a.operationId) : null;
     if (op?.status === 'cancelled') return op.reason!;
     return a.operationId
@@ -979,17 +1124,47 @@ export function combatView(state: State): CombatView | undefined {
                   i = artifact.compiled.models
                     .find((m) => m.source === a.selection!.model)!
                     .instructions.find((i) => i.source === a.selection!.source)!;
+                const activation = a.activation;
+                const instruction =
+                  activation && i.activation
+                    ? activation.branch === 'alternative'
+                      ? i.activation.alternative.value
+                      : activation.interrupted
+                        ? i.activation.interrupted.value
+                        : i.activation.primary.value.replaceAll(
+                            '{0}',
+                            activation.target
+                              ? state.content!.heroes.find(
+                                  (h) => h.id === activation.target!.heroId,
+                                )!.name.text
+                              : '',
+                          )
+                    : null;
                 return (
-                  i.text.value +
-                  (i.addition
-                    ? '\n\n' + artifact.source.texts.find((t) => t.key === i.addition!.key)!.value
-                    : '')
+                  (instruction ? instruction + '\n\n' : '') +
+                  (activation?.branch === 'alternative'
+                    ? ''
+                    : i.text.value +
+                      (i.addition
+                        ? '\n\n' +
+                          artifact.source.texts.find((t) => t.key === i.addition!.key)!.value
+                        : ''))
                 );
               })()
             : null,
           packet: a.packet,
           result: a.result,
           applied: a.applied,
+          ...(a.activation
+            ? {
+                activation: {
+                  initialHeroId: a.activation.target?.heroId ?? null,
+                  recipientHeroId: a.activation.recipient,
+                  branch: a.activation.branch,
+                  movesRemaining: a.activation.movesRemaining,
+                },
+              }
+            : {}),
         }
       : null,
     pending: combatPending(state),

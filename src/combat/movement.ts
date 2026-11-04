@@ -22,6 +22,82 @@ export function groupInRange(state: State, heroId: string, group: DeployedGroup,
   );
 }
 
+/** Visible movement edges, never the authoring ConnectedSpaces collection. */
+function activationGraph(state: State) {
+  invariant(state.mapGeneration?.status === 'frozen', 'Attivazione senza grafo congelato.');
+  const p = state.mapGeneration.projection;
+  const visible = new Set(
+    p.spaces
+      .filter((s) => state.scenario!.tiles.some((t) => t.source === s.tileSource && t.visible))
+      .map((s) => s.id),
+  );
+  const edges = p.movementGraph.edges.filter((e) => visible.has(e.a) && visible.has(e.b));
+  return (from: string) => edges.flatMap((e) => (e.a === from ? [e.b] : e.b === from ? [e.a] : []));
+}
+function heroSourceSpace(state: State, heroId: string) {
+  const position = state.journey!.heroes.find((h) => h.heroId === heroId);
+  invariant(position, 'Destinatario senza posizione.');
+  const binding = state.scenario!.spaceBindings.find((b) => b.id === position.spaceId);
+  invariant(binding, 'Destinatario senza binding fonte.');
+  return binding.sourceId;
+}
+function activationDistances(state: State, to: string) {
+  const neighbors = activationGraph(state),
+    distances = new Map([[to, 0]]),
+    queue = [to];
+  for (let n = 0; n < queue.length; n++)
+    for (const next of neighbors(queue[n]!))
+      if (!distances.has(next)) {
+        distances.set(next, distances.get(queue[n]!)! + 1);
+        queue.push(next);
+      }
+  return distances;
+}
+export function activeCompany(state: State) {
+  return state.preparation!.heroes.filter(
+    (h) =>
+      !defeatedHeroes(state).includes(h.heroId) &&
+      !state.journey!.heroes.find((p) => p.heroId === h.heroId)!.removed,
+  );
+}
+export function activationTargets(
+  state: State,
+  from: string,
+  policy: { movement: number; alternativeMovement: number; alternativeDestination: string },
+  initialHeroId: string | null,
+  range: number,
+) {
+  const heroes = activeCompany(state).flatMap((h) => {
+    const distance = activationDistances(state, heroSourceSpace(state, h.heroId)).get(from);
+    return distance === undefined ? [] : [{ heroId: h.heroId, distance }];
+  });
+  const attackable = heroes.filter((h) => h.distance <= policy.movement + range);
+  const initial = attackable.find((h) => h.heroId === initialHeroId);
+  const nearest = (pool: typeof heroes) =>
+    pool.filter((h) => h.distance === Math.min(...pool.map((h) => h.distance)));
+  if (attackable.length)
+    return (initial ? [initial] : nearest(attackable)).map((h) => ({
+      ...h,
+      branch: 'primary' as const,
+      moves: Math.max(0, h.distance - range),
+      stop: range,
+    }));
+  const stop = policy.alternativeDestination === 'adjacent-to-hero' ? 1 : 0;
+  return nearest(heroes).map((h) => ({
+    ...h,
+    branch: 'alternative' as const,
+    moves: Math.min(policy.alternativeMovement, Math.max(0, h.distance - stop)),
+    stop,
+  }));
+}
+export function activationSteps(state: State, from: string, heroId: string) {
+  const distances = activationDistances(state, heroSourceSpace(state, heroId));
+  const distance = distances.get(from);
+  return distance === undefined
+    ? []
+    : activationGraph(state)(from).filter((next) => distances.get(next) === distance - 1);
+}
+
 export function nearestThreatSteps(state: State, from: string) {
   invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza grafo congelato.');
   const sc = state.scenario!,
@@ -104,6 +180,13 @@ export function moveEnemyOneSpace(state: State, attempt: CombatAttempt, destinat
     ),
     'Movimento nemico non diretto verso la minaccia più vicina.',
   );
+  placeEnemyInSpace(
+    state,
+    state.scenario!.enemies!.groups.find((g) => g.id === attempt.groupId)!,
+    destination,
+  );
+}
+export function placeEnemyInSpace(state: State, g: DeployedGroup, destination: string) {
   invariant(state.mapGeneration?.status === 'frozen', 'Posa senza realizzazione.');
   const p = state.mapGeneration.projection,
     s = p.spaces.find((s) => s.id === destination)!;
@@ -114,7 +197,6 @@ export function moveEnemyOneSpace(state: State, attempt: CombatAttempt, destinat
     number,
     number,
   ]);
-  const g = state.scenario!.enemies!.groups.find((g) => g.id === attempt.groupId)!;
   g.spaceId = destination;
   g.tileSource = s.tileSource;
   g.position = [f(sum[0] / hexes.length), f(sum[1] / hexes.length), f(sum[2] / hexes.length)];

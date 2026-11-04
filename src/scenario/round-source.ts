@@ -8,6 +8,10 @@ import { groupTrialProgram } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { validatePhysical } from '../physical-resolution/runtime';
 import { livingEnemyGroups } from './deployment';
+import { combatArtifact, startSourceActivation } from '../combat/controller';
+import { preflightCombatOperation } from '../combat/preflight';
+import { activeCompany, activationTargets } from '../combat/movement';
+import { effectiveGroup } from '../combat/group';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -28,30 +32,9 @@ function integer(state: State, name: string) {
   );
   return value;
 }
-export function sourceDarknessHeroes(state: State): number[] {
-  const data = source(state),
-    sc = state.scenario!;
-  if (data.configuration.disableDarkness) return [];
-  if (sc.globals[data.bindings.darknessOverride] !== '')
-    fail(
-      'L’istruzione di oscurità di questa fonte richiede un consumer ulteriore. Nessuna pesca è stata applicata.',
-    );
-  return state.preparation!.heroes.flatMap((hero, index) => {
-    if (defeatedHeroes(state).includes(hero.heroId)) return [];
-    const position = state.journey!.heroes.find((p) => p.heroId === hero.heroId)!;
-    const binding = sc.spaceBindings.find((b) => b.id === position.spaceId);
-    const space = data.darkness.spaces.find((s) => s.id === binding?.sourceId);
-    invariant(space, 'Posizione senza proprietà fonte di oscurità.');
-    const token = sc.instances.some(
-      (i) =>
-        i.visible &&
-        i.spaceId === binding!.sourceId &&
-        i.prefab &&
-        data.darkness.tokenPrefabs.includes(i.prefab),
-    );
-    return sc.globals[data.bindings.darkness] === true || space.hasDarkness || token ? [index] : [];
-  });
-}
+export { sourceDarknessHeroes } from './darkness';
+import { sourceDarknessHeroes } from './darkness';
+
 function threat(state: State) {
   const data = source(state),
     sc = state.scenario!,
@@ -95,10 +78,12 @@ export function preflightSourceShadow(state: State, entropy?: string) {
       'Un eroe è sconfitto: l’inizio dell’Ombra richiede il seguito della perdita dell’avventura. Nessun avanzamento è stato applicato.',
     );
   invariant(!data.configuration.initialEnemyGroups.length, 'Attivazioni nemiche non disponibili.');
-  if (livingEnemyGroups(state).length)
+  const shadow = state.scenario!.pack.manifest.combat?.source.shadow;
+  if (livingEnemyGroups(state).length && !shadow)
     fail(
       'I gruppi nemici in gioco richiedono le loro attivazioni, non ancora disponibili. Nessun tick, pesca o costo è stato applicato.',
     );
+  if (shadow) preflightActivations(state);
   sourceDarknessHeroes(state);
   if (integer(state, data.bindings.threat) >= data.threat.limit)
     threatBoundary(state, integer(state, data.bindings.threat));
@@ -119,9 +104,20 @@ export function preflightSourceShadow(state: State, entropy?: string) {
           validatePhysicalProgram(groupTrialProgram(state, a), p.heroes.length);
           delete a.trial;
         }
+  // This closure's spawn has no result-dependent branches: all new groups wait
+  // until the next Shadow. Inspect the certified pool structurally, not a draw.
+  if (shadow)
+    for (const d of work.scenario!.pack.definitions)
+      for (const s of d.states)
+        s.actions = s.actions.map((a) =>
+          a.op === 'spawnRandom'
+            ? { index: a.index, op: 'set' as const, target: a.points, value: 0, origin: a.origin }
+            : a,
+        );
   try {
     if (work.scenario!.pack.manifest.followup) {
       initializeShadow(work, 'preflight');
+      activeFrame(work).stage = 'darkness';
       work.scenario!.enemies!.entropy ??= entropy ?? '0'.repeat(64);
       finishSourceDarkness(work);
       for (let n = 0; n < 2000; n++) {
@@ -190,17 +186,93 @@ function initializeShadow(state: State, requestId: string) {
     rounds = sc.rounds!;
   invariant(rounds.active === null, 'Ombra già in corso.');
   const id = cycleUUID({ scenario: sc.id, round: round.id, requestId, kind: 'source-round' });
+  const activations = !!sc.pack.manifest.combat?.source.shadow;
   rounds.frames.push({
     id,
     roundId: round.id,
     number: round.number,
-    stage: 'darkness',
+    stage: activations ? 'enemies' : 'darkness',
+    ...(activations ? { activated: [], refreshed: [] } : {}),
     darknessHeroes: sourceDarknessHeroes(state).map((n) => state.preparation!.heroes[n]!.heroId),
     threat: null,
   });
   rounds.active = id;
   round.phase = 'shadow';
-  round.shadowStep = 'darkness';
+  round.shadowStep = activations ? 'enemies' : 'darkness';
+}
+function preflightActivations(state: State) {
+  const a = combatArtifact(state),
+    cap = a.source.shadow!,
+    sc = state.scenario!;
+  if (
+    sc.tiles.some((t) => t.visible && !cap.terrain.tiles.some((p) => p.source === t.source)) ||
+    sc.instances.some(
+      (i) => i.visible && i.prefab && cap.terrain.forbiddenPrefabs.includes(i.prefab),
+    )
+  )
+    fail(
+      'Questo terreno richiede effetti di attivazione ulteriori. Nessun effetto dell’Ombra è stato applicato.',
+    );
+  for (const g of livingEnemyGroups(state)) {
+    if (g.logic)
+      fail(
+        'Il seguito e il refresh di questo gruppo non sono ancora disponibili. Nessun effetto dell’Ombra è stato applicato.',
+      );
+    if (!g.placed || g.exhausted) continue;
+    const effective = effectiveGroup(a, g);
+    const size = g.figures.filter((f) => f.health > 0).length;
+    const canAttack = effective.model.instructions
+      .filter((i) => i.minimum <= size && i.maximum >= 1)
+      .some((i) =>
+        activationTargets(state, g.spaceId, i.activation!, null, effective.ranged ? 1 : 0).some(
+          (p) => p.branch === 'primary',
+        ),
+      );
+    if (!canAttack) continue;
+    for (const h of activeCompany(state)) {
+      const missing = preflightCombatOperation(state, a, g, h.heroId, 'activation');
+      if (missing.length)
+        fail(
+          missing.includes('boon-quantities-57')
+            ? 'Una possibile attivazione richiede l’acquisizione di benefici la cui riserva non è verificata. Nessun movimento, carta, tick o minaccia è stato applicato.'
+            : 'Una possibile conseguenza dell’attivazione non è ancora disponibile. Nessun effetto dell’Ombra è stato applicato.',
+        );
+    }
+  }
+}
+/** Rescan after the complete physical frontier, never after a mere acknowledgement. */
+export function advanceSourceActivations(state: State) {
+  if (!state.scenario?.rounds?.active || !state.scenario.pack.manifest.combat?.source.shadow)
+    return false;
+  const frame = activeFrame(state);
+  if (
+    frame.stage !== 'enemies' ||
+    state.combat!.active ||
+    state.scenario.pending ||
+    state.physical!.snapshot.active
+  )
+    return false;
+  if (startSourceActivation(state, frame.id)) return false;
+  frame.stage = 'darkness';
+  frame.darknessHeroes = sourceDarknessHeroes(state).map(
+    (n) => state.preparation!.heroes[n]!.heroId,
+  );
+  state.round!.shadowStep = 'darkness';
+  return true;
+}
+function refreshSourceGroups(state: State) {
+  const cap = state.scenario!.pack.manifest.combat?.source.shadow;
+  if (!cap) return;
+  const frame = activeFrame(state);
+  for (const g of livingEnemyGroups(state)) {
+    invariant(!g.logic, 'BEFORE_UNEXHAUST richiede il consumer della logica nemica.');
+    // Source groups with no logic have no receiver for BEFORE_UNEXHAUST.
+    // Record that event boundary before changing either property.
+    invariant(!frame.refreshed!.includes(g.id), 'Refresh duplicato.');
+    frame.refreshed!.push(g.id);
+    g.exhausted = false;
+    g.attackReduction = 0;
+  }
 }
 export function beginSourceShadow(state: State, requestId: string, entropy?: string) {
   preflightSourceShadow(state, entropy);
@@ -271,6 +343,7 @@ export function advanceSourceShadow(state: State): boolean {
       .filter((t) => t.threshold <= frame.threat!.after)
       .sort((a, b) => a.threshold - b.threshold)[0];
     if (!next) {
+      refreshSourceGroups(state);
       frame.stage = 'reset';
       return true;
     }

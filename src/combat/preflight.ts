@@ -12,7 +12,7 @@ export function preflightCombatOperation(
   a: CombatClosure,
   first: DeployedGroup,
   heroId: string,
-  cause: 'counterattack' | 'provocation',
+  cause: 'counterattack' | 'provocation' | 'activation',
 ) {
   if (cause === 'counterattack') {
     const effect = effectiveGroup(a, first);

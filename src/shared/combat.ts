@@ -152,6 +152,54 @@ export const CombatClosureSourceSchema = z.strictObject({
       }),
     )
     .max(100),
+  shadow: z
+    .strictObject({
+      version: z.literal('source-shadow-activations-v1'),
+      companyFingerprint: HashSchema,
+      activationOverride: z.literal(-1),
+      controller: z.strictObject({
+        assemblyHash: HashSchema,
+        method: z.string().regex(/^06[0-9a-f]{6}$/),
+        bodyHash: HashSchema,
+        normalDifficulty: z.literal(0),
+        enemyPointsPerHero: z.literal(0),
+        difficultyEvidenceHash: HashSchema,
+      }),
+      beforeUnexhaust: id,
+      terrain: z.strictObject({
+        tiles: z.array(z.strictObject({ source: SourceSchema, evidenceHash: HashSchema })).max(200),
+        forbiddenPrefabs: z.array(SourceSchema).max(100),
+        evidenceHash: HashSchema,
+      }),
+      instructions: z
+        .array(
+          z.strictObject({
+            source: SourceSchema,
+            movement: z.int().min(0).max(8),
+            alternativeMovement: z.int().min(0).max(8),
+            alternativeDestination: z.enum(['hero', 'adjacent-to-hero']),
+            evidenceHash: HashSchema,
+          }),
+        )
+        .min(1)
+        .max(300),
+      thresholds: z
+        .array(
+          z.strictObject({
+            source: SourceSchema,
+            owner: SourceSchema,
+            definition: SourceSchema,
+            threshold: z.int().positive().max(999),
+            multiplier: z.int().positive().max(100),
+            nextSource: SourceSchema,
+            nextOwner: SourceSchema,
+            nextThreshold: z.int().positive().max(999),
+            evidenceHash: HashSchema,
+          }),
+        )
+        .max(10),
+    })
+    .optional(),
 });
 export type CombatClosureSource = z.infer<typeof CombatClosureSourceSchema>;
 export const CombatClosureArtifactSchema = z.strictObject({
@@ -163,8 +211,17 @@ export const CombatClosureArtifactSchema = z.strictObject({
 export const CombatStreamsSchema = z.strictObject({
   instruction: z.int().min(0).max(1000000),
   reduction: z.int().min(0).max(1000000),
+  target: z.int().min(0).max(1000000).optional(),
 });
 export type CombatStreams = z.infer<typeof CombatStreamsSchema>;
+export const ActivationHeroSelectionSchema = z.strictObject({
+  algorithm: z.literal('combat-target-sha256-rejection-v1'),
+  population: z.array(ContentIdSchema).min(1).max(5),
+  heroId: ContentIdSchema,
+  index: z.int().min(0).max(4),
+  cursorBefore: z.int().nonnegative(),
+  cursorAfter: z.int().nonnegative(),
+});
 export const InstructionSelectionSchema = z.strictObject({
   algorithm: z.literal('combat-group-sha256-rejection-v1'),
   groupId: id,
@@ -208,7 +265,7 @@ export const AttackOutcomeSchema = z.strictObject({
   instructionId: SourceSchema,
   instructionHash: HashSchema,
   recipientHeroId: ContentIdSchema,
-  cause: z.enum(['counterattack', 'provocation']),
+  cause: z.enum(['counterattack', 'provocation', 'activation']),
   rootSource: id,
   directSource: id,
   returnTo: id,
