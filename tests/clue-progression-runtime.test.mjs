@@ -89,7 +89,7 @@ test('message inspiration uses the existing physical consumer once and records a
   assert.equal(f.state.scenario.messageLog.length, 1);
   assert.equal(f.state.physical.snapshot.parents.length, 1);
 });
-test('whole clue continuation rejects a hidden receiver behind a possible result before paying any action', () => {
+test('whole clue continuation rejects a hidden receiver behind a source-admitted result before paying any action', () => {
   const f = runtime([
     state(0, [], { 'NODE CLICKED': 1 }),
     state(
@@ -113,7 +113,7 @@ test('whole clue continuation rejects a hidden receiver behind a possible result
           stat: 'might',
           sum: literal(0),
           bounds: [
-            { maximum: 98, event: 'LOW' },
+            { maximum: 0, event: 'LOW' },
             { maximum: 99, event: 'HIGH' },
           ],
         }),

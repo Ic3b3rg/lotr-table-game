@@ -193,6 +193,25 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         commands.clear();
         element('#scenario-error').hidden = true;
         body.replaceChildren(...(q ? [sourceText(q.text)] : []));
+        if (q?.kind === 'physical') {
+          const instance = sc!.instances.find((i) => i.id === q.instanceId),
+            action = sc!.pack.definitions
+              .find((d) => d.source === instance?.definition)
+              ?.states.find((s) => s.index === q.state)
+              ?.actions.find((a) => a.index === q.action);
+          if (action?.op === 'challenge' && 'scope' in action.sum) {
+            const total = (action.sum.scope === 'global' ? sc!.globals : instance!.variables)[
+              action.sum.name
+            ];
+            body.append(
+              text(
+                'p',
+                `Progresso dell’incontro: ${total} successi accumulati. I successi di questa prova si aggiungono al totale.`,
+                'company-help',
+              ),
+            );
+          }
+        }
         if (q?.kind === 'deployment') {
           const task = sc!.tasks.find(
             (t) =>
