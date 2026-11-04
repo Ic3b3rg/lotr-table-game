@@ -286,7 +286,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : q.kind === 'choice'
                 ? 'Scegli come proseguire'
                 : q.kind === 'physical'
-                  ? 'Completa la prova o la conseguenza dell’incontro'
+                  ? session.round?.phase === 'shadow'
+                    ? 'Risolvi la prova dell’Ombra'
+                    : 'Completa la prova o la conseguenza dell’incontro'
                   : 'Segui l’istruzione dell’avventura';
             const actor = q.actorPlayerId
               ? (session.players.find((p) => p.id === q.actorPlayerId)?.name ??
@@ -294,7 +296,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : 'Il gruppo';
             message = explorer
               ? `${actor} completa l’istruzione di esplorazione. L’ingresso ha usato 1 movimento, senza altre azioni; ${session.journey?.travel?.remaining ?? 0} movimenti residui restano salvati fino al ritorno.`
-              : `${actor} completa il passo corrente. L’interazione conserva costo e movimenti residui.`;
+              : session.round?.phase === 'shadow'
+                ? `${actor} completa l’istruzione dell’Ombra. Seguite i piazzamenti nell’ordine indicato; la Riorganizzazione attende tutti gli effetti.`
+                : `${actor} completa il passo corrente. L’interazione conserva costo e movimenti residui.`;
             target = '#scenario';
             label = 'Apri l’istruzione';
             topic = explorer ? 'exploration' : q.kind === 'physical' ? 'physical' : 'encounter';

@@ -1935,3 +1935,23 @@ body[data-scenario='setup'] #scout-discard-controls {
   outline: 2px solid currentColor;
   outline-offset: 4px;
 }
+
+.map-token {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(var(--map-inverse-zoom, 1));
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--surface, #fff8e9);
+  padding: 0.2rem 0.45rem;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  pointer-events: none;
+}
+.map-token-enemy {
+  color: #7c211c;
+  z-index: 5;
+}
+.map-token-exploration {
+  color: #254b3a;
+  z-index: 3;
+}

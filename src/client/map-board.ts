@@ -116,6 +116,13 @@ export function createMapBoard(select: (id: string) => void) {
       heroes: Journey['heroes'],
       catalog: Catalog,
       unexplored = new Set<string>(),
+      markers: {
+        id: string;
+        kind: 'enemy' | 'exploration';
+        label: string;
+        x: number;
+        y: number;
+      }[] = [],
     ) {
       map = definition;
       positions = heroes;
@@ -187,6 +194,20 @@ export function createMapBoard(select: (id: string) => void) {
         } else actor.append(text('span', definition.name.text.slice(0, 1)));
         plane.append(actor);
         actors.set(hero.heroId, actor);
+      }
+      for (const marker of markers) {
+        const token = text(
+          'span',
+          marker.kind === 'enemy' ? '⚑' : '◇',
+          `map-token map-token-${marker.kind}`,
+        );
+        token.dataset.tokenId = marker.id;
+        token.setAttribute('role', 'img');
+        token.setAttribute('aria-label', marker.label);
+        token.title = marker.label;
+        token.style.left = `${(marker.x / map.width) * 100}%`;
+        token.style.top = `${(marker.y / map.height) * 100}%`;
+        plane.append(token);
       }
       needsLayout = true;
       panX = 0;
