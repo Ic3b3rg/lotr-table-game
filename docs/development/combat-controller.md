@@ -132,3 +132,11 @@ sette SIGKILL, sette restore, dieci alterazioni risignate respinte e tutti i
 fonte riprodotta. Nessuna nuova corsa browser: client eseguibile e CSS identici
 alle prove ricevute, salvo commenti di percorso prodotti da esbuild.
 [Review, disposizione e limiti](../reviews/2026-11-04-combat-controller.md).
+
+## Estensione successiva
+
+La nuova capacità di [#87](shadow-activations.md) collega vere attivazioni,
+seguito25 e ritorno al nuovo round nello stesso controller e ledger. I pack85
+conservano i propri confini; la nuova capacità viene congelata prima dello
+startup. Le quantità57 restano non verificate e gated per scelta esplicita
+del proprietario.
