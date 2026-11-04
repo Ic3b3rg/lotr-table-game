@@ -132,3 +132,9 @@ Originali, parametri, input/byte/hash, comandi e tentativi sono in
 `.scratch/issue87/evidence-lock.json`. Host, osservatore, browser e tre contesti
 propri vengono chiusi prima del sigillo. Nessuna installazione, altro checkout,
 agente, push, PR o write GitHub. Il tavolo protetto non è stato consultato.
+
+Integrazione root: [review Standards/Spec e correzioni](../reviews/2026-11-04-shadow-activations.md).
+Tre difetti unici corretti con regressioni RED→GREEN: dipendenze abilitate da
+movimenti precedenti, alternative prive di percorso e origine persistente
+dell'esplorazione durante Ombra. Suite integrata633/633; backup e prove fonte
+ricontrollati. Il riepilogo UI riconosce le attivazioni disponibili nel nuovo pack.
