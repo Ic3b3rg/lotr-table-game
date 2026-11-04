@@ -1,5 +1,6 @@
 import type { Session, Player, Command } from '../shared/protocol';
 import type { ScenarioInstance } from '../shared/scenario';
+import { playableScenarioPrefab } from '../shared/clues';
 import { sourceText } from './source-text';
 import { text } from './dom';
 import { refreshActions } from './actions';
@@ -55,7 +56,7 @@ export function createEncounterInspection(
         : 0;
     const supported =
       sc.pack.manifest.scope === 'original-encounter-v1' &&
-      sc.pack.manifest.playablePrefabs?.includes(i.prefab!) &&
+      playableScenarioPrefab(sc.pack, i.prefab!) &&
       !!a;
     const allowed =
       supported &&
@@ -78,7 +79,9 @@ export function createEncounterInspection(
     commit.replaceChildren(...(a ? [sourceText(a.label)] : []));
     const remaining = session!.journey?.travel?.remaining ?? 0;
     info.textContent = !supported
-      ? 'Ispezionare e annullare è gratuito. Questo segnalino richiede effetti ancora in sviluppo.'
+      ? sc.pack.manifest.clues?.fort.prefab === i.prefab
+        ? 'Il covo è individuato. L’interazione finale e la conclusione dell’avventura richiedono ancora i loro effetti. Ispezionare e annullare è gratuito; nessuna azione viene consumata.'
+        : 'Ispezionare e annullare è gratuito. Questo segnalino richiede effetti ancora in sviluppo.'
       : allowed
         ? `Conferma: 1 azione${cost ? ` e ${cost} ispirazione richiesta dalle carte attive` : ``}. Movimenti del viaggio conservati: ${remaining}. Le prove e le scelte sono la continuazione dell’interazione.`
         : sc.pending

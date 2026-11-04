@@ -301,7 +301,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
             details.append(
               text(
                 'p',
-                'Gruppo in gioco. Combattimento e attivazioni richiedono le rispettive capacità. Un eroe nella sua casella deve provocare prima di viaggiare o interagire; quel seguito resta bloccato.',
+                session.combat
+                  ? 'Gruppo in gioco. Un eroe nella sua casella deve provocare prima di viaggiare o interagire. Seguite la richiesta di combattimento fino al ritorno.'
+                  : 'Gruppo in gioco. Combattimento e attivazioni richiedono le rispettive capacità. Un eroe nella sua casella deve provocare prima di viaggiare o interagire; quel seguito resta bloccato.',
               ),
             );
             tokens.append(details);

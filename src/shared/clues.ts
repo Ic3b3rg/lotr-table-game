@@ -1,0 +1,9 @@
+import type { ScenarioPack } from './scenario';
+
+/** Additional interactions are owned by the optional, immutable pre-startup capability. */
+export function playableScenarioPrefab(pack: ScenarioPack, source: string) {
+  return !!(
+    pack.manifest.playablePrefabs?.includes(source) ||
+    pack.manifest.clues?.encounters.includes(source)
+  );
+}

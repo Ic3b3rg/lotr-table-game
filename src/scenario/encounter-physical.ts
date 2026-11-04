@@ -38,6 +38,8 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
         target: action.op === 'sourceTest' ? action.target : null,
       },
     ];
+  else if (action.op === 'message' && action.inspiration)
+    children = [{ kind: 'inspiration', hero, amount: action.inspiration }];
   else {
     invariant(action.op === 'message' && action.consequence, 'Conseguenza senza Message fonte.');
     const c = action.consequence;

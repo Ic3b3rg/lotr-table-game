@@ -1,4 +1,5 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
+import { playableScenarioPrefab } from '../shared/clues';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
@@ -28,7 +29,9 @@ import {
   beginEncounterPhysical,
   openSourcePhysical,
   groupTrialProgram,
+  encounterProgram,
 } from './encounter-physical';
+import { validatePhysicalProgram } from '../physical-resolution/program';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { comparisonSort } from '../map-generation/comparison-sort';
 import { materializeDeployment, deploymentText } from './deployment';
@@ -68,6 +71,35 @@ function setValue(
   invariant(ref.name in store, 'Binding sconosciuto.');
   invariant(typeof store[ref.name] === typeof value, 'Tipo binding cambiato.');
   store[ref.name] = value;
+}
+function integerValue(
+  sc: Scenario,
+  i: ScenarioInstance,
+  value: Extract<ScenarioAction, { op: 'addInt' }>['value'],
+) {
+  const n = value.kind === 'literal' ? value.value : variable(sc, i, value.ref)[value.ref.name];
+  invariant(typeof n === 'number' && Number.isInteger(n), 'Binding intero non numerico.');
+  return n;
+}
+function challengeResult(
+  sc: Scenario,
+  i: ScenarioInstance,
+  a: Extract<ScenarioAction, { op: 'challenge' }>,
+  successes: number,
+) {
+  const prior = 'scope' in a.sum ? variable(sc, i, a.sum)[a.sum.name] : a.sum.value;
+  invariant(typeof prior === 'number', 'Somma non numerica.');
+  const total = Math.min(99, Math.max(0, prior + successes));
+  if ('scope' in a.sum) setValue(sc, i, a.sum, total);
+  const event = (
+    a.bounds.find(
+      (b) =>
+        (typeof b.maximum === 'number'
+          ? b.maximum
+          : (variable(sc, i, b.maximum)[b.maximum.name] as number)) >= total,
+    ) ?? a.bounds.at(-1)!
+  ).event;
+  return { total, event };
 }
 function resolveTile(
   state: State,
@@ -200,9 +232,158 @@ function logMessage(sc: Scenario, i: ScenarioInstance, index: number) {
 function complete(i: ScenarioInstance, index: number) {
   if (!i.completed.includes(index)) i.completed.push(index);
 }
-function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
+type SourceProbe = {
+  path: number[];
+  cursor: number;
+  supply: { damage: number; fear: number };
+};
+class SourceFork extends Error {
+  constructor(readonly count: number) {
+    super('Source continuation branches');
+  }
+}
+function probeChoice(probe: SourceProbe, count: number) {
+  const result = probe.path[probe.cursor++];
+  if (result === undefined) throw new SourceFork(count);
+  invariant(result < count, 'Ramo di verifica estraneo alla fonte.');
+  return result;
+}
+/** Traverse the real consumer on disposable mutable state, replacing only physical outcomes
+ * and nonbranching deployment. No cards, random draws or source opcodes are executed elsewhere. */
+function preflightContinuation(state: State, start: (work: State, probe: SourceProbe) => void) {
+  const paths: number[][] = [[]];
+  let runs = 0;
+  while (paths.length) {
+    invariant(++runs <= 10000, 'Budget verifica della continuazione superato.');
+    const sc = state.scenario!,
+      work: State = {
+        ...state,
+        scenario: { ...structuredClone({ ...sc, pack: undefined }), pack: sc.pack },
+        preparation: structuredClone(state.preparation),
+        round: structuredClone(state.round),
+        journey: structuredClone(state.journey),
+      },
+      probe: SourceProbe = {
+        path: paths.pop()!,
+        cursor: 0,
+        supply: {
+          damage: state.physical?.snapshot.decks.damage.length ?? 0,
+          fear: state.physical?.snapshot.decks.fear.length ?? 0,
+        },
+      };
+    try {
+      start(work, probe);
+      for (let n = 0; work.scenario!.pending; n++) {
+        invariant(n < 2000, 'Continuazione fonte ciclica.');
+        const s = work.scenario!,
+          q = s.pending!;
+        invariant(
+          [
+            'message',
+            'objective',
+            'placement',
+            'exploration-markers',
+            'exploration-intro',
+            'exploration-outro',
+            'choice',
+          ].includes(q.kind),
+          'Richiesta fuori dalla closure degli indizi.',
+        );
+        const input =
+          q.kind === 'choice'
+            ? {
+                kind: 'choice' as const,
+                event: q.options![probeChoice(probe, q.options!.length)]!.event,
+              }
+            : { kind: 'ack' as const };
+        resumeScenario(
+          work,
+          q.actorPlayerId ?? work.players[0]!.id,
+          {
+            type: 'SCENARIO_INPUT',
+            requestId: 'preflight-source-continuation-only',
+            generation: work.generation,
+            expectedRevision: work.revision,
+            scenarioId: s.id,
+            packFingerprint: s.packFingerprint,
+            projectionFingerprint: s.projectionFingerprint,
+            pendingId: q.id,
+            sourceFingerprint: q.fingerprint,
+            heroId: q.heroId,
+            input,
+          },
+          undefined,
+          probe,
+        );
+      }
+      invariant(
+        !work.scenario!.tasks.length &&
+          work.scenario!.instances.every((i) => i.stopped || i.settled),
+        'Continuazione senza ritorno fonte.',
+      );
+    } catch (error) {
+      if (error instanceof SourceFork) {
+        for (let n = error.count - 1; n >= 0; n--) paths.push([...probe.path, n]);
+      } else if (error instanceof ApiError) throw error;
+      else
+        throw new ApiError(
+          409,
+          'SCENARIO_CONTINUATION_CAPABILITY',
+          'Il seguito obbligatorio di questa interazione o esplorazione richiede effetti ancora in sviluppo. Nessun costo, movimento o carta è stato applicato.',
+        );
+    }
+  }
+}
+function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: SourceProbe) {
   const sc = state.scenario!,
     p = projection(state);
+  if (
+    probe &&
+    ((a.op === 'confirm' && i.kind !== 'exploration') ||
+      a.op === 'sourceTest' ||
+      a.op === 'challenge' ||
+      (a.op === 'message' && (a.consequence || a.inspiration)))
+  ) {
+    invariant(
+      state.physical?.version === 3 && state.physical.fronts && state.physical.lastStand,
+      'Closure fisica non posseduta.',
+    );
+    validatePhysicalProgram(encounterProgram(state, a), state.physical.heroes.length);
+    if (a.op === 'message' && a.consequence) {
+      const { family, amount } = a.consequence;
+      if (probe.supply[family] < amount)
+        throw new ApiError(
+          409,
+          'SCENARIO_PHYSICAL_DECK_EMPTY',
+          'Il mazzo necessario non ha carte sufficienti per il seguito obbligatorio. Nessun costo o pesca è stato applicato.',
+        );
+      // Reserve the full printed consequence on this path. No draw, prevention
+      // choice or hypothetical return may supply a later mandatory message.
+      probe.supply[family] -= amount;
+    }
+    if (a.op === 'message' && a.inspiration) {
+      messageRequest(state, i, a);
+      return;
+    }
+    complete(i, a.index);
+    if (a.op === 'confirm') invariant(send(sc, i, a.confirmEvent), 'Conferma senza seguito fonte.');
+    else if (a.op === 'challenge' || a.op === 'sourceTest') {
+      const successes = probeChoice(probe, 100),
+        event =
+          a.op === 'challenge'
+            ? challengeResult(sc, i, a, successes).event
+            : successes >= a.target
+              ? a.passEvent
+              : a.failEvent;
+      invariant(send(sc, i, event), 'Prova senza ramo fonte.');
+    } else logMessage(sc, i, a.index);
+    return;
+  }
+  if (probe && a.op === 'spawnRandom') {
+    invariant(sc.pack.manifest.followup && sc.enemies, 'Spawn senza capacità congelata.');
+    complete(i, a.index);
+    return;
+  }
   switch (a.op) {
     case 'confirm':
       if (i.kind === 'exploration') {
@@ -249,6 +430,31 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       break;
     case 'set':
       setValue(sc, i, a.target, structuredClone(a.value));
+      break;
+    case 'copyInt':
+      setValue(sc, i, a.target, integerValue(sc, i, a.value));
+      break;
+    case 'switchInt': {
+      const value = integerValue(sc, i, a.value),
+        match = a.cases.find((c) => integerValue(sc, i, c.equals) === value);
+      if (match) {
+        invariant(send(sc, i, match.event), 'Uguaglianza senza ramo fonte.');
+        return;
+      }
+      break;
+    }
+    case 'isExplored': {
+      const tile = resolveTile(state, i, a.tile),
+        marker = sc.explorationMarkers?.find((m) => m.tileSource === tile.source);
+      invariant(
+        send(sc, i, !marker || !marker.visible ? a.trueEvent : a.falseEvent),
+        'Esplorazione senza ramo fonte.',
+      );
+      return;
+    }
+    case 'focus':
+      for (const ref of a.positions)
+        invariant(Array.isArray(variable(sc, i, ref)[ref.name]), 'Posizione fonte non legata.');
       break;
     case 'flip': {
       const v = variable(sc, i, a.target)[a.target.name];
@@ -370,7 +576,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       break;
     }
     case 'message':
-      if (a.consequence) {
+      if (a.consequence || a.inspiration) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
@@ -387,9 +593,10 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
           m.visible = false;
         });
       const ordinary = i.kind === 'exploration';
+      const presented = ordinary || !!a.intro;
       if (ordinary) i.visible = false;
       const adjacent: number[] = [];
-      if (ordinary && !a.skipAdjacentSectionEvent)
+      if (presented && !a.skipAdjacentSectionEvent)
         for (const s of cells(state, tile.source))
           for (const id of s.connected) {
             const section = p.spaces.find((s) => s.id === id)!.sectionId;
@@ -402,9 +609,9 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         action: a.index,
         tileSource: tile.source,
         spaceIndex: 0,
-        stage: ordinary ? 'intro' : 'pre',
+        stage: presented && !a.skipIntro ? 'intro' : 'pre',
         waiting: null,
-        ...(ordinary ? { adjacent, adjacentIndex: 0 } : {}),
+        ...(presented ? { adjacent, adjacentIndex: 0 } : {}),
       });
       return;
     }
@@ -435,7 +642,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
   }
   complete(i, a.index);
 }
-function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
+function runInstance(state: State, i: ScenarioInstance, synchronous = false, probe?: SourceProbe) {
   const sc = state.scenario!;
   let progress = false;
   for (let n = 0; n < 1000; n++) {
@@ -448,6 +655,10 @@ function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
         synchronous &&
         ![
           'set',
+          'copyInt',
+          'switchInt',
+          'isExplored',
+          'focus',
           'flip',
           'addInt',
           'subtractInt',
@@ -496,7 +707,7 @@ function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
         action: a.index,
         op: a.op,
       });
-      execute(state, i, a);
+      execute(state, i, a, probe);
       progress = true;
       if (i.entry !== entry || i.stopped) break;
     }
@@ -628,20 +839,26 @@ function advanceTask(state: State) {
     const p = state.physical!,
       parent = p.snapshot.parents.find((r) => r.id === task.parentId)!;
     if (parent.status === 'completed') {
-      complete(owner, task.action);
-      sc.tasks.pop();
       const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      sc.tasks.pop();
+      // A resource child can complete without presenting a physical decision.
+      // Its source DisplayMessage still owns an acknowledgement before FINISHED.
+      if (a.op === 'message' && a.inspiration) {
+        messageRequest(state, owner, a);
+        return true;
+      }
+      complete(owner, task.action);
       if (a.op === 'confirm')
         invariant(send(sc, owner, a.confirmEvent), 'Conferma senza seguito fonte.');
       else if (a.op === 'sourceTest' || a.op === 'challenge') {
         const successes = parent.results.find((r) => r.kind === 'test')?.successes;
         invariant(successes !== undefined, 'Prova padre senza risultato.');
         let total: number | null = null;
+        let challengeEvent: string | undefined;
         if (a.op === 'challenge') {
-          const prior = variable(sc, owner, a.sum)[a.sum.name];
-          invariant(typeof prior === 'number', 'Somma non numerica.');
-          total = Math.min(99, Math.max(0, prior + successes));
-          setValue(sc, owner, a.sum, total);
+          const result = challengeResult(sc, owner, a, successes);
+          total = result.total;
+          challengeEvent = result.event;
         }
         const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
         sc.play!.tests.push({
@@ -659,7 +876,7 @@ function advanceTask(state: State) {
             ? successes >= a.target
               ? a.passEvent
               : a.failEvent
-            : (a.bounds.find((b) => b.maximum >= total!) ?? a.bounds.at(-1)!).event;
+            : challengeEvent!;
         invariant(send(sc, owner, event), 'Prova senza ramo compilato.');
       } else if (a.op === 'message') logMessage(sc, owner, a.index);
       return true;
@@ -765,7 +982,11 @@ function advanceTask(state: State) {
   } else {
     const frame = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     if (task.stage === 'intro' || task.stage === 'outro') {
-      invariant(frame && frame.instanceId === owner.id, 'Presentazione senza esploratore.');
+      const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      invariant(
+        (frame && frame.instanceId === owner.id) || (action.op === 'explore' && action.intro),
+        'Presentazione senza fonte.',
+      );
       const cap = sc.pack.manifest.exploration!;
       request(state, {
         instanceId: owner.id,
@@ -775,10 +996,12 @@ function advanceTask(state: State) {
         kind: task.stage === 'intro' ? 'exploration-intro' : 'exploration-outro',
         text:
           task.stage === 'intro'
-            ? cap.tiles.find((t) => t.source === task.tileSource)!.intros[frame.intro]!
+            ? action.op === 'explore' && action.intro
+              ? action.intro
+              : cap.tiles.find((t) => t.source === task.tileSource)!.intros[frame!.intro]!
             : cap.outro,
-        heroId: frame.heroId,
-        actorPlayerId: frame.playerId,
+        heroId: frame?.heroId ?? null,
+        actorPlayerId: frame?.playerId ?? null,
         stage: 'ready',
         tileSource: task.tileSource,
       });
@@ -804,7 +1027,9 @@ function advanceTask(state: State) {
         task.waiting = principal.id;
         return true;
       }
-      task.stage = 'outro';
+      const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
+      invariant(action.op === 'explore', 'Suite fuori esplorazione.');
+      task.stage = action.skipOutro ? 'done' : 'outro';
       return true;
     }
     const spaces = cells(state, task.tileSource);
@@ -837,7 +1062,7 @@ function advanceTask(state: State) {
         return true;
       }
     }
-    if (frame && owner.kind === 'exploration' && task.stage !== 'done') {
+    if (task.adjacent && task.stage !== 'done') {
       task.stage = 'adjacent';
       return true;
     }
@@ -846,11 +1071,11 @@ function advanceTask(state: State) {
   sc.tasks.pop();
   return true;
 }
-function pump(state: State) {
+function pump(state: State, probe?: SourceProbe) {
   const sc = state.scenario!;
   for (let n = 0; n < 2000; n++) {
     let progress = false;
-    for (const i of sc.instances) progress = runInstance(state, i) || progress;
+    for (const i of sc.instances) progress = runInstance(state, i, false, probe) || progress;
     if (sc.pending) return;
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
@@ -1011,6 +1236,7 @@ export function resumeScenario(
   playerId: string,
   command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
   physicalPath?: string,
+  probe?: SourceProbe,
 ) {
   const sc = state.scenario,
     q = sc?.pending;
@@ -1077,7 +1303,9 @@ export function resumeScenario(
       task?.kind === 'explore' && task.instanceId === i.id && task.action === q.action,
       'Callback esplorazione scaduto.',
     );
-    if (q.kind === 'exploration-intro') rewardExploration(state);
+    const action = current(sc, i).actions.find((a) => a.index === task.action)!;
+    invariant(action.op === 'explore', 'Presentazione senza esplorazione.');
+    if (q.kind === 'exploration-intro' && !action.noInspiration && !probe) rewardExploration(state);
     sc.messageLog.push({
       id: `${actionKey(i, q.action)}:${task.stage}`,
       text: structuredClone(q.text),
@@ -1231,7 +1459,7 @@ export function resumeScenario(
       complete(i, q.action);
     }
   }
-  pump(state);
+  pump(state, probe);
 }
 
 export function exploreScenario(
@@ -1240,13 +1468,18 @@ export function exploreScenario(
   c: ExplorationCommand,
   entropy: string,
   grantId?: string,
+  probe?: SourceProbe,
 ) {
+  if (state.scenario!.pack.manifest.clues && !probe)
+    preflightContinuation(state, (work, probe) =>
+      exploreScenario(work, playerId, c, entropy, grantId, probe),
+    );
   const i = prepareExploration(state, playerId, c, entropy, grantId),
     sc = state.scenario!;
-  runInstance(state, i);
+  runInstance(state, i, false, probe);
   sc.events.push({ id: eventId(sc, 'NODE CLICKED'), event: 'NODE CLICKED', receivers: [i.id] });
   invariant(send(sc, i, 'NODE CLICKED'), 'Template senza ingresso.');
-  pump(state);
+  pump(state, probe);
 }
 
 /** Commit the source confirmation and its one interact action together. Inspection is read-only. */
@@ -1254,6 +1487,7 @@ export function interactScenario(
   state: State,
   playerId: string,
   c: Extract<Command, { type: 'INTERACT_SCENARIO' }>,
+  probe?: SourceProbe,
 ) {
   const sc = state.scenario!,
     i = sc.instances.find((i) => i.id === c.instanceId),
@@ -1277,12 +1511,7 @@ export function interactScenario(
     digest(i) !== c.sourceFingerprint
   )
     fail('SCENARIO_SOURCE_CHANGED', 'Il segnalino o la fonte sono cambiati.');
-  if (
-    !sc.pack.manifest.playablePrefabs?.includes(i!.prefab!) ||
-    !i!.visible ||
-    i!.stopped ||
-    !i!.settled
-  )
+  if (!playableScenarioPrefab(sc.pack, i!.prefab!) || !i!.visible || i!.stopped || !i!.settled)
     fail('SCENARIO_CAPABILITY', 'Questo segnalino non ha una continuazione disponibile.');
   if (sc.pending || sc.play!.active || state.physical!.snapshot.active)
     fail('SCENARIO_PENDING', 'Concludi la richiesta corrente.');
@@ -1316,6 +1545,8 @@ export function interactScenario(
       'INTERACTION_RESOURCE',
       `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
     );
+  if (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) && !probe)
+    preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
   sc.play!.attempts.push({
@@ -1336,5 +1567,5 @@ export function interactScenario(
     receivers: [i!.id],
   });
   invariant(send(sc, i!, 'NODE CLICKED'), 'Handler incontro non compilato.');
-  pump(state);
+  pump(state, probe);
 }

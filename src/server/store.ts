@@ -1,4 +1,5 @@
 import { combatView } from '../combat/controller';
+import { playableScenarioPrefab } from '../shared/clues';
 import { scenarioView } from '../shared/scenario';
 import { scenarioReceiptProblem } from '../scenario/validate';
 import { explorationProblem, explorationSource } from '../shared/exploration';
@@ -392,7 +393,7 @@ export function publicSession(state: State) {
     ...(state.combat ? { combat: combatView(state) } : {}),
     encounterFingerprints: Object.fromEntries(
       (state.scenario?.instances ?? [])
-        .filter((i) => state.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!))
+        .filter((i) => playableScenarioPrefab(state.scenario!.pack, i.prefab!))
         .map((i) => [i.id, digest(i)]),
     ),
     explorationFingerprints: Object.fromEntries(

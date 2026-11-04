@@ -18,7 +18,7 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'FFG.JIME.Actions.SetObjective': 'objective',
   'FFG.JIME.Actions.AddThreatEvent': 'threat',
   'HutongGames.PlayMaker.Actions.SetBoolValue': 'set',
-  'HutongGames.PlayMaker.Actions.SetIntValue': 'set',
+  'HutongGames.PlayMaker.Actions.SetIntValue': ['set', 'copyInt'],
   'HutongGames.PlayMaker.Actions.BoolFlip': 'flip',
   'FFG.JIME.Actions.GetTileId': 'getTile',
   'HutongGames.PlayMaker.Actions.GetPosition': 'getPosition',
@@ -34,6 +34,9 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'HutongGames.PlayMaker.Actions.IntOperator': ['subtractInt', 'multiplyInt'],
   'FFG.JIME.Actions.SpawnRandomEnemyGroups': 'spawnRandom',
   'HutongGames.PlayMaker.Actions.IntCompare': 'compareInt',
+  'HutongGames.PlayMaker.Actions.IntSwitch': 'switchInt',
+  'FFG.JIME.Actions.IsTileExplored': 'isExplored',
+  'FFG.Common.Actions.FocusCameraOnWorldPositions': 'focus',
 };
 
 export function validateSourceHandler(action: ScenarioAction) {
