@@ -77,5 +77,29 @@
     "bytes": 133815008,
     "manifestBytes": 54853,
     "sha256": "f7ba6b1b2e2b611fbc0bad6227c4491f4353f198ebd9ea086287967586a4ed2d"
+  },
+  "integration": {
+    "importedCodeHead": "24534ea",
+    "codeTreeEqual": true,
+    "tests": 582,
+    "fail": 0,
+    "skip": 0,
+    "todo": 0,
+    "durationMs": 126132.658875,
+    "inputLocks": 56,
+    "primaryApplicationFilesRechecked": 8,
+    "sealedFiles": 318,
+    "sealedBytes": 133815008,
+    "uiBackupsRevalidated": 18,
+    "originalResignedBackupsRejected": 7,
+    "compatibilityBackups": 111,
+    "acceptedScreenshotsInspected": 3,
+    "nativeAcceptanceRepeated": false,
+    "packAndHostAndCssByteIdentical": true,
+    "browserBundleOnlyPathCommentsChanged": true,
+    "browserChangedCommentLines": 190,
+    "rootBrowserSha256": "48eea0047783ca2de465b4092f62af1feb0d027eb52d0950c453248f3f4c3bc9",
+    "standardsFindings": 0,
+    "specFindings": 0
   }
 }

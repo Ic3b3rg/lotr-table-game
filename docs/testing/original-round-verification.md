@@ -162,3 +162,32 @@ Il seguito concreto richiede chiudere quei receiver nei proprietari fonte
 prima di abilitare un'altra Ombra. Combattimento/controller, benefici57,
 altri rami, finale/campo/A2 e chiusura33/65 restano separati. Nessuna
 approvazione provvisoria sulle quantità dei benefici è stata assunta.
+
+## Integrazione del root
+
+Review Standards e Spec indipendenti: **0 P1/P2**; disposizione nel
+[rapporto di review](../reviews/2026-11-04-original-round.md). Importati i
+quattro commit senza modifiche al codice, verificando l'identità dell'albero
+con la consegna prima delle aggiunte documentali d'integrazione.
+
+Suite integrata **582/582**, zero fail/skip/todo,126.133s; typecheck, formato
+e diff verdi. Verificati il sigillo di318 file/133.815.008 byte, i56 input
+bloccati e gli otto file applicativi primari già identificati. Oracle fonte
+ripetuto; pack ricompilato identico byte per byte. Il validatore compilato
+dal codice del root riconvalida18 backup UI, sette manomissioni respinte e
+111 backup precedenti, senza cambiare i campi gameplay originari.
+
+Il root ha ispezionato le catture accettate di Riorganizzazione320,
+Scoperta1024 e round2/320. Non ha duplicato l'accettazione nativa ricevuta.
+Host e CSS compilati sono identici alla consegna. Il JavaScript browser
+differisce soltanto nei commenti dei percorsi dei moduli esbuild: il child
+riusa node_modules del root tramite symlink. Verificati tutti i190 cambi di
+riga come commenti; il resto del file è identico. Non è una modifica del
+comportamento e non invalida le catture.
+
+Prove ricevute e copie di lavoro separate nella scratch ignorata
+`.scratch/first-round-root-review/`. Privacy controllata anche nei quattro
+commit:30 percorsi/32 snapshot, nessun originale o artifact privato introdotto.
+Il brief della issue viene chiarito sul valore effettivo di REVEALED_DUDES;
+il runtime e le ricevute erano già conformi alla fonte. #33/#65/#57 restano
+aperte; la successiva scadenza del timer conserva il gate.
