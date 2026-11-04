@@ -60,6 +60,7 @@ test('source failure preserves episode, waits for both messages and awards the s
     before = s.physical.snapshot;
   assert.equal(beginHeroFailure(s, 'shadow-start', 'invented-trigger-request-000000001'), true);
   assert.equal(sc.pending.text[0].text, 'Conclusione inventata');
+  assert.equal(sc.instances.find((i) => i.kind === 'principal').processing, 1);
   assert.deepEqual(sc.conclusion.xp, []);
   // Exercise the existing source consumer and its real hide callback.
   const q = sc.pending;

@@ -99,7 +99,7 @@ export function beginHeroFailure(state: State, timing: Timing, requestId: string
   // Only the principal receives the controller's event; its terminal path owns progress.
   sc.pending = null;
   invariant(
-    startPhaseEvent(state, principal.id, cap.event, false),
+    startPhaseEvent(state, principal.id, cap.event, true),
     'Conclusione senza ricevitore principale.',
   );
   return true;
