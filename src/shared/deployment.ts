@@ -41,6 +41,7 @@ export const DeployedGroupSchema = z.strictObject({
   bonuses: z.array(SourceSchema).max(10),
   tokenId: z.int().min(-1).max(100),
   exhausted: z.boolean(),
+  attackReduction: count.optional(),
   logic: SourceSchema.nullable(),
   placed: z.boolean(),
   spaceId: z.string().max(200),

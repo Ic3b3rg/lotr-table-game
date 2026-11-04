@@ -618,3 +618,5 @@ export function verifyCombatArtifact(
         check(expected[key] === artifact[key], `Artifact cross-source: ${key}.`);
   return artifact;
 }
+
+export { compileCombatClosure, verifyCombatClosure, type CombatClosure } from './closure-compiler';
