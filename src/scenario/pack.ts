@@ -215,6 +215,35 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        const typeOf = (ref: { scope: 'local' | 'global'; name: string }) =>
+          (ref.scope === 'local' ? locals : globals).get(ref.name)?.type;
+        const integerRefs = [
+          ...(a.op === 'copyInt'
+            ? [a.target, ...(a.value.kind === 'variable' ? [a.value.ref] : [])]
+            : []),
+          ...(a.op === 'switchInt'
+            ? [a.value, ...a.cases.map((c) => c.equals)].flatMap((v) =>
+                v.kind === 'variable' ? [v.ref] : [],
+              )
+            : []),
+          ...(a.op === 'challenge'
+            ? [
+                ...('scope' in a.sum ? [a.sum] : []),
+                ...a.bounds.flatMap((b) => (typeof b.maximum === 'number' ? [] : [b.maximum])),
+              ]
+            : []),
+          ...(a.op === 'isExplored' && a.tile.kind === 'variable' ? [a.tile.ref] : []),
+        ];
+        invariant(
+          integerRefs.every((ref) => typeOf(ref) === 'int') &&
+            (a.op !== 'focus' || a.positions.every((ref) => typeOf(ref) === 'vector')),
+          'Tipo del binding della nuova istruzione incoerente.',
+        );
+        if (a.op === 'message')
+          invariant(
+            !(a.inspiration && a.consequence),
+            'Messaggio con conseguenze concorrenti non compilate.',
+          );
         if (
           ['copyInt', 'switchInt', 'isExplored', 'focus'].includes(a.op) ||
           (a.op === 'challenge' &&
@@ -458,34 +487,48 @@ export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
   for (const f of p.provenance.files)
     if (files.has(f.file)) invariant(files.get(f.file) === f.sha256, 'Source hash mismatch.');
   const principal = pack.definitions.find((d) => d.source === pack.principal)!;
+  const startupStates = new Set<number>();
+  const visitStartup = (index: number | undefined) => {
+    if (index === undefined || startupStates.has(index)) return;
+    startupStates.add(index);
+    const state = principal.states.find((s) => s.index === index)!;
+    for (const [event, next] of Object.entries(state.transitions))
+      if (event !== 'NODE CLICKED') visitStartup(next);
+  };
+  if (pack.manifest.clues) {
+    visitStartup(principal.initial);
+    visitStartup(principal.handlers.SCENARIO_BEGIN);
+  }
   const startupSources = new Set(
-    principal.states.flatMap((s) =>
-      s.actions.flatMap((a) => {
-        if (a.op !== 'explore') return [];
-        const target = a.tile;
-        const startVariable =
-          target.kind === 'variable' &&
-          principal.states.some((s) =>
-            s.actions.some(
-              (x) =>
-                x.op === 'getStart' &&
-                x.target.scope === target.ref.scope &&
-                x.target.name === target.ref.name,
-            ),
-          );
-        const hash =
-          target.kind === 'start' || startVariable
-            ? p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId
-            : target.kind === 'hash'
-              ? target.value
-              : (target.ref.scope === 'local' ? principal.variables : pack.globals).find(
-                  (v) => v.name === target.ref.name,
-                )?.value;
-        const tile = p.sections.flatMap((s) => s.tiles).find((t) => t.hashId === hash);
-        invariant(tile, 'Tessera startup non disponibile.');
-        return [tile.source];
-      }),
-    ),
+    principal.states
+      .filter((s) => !pack.manifest.clues || startupStates.has(s.index))
+      .flatMap((s) =>
+        s.actions.flatMap((a) => {
+          if (a.op !== 'explore') return [];
+          const target = a.tile;
+          const startVariable =
+            target.kind === 'variable' &&
+            principal.states.some((s) =>
+              s.actions.some(
+                (x) =>
+                  x.op === 'getStart' &&
+                  x.target.scope === target.ref.scope &&
+                  x.target.name === target.ref.name,
+              ),
+            );
+          const hash =
+            target.kind === 'start' || startVariable
+              ? p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId
+              : target.kind === 'hash'
+                ? target.value
+                : (target.ref.scope === 'local' ? principal.variables : pack.globals).find(
+                    (v) => v.name === target.ref.name,
+                  )?.value;
+          const tile = p.sections.flatMap((s) => s.tiles).find((t) => t.hashId === hash);
+          invariant(tile, 'Tessera startup non disponibile.');
+          return [tile.source];
+        }),
+      ),
   );
   for (const a of p.assignments) {
     const m = pack.manifest.prefabs.find((m) => m.source === a.prefab.source);

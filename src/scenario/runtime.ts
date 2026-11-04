@@ -29,7 +29,9 @@ import {
   beginEncounterPhysical,
   openSourcePhysical,
   groupTrialProgram,
+  encounterProgram,
 } from './encounter-physical';
+import { validatePhysicalProgram } from '../physical-resolution/program';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { comparisonSort } from '../map-generation/comparison-sort';
 import { materializeDeployment, deploymentText } from './deployment';
@@ -230,9 +232,141 @@ function logMessage(sc: Scenario, i: ScenarioInstance, index: number) {
 function complete(i: ScenarioInstance, index: number) {
   if (!i.completed.includes(index)) i.completed.push(index);
 }
-function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
+type SourceProbe = { path: number[]; cursor: number };
+class SourceFork extends Error {
+  constructor(readonly count: number) {
+    super('Source continuation branches');
+  }
+}
+function probeChoice(probe: SourceProbe, count: number) {
+  const result = probe.path[probe.cursor++];
+  if (result === undefined) throw new SourceFork(count);
+  invariant(result < count, 'Ramo di verifica estraneo alla fonte.');
+  return result;
+}
+/** Traverse the real consumer on disposable mutable state, replacing only physical outcomes
+ * and nonbranching deployment. No cards, random draws or source opcodes are executed elsewhere. */
+function preflightContinuation(state: State, start: (work: State, probe: SourceProbe) => void) {
+  const paths: number[][] = [[]];
+  let runs = 0;
+  while (paths.length) {
+    invariant(++runs <= 10000, 'Budget verifica della continuazione superato.');
+    const sc = state.scenario!,
+      work: State = {
+        ...state,
+        scenario: { ...structuredClone({ ...sc, pack: undefined }), pack: sc.pack },
+        preparation: structuredClone(state.preparation),
+        round: structuredClone(state.round),
+        journey: structuredClone(state.journey),
+      },
+      probe = { path: paths.pop()!, cursor: 0 };
+    try {
+      start(work, probe);
+      for (let n = 0; work.scenario!.pending; n++) {
+        invariant(n < 2000, 'Continuazione fonte ciclica.');
+        const s = work.scenario!,
+          q = s.pending!;
+        invariant(
+          [
+            'message',
+            'objective',
+            'placement',
+            'exploration-markers',
+            'exploration-intro',
+            'exploration-outro',
+            'choice',
+          ].includes(q.kind),
+          'Richiesta fuori dalla closure degli indizi.',
+        );
+        const input =
+          q.kind === 'choice'
+            ? {
+                kind: 'choice' as const,
+                event: q.options![probeChoice(probe, q.options!.length)]!.event,
+              }
+            : { kind: 'ack' as const };
+        resumeScenario(
+          work,
+          q.actorPlayerId ?? work.players[0]!.id,
+          {
+            type: 'SCENARIO_INPUT',
+            requestId: 'preflight-source-continuation-only',
+            generation: work.generation,
+            expectedRevision: work.revision,
+            scenarioId: s.id,
+            packFingerprint: s.packFingerprint,
+            projectionFingerprint: s.projectionFingerprint,
+            pendingId: q.id,
+            sourceFingerprint: q.fingerprint,
+            heroId: q.heroId,
+            input,
+          },
+          undefined,
+          probe,
+        );
+      }
+      invariant(
+        !work.scenario!.tasks.length &&
+          work.scenario!.instances.every((i) => i.stopped || i.settled),
+        'Continuazione senza ritorno fonte.',
+      );
+    } catch (error) {
+      if (error instanceof SourceFork) {
+        for (let n = error.count - 1; n >= 0; n--) paths.push([...probe.path, n]);
+      } else if (error instanceof ApiError) throw error;
+      else
+        throw new ApiError(
+          409,
+          'SCENARIO_CONTINUATION_CAPABILITY',
+          'Il seguito obbligatorio di questa interazione o esplorazione richiede effetti ancora in sviluppo. Nessun costo, movimento o carta è stato applicato.',
+        );
+    }
+  }
+}
+function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: SourceProbe) {
   const sc = state.scenario!,
     p = projection(state);
+  if (
+    probe &&
+    ((a.op === 'confirm' && i.kind !== 'exploration') ||
+      a.op === 'sourceTest' ||
+      a.op === 'challenge' ||
+      (a.op === 'message' && (a.consequence || a.inspiration)))
+  ) {
+    invariant(
+      state.physical?.version === 3 && state.physical.fronts && state.physical.lastStand,
+      'Closure fisica non posseduta.',
+    );
+    validatePhysicalProgram(encounterProgram(state, a), state.physical.heroes.length);
+    if (
+      a.op === 'message' &&
+      a.consequence &&
+      !state.physical.snapshot.decks[a.consequence.family].length
+    )
+      throw new ApiError(
+        409,
+        'SCENARIO_PHYSICAL_DECK_EMPTY',
+        'Il mazzo della conseguenza è realmente vuoto. La continuazione resta sospesa prima del costo.',
+      );
+    complete(i, a.index);
+    if (a.op === 'confirm') invariant(send(sc, i, a.confirmEvent), 'Conferma senza seguito fonte.');
+    else if (a.op === 'challenge' || a.op === 'sourceTest') {
+      const successes = probeChoice(probe, 100),
+        event =
+          a.op === 'challenge'
+            ? challengeResult(sc, i, a, successes).event
+            : successes >= a.target
+              ? a.passEvent
+              : a.failEvent;
+      invariant(send(sc, i, event), 'Prova senza ramo fonte.');
+    } else logMessage(sc, i, a.index);
+    return;
+  }
+  if (probe && a.op === 'spawnRandom') {
+    invariant(sc.pack.manifest.followup && sc.enemies, 'Spawn senza capacità congelata.');
+    complete(i, a.index);
+    return;
+  }
   switch (a.op) {
     case 'confirm':
       if (i.kind === 'exploration') {
@@ -491,7 +625,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
   }
   complete(i, a.index);
 }
-function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
+function runInstance(state: State, i: ScenarioInstance, synchronous = false, probe?: SourceProbe) {
   const sc = state.scenario!;
   let progress = false;
   for (let n = 0; n < 1000; n++) {
@@ -556,7 +690,7 @@ function runInstance(state: State, i: ScenarioInstance, synchronous = false) {
         action: a.index,
         op: a.op,
       });
-      execute(state, i, a);
+      execute(state, i, a, probe);
       progress = true;
       if (i.entry !== entry || i.stopped) break;
     }
@@ -914,11 +1048,11 @@ function advanceTask(state: State) {
   sc.tasks.pop();
   return true;
 }
-function pump(state: State) {
+function pump(state: State, probe?: SourceProbe) {
   const sc = state.scenario!;
   for (let n = 0; n < 2000; n++) {
     let progress = false;
-    for (const i of sc.instances) progress = runInstance(state, i) || progress;
+    for (const i of sc.instances) progress = runInstance(state, i, false, probe) || progress;
     if (sc.pending) return;
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
@@ -1079,6 +1213,7 @@ export function resumeScenario(
   playerId: string,
   command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
   physicalPath?: string,
+  probe?: SourceProbe,
 ) {
   const sc = state.scenario,
     q = sc?.pending;
@@ -1147,7 +1282,7 @@ export function resumeScenario(
     );
     const action = current(sc, i).actions.find((a) => a.index === task.action)!;
     invariant(action.op === 'explore', 'Presentazione senza esplorazione.');
-    if (q.kind === 'exploration-intro' && !action.noInspiration) rewardExploration(state);
+    if (q.kind === 'exploration-intro' && !action.noInspiration && !probe) rewardExploration(state);
     sc.messageLog.push({
       id: `${actionKey(i, q.action)}:${task.stage}`,
       text: structuredClone(q.text),
@@ -1301,7 +1436,7 @@ export function resumeScenario(
       complete(i, q.action);
     }
   }
-  pump(state);
+  pump(state, probe);
 }
 
 export function exploreScenario(
@@ -1310,13 +1445,18 @@ export function exploreScenario(
   c: ExplorationCommand,
   entropy: string,
   grantId?: string,
+  probe?: SourceProbe,
 ) {
+  if (state.scenario!.pack.manifest.clues && !probe)
+    preflightContinuation(state, (work, probe) =>
+      exploreScenario(work, playerId, c, entropy, grantId, probe),
+    );
   const i = prepareExploration(state, playerId, c, entropy, grantId),
     sc = state.scenario!;
-  runInstance(state, i);
+  runInstance(state, i, false, probe);
   sc.events.push({ id: eventId(sc, 'NODE CLICKED'), event: 'NODE CLICKED', receivers: [i.id] });
   invariant(send(sc, i, 'NODE CLICKED'), 'Template senza ingresso.');
-  pump(state);
+  pump(state, probe);
 }
 
 /** Commit the source confirmation and its one interact action together. Inspection is read-only. */
@@ -1324,6 +1464,7 @@ export function interactScenario(
   state: State,
   playerId: string,
   c: Extract<Command, { type: 'INTERACT_SCENARIO' }>,
+  probe?: SourceProbe,
 ) {
   const sc = state.scenario!,
     i = sc.instances.find((i) => i.id === c.instanceId),
@@ -1381,6 +1522,8 @@ export function interactScenario(
       'INTERACTION_RESOURCE',
       `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
     );
+  if (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) && !probe)
+    preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
   sc.play!.attempts.push({
@@ -1401,5 +1544,5 @@ export function interactScenario(
     receivers: [i!.id],
   });
   invariant(send(sc, i!, 'NODE CLICKED'), 'Handler incontro non compilato.');
-  pump(state);
+  pump(state, probe);
 }

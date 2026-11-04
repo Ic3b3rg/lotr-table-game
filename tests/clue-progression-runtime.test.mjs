@@ -1,158 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSync } from 'esbuild';
-import {
-  compilePhysicalFronts,
-  compileLastStand,
-  freezePhysical,
-} from '../dist/physical-resolution-library.mjs';
-import { lastStandFixture } from './fixtures/last-stand.mjs';
-import { binding, hash } from './fixtures/physical-fronts.mjs';
-import {
-  clueCompilerFixture,
-  native,
-  local,
-  global,
-  literal,
-  variable,
-  message,
-} from './fixtures/clue-progression.mjs';
+import { hash } from './fixtures/map-freeze.mjs';
+import { native, local, global, literal, variable, message } from './fixtures/clue-progression.mjs';
 import { state, action } from './fixtures/scenario.mjs';
-const code = buildSync({
-  stdin: {
-    contents: `export { pumpPhaseEvent, resumeScenario } from './src/scenario/runtime';`,
-    resolveDir: process.cwd(),
-    loader: 'ts',
-  },
-  bundle: true,
-  write: false,
-  platform: 'node',
-  format: 'esm',
-  target: 'node24',
-});
-const { pumpPhaseEvent, resumeScenario } = await import(
-  `data:text/javascript;base64,${Buffer.from(Buffer.from(code.outputFiles[0].contents).toString() + '\n//# sourceURL=clue-runtime-driver.mjs').toString('base64')}`
-);
-
-function runtime(states, variables = []) {
-  const f = lastStandFixture(),
-    pack = clueCompilerFixture(),
-    d = pack.definitions.find((d) => d.source === 'example.assets:73000');
-  d.states = states;
-  d.variables = variables;
-  const id = '00000000-0000-4000-8000-000000000099',
-    hero = f.heroes[0];
-  const p = freezePhysical(
-    f.raw,
-    binding,
-    f.heroes,
-    '1'.repeat(64),
-    undefined,
-    { artifact: compilePhysicalFronts(f.raw, f.ir, f.catalog), catalog: f.catalog },
-    compileLastStand(f.raw, f.lastStandInput),
-  );
-  p.version = 3;
-  const i = {
-    id: 'invented-clue',
-    kind: 'encounter',
-    definition: d.source,
-    prefab: pack.manifest.clues.encounters[0],
-    spaceId: 'source-space',
-    variables: Object.fromEntries(variables.map((v) => [v.name, v.value])),
-    state: 0,
-    entry: 1,
-    started: [],
-    completed: [],
-    stopped: false,
-    settled: false,
-    visible: true,
-    processing: 0,
-  };
-  const sc = {
-    id,
-    phase: 'action',
-    pack,
-    packFingerprint: hash(pack),
-    projectionFingerprint: hash('projection'),
-    globals: Object.fromEntries(pack.globals.map((v) => [v.name, v.value])),
-    instances: [i],
-    pending: null,
-    tasks: [],
-    effects: [],
-    events: [],
-    commands: [],
-    messageLog: [],
-    play: {
-      active: 'attempt',
-      attempts: [
-        {
-          id: 'attempt',
-          instanceId: i.id,
-          heroId: hero.heroId,
-          playerId: hero.playerId,
-          returned: false,
-        },
-      ],
-      tests: [],
-      lore: 0,
-    },
-    tiles: [],
-    spaceBindings: [{ id: hero.spaceId, sourceId: i.spaceId }],
-  };
-  return {
-    ...f,
-    i,
-    state: {
-      scenario: sc,
-      preparation: structuredClone(f.context.preparation),
-      content: { catalog: f.catalog },
-      physical: p,
-      revision: 0,
-      generation: id,
-      players: [],
-      journey: { heroes: f.heroes, definition: { connections: [] } },
-      mapGeneration: {
-        status: 'frozen',
-        projection: { spaces: [{ id: i.spaceId, hasDarkness: false }] },
-      },
-    },
-  };
-}
-function answer(f, input) {
-  const s = f.state,
-    sc = s.scenario,
-    q = sc.pending;
-  resumeScenario(s, q.actorPlayerId ?? f.heroes[0].playerId, {
-    type: 'SCENARIO_INPUT',
-    requestId: `invented-request-000000000-${s.revision++}`,
-    generation: s.generation,
-    expectedRevision: s.revision,
-    scenarioId: sc.id,
-    packFingerprint: sc.packFingerprint,
-    projectionFingerprint: sc.projectionFingerprint,
-    pendingId: q.id,
-    sourceFingerprint: q.fingerprint,
-    heroId: q.heroId,
-    input,
-  });
-}
-function finish(f) {
-  for (let n = 0; n < 100 && f.state.scenario.pending; n++) {
-    const a = f.state.physical.snapshot.active;
-    answer(
-      f,
-      a
-        ? {
-            kind: 'physical-choice',
-            option:
-              ['resolve', 'close', 'reveal'].find((id) => a.options?.some((o) => o.id === id)) ??
-              a.options[0].id,
-          }
-        : { kind: 'ack' },
-    );
-  }
-  assert.equal(f.state.scenario.pending, null);
-}
+import { runtime, finish, pumpPhaseEvent, interactScenario } from './clue-progression-helper.mjs';
 test('ordered integer equality copies a binding and uses FINISHED only when no case matches', () => {
   const f = runtime(
     [
@@ -237,4 +88,75 @@ test('message inspiration uses the existing physical consumer once and records a
   assert.equal(f.state.preparation.heroes[0].inspiration, before + 1);
   assert.equal(f.state.scenario.messageLog.length, 1);
   assert.equal(f.state.physical.snapshot.parents.length, 1);
+});
+test('whole clue continuation rejects a hidden receiver behind a possible result before paying any action', () => {
+  const f = runtime([
+    state(0, [], { 'NODE CLICKED': 1 }),
+    state(
+      1,
+      [
+        native(0, 'confirm', 'FFG.JIME.Actions.DisplayMessageCancelConfirm', {
+          text: message(0, 'Ricerca inventata').text,
+          label: message(0, 'Cerca').text,
+          cancelLabel: message(0, 'Annulla').text,
+          confirmEvent: 'YES',
+          cancelEvent: 'NO',
+        }),
+      ],
+      { YES: 2, NO: 0 },
+    ),
+    state(
+      2,
+      [
+        native(0, 'challenge', 'FFG.JIME.Actions.DisplayMessageChallenge', {
+          text: message(0, 'Prova inventata').text,
+          stat: 'might',
+          sum: literal(0),
+          bounds: [
+            { maximum: 98, event: 'LOW' },
+            { maximum: 99, event: 'HIGH' },
+          ],
+        }),
+      ],
+      { LOW: 0, HIGH: 3 },
+    ),
+    state(3, [action(0, 'broadcast', { event: 'HIDDEN_DEPENDENCY' })]),
+  ]);
+  const s = f.state,
+    sc = s.scenario,
+    hero = f.heroes[0];
+  f.i.settled = true;
+  sc.play.active = null;
+  sc.play.attempts = [];
+  s.round = {
+    id: s.generation,
+    turnId: s.generation,
+    phase: 'action',
+    activeHeroId: hero.heroId,
+    heroes: f.heroes.map((h) => ({ heroId: h.heroId, actionsUsed: 0, turnEnded: false })),
+  };
+  const d = sc.pack.definitions.find((d) => d.source === 'example.assets:74000');
+  d.deferredHandlers.HIDDEN_DEPENDENCY = 'unavailable-original-effect';
+  sc.instances.push({
+    ...structuredClone(f.i),
+    id: 'hidden',
+    definition: d.source,
+    prefab: sc.pack.manifest.clues.fort.prefab,
+    visible: false,
+  });
+  const before = structuredClone(s),
+    c = {
+      type: 'INTERACT_SCENARIO',
+      scenarioId: sc.id,
+      packFingerprint: sc.packFingerprint,
+      projectionFingerprint: sc.projectionFingerprint,
+      instanceId: f.i.id,
+      heroId: hero.heroId,
+      roundId: s.round.id,
+      turnId: s.round.turnId,
+      sourceFingerprint: hash(f.i),
+      requestId: 'invented-preflight-request-000001',
+    };
+  assert.throws(() => interactScenario(s, hero.playerId, c));
+  assert.deepEqual(s, before, 'gate must precede cost, event, cards and RNG');
 });

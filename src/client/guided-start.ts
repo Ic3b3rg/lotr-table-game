@@ -1,4 +1,5 @@
 import type { Player, Session } from '../shared/protocol';
+import { playableScenarioPrefab } from '../shared/clues';
 import { rosterProblem } from '../shared/preparation';
 import type { GenerationOffer } from '../shared/generated-map';
 import { SHADOW_LABELS } from '../shared/rounds';
@@ -308,12 +309,13 @@ export function createGuidedStart(sync: () => Promise<void>) {
               (i) =>
                 i.visible &&
                 !i.stopped &&
-                session.scenario!.pack.manifest.playablePrefabs?.includes(i.prefab!),
+                playableScenarioPrefab(session.scenario!.pack, i.prefab!),
             );
             if (session.round?.heroes.every((h) => h.turnEnded)) {
               heading = 'I turni sono conclusi';
-              message =
-                'La Fase di Ombra originale non è ancora disponibile. I progressi sono salvati; puoi consultarli o esportare un backup.';
+              message = session.scenario.pack.manifest.rounds
+                ? 'Il gruppo può iniziare l’Ombra nella sezione del round. Seguite tutte le istruzioni fino alla Riorganizzazione.'
+                : 'La Fase di Ombra originale non è ancora disponibile. I progressi sono salvati; puoi consultarli o esportare un backup.';
               target = '#scenario';
               label = 'Controlla lo stato dell’avventura';
             } else if (session.round?.activeHeroId) {

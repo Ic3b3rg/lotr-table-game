@@ -130,6 +130,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       element('#scenario-limit').textContent = sc?.pack.manifest.combat?.source.shadow
         ? 'Attacchi, provocazioni e attivazioni dell’Ombra usano carte, capacità e conseguenze reali. Seguite le richieste fino alle Scoperte e al prossimo turno. L’avventura completa è ancora in sviluppo.'
         : 'Attacchi e provocazioni usano carte, capacità e conseguenze reali. Le successive attivazioni dell’Ombra e il seguito dell’avventura richiedono ancora i loro effetti.';
+    if (sc?.pack.manifest.clues)
+      element('#scenario-limit').textContent =
+        'I quattro incontri che custodiscono gli indizi sono giocabili. Ogni traccia aggiorna la missione e rivela i luoghi previsti. Seguite le richieste fino al ritorno al turno. L’interazione finale del covo e la conclusione dell’avventura richiedono ancora i loro effetti.';
     refreshActions();
   }
   agreed.oninput = () => {
@@ -305,6 +308,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         session.generation,
         content?.id,
         sc?.play,
+        sc?.pack.manifest.clues ? sc.globals[sc.pack.manifest.clues.counter.name] : null,
         sc?.instances.map((i) => [i.id, i.variables, i.stopped]),
         session.round?.heroes,
         session.journey?.travel,
@@ -312,6 +316,20 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       if (sc?.play && progressKey !== nextProgress) {
         progressKey = nextProgress;
         const summary = [];
+        const clues = sc.pack.manifest.clues;
+        if (clues) {
+          const remaining = sc.globals[clues.counter.name];
+          if (typeof remaining === 'number')
+            summary.push(
+              text(
+                'p',
+                remaining > 0
+                  ? `Indizi ancora da trovare: ${remaining}.`
+                  : 'Indizi raccolti: seguite l’obiettivo attuale per il covo.',
+                'company-help',
+              ),
+            );
+        }
         for (const source of sc.pack.manifest.playablePrefabs ?? []) {
           const m = sc.pack.manifest.prefabs.find((p) => p.source === source)!,
             i = sc.instances.find((i) => i.prefab === source);
@@ -336,14 +354,22 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         else if (sc.play.attempts.at(-1)?.interrupted === 'hero-defeated')
           summary.push(text('p', 'Interazione terminata: l’eroe è sconfitto.', 'company-help'));
         summary.push(text('p', `Sapienza ottenuta: ${sc.play.lore}.`, 'company-help'));
-        for (const t of sc.play.tests.slice(-5))
+        for (const t of sc.play.tests.slice(-5)) {
+          const effect = sc.effects.find((e) => e.id === t.source),
+            instance = sc.instances.find((i) => i.id === effect?.instanceId),
+            a = sc.pack.definitions
+              .find((d) => d.source === instance?.definition)
+              ?.states.find((s) => s.index === effect?.state)
+              ?.actions.find((a) => a.index === effect?.action),
+            accumulated = a?.op === 'challenge' && 'scope' in a.sum;
           summary.push(
             text(
               'p',
-              `${content?.heroes.find((h) => h.id === t.heroId)?.name.text ?? t.heroId} · ${STAT_LABELS[t.stat]}${t.target === null ? '' : ` ${t.target}`} · ${t.successes} successi${t.total === null ? '' : ` · totale condiviso ${t.total}`}.`,
+              `${content?.heroes.find((h) => h.id === t.heroId)?.name.text ?? t.heroId} · ${STAT_LABELS[t.stat]}${t.target === null ? '' : ` ${t.target}`} · ${t.successes} successi${t.total === null ? '' : ` · ${accumulated ? 'totale condiviso' : 'risultato della prova'} ${t.total}`}.`,
               'company-help',
             ),
           );
+        }
         progress.replaceChildren(...summary);
       }
       element('#scenario-results-details').hidden = !sc?.completedSetup.length;
