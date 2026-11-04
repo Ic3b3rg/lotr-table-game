@@ -9,3 +9,5 @@ export type {
   EnemySelection,
 } from './kernel-model';
 export { combatCapability } from './capability';
+export { compileSourceDeployment, verifySourceDeployment } from './deployment-compiler';
+export { generateDeployment } from './deployment';

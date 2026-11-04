@@ -1,3 +1,5 @@
+import { compileSourceText } from '../scenario/text';
+import { sourceText } from './source-text';
 import { scenarioMapView } from '../shared/scenario-map';
 import { createEncounterInspection } from './encounter-inspection';
 import { createExplorationInspection } from './exploration-inspection';
@@ -88,6 +90,8 @@ export function createJourneyMap(sync: () => Promise<void>) {
     );
     const destination = journey?.definition.spaces.find((space) => space.id === select.value);
     const view = scenarioMapView(current);
+    const provocation = view?.groups.some((g) => !g.exhausted && g.spaceId === position?.spaceId);
+    if (provocation) start.dataset.blocked = 'true';
     const unexplored = !!destination && !!view?.unexplored.includes(destination.id);
     const explorationBlocked = unexplored && !current.explorationFingerprints[destination!.id];
     move.textContent = unexplored ? 'Entra ed esplora · 1 movimento' : 'Conferma movimento';
@@ -99,19 +103,21 @@ export function createJourneyMap(sync: () => Promise<void>) {
           journey &&
           adjacent(journey.definition, position.spaceId, destination.id),
       );
-    move.dataset.blocked = String(!own || pending || remaining < 1 || !canMove);
+    move.dataset.blocked = String(!own || pending || provocation || remaining < 1 || !canMove);
     element('#map-budget').textContent =
       `Azioni disponibili: ${2 - (progress?.actionsUsed ?? 0)} · Movimenti del viaggio: ${remaining}`;
     const origin = journey?.definition.spaces.find((space) => space.id === position?.spaceId);
-    element('#map-preview').textContent = !destination
-      ? 'Seleziona una casella prima di confermare il movimento.'
-      : explorationBlocked
-        ? 'Questa tessera è da esplorare. La sua esplorazione fonte non è ancora disponibile: nessun movimento viene consumato.'
-        : canMove
-          ? unexplored
-            ? `${origin!.label} → ${destination.label}. Prima dell’ingresso leggi la conferma: puoi annullare gratuitamente. Entrare usa 1 movimento; completa l’esplorazione prima di riprendere il viaggio.`
-            : `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
-          : 'La destinazione deve essere adiacente alla posizione attuale, attraverso un collegamento valido.';
+    element('#map-preview').textContent = provocation
+      ? 'Un gruppo nemico pronto è nella casella dell’eroe. Viaggiare o interagire richiede una provocazione; il combattimento non è ancora disponibile. Puoi concludere il turno senza spendere altre azioni.'
+      : !destination
+        ? 'Seleziona una casella prima di confermare il movimento.'
+        : explorationBlocked
+          ? 'Questa tessera è da esplorare. La sua esplorazione fonte non è ancora disponibile: nessun movimento viene consumato.'
+          : canMove
+            ? unexplored
+              ? `${origin!.label} → ${destination.label}. Prima dell’ingresso leggi la conferma: puoi annullare gratuitamente. Entrare usa 1 movimento; completa l’esplorazione prima di riprendere il viaggio.`
+              : `${origin!.label} → ${destination.label}. Il movimento usa un residuo del viaggio; non consuma un’altra azione.`
+            : 'La destinazione deve essere adiacente alla posizione attuale, attraverso un collegamento valido.';
     let message = !journey
       ? plan
         ? beforeTurns
@@ -123,7 +129,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
       : pending
         ? current.scenario?.explorations?.active
           ? `Completa l’esplorazione nell’avventura. L’ingresso è già pagato; movimenti residui salvati: ${remaining}.`
-          : 'Concludi la richiesta corrente: il viaggio rimane salvato.'
+          : round?.phase === 'shadow'
+            ? 'L’Ombra è in corso. Seguite l’istruzione dell’avventura qui sotto.'
+            : 'Concludi la richiesta corrente: il viaggio rimane salvato.'
         : own
           ? `${catalog.heroes.find((hero) => hero.id === active!.heroId)!.name.text} · ${origin!.label} · ${remaining} ${remaining === 1 ? 'movimento disponibile' : 'movimenti disponibili'}.`
           : round?.activeHeroId
@@ -231,7 +239,9 @@ export function createJourneyMap(sync: () => Promise<void>) {
       const nextMap = `${session.generation}:${session.journey?.id}:${JSON.stringify(session.scenario?.tiles)}:${session.scenario?.instances
         .filter((i) => i.visible)
         .map((i) => i.id)
-        .join(',')}`;
+        .join(
+          ',',
+        )}:${JSON.stringify(session.scenario?.enemies?.groups)}:${JSON.stringify(session.scenario?.explorationMarkers)}`;
       if (mapKey !== nextMap) {
         mapKey = nextMap;
         agreed.checked = false;
@@ -243,6 +253,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
             session.journey.heroes,
             catalog,
             new Set(view?.unexplored ?? []),
+            view?.markers ?? [],
           );
           tokens.replaceChildren(
             ...(view?.nodes ?? []).map((n) => {
@@ -258,6 +269,37 @@ export function createJourneyMap(sync: () => Promise<void>) {
               return b;
             }),
           );
+          for (const group of view?.groups ?? []) {
+            const details = document.createElement('details');
+            const summary = text(
+              'summary',
+              `${group.figures.length} ${group.name} · ${group.exhausted ? 'Esaurito' : 'Pronto'}${group.tokenId >= 0 ? ` · Stendardo ${group.tokenId + 1}` : ''}`,
+            );
+            details.append(
+              summary,
+              text('p', visibleDefinition.spaces.find((s) => s.id === group.spaceId)!.label),
+            );
+            for (const [index, figure] of group.figures.entries())
+              details.append(
+                text(
+                  'p',
+                  `Figura ${index + 1}: salute ${figure.health}, armatura ${figure.armor}, stregoneria ${figure.sorcery}.`,
+                ),
+              );
+            for (const bonus of group.bonuses) {
+              details.append(
+                text('strong', bonus.name),
+                sourceText(compileSourceText(bonus.description)),
+              );
+            }
+            details.append(
+              text(
+                'p',
+                'Gruppo in gioco. Combattimento e attivazioni richiedono le rispettive capacità. Un eroe nella sua casella deve provocare prima di viaggiare o interagire; quel seguito resta bloccato.',
+              ),
+            );
+            tokens.append(details);
+          }
           select.replaceChildren(
             ...[
               '',

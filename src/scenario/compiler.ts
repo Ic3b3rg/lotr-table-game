@@ -47,11 +47,35 @@ const CompilationSchema = z.strictObject({
   pack: ScenarioPackSchema,
   certificates: z.array(certificate).min(1).max(600),
   roundsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  followupCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.followup
+      ? input.followupCertificate?.instructionHash === digest(pack.manifest.followup)
+      : !input.followupCertificate,
+    'Seguito della fase assente o non attestato.',
+  );
+  for (const row of pack.manifest.followup?.instances ?? []) {
+    const c = certificates.find((c) => c.source === row.definition),
+      d = pack.definitions.find((d) => d.source === row.definition);
+    invariant(
+      c &&
+        d &&
+        row.lifecycleHash === c.lifecycleHash &&
+        row.initializationHash ===
+          digest({
+            definition: d.source,
+            initial: d.initial,
+            variables: d.variables,
+            actions: d.states.find((s) => s.index === d.initial)!.actions,
+          }),
+      'Lifecycle statico non attestato.',
+    );
+  }
   invariant(
     pack.manifest.rounds
       ? input.roundsCertificate?.instructionHash === digest(pack.manifest.rounds)

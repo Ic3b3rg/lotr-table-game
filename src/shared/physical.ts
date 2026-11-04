@@ -84,6 +84,18 @@ const LegacyPhysicalProgramSchema = z.strictObject({
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
   z.strictObject({
+    kind: z.literal('group-test'),
+    hero: slot,
+    heroes: z.array(slot).min(1).max(5),
+    stat: StatSchema,
+    target: z.int().min(1).max(99),
+    failure: z.strictObject({
+      family: PhysicalFamilySchema,
+      amount: z.int().min(1).max(56),
+      face: z.enum(['faceup', 'facedown']),
+    }),
+  }),
+  z.strictObject({
     kind: z.literal('darkness'),
     hero: slot,
     heroes: z.array(slot).min(1).max(5),
@@ -239,9 +251,20 @@ export const PhysicalResultSchema = z.strictObject({
     'rally-reset',
     'rally-scout',
     'darkness',
+    'group-test',
   ]),
   heroId: ContentIdSchema,
   successes: z.int().min(0).max(999).optional(),
+  tests: z
+    .array(
+      z.strictObject({
+        heroId: ContentIdSchema,
+        successes: z.int().min(0).max(999),
+        outcome: z.enum(['pass', 'fail']),
+      }),
+    )
+    .max(5)
+    .optional(),
   prevented: PhysicalCountsSchema,
   transferred: PhysicalCountsSchema,
   returned: PhysicalCountsSchema,

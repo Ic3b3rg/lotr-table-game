@@ -25,12 +25,14 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'FFG.Common.Actions.CheckBool': 'branchBool',
   'HutongGames.PlayMaker.Actions.BoolTest': 'branchBool',
   'HutongGames.PlayMaker.Actions.SendEventByName': 'broadcast',
+  'HutongGames.PlayMaker.Actions.SendEvent': ['send', 'broadcast'],
   'FFG.Common.Actions.FinishProcessingEvent': 'release',
   'FFG.Common.Actions.FinishFSM': 'stop',
   'FFG.JIME.Actions.RevealNode': 'revealNode',
   'FFG.JIME.Actions.HideThisNode': 'hideNode',
   'HutongGames.PlayMaker.Actions.IntAdd': 'addInt',
-  'HutongGames.PlayMaker.Actions.IntOperator': 'subtractInt',
+  'HutongGames.PlayMaker.Actions.IntOperator': ['subtractInt', 'multiplyInt'],
+  'FFG.JIME.Actions.SpawnRandomEnemyGroups': 'spawnRandom',
   'HutongGames.PlayMaker.Actions.IntCompare': 'compareInt',
 };
 

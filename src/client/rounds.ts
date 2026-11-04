@@ -167,7 +167,12 @@ export function createRounds(sync: () => Promise<void>) {
             : frame?.threat
               ? `Minaccia: ${frame.threat.before} → ${frame.threat.after}. Aumento ${frame.threat.delta}: ${frame.threat.heroes} eroi, ${frame.threat.tokens.length} segnalini minaccia attivi, ${frame.threat.tiles.length} tessere visibili inesplorate. Il gruppo può proseguire.`
               : 'Concludete la richiesta dell’Ombra.';
-        confirm.textContent = 'Applica la minaccia e riorganizza';
+        if (current.scenario?.pending)
+          status.textContent =
+            'L’Ombra continua nel pannello dell’avventura. Leggete le istruzioni, completate le prove e confermate i piazzamenti; la Riorganizzazione attende il seguito.';
+        confirm.textContent = current.scenario?.pack.manifest.followup
+          ? 'Applica la minaccia e risolvi gli eventi'
+          : 'Applica la minaccia e riorganizza';
         element('#round-agreement').textContent =
           'Il gruppo ha letto l’aumento della minaccia ed è pronto a proseguire.';
       } else if (round.phase === 'rally') {

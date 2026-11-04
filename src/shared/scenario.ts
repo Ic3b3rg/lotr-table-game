@@ -5,6 +5,7 @@ import { CopyIdSchema } from './preparation';
 import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
 import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
+import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
 
 export const SourceTextSchema = z
   .array(
@@ -134,7 +135,20 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     skipAdjacentSectionEvent: z.boolean().optional(),
   }),
   action('section', { sectionId: z.int().min(0).max(3), text: SourceTextSchema }),
-  action('objective', { id: z.int().nonnegative(), text: SourceTextSchema }),
+  action('objective', {
+    id: z.int().nonnegative(),
+    text: SourceTextSchema,
+    bindings: z
+      .array(
+        z.strictObject({
+          placeholder: z.string().regex(/^\{[a-zA-Z0-9_-]{1,80}\}$/),
+          ref: VariableRefSchema,
+        }),
+      )
+      .min(1)
+      .max(5)
+      .optional(),
+  }),
   action('threat', { source: SourceSchema, threshold: z.int().positive().max(999) }),
   action('set', { target: VariableRefSchema, value: scalar }),
   action('flip', { target: VariableRefSchema }),
@@ -146,12 +160,36 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     falseEvent: z.string().min(1).max(100),
   }),
   action('broadcast', { event: z.string().min(1).max(100) }),
+  action('send', { definition: SourceSchema, event: z.string().min(1).max(100) }),
+  action('spawnRandom', {
+    points: VariableRefSchema,
+    text: SourceTextSchema,
+    excludeGameEnemyPoints: z.boolean(),
+    trial: z
+      .strictObject({
+        stat: StatSchema,
+        target: z.int().min(1).max(99),
+        failure: z.strictObject({
+          family: z.enum(['damage', 'fear']),
+          amount: z.int().min(1).max(56),
+          face: z.enum(['faceup', 'facedown']),
+        }),
+      })
+      .optional(),
+    filter: z.strictObject({
+      MustHaveAny: Int32Schema,
+      MustHaveAll: Int32Schema,
+      ExcludeIfAny: Int32Schema,
+    }),
+    sections: z.array(z.int().min(0).max(3)).max(4).nullable(),
+  }),
   action('release', {}),
   action('stop', {}),
   action('revealNode', {}),
   action('hideNode', {}),
   action('addInt', { target: VariableRefSchema, value: intValue }),
   action('subtractInt', { target: VariableRefSchema, left: intValue, right: intValue }),
+  action('multiplyInt', { target: VariableRefSchema, left: intValue, right: intValue }),
   action('compareInt', {
     left: intValue,
     right: intValue,
@@ -219,6 +257,50 @@ export const ScenarioPackSchema = z.strictObject({
     .optional(),
   manifest: z.strictObject({
     rounds: RoundSourceSchema.optional(),
+    followup: z
+      .strictObject({
+        version: z.literal('source-shadow-followup-v1'),
+        projectionFingerprint: HashSchema,
+        evidenceHash: HashSchema,
+        playerCountBinding: z.string().min(1).max(150),
+        enemyPointsBinding: z.string().min(1).max(150),
+        thresholdEvent: z.string().min(1).max(100),
+        instances: z
+          .array(
+            z.strictObject({
+              gameObject: SourceSchema,
+              definition: SourceSchema,
+              kind: z.enum(['logic', 'threat']),
+              hasNode: z.boolean(),
+              initializationHash: HashSchema,
+              lifecycleHash: HashSchema,
+            }),
+          )
+          .min(1)
+          .max(32),
+        thresholds: z
+          .array(z.strictObject({ source: SourceSchema, definition: SourceSchema.nullable() }))
+          .min(1)
+          .max(100),
+        deployment: z.strictObject({
+          version: z.literal('source-deployment-v1'),
+          source: DeploymentSourceSchema,
+          compiled: z.unknown(),
+          fingerprint: HashSchema,
+        }),
+        deploymentText: SourceTextSchema,
+        explorationNodes: z
+          .array(
+            z.strictObject({
+              tileSource: SourceSchema,
+              source: SourceSchema,
+              position: VectorSchema,
+            }),
+          )
+          .max(200),
+        explorationText: z.strictObject({ single: SourceTextSchema, plural: SourceTextSchema }),
+      })
+      .optional(),
     scope: z.enum([
       'startup-only',
       'synthetic-physical-p0',
@@ -319,7 +401,7 @@ export const EncounterIntentSchema = z.discriminatedUnion('type', [
 ]);
 export const ScenarioInstanceSchema = z.strictObject({
   id: z.string().min(1).max(200),
-  kind: z.enum(['principal', 'timer', 'encounter', 'exploration']),
+  kind: z.enum(['principal', 'timer', 'encounter', 'exploration', 'logic', 'threat']),
   definition: SourceSchema,
   prefab: SourceSchema.nullable(),
   spaceId: z.string().max(200).nullable(),
@@ -350,6 +432,9 @@ export const ScenarioRequestSchema = z.strictObject({
     'choice',
     'exploration-intro',
     'exploration-outro',
+    'deployment-intro',
+    'deployment',
+    'exploration-markers',
   ]),
   options: z
     .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
@@ -378,6 +463,11 @@ const taskBase = {
 };
 export const ScenarioSchema = z.strictObject({
   rounds: SourceRoundStateSchema.optional(),
+  enemies: DeploymentStateSchema.optional(),
+  explorationMarkers: z
+    .array(z.strictObject({ source: SourceSchema, tileSource: SourceSchema, visible: z.boolean() }))
+    .max(200)
+    .optional(),
   explorations: z
     .strictObject({
       version: z.literal('source-exploration-v1'),
@@ -461,6 +551,14 @@ export const ScenarioSchema = z.strictObject({
   tasks: z
     .array(
       z.discriminatedUnion('kind', [
+        z.strictObject({
+          ...taskBase,
+          kind: z.literal('spawnRandom'),
+          stage: z.enum(['intro', 'placements']),
+          groupIndex: z.int().nonnegative(),
+          effectId: z.string().max(300),
+          parentId: z.uuid().optional(),
+        }),
         z.strictObject({ ...taskBase, kind: z.literal('physical'), parentId: z.uuid() }),
         z.strictObject({
           ...taskBase,
@@ -477,6 +575,9 @@ export const ScenarioSchema = z.strictObject({
           kind: z.literal('section'),
           sectionId: z.int().nonnegative(),
           tileIndex: z.int().nonnegative(),
+          remaining: z.array(SourceSchema).max(200).optional(),
+          order: z.array(SourceSchema).max(200).optional(),
+          markers: z.enum(['unrevealed', 'pending', 'done']).optional(),
         }),
       ]),
     )

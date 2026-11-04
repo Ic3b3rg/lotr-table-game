@@ -67,6 +67,7 @@ export const CycleStateSchema = z.strictObject({
         ]),
         lastStandRules: z.literal('source-last-stand-v1').optional(),
         explorationEntropy: hash.optional(),
+        shadowEntropy: hash.optional(),
       }),
     )
     .min(0)

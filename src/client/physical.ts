@@ -43,7 +43,8 @@ export function createPhysicalControls(
       current = session;
       const view = session.physical,
         q = session.scenario?.pending;
-      root.hidden = !view;
+      root.hidden =
+        !view || (!!session.scenario?.pack.manifest.followup && !!q && q.kind !== 'physical');
       const nextKey = `${session.generation}:${player?.id}:${catalog?.id}:${JSON.stringify(view)}:${q?.id}`;
       if (key === nextKey) return;
       key = nextKey;
@@ -54,7 +55,9 @@ export function createPhysicalControls(
         text(
           'p',
           !view.synthetic
-            ? 'Le conseguenze e le prove dell’incontro usano le carte della Compagnia. Completa l’istruzione indicata; il turno conserva azioni e movimenti residui.'
+            ? session.round?.phase === 'shadow'
+              ? 'Ogni proprietario risolve le prove e le conseguenze dell’Ombra indicate qui sotto. Gli altri giocatori attendono; la fase riprende dopo tutti gli eroi.'
+              : 'Le conseguenze e le prove dell’incontro usano le carte della Compagnia. Completa l’istruzione indicata; il turno conserva azioni e movimenti residui.'
             : view.lastStand
               ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
               : view.fronts
@@ -96,7 +99,7 @@ export function createPhysicalControls(
         root.append(
           text(
             'h4',
-            `Prova dell’incontro · ${name(t.heroId)} · ${STAT_LABELS[t.stat]}${t.target === null ? ' · conta i successi' : ` ${t.target}`}`,
+            `Prova ${session.round?.phase === 'shadow' ? 'dell’Ombra' : 'dell’incontro'} · ${name(t.heroId)} · ${STAT_LABELS[t.stat]}${t.target === null ? ' · conta i successi' : ` ${t.target}`}`,
           ),
         );
         const cards = text('ul', '', 'physical-test-cards');

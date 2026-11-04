@@ -7,6 +7,7 @@ import { beginScenario, resumeScenario } from '../scenario/runtime';
 import { ApiError } from './errors';
 import { needsPhysical, loadPhysicalSource } from '../scenario/physical';
 import { initializeOriginalCycle } from './physical-cycle';
+import { requiresProvocation } from '../scenario/deployment';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -155,6 +156,7 @@ export function allowScenarioPlay(state: State, command: Command) {
       'L’interazione richiede il proprio consumer fonte, compresi i costi prima di interagire. La prova libera non lo sostituisce e nessuna azione è stata consumata.',
     );
   const allowed =
+    // Enemy checks precede the ordinary action's cost and movement.
     sc.phase === 'action' &&
     (['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type) ||
       (original && (command.type === 'INTERACT_SCENARIO' || command.type === 'EXPLORE_SCENARIO')));
@@ -163,6 +165,17 @@ export function allowScenarioPlay(state: State, command: Command) {
     !!sc.pack.manifest.rounds &&
     ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'END_RALLY', 'START_RALLY_SCOUT'].includes(
       command.type,
+    );
+  if (
+    'heroId' in command &&
+    command.heroId &&
+    ['START_TRAVEL', 'MOVE_HERO', 'INTERACT_SCENARIO', 'EXPLORE_SCENARIO'].includes(command.type) &&
+    requiresProvocation(state, command.heroId)
+  )
+    throw new ApiError(
+      409,
+      'ENEMY_PROVOCATION_CAPABILITY',
+      'Un gruppo nemico pronto è nella casella dell’eroe. La provocazione richiede il combattimento, non ancora disponibile. Nessun costo o movimento è stato applicato.',
     );
   if (!allowed && !phaseCommand)
     throw new ApiError(

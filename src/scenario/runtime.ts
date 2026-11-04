@@ -1,4 +1,5 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
+import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
 import { randomUUID } from 'node:crypto';
@@ -23,8 +24,14 @@ import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { newRound } from '../server/rounds';
 import { ApiError } from '../server/errors';
 import { cycleUUID } from '../physical-resolution/cycle-request';
-import { beginEncounterPhysical } from './encounter-physical';
+import {
+  beginEncounterPhysical,
+  openSourcePhysical,
+  groupTrialProgram,
+} from './encounter-physical';
 import { defeatedHeroes } from '../server/physical-defeat';
+import { comparisonSort } from '../map-generation/comparison-sort';
+import { materializeDeployment, deploymentText } from './deployment';
 import type { Command } from '../shared/protocol';
 import { persistentEffects } from '../physical-resolution/effects';
 import {
@@ -102,7 +109,7 @@ function send(sc: Scenario, i: ScenarioInstance, event: string) {
     throw new ApiError(
       409,
       'ROUND_SOURCE_CAPABILITY',
-      `Il seguito della fonte richiede ${capability}. I progressi restano salvati.`,
+      'Questo seguito dell’avventura non è ancora disponibile. I progressi sono salvati.',
     );
   if (target === undefined) return false;
   enter(sc, i, target);
@@ -260,6 +267,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
       break;
     }
     case 'subtractInt':
+    case 'multiplyInt':
     case 'compareInt': {
       const value = (v: typeof a.left) =>
         v.kind === 'literal' ? v.value : variable(sc, i, v.ref)[v.ref.name];
@@ -270,6 +278,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         'Operatore intero con binding non numerico.',
       );
       if (a.op === 'subtractInt') setValue(sc, i, a.target, (left - right) | 0);
+      else if (a.op === 'multiplyInt') setValue(sc, i, a.target, Math.imul(left, right));
       else {
         invariant(
           send(sc, i, left === right ? a.equalEvent : left < right ? a.lessEvent : a.greaterEvent),
@@ -301,6 +310,25 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
     case 'broadcast':
       broadcast(sc, a.event);
       break;
+    case 'send': {
+      const receiver = sc.instances.find((r) => r.definition === a.definition);
+      invariant(receiver, 'Receiver indirizzato non inizializzato.');
+      sc.events.push({ id: eventId(sc, a.event), event: a.event, receivers: [receiver.id] });
+      invariant(send(sc, receiver, a.event), 'Callback indirizzato senza seguito fonte.');
+      break;
+    }
+    case 'spawnRandom':
+      invariant(sc.pack.manifest.followup && sc.enemies, 'Spawn senza capacità congelata.');
+      sc.tasks.push({
+        kind: 'spawnRandom',
+        instanceId: i.id,
+        entry: i.entry,
+        action: a.index,
+        stage: 'intro',
+        groupIndex: 0,
+        effectId: actionKey(i, a.index),
+      });
+      return;
     case 'release':
       i.processing = 0;
       break;
@@ -319,7 +347,7 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         sc.threats.push({ source: a.source, threshold: a.threshold });
       break;
     case 'objective':
-      sc.objective = { id: a.id, text: structuredClone(a.text) };
+      sc.objective = { id: a.id, text: objectiveText(a, (ref) => variable(sc, i, ref)[ref.name]) };
       break;
     case 'revealTile':
       sc.tiles.find((t) => t.source === resolveTile(state, i, a.tile).source)!.visible = true;
@@ -353,6 +381,11 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         view = sc.tiles.find((t) => t.source === tile.source)!;
       invariant(view.visible, 'Esplorazione di tessera nascosta.');
       view.explored = true;
+      sc.explorationMarkers
+        ?.filter((m) => m.tileSource === tile.source)
+        .forEach((m) => {
+          m.visible = false;
+        });
       const ordinary = i.kind === 'exploration';
       if (ordinary) i.visible = false;
       const adjacent: number[] = [];
@@ -383,6 +416,16 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction) {
         action: a.index,
         sectionId: a.sectionId,
         tileIndex: 0,
+        ...(sc.pack.manifest.followup
+          ? {
+              remaining: p.sections
+                .find((s) => s.id === a.sectionId)!
+                .tiles.filter((t) => !sc.tiles.find((v) => v.source === t.source)!.visible)
+                .map((t) => t.source),
+              order: [],
+              markers: 'unrevealed' as const,
+            }
+          : {}),
       });
       return;
     default: {
@@ -509,12 +552,78 @@ export function processRoundEvent(state: State, event: string, end: boolean) {
     );
   }
 }
+/** Starts one source-owned phase dispatch; pending dialogs retain the caller's frame. */
+export function startPhaseEvent(state: State, id: string, event: string, processing: boolean) {
+  const sc = state.scenario!,
+    i = sc.instances.find((i) => i.id === id);
+  invariant(i, 'Receiver della fase non inizializzato.');
+  const d = definition(sc, i),
+    cursor = current(sc, i);
+  if (i.stopped) return false;
+  if (
+    cursor.deferredTransitions?.[event] ||
+    (cursor.transitions[event] === undefined && d.deferredHandlers[event])
+  )
+    throw new ApiError(
+      409,
+      'ROUND_SOURCE_CAPABILITY',
+      'Un seguito dell’avventura non è ancora disponibile. Nessun avanzamento è stato applicato.',
+    );
+  if (cursor.transitions[event] === undefined && d.handlers[event] === undefined) return false;
+  if (processing) i.processing = 1;
+  sc.events.push({ id: eventId(sc, event), event, receivers: [i.id] });
+  invariant(send(sc, i, event), 'Evento senza ingresso fonte.');
+  pump(state);
+  return true;
+}
+export function pumpPhaseEvent(state: State) {
+  pump(state);
+}
 function advanceTask(state: State) {
   const sc = state.scenario!,
     task = sc.tasks.at(-1);
   if (!task) return false;
   const owner = sc.instances.find((i) => i.id === task.instanceId)!;
   invariant(owner.entry === task.entry, 'Continuazione fonte scaduta.');
+  if (task.kind === 'spawnRandom') {
+    const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
+    invariant(a.op === 'spawnRandom', 'Spawn senza istruzione fonte.');
+    if (task.stage === 'intro' && a.trial) {
+      const effect = sc.effects.find((e) => e.id === task.effectId)!;
+      task.parentId ??= openSourcePhysical(state, effect, a, groupTrialProgram(state, a));
+      const parent = state.physical!.snapshot.parents.find((p) => p.id === task.parentId)!;
+      if (parent.status !== 'completed') {
+        const active = state.physical!.snapshot.active;
+        invariant(active?.runId === task.parentId, 'Prova della soglia senza figlio.');
+        request(state, physicalRequestData(state, effect, active));
+        return true;
+      }
+      sc.messageLog.push({ id: `${task.effectId}:intro`, text: structuredClone(a.text) });
+      materializeDeployment(state, owner, a, task.effectId);
+      task.stage = 'placements';
+    }
+    const attempt = sc.enemies!.attempts.find((p) => p.effectId === task.effectId);
+    const group = attempt?.groups[task.groupIndex];
+    if (task.stage === 'intro' || group) {
+      if (group) sc.enemies!.groups.find((g) => g.id === group)!.placed = true;
+      request(state, {
+        instanceId: owner.id,
+        state: owner.state,
+        entry: owner.entry,
+        action: a.index,
+        kind: task.stage === 'intro' ? 'deployment-intro' : 'deployment',
+        text: task.stage === 'intro' ? a.text : deploymentText(state, group!),
+        heroId: null,
+        actorPlayerId: null,
+        stage: 'ready',
+        tileSource: group ? sc.enemies!.groups.find((g) => g.id === group)!.tileSource : null,
+      });
+      return true;
+    }
+    complete(owner, task.action);
+    sc.tasks.pop();
+    return true;
+  }
   if (task.kind === 'physical') {
     const p = state.physical!,
       parent = p.snapshot.parents.find((r) => r.id === task.parentId)!;
@@ -565,27 +674,38 @@ function advanceTask(state: State) {
     return true;
   }
   if (task.kind === 'section') {
-    const tiles = projection(state).sections.find((s) => s.id === task.sectionId)!.tiles;
-    while (task.tileIndex < tiles.length) {
-      const tile = tiles[task.tileIndex]!,
-        view = sc.tiles.find((t) => t.source === tile.source)!;
-      if (view.visible) {
-        task.tileIndex++;
-        continue;
-      }
-      view.visible = true;
+    let tiles = projection(state).sections.find((s) => s.id === task.sectionId)!.tiles;
+    if (task.remaining) {
+      const p = projection(state);
+      const touches = (source: string) =>
+        p.spaces
+          .filter((s) => s.tileSource === source)
+          .some((s) =>
+            s.connected.some(
+              (id) =>
+                sc.tiles.find((t) => t.source === p.spaces.find((s) => s.id === id)!.tileSource)!
+                  .visible,
+            ),
+          );
+      comparisonSort(task.remaining, (a, b) => Number(touches(b)) - Number(touches(a)));
+      tiles = task.remaining.map((source) => tiles.find((t) => t.source === source)!);
+    }
+    if (task.remaining && tiles.length) {
+      const tile = tiles[0]!;
+      task.remaining.shift();
+      task.order!.push(tile.source);
+      sc.tiles.find((t) => t.source === tile.source)!.visible = true;
       const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
-      invariant(action.op === 'section', 'Continuazione sezione non valida.');
-      const text: SourceText = action.text.map((t) =>
-        t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
-      );
+      invariant(action.op === 'section', 'Sezione senza istruzione fonte.');
       request(state, {
         instanceId: owner.id,
         state: owner.state,
         entry: owner.entry,
         action: task.action,
         kind: 'placement',
-        text,
+        text: action.text.map((t) =>
+          t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
+        ),
         heroId: null,
         actorPlayerId: null,
         stage: 'ready',
@@ -593,6 +713,55 @@ function advanceTask(state: State) {
       });
       return true;
     }
+    if (task.remaining && task.markers === 'unrevealed') {
+      task.markers = 'pending';
+      const nodes = sc.explorationMarkers!.filter((m) => task.order!.includes(m.tileSource));
+      nodes.forEach((m) => {
+        m.visible = true;
+      });
+      const cap = sc.pack.manifest.followup!;
+      request(state, {
+        instanceId: owner.id,
+        state: owner.state,
+        entry: owner.entry,
+        action: task.action,
+        kind: 'exploration-markers',
+        text: task.order!.length <= 1 ? cap.explorationText.single : cap.explorationText.plural,
+        heroId: null,
+        actorPlayerId: null,
+        stage: 'ready',
+        tileSource: null,
+      });
+      return true;
+    }
+    if (!task.remaining)
+      while (task.tileIndex < tiles.length) {
+        const tile = tiles[task.tileIndex]!,
+          view = sc.tiles.find((t) => t.source === tile.source)!;
+        if (view.visible) {
+          task.tileIndex++;
+          continue;
+        }
+        view.visible = true;
+        const action = current(sc, owner).actions.find((a) => a.index === task.action)!;
+        invariant(action.op === 'section', 'Continuazione sezione non valida.');
+        const text: SourceText = action.text.map((t) =>
+          t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
+        );
+        request(state, {
+          instanceId: owner.id,
+          state: owner.state,
+          entry: owner.entry,
+          action: task.action,
+          kind: 'placement',
+          text,
+          heroId: null,
+          actorPlayerId: null,
+          stage: 'ready',
+          tileSource: tile.source,
+        });
+        return true;
+      }
   } else {
     const frame = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     if (task.stage === 'intro' || task.stage === 'outro') {
@@ -685,6 +854,12 @@ function pump(state: State) {
     if (sc.pending) return;
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
+      if (
+        sc.pack.manifest.followup &&
+        progress &&
+        sc.instances.some((i) => !i.stopped && !i.settled)
+      )
+        continue;
       const exploration = sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
       if (exploration) {
         const node = sc.instances.find((i) => i.id === exploration.instanceId)!;
@@ -768,6 +943,15 @@ export function beginScenario(
       : {}),
   };
   state.scenario = sc;
+  if (sc.pack.manifest.followup) {
+    sc.globals[sc.pack.manifest.followup.playerCountBinding] = state.preparation!.heroes.length;
+    sc.enemies = { entropy: null, cursor: 0, groups: [], attempts: [] };
+    sc.explorationMarkers = sc.pack.manifest.followup.explorationNodes.map((n) => ({
+      source: n.source,
+      tileSource: n.tileSource,
+      visible: false,
+    }));
+  }
   initializeScenarioPhysical(state, journeyDefinition.startSpaceId, physical);
   const add = (
     id: string,
@@ -803,6 +987,8 @@ export function beginScenario(
   };
   const principal = add('principal', 'principal', sc.pack.principal);
   sc.pack.timers.forEach((t, n) => add(`timer-${n}`, 'timer', t));
+  for (const row of sc.pack.manifest.followup?.instances ?? [])
+    add(`static:${row.gameObject}`, row.kind, row.definition);
   for (const spaceId of p.spawnOrder) {
     const a = p.assignments.find((a) => a.spaceId === spaceId)!,
       m = sc.pack.manifest.prefabs.find((m) => m.source === a.prefab.source)!;
@@ -863,7 +1049,28 @@ export function resumeScenario(
       'SCENARIO_INPUT_REQUIRED',
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
-  if (q.kind === 'exploration-intro' || q.kind === 'exploration-outro') {
+  if (q.kind === 'deployment-intro' || q.kind === 'deployment') {
+    if (input.kind !== 'ack') throw wrong();
+    const task = sc.tasks.at(-1),
+      a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    invariant(
+      task?.kind === 'spawnRandom' &&
+        task.instanceId === i.id &&
+        task.entry === q.entry &&
+        task.action === q.action &&
+        a.op === 'spawnRandom',
+      'Callback spawn scaduto.',
+    );
+    sc.messageLog.push({
+      id: `${task.effectId}:${q.kind === 'deployment-intro' ? 'intro' : task.groupIndex}`,
+      text: structuredClone(q.text),
+    });
+    if (q.kind === 'deployment-intro') {
+      materializeDeployment(state, i, a, task.effectId);
+      task.stage = 'placements';
+    } else task.groupIndex++;
+    sc.pending = null;
+  } else if (q.kind === 'exploration-intro' || q.kind === 'exploration-outro') {
     if (input.kind !== 'ack') throw wrong();
     const task = sc.tasks.at(-1);
     invariant(
@@ -1011,9 +1218,15 @@ export function resumeScenario(
       return;
     }
     const task = sc.tasks.at(-1);
-    if (task?.kind === 'section' && task.instanceId === i.id && task.action === q.action)
+    if (task?.kind === 'section' && task.instanceId === i.id && task.action === q.action) {
       task.tileIndex++;
-    else {
+      if (task.remaining)
+        sc.messageLog.push({
+          id: `${actionKey(i, q.action)}:${q.kind === 'exploration-markers' ? 'markers' : q.tileSource}`,
+          text: structuredClone(q.text),
+        });
+      if (q.kind === 'exploration-markers') task.markers = 'done';
+    } else {
       logMessage(sc, i, q.action);
       complete(i, q.action);
     }

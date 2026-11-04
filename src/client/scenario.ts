@@ -54,7 +54,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           ? 'Rivela per Spirito 1'
           : q?.kind === 'handoff'
             ? 'Inizia la Fase di Azione'
-            : q?.kind === 'placement'
+            : q?.kind === 'placement' ||
+                q?.kind === 'deployment' ||
+                q?.kind === 'exploration-markers'
               ? 'Conferma il piazzamento'
               : q?.kind === 'objective'
                 ? 'Conferma l’obiettivo'
@@ -121,6 +123,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     if (sourcePhases)
       element('#scenario-limit').textContent =
         'Il passaggio senza nemici a Ombra e Riorganizzazione è disponibile. Altri incontri, combattimento ed eventi successivi mantengono i propri limiti: l’avventura completa è ancora in sviluppo.';
+    if (sc?.pack.manifest.followup)
+      element('#scenario-limit').textContent =
+        'Il seguito del timer e i piazzamenti obbligatori della minaccia sono disponibili. I gruppi apparsi attendono la prossima Ombra: non si attivano in questa fase. Combattimento, provocazione, successive attivazioni e altri incontri conservano i propri limiti.';
     refreshActions();
   }
   agreed.oninput = () => {
@@ -181,6 +186,34 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         commands.clear();
         element('#scenario-error').hidden = true;
         body.replaceChildren(...(q ? [sourceText(q.text)] : []));
+        if (q?.kind === 'deployment') {
+          const task = sc!.tasks.find(
+            (t) =>
+              t.kind === 'spawnRandom' &&
+              t.instanceId === q.instanceId &&
+              t.entry === q.entry &&
+              t.action === q.action,
+          );
+          const attempt =
+            task?.kind === 'spawnRandom'
+              ? sc!.enemies!.attempts.find((a) => a.effectId === task.effectId)
+              : null;
+          const group =
+            task?.kind === 'spawnRandom'
+              ? sc!.enemies!.groups.find((g) => g.id === attempt?.groups[task.groupIndex])
+              : null;
+          const space = session.journey?.definition.spaces.find(
+            (s) => s.id === sc!.spaceBindings.find((b) => b.sourceId === group?.spaceId)?.id,
+          );
+          if (space)
+            body.append(
+              text(
+                'p',
+                `Posizione del gruppo: ${space.label}. Il segnalino sulla mappa indica questa casella.`,
+                'company-help',
+              ),
+            );
+        }
         if (q?.kind === 'choice' && (!q.actorPlayerId || q.actorPlayerId === identity?.id)) {
           const fields = document.createElement('fieldset'),
             legend = text('legend', 'Scegli come proseguire');
@@ -211,7 +244,23 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           body.append(fields);
         }
         const objective = element('#scenario-objective');
-        objective.replaceChildren(...(sc?.objective ? [sourceText(sc.objective.text)] : []));
+        objective.replaceChildren(
+          ...(sc?.objective
+            ? [
+                text('strong', 'Obiettivo attuale: '),
+                sourceText(sc.objective.text),
+                ...(sc.pack.manifest.followup && sc.objective.id > 0
+                  ? [
+                      text(
+                        'p',
+                        'Per seguire la missione, consulta sempre l’obiettivo attuale qui sopra.',
+                        'company-help',
+                      ),
+                    ]
+                  : []),
+              ]
+            : []),
+        );
         objective.hidden = !sc?.objective;
         key = nextKey;
       }

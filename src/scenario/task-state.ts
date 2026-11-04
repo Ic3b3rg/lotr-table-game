@@ -32,7 +32,11 @@ export function validateSourceTasks(state: State) {
       invariant(
         action.op === 'section' &&
           task.sectionId === action.sectionId &&
-          task.tileIndex < projection.sections.find((s) => s.id === task.sectionId)!.tiles.length,
+          (task.markers === 'pending'
+            ? task.tileIndex <=
+              projection.sections.find((s) => s.id === task.sectionId)!.tiles.length
+            : task.tileIndex <
+              projection.sections.find((s) => s.id === task.sectionId)!.tiles.length),
         'Cursore sezione fuori dalla fonte.',
       );
     }

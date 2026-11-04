@@ -1,6 +1,7 @@
 import type { State } from '../server/state';
 import { HANDOFF_TEXT } from '../shared/scenario';
 import { digest } from '../map-freeze/hash';
+import { sectionOrder } from './section-order';
 import { invariant } from '../map-freeze/validate';
 export function validateSourceRequest(state: State) {
   const sc = state.scenario!,
@@ -99,7 +100,9 @@ export function validateSourceRequest(state: State) {
     } else invariant(q.tileSource === null, 'Tessera non richiesta dal packet.');
   } else {
     invariant(
-      a.op === 'section' && q.kind === 'placement' && state.mapGeneration?.status === 'frozen',
+      a.op === 'section' &&
+        (q.kind === 'placement' || q.kind === 'exploration-markers') &&
+        state.mapGeneration?.status === 'frozen',
       'Richiesta non asincrona.',
     );
     const task = sc.tasks.find(
@@ -110,9 +113,27 @@ export function validateSourceRequest(state: State) {
         t.action === a.index,
     );
     invariant(task?.kind === 'section', 'Piazzamento sezione senza continuazione.');
-    const tile = state.mapGeneration.projection.sections.find((s) => s.id === a.sectionId)!.tiles[
-      task.tileIndex
-    ];
+    if (q.kind === 'exploration-markers') {
+      const cap = sc.pack.manifest.followup!;
+      invariant(
+        task.markers === 'pending' &&
+          !task.remaining?.length &&
+          q.tileSource === null &&
+          digest(q.text) ===
+            digest(
+              task.order!.length <= 1 ? cap.explorationText.single : cap.explorationText.plural,
+            ),
+        'Segnalini senza continuazione fonte.',
+      );
+      return;
+    }
+    const tile = task.order
+      ? state.mapGeneration.projection.sections
+          .flatMap((s) => s.tiles)
+          .find((t) => t.source === task.order!.at(-1))
+      : state.mapGeneration.projection.sections.find((s) => s.id === a.sectionId)!.tiles[
+          task.tileIndex
+        ];
     invariant(tile && tile.source === q.tileSource, 'Ordine tessere della richiesta incoerente.');
     const text = a.text.map((t) =>
       t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
@@ -122,11 +143,63 @@ export function validateSourceRequest(state: State) {
 }
 export function validateMessageLog(state: State) {
   const sc = state.scenario!;
+  const visible = new Set<string>();
   const expected = sc.effects.flatMap((e) => {
     const i = sc.instances.find((i) => i.id === e.instanceId)!,
       d = sc.pack.definitions.find((d) => d.source === i.definition)!,
       a = d.states.find((s) => s.index === e.state)!.actions.find((a) => a.index === e.action)!;
     const completed = e.entry < i.entry || (e.entry === i.entry && i.completed.includes(e.action));
+    if (a.op === 'revealTile') {
+      const effect = sc.pack.definitions
+        .find((d) => d.source === i.definition)!
+        .states.find((s) => s.index === e.state)!
+        .actions.find((x) => x.index === e.action)!;
+      if (effect.op === 'revealTile') {
+        const p = state.mapGeneration!;
+        invariant(p.status === 'frozen', 'Registro senza mappa.');
+        const value = effect.tile;
+        const hash =
+          value.kind === 'start'
+            ? p.projection.sections.find((s) => s.id === 0)!.tiles[0]!.hashId
+            : value.kind === 'hash'
+              ? value.value
+              : (value.ref.scope === 'local' ? i.variables : sc.globals)[value.ref.name];
+        visible.add(
+          p.projection.sections.flatMap((s) => s.tiles).find((t) => t.hashId === hash)!.source,
+        );
+      }
+    }
+    if (a.op === 'section' && sc.pack.manifest.followup) {
+      invariant(state.mapGeneration?.status === 'frozen', 'Registro senza mappa.');
+      const p = state.mapGeneration.projection;
+      const order = sectionOrder(p, a.sectionId, visible);
+      const task = sc.tasks.find(
+        (t) => t.instanceId === i.id && t.entry === e.entry && t.action === e.action,
+      );
+      const count =
+        task?.kind === 'section'
+          ? task.tileIndex - (task.markers === 'done' ? 1 : 0)
+          : order.length;
+      const logs = order.slice(0, count).map((source) => {
+        const tile = p.sections.flatMap((s) => s.tiles).find((t) => t.source === source)!;
+        visible.add(source);
+        return {
+          id: `${e.id}:${source}`,
+          text: a.text.map((t) =>
+            t.kind === 'text' ? { ...t, text: t.text.replaceAll('{tile}', tile.code) } : t,
+          ),
+        };
+      });
+      if (completed)
+        logs.push({
+          id: `${e.id}:markers`,
+          text:
+            order.length <= 1
+              ? sc.pack.manifest.followup.explorationText.single
+              : sc.pack.manifest.followup.explorationText.plural,
+        });
+      return logs;
+    }
     return a.op === 'message' && !a.ignoreLog && completed ? [{ id: e.id, text: a.text }] : [];
   });
   invariant(

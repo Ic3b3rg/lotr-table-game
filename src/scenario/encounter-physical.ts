@@ -66,11 +66,34 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
     children,
   };
 }
-export function beginEncounterPhysical(state: State, effect: SourceEffect, action: ScenarioAction) {
+export function groupTrialProgram(
+  state: State,
+  a: Extract<ScenarioAction, { op: 'spawnRandom' }>,
+): PhysicalProgram {
+  invariant(a.trial, 'Spawn senza prova fonte.');
+  return {
+    profile: 'source-fronts-v1',
+    initialCredits: state.physical!.heroes.map(() => 0),
+    limits: state.physical!.heroes.map(() => ({
+      kind: 'requires-capability',
+      capability: 'source-derived',
+    })),
+    darknessHeroes: [],
+    children: [
+      { kind: 'group-test', hero: 0, heroes: state.physical!.heroes.map((_, n) => n), ...a.trial },
+    ],
+  };
+}
+export function openSourcePhysical(
+  state: State,
+  effect: SourceEffect,
+  action: ScenarioAction,
+  program: PhysicalProgram,
+) {
   const p = state.physical!,
     sc = state.scenario!;
   invariant(
-    p?.fronts && p.lastStand && p.version === 3 && sc.play?.active,
+    p?.fronts && p.lastStand && p.version === 3,
     'Capacità fisiche originali non congelate.',
   );
   const resources = p.snapshot.resolution!.resources;
@@ -103,7 +126,7 @@ export function beginEncounterPhysical(state: State, effect: SourceEffect, actio
         action: effect.action,
         parameterHash: action.origin.parameterHash,
       },
-      encounterProgram(state, action),
+      program,
       context,
       spatial,
       cycleUUID({ scenario: sc.id, effect: effect.id }),
@@ -113,7 +136,12 @@ export function beginEncounterPhysical(state: State, effect: SourceEffect, actio
   }
   state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
   syncPhysicalDefeat(state);
-  sc.tasks.push({
+  return parentId;
+}
+export function beginEncounterPhysical(state: State, effect: SourceEffect, action: ScenarioAction) {
+  invariant(state.scenario!.play?.active, 'Incontro senza padre.');
+  const parentId = openSourcePhysical(state, effect, action, encounterProgram(state, action));
+  state.scenario!.tasks.push({
     kind: 'physical',
     instanceId: effect.instanceId,
     entry: effect.entry,

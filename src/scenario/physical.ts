@@ -160,6 +160,7 @@ export function physicalRequestData(
       action.op === 'confirm' ||
       action.op === 'sourceTest' ||
       action.op === 'challenge' ||
+      (action.op === 'spawnRandom' && action.trial) ||
       (action.op === 'message' && action.consequence),
     'Richiesta fisica senza programma fonte.',
   );

@@ -1587,6 +1587,46 @@ class FrontReplay {
               );
               this.inspiration(child.hero);
               break;
+            case 'group-test': {
+              this.result.tests = [];
+              this.ordered(child.hero, `${path}/group-test`, child.heroes, (hero, orderPath) => {
+                this.r.sourceTest = null;
+                const input = this.ask(hero, `${orderPath}/reveal`, {
+                  mode: 'choose',
+                  title: `${STAT_LABELS[child.stat]} · difficoltà ${child.target}`,
+                  options: [{ id: 'reveal', label: 'Rivela le carte della prova' }],
+                  minimum: 1,
+                  maximum: 1,
+                  remaining: empty(),
+                });
+                invariant(
+                  input.kind === 'physical-choice' && input.option === 'reveal',
+                  'La prova fonte richiede il reveal.',
+                );
+                const successes = this.test(
+                  hero,
+                  child.stat,
+                  `${orderPath}/source-test`,
+                  false,
+                  false,
+                  child.target,
+                );
+                const outcome = successes >= child.target ? 'pass' : 'fail';
+                this.result.tests!.push({
+                  heroId: this.p.heroes[hero]!.heroId,
+                  successes,
+                  outcome,
+                });
+                if (outcome === 'fail')
+                  this.suffer(
+                    hero,
+                    [{ family: child.failure.family, amount: child.failure.amount }],
+                    child.failure.face,
+                    `${orderPath}/failure`,
+                  );
+              });
+              break;
+            }
             case 'test': {
               this.r.sourceTest = null;
               const input = this.ask(child.hero, `${path}/reveal`, {
