@@ -4,6 +4,18 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'camp',
+    title: 'Sconfitta, premi e primo campo',
+    target: '#campaign',
+    action: 'Torna al campo',
+    paragraphs: [
+      'Se un eroe è sconfitto, i superstiti completano i propri turni e la compagnia perde all’inizio della prossima Ombra. Senza superstiti la perdita è immediata. Una sconfitta durante l’Ombra già iniziata attende il confine previsto; le conseguenze ancora dovute si completano prima del seguito.',
+      'Un partecipante conferma per il gruppo i messaggi della conclusione. Gli XP vengono applicati al ruolo che ciascun eroe aveva in quel momento. La Sapienza è condivisa. Il riepilogo indica quali premi sono già applicati: reload e ripristino non li assegnano una seconda volta.',
+      'Seguite la destinazione e il racconto della mappa della campagna, poi entrate nel campo. Ogni proprietario può scegliere un ruolo per il proprio eroe; scegliendo un ruolo già assegnato lo si trasferisce, lasciando l’altro eroe in attesa della propria scelta. L’esperienza resta nel ruolo che l’ha ricevuta.',
+      'Gli acquisti di abilità e i potenziamenti attendono i rispettivi effetti e non spendono risorse. La prossima avventura ha una destinazione salvata, ma attende la propria mappa e le proprie istruzioni prima della partenza. Guida, lettore delle carte e copie di sicurezza restano disponibili nel campo.',
+    ],
+  },
+  {
     id: 'combat',
     title: 'Attaccare e provocare: costi, successi e ritorno',
     target: '#combat',
@@ -280,7 +292,13 @@ export function createGuide(navigate: (target: string) => void) {
   element('#open-guide').onclick = () => open();
   element('#close-guide').onclick = () => dialog.close();
   dialog.addEventListener('close', () => {
-    if (restoreFocus && caller?.isConnected) caller.focus({ preventScroll: true });
+    // The close event is queued: preserve focus if another control already received it.
+    if (
+      restoreFocus &&
+      caller?.isConnected &&
+      (document.activeElement === document.body || dialog.contains(document.activeElement))
+    )
+      caller.focus({ preventScroll: true });
   });
   return { open };
 }
