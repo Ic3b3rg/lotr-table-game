@@ -77,10 +77,10 @@ export function createCardReader() {
     heading.id = 'reading-title';
     content.replaceChildren(heading, ...nodes);
     panel.hidden = false;
+    panel.scrollTop = 0;
     panel.focus({ preventScroll: true });
-    panel.scrollIntoView({
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      block: 'nearest',
+    requestAnimationFrame(() => {
+      if (!panel.hidden) panel.scrollIntoView({ behavior: 'instant', block: 'start' });
     });
   }
   return {

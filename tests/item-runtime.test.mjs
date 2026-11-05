@@ -71,3 +71,45 @@ test('uncompiled upgrade, wrong product, card and policy fail before cost, cards
     assert.deepEqual(f.state, before);
   }
 });
+
+test('the real source victory carries the unique trinket into the first camp as common inventory', async () => {
+  const { driver } = await import('./lair-victory-runtime-helper.mjs');
+  const { hash } = await import('./fixtures/map-freeze.mjs');
+  const f = itemRuntime({
+    success: 1,
+    fate: 0,
+    edit: (raw) => {
+      for (const h of raw.catalog.heroes) h.stats.wit = 6;
+    },
+  });
+  f.commit();
+  f.finishPhysical();
+  f.answer({ kind: 'ack' });
+  f.finishPhysical();
+  assert.equal(f.physical.snapshot.resolution.resources.itemCustody.length, 1);
+  const episodeCustody = structuredClone(f.physical.snapshot.resolution.resources.itemCustody),
+    lair = f.sc.instances.find((i) => i.id === 'invented-lair');
+  driver.interactScenario(f.state, f.heroes[0].playerId, {
+    ...f.intent(),
+    instanceId: lair.id,
+    sourceFingerprint: hash(lair),
+  });
+  for (let n = 0; n < 30 && f.sc.conclusion?.stage !== 'camp'; n++) {
+    if (f.sc.pending?.kind === 'physical') f.finishPhysical();
+    else {
+      assert.ok(f.sc.pending);
+      f.answer({ kind: 'ack' });
+    }
+  }
+  assert.equal(f.sc.conclusion.stage, 'camp');
+  assert.deepEqual(f.sc.conclusion.campaign.inventory, [
+    { copy: 'trinket:1', cardId: 'trinket', modelId: 9003 },
+  ]);
+  assert.deepEqual(
+    f.physical.snapshot.resolution.resources.itemCustody,
+    episodeCustody,
+    'the ended episode retains its exact custody evidence',
+  );
+  assert.equal(f.sc.conclusion.campEntryCount, 1);
+  assert.equal(f.sc.conclusion.transitionCount, 1);
+});
