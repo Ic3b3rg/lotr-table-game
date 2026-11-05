@@ -115,3 +115,12 @@ Vittoria/covo, altri incontri/terreni, campo completo e A2 restano nel seguito;
 #57/#65/#89/#33 rimangono aperte. I dati schema19 richiedono il nuovo lettore;
 un rollback usa un backup precedente. Nessuna installazione, agente,
 checkout aggiuntivo, scrittura GitHub, push, PR o merge.
+
+## Integrazione del root
+
+[Review Standards/Spec e verifica indipendente](../reviews/2026-11-05-live-groups.md):
+zero rilievi bloccanti nei due assi, un suggerimento facoltativo di manutenzione.
+Il root riproduce fonti e compilazioni,503 confronti interi e le viste17/18/14,
+export/finali; suite719/719 a concorrenza4,494088,483417ms. Codice consegnato
+invariato. Il sigillo ricevuto resta intatto; adapter e prove root separati.
+Quantità57 e accettazione originale rimangono bloccate come sopra.
