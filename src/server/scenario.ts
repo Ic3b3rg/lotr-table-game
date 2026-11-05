@@ -11,6 +11,8 @@ import { needsPhysical, loadPhysicalSource, requireLinkedTitle } from '../scenar
 import { initializeOriginalCycle } from './physical-cycle';
 import { requiresProvocation } from '../scenario/deployment';
 import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
+import { validateCampCatalog } from '../scenario/camp-capability';
+import type { CampSkillReceipt } from '../shared/camp-skills';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -53,6 +55,7 @@ export function applyScenario(
   physicalPath: string,
   explorationEntropy?: string,
 ) {
+  let skill: CampSkillReceipt | undefined;
   if (state.revision !== command.expectedRevision)
     throw new ApiError(
       409,
@@ -98,6 +101,7 @@ export function applyScenario(
         'L’avventura richiede la preparazione iniziale di ruolo. Le Scoperte libere dei tavoli precedenti restano conservate, ma non costituiscono questo nuovo avvio.',
       );
     const parsed = loadScenarioPack(path);
+    validateCampCatalog(parsed.pack, state.content!);
     let physical;
     if (needsPhysical(parsed.pack)) {
       try {
@@ -127,7 +131,7 @@ export function applyScenario(
     }
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
-    answerCampaign(state, playerId, command);
+    skill = answerCampaign(state, playerId, command);
   else resumeScenario(state, playerId, command, physicalPath, undefined, explorationEntropy);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
@@ -147,7 +151,14 @@ export function applyScenario(
     !state.physical!.cycle
   )
     initializeOriginalCycle(state);
-  return { scenarioId: sc.id, pendingId, source, kind, phase: sc.phase };
+  return {
+    scenarioId: sc.id,
+    pendingId,
+    source,
+    kind,
+    phase: sc.phase,
+    ...(skill ? { skill } : {}),
+  };
 }
 export function allowScenarioPlay(state: State, command: Command) {
   const sc = state.scenario!;

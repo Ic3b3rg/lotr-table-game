@@ -12,6 +12,7 @@ import { validateLiveGroups } from './live-groups';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isConclusionReward } from './failure-capability';
+import { validateCampCapability } from './camp-capability';
 import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
@@ -483,6 +484,7 @@ export function parseScenarioPack(raw: unknown) {
       'Ingresso incontro senza conferma fonte esclusiva.',
     );
   }
+  validateCampCapability(pack);
   return { pack, fingerprint: digest(pack) };
 }
 export function loadScenarioPack(path: string) {
@@ -490,6 +492,11 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.campSkills)
+    invariant(
+      pack.manifest.campSkills.catalogFingerprint === p.context.catalogFingerprint,
+      'Campo diverso dal catalogo della realizzazione.',
+    );
   validateFirstCombatBinding(pack, p);
   if (pack.manifest.threatTokens)
     invariant(

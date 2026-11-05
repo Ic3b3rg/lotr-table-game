@@ -2,6 +2,7 @@ import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } fr
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
+import { CampSkillInputSchema, CampSkillReceiptSchema } from './camp-skills';
 import { CombatIntentSchema, CombatViewSchema, ResumedJourneySchema } from './combat-controller';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
@@ -45,7 +46,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(26),
+  schemaVersion: z.literal(27),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -72,6 +73,7 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  CampSkillInputSchema,
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -343,6 +345,7 @@ export const ReceiptSchema = z.union([
     kind: z.string().max(50),
     completed: z.boolean().optional(),
     phase: z.enum(['setup', 'action']),
+    skill: CampSkillReceiptSchema.optional(),
   }),
   z.strictObject({
     requestId: IntentIdSchema,

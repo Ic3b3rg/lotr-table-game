@@ -51,6 +51,7 @@ const CompilationSchema = z.strictObject({
   shadowCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  campSkillsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -66,6 +67,12 @@ export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
   const first = pack.manifest.firstCombat;
+  invariant(
+    pack.manifest.campSkills
+      ? input.campSkillsCertificate?.instructionHash === digest(pack.manifest.campSkills)
+      : !input.campSkillsCertificate,
+    'Abilità del campo assenti o non attestate.',
+  );
   const tokens = pack.manifest.threatTokens;
   invariant(
     tokens

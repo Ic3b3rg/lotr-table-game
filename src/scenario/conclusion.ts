@@ -6,6 +6,8 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { startPhaseEvent } from './runtime';
 import { ApiError } from '../server/errors';
+import { initializeCampSkills, transactCampSkill } from './camp-skills';
+import type { CampSkillReceipt } from '../shared/camp-skills';
 
 type Timing = 'shadow-start' | 'no-active-heroes';
 function equippedCards(state: State) {
@@ -269,6 +271,7 @@ export function applyConclusionAction(
     };
     const playerCount = sc.pack.manifest.followup?.playerCountBinding;
     if (playerCount) c.campaign.sceneGlobals[playerCount] = state.preparation!.heroes.length;
+    initializeCampSkills(state);
   }
 }
 function campaignRequest(state: State) {
@@ -321,6 +324,7 @@ export function answerCampaign(
   const sc = state.scenario!,
     c = sc.conclusion!,
     q = sc.pending;
+  let skill: CampSkillReceipt | undefined;
   if (
     !q ||
     command.scenarioId !== sc.id ||
@@ -335,7 +339,9 @@ export function answerCampaign(
       'SCENARIO_REQUEST_CHANGED',
       'Il passaggio della campagna è concluso o è cambiato.',
     );
-  if (command.input.kind === 'camp-role' && c.stage === 'camp') {
+  if (command.input.kind === 'camp-skill') {
+    skill = transactCampSkill(state, playerId, command.input);
+  } else if (command.input.kind === 'camp-role' && c.stage === 'camp') {
     const input = command.input;
     const h = state.preparation!.heroes.find((h) => h.heroId === input.heroId);
     if (!h || h.playerId !== playerId)
@@ -357,4 +363,5 @@ export function answerCampaign(
     );
   sc.pending = null;
   campaignRequest(state);
+  return skill;
 }

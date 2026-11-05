@@ -1995,6 +1995,43 @@ body[data-scenario='setup'] #scout-discard-controls {
 .combat-summary {
   font-weight: 600;
 }
+.camp-skills {
+  margin-top: 1.5rem;
+  min-width: 0;
+}
+.camp-role-skills {
+  margin-block: 1rem;
+}
+.camp-role-skills > summary {
+  padding-block: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.camp-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+}
+.camp-offer {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+.camp-offer .physical-card {
+  width: 100%;
+  flex: 1;
+}
+.camp-price {
+  font-weight: 600;
+  margin-bottom: 0;
+}
+.camp-availability {
+  margin-block: 0.5rem;
+}
+.camp-offer .company-action {
+  width: 100%;
+}
 .combat-choices {
   margin-top: 1rem;
 }
