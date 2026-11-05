@@ -31,13 +31,11 @@ export const driver = await import(
 export function lairRuntime({ count = 3, successes = count + 2, edit = () => {} } = {}) {
   const f = lastStandFixture(),
     pack = lairCompilation().pack;
-  const heroes = f.catalog.heroes
-    .slice(0, count)
-    .map((h, n) => ({
-      heroId: h.id,
-      playerId: `00000000-0000-4000-8000-00000000001${n}`,
-      spaceId: 'invented-space',
-    }));
+  const heroes = f.catalog.heroes.slice(0, count).map((h, n) => ({
+    heroId: h.id,
+    playerId: `00000000-0000-4000-8000-00000000001${n}`,
+    spaceId: 'invented-space',
+  }));
   f.context.preparation.heroes = heroes.map((h, n) => ({
     heroId: h.heroId,
     playerId: h.playerId,
