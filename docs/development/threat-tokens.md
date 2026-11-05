@@ -127,3 +127,22 @@ aggiuntivi, campo completo, upgrade oltre base o A2.89/33/65/57 rimangono aperti
 non si dichiara il gioco o l'avventura completi. Il live del proprietario non è
 aggiornato. Root esegue Standards/Spec fresche e integrazione. Nessun agente,
 checkout aggiuntivo, installazione o scrittura remota è usato dall'implementer.
+
+## Review e integrazione del root
+
+Review fresche: Standards0; Spec1P2 sui messaggi del segnalino che oscuravano
+le fasi successive. Corretto limitando la guida al medesimo turno di Azione,
+eroe e round; regressione RED→GREEN e9/9casi UI mirati.
+
+Root **864/864**, exit code0, zero fail/skip/cancel/todo, concorrenza4 da sola
+dopo tutti i controlli pesanti. Tipi, formato, diff e privacy verdi.
+Primarie, oracle e tre compilazioni byte-identiche ricontrollati; validator
+dal commit corretto su503file, tutte le serie96–110 e32snapshot112,
+payload/viste/origini/export/finali interi. Recovery49 e audit delle due
+partite inventate,324casi e1200PNG, sette immagini lette direttamente.
+Le catture ricevute precedono la correzione root dei messaggi: il seguito
+delle fasi è coperto dalla nuova regressione. Nessuna nuova partita
+originale, modifica delle quantità57 o ripresa156.
+
+Dettagli, hash, esiti distinti dei due assi e limiti nella
+[review del root](../reviews/2026-11-05-threat-tokens.md).
