@@ -59,11 +59,21 @@ import { readSession, readBackup } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { cycleCommand } from './physical-cycle-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
+import { attachActivationSource } from './fixtures/shadow-activations.mjs';
+import { endTurns } from './original-round-helper.mjs';
+import { drainFollowup, rally } from './second-shadow-helper.mjs';
 
 test('a real linked visit waits for the existing provocation consumer and commits its source cost and callback once', async (t) => {
   const r = await readyCombat(
     t,
-    (_src, pack) => {
+    (src, pack, frozen) => {
+      // Before startup: every invented melee activation can reach the party on this map.
+      attachActivationSource(
+        src,
+        frozen.mapGeneration.projection.sections.flatMap((s) => s.tiles.map((t) => t.source)),
+      );
+      Object.assign(src.shadow.controller, pack.manifest.rounds.controller);
+      for (const instruction of src.shadow.instructions) instruction.movement = 8;
       attachFailure(pack);
       transplantLinkedPair(pack);
       sealLinked(pack);
@@ -81,46 +91,81 @@ test('a real linked visit waits for the existing provocation consumer and commit
     },
   );
   let s = await readSession(r.host);
-  // All positions and groups below were created by the real startup and shadow deployment.
   const destination = s.scenario.spaceBindings.find((b) => b.sourceId === linkedNode(s).spaceId).id;
-  let from = s.journey.heroes[0].spaceId;
-  const queue = [[from]],
-    seen = new Set([from]);
-  let path;
-  while (queue.length) {
-    const p = queue.shift();
-    if (p.at(-1) === destination) {
-      path = p;
-      break;
-    }
-    for (const [a, b] of s.journey.definition.connections) {
-      const n = a === p.at(-1) ? b : b === p.at(-1) ? a : null;
-      if (n && !seen.has(n)) {
-        seen.add(n);
-        queue.push([...p, n]);
+  async function moveToVisit(actor) {
+    s = await readSession(r.host);
+    const hero = s.preparation.heroes.find((h) => h.playerId === actor.body.player.id);
+    if (!s.round.activeHeroId)
+      await ok(cycleCommand(r, 'START_TURN', { heroId: hero.heroId }, actor));
+    s = await readSession(r.host);
+    const from = s.journey.heroes.find((h) => h.heroId === hero.heroId).spaceId,
+      queue = [[from]],
+      seen = new Set([from]);
+    let path;
+    while (queue.length) {
+      const p = queue.shift();
+      if (p.at(-1) === destination) {
+        path = p;
+        break;
+      }
+      for (const [a, b] of s.journey.definition.connections) {
+        const n = a === p.at(-1) ? b : b === p.at(-1) ? a : null;
+        if (n && !seen.has(n)) {
+          seen.add(n);
+          queue.push([...p, n]);
+        }
       }
     }
-  }
-  assert.ok(path && path.length <= 3);
-  if (path.length > 1) {
-    if (!s.journey.travel?.remaining) await ok(cycleCommand(r, 'START_TRAVEL'));
+    assert.ok(path && path.length <= 3);
     for (const destinationSpaceId of path.slice(1)) {
       s = await readSession(r.host);
+      if (!s.journey.travel?.remaining) await ok(cycleCommand(r, 'START_TRAVEL', {}, actor));
+      s = await readSession(r.host);
       await ok(
-        cycleCommand(r, 'MOVE_HERO', {
-          fromSpaceId: s.journey.heroes[0].spaceId,
-          destinationSpaceId,
-        }),
+        cycleCommand(
+          r,
+          'MOVE_HERO',
+          {
+            fromSpaceId: s.journey.heroes.find((h) => h.heroId === hero.heroId).spaceId,
+            destinationSpaceId,
+          },
+          actor,
+        ),
       );
       await drainCombat(r);
     }
+    await ok(cycleCommand(r, 'END_TURN', {}, actor));
   }
+  // No placement, population or RNG outcome is seeded or retried. Both heroes move legally;
+  // the existing source activation then brings the live melee groups to their shared space.
+  await moveToVisit(r.player);
+  await moveToVisit(r.other);
+  await endTurns(r);
+  await ok(cycleCommand(r, 'BEGIN_SHADOW'));
+  await drainCombat(r);
+  await drainFollowup(r);
+  await ok(cycleCommand(r, 'CONFIRM_SHADOW_STEP', { step: 'threat' }));
+  await drainFollowup(r);
+  await rally(r);
+  await ok(cycleCommand(r, 'START_TURN'));
   s = await readSession(r.host);
   const here = linkedNode(s).spaceId,
     groups = s.scenario.enemies.groups.filter(
       (g) => g.spaceId === here && g.figures.some((f) => f.health > 0),
     );
-  assert.ok(groups.length, 'real deployment must place a group at the invented linked visit');
+  assert.ok(groups.length, 'real source activation must engage the party at the invented visit');
+  assert.equal(s.combat.current, null);
+  const readyState = (await readBackup(r.host)).payload.state;
+  assert.equal(readyState.combat.active, null);
+  assert.equal(
+    groups.length,
+    s.scenario.enemies.groups.filter((g) => g.figures.some((f) => f.health > 0)).length,
+  );
+  const activated = readyState.combat.attempts.filter((a) => a.kind === 'activation');
+  assert.ok(activated.length);
+  assert.ok(
+    groups.every((g) => activated.some((a) => a.groupId === g.id && a.stage === 'completed')),
+  );
   const before = await readBackup(r.host),
     intent = { ...linkedIntent(s), requestId: randomUUID() };
   const submittedAt = s;

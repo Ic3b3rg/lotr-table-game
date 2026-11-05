@@ -98,7 +98,9 @@ di rivelazione, entrambe prove e fallimenti, ritorni, idempotenza, minaccia
 0/1/3/4/9 e contatore−1, destinatario diverso o sconfitto, copie/preparazione/
 limite, capacità di attacco, gate e vecchi formati. HTTP/SQLite aggiunge
 attori, fonte, turno, copia, cursor, stale, concorrenza e retry con receipt
-identiche, provocazione reale e perdita terminale fino al campo.
+identiche, provocazione reale e perdita terminale fino al campo. La fixture della
+provocazione muove legalmente entrambi gli eroi sul luogo e usa l’attivazione
+fonte dei gruppi prima della visita: non presume un piazzamento casuale.
 
 Quindici SIGKILL ripristinano su host nuovi vuoti senza pack ai confini di
 visita, carte, rivelazione, danno, callback, ritorno, destinatario e titolo.
