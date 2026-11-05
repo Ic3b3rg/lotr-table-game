@@ -163,7 +163,7 @@ test('schema 4 con Scoperta aperta migra senza riordinare e resta indipendente d
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 27);
+  assert.equal(migrated.schemaVersion, 28);
   assert.equal(migrated.round, null);
   assert.deepEqual(migrated.scout, before.scout);
   assert.deepEqual(migrated.preparation, before.preparation);

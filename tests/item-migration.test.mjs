@@ -25,7 +25,7 @@ test('schema23 is structural; ordinary inventory words in variable dictionaries 
   for (let schemaVersion = 10; schemaVersion <= 22; schemaVersion++) {
     const old = { ...structuredClone(raw), schemaVersion };
     if (schemaVersion === 10) delete old.physical;
-    const expected = { ...structuredClone(old), schemaVersion: 27, physical: null };
+    const expected = { ...structuredClone(old), schemaVersion: 28, physical: null };
     assert.deepEqual(parseState(old), expected);
     assert.equal(old.schemaVersion, schemaVersion);
   }
