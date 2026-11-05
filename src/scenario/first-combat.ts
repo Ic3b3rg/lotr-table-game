@@ -309,7 +309,7 @@ function missionState(state: State) {
 /** Resolve the reciprocal group/logic association from the saved source receipt. */
 export function firstCombatGroup(state: State, g: DeployedGroup) {
   const sc = state.scenario,
-    cap = sc?.pack.manifest.firstCombat;
+    cap = sc?.pack?.manifest.firstCombat;
   if (!cap || !sc?.firstCombat || !g.logic) return false;
   const binding = sc.firstCombat.spawns.find((s) => s.groupId === g.id && s.outcome === 'spawned');
   const owner = sc.instances.find((i) => i.id === binding?.logicInstanceId);

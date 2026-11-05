@@ -43,15 +43,20 @@ test('owner, hero, space, source, concurrent/stale and retry requests preserve t
     assert.deepEqual((await readBackup(r.host)).payload, before.payload);
     assert.deepEqual(await readSession(r.host), s);
   }
+  const candidates = [c, { ...c, requestId: randomUUID() }];
   const race = await Promise.all(
-    [c, { ...c, requestId: randomUUID() }].map((c) =>
-      r.host.request('/api/commands', c, r.player.cookie),
-    ),
+    candidates.map((c) => r.host.request('/api/commands', c, r.player.cookie)),
   );
   assert.deepEqual(race.map((r) => r.status).sort(), [200, 409]);
-  const receipt = await (await ok(r.host.request('/api/commands', c, r.player.cookie))).json();
+  const winner = race.findIndex((r) => r.status === 200),
+    committedCommand = candidates[winner],
+    receipt = await race[winner].json();
   assert.deepEqual(
-    await (await ok(r.host.request('/api/commands', c, r.player.cookie))).json(),
+    await (await ok(r.host.request('/api/commands', committedCommand, r.player.cookie))).json(),
+    receipt,
+  );
+  assert.deepEqual(
+    await (await ok(r.host.request('/api/commands', committedCommand, r.player.cookie))).json(),
     receipt,
   );
   const committed = await readBackup(r.host),
