@@ -9,6 +9,11 @@ export const ScenarioTitleGrantSchema = z.strictObject({
   cardHash: HashSchema,
   titleModel: model,
   skillModel: model,
+  policy: z.strictObject({
+    window: z.literal('when-attacking'),
+    effect: z.literal('choose-attack-modifier'),
+    cost: z.literal('remove-from-adventure'),
+  }),
   alreadyOwned: z.string().min(1).max(16000),
 });
 export type ScenarioTitleGrant = z.infer<typeof ScenarioTitleGrantSchema>;

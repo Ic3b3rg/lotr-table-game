@@ -130,3 +130,22 @@ test('the return spends only its committed option and floors its own threat befo
     assert.equal(f.physical.snapshot.lastStand.selections.length, 0, 'no fictitious last stand');
   }
 });
+
+test('late resource-return and physical-pool dependencies gate the whole real continuation before its action', () => {
+  for (const kind of ['return-owner', 'damage-pool']) {
+    const f = linkedRuntime();
+    leaveFirst(f);
+    if (kind === 'return-owner') {
+      const d = f.sc.pack.definitions.find((d) => d.source === f.nodes[0].definition);
+      delete d.handlers.INVENTED_SUPPLIED;
+      d.deferredHandlers.INVENTED_SUPPLIED = 'invented missing return owner';
+    } else {
+      // Entire finite damage pool already resides below a hero limit in this invented precondition.
+      f.physical.snapshot.areas[0].damage.push(...f.physical.snapshot.decks.damage.splice(0));
+    }
+    f.state.round.activeHeroId = f.heroes[1].heroId;
+    const before = structuredClone(f.state);
+    assert.throws(() => f.commit(1, 1), /seguito|capacità|mazzo|carte/i);
+    assert.deepEqual(f.state, before);
+  }
+});

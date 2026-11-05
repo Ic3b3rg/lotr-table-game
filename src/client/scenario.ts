@@ -146,6 +146,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       element('#scenario-limit').textContent =
         (sc.pack.manifest.clues ? 'Gli incontri degli indizi restano giocabili. ' : '') +
         `Le soglie abilitate seguono messaggi e collocazioni fino al ritorno al round oppure alla conclusione per minaccia. I gruppi appena collocati attendono la prossima Ombra. Altri incontri e benefici non disponibili conservano i propri limiti.${sc.pack.manifest.lair ? '' : ' La vittoria attende il proprio seguito.'}`;
+    if (sc?.pack.manifest.linked)
+      element('#scenario-limit').textContent +=
+        ' Nei due luoghi collegati, seguite visita, recupero e ritorno. La consegna indicata costa 1 azione; chi ha agito sceglie il destinatario del titolo, che lo prepara subito.';
     refreshActions();
   }
   agreed.oninput = () => {

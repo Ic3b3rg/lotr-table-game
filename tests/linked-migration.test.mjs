@@ -47,5 +47,14 @@ test('schema20 migrates structurally and every older format rejects linked forms
       physical: { runs: [{ program: { children: [{ kind: 'scenario-title' }] } }] },
     };
     assert.throws(() => runtime.parseState(bad), /collegat|titolo|storico/i);
+    for (const physical of [
+      { cycle: { records: [{ intent: { choiceEvent: 'DELIVER' } }] } },
+      { cycle: { records: [{ intent: { input: { kind: 'choose-hero' } } }] } },
+      { cycle: { seed: { combat: { operation: { origin: { choiceEvent: 'DELIVER' } } } } } },
+    ])
+      assert.throws(
+        () => runtime.parseState({ ...old, schemaVersion, physical }),
+        /collegat|titolo|storico/i,
+      );
   }
 });

@@ -49,14 +49,19 @@ test('the linked capability grants no campaign, arbitrary title or interaction p
         .at(-2)
         .states[0].actions.push(native(99, 'lore', 'FFG.JIME.Actions.AddLore', { amount: 1 })),
     (p) =>
-      p.definitions
-        .at(-1)
-        .states[0].actions.push(
-          native(99, 'awardTitle', 'FFG.JIME.Actions.AwardTitle', {
-            recipient: { scope: 'local', name: 'tile' },
-            titleModel: p.manifest.linked.title.titleModel.source,
-          }),
-        ),
+      p.definitions.at(-2).states[0].actions.push(
+        native(99, 'set', 'HutongGames.PlayMaker.Actions.SetBoolValue', {
+          target: { scope: 'global', name: 'inventedWon' },
+          value: false,
+        }),
+      ),
+    (p) =>
+      p.definitions.at(-1).states[0].actions.push(
+        native(99, 'awardTitle', 'FFG.JIME.Actions.AwardTitle', {
+          recipient: { scope: 'local', name: 'tile' },
+          titleModel: p.manifest.linked.title.titleModel.source,
+        }),
+      ),
   ]) {
     const bad = structuredClone(raw.pack);
     edit(bad);

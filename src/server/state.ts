@@ -200,7 +200,20 @@ export function parseState(raw: unknown): State {
         scenario?: OldScenario;
         physical?: {
           runs?: { program?: { children?: { kind?: string }[] } }[];
-          cycle?: { seed?: { scenario?: OldScenario } };
+          cycle?: {
+            records?: { intent?: { choiceEvent?: unknown; input?: { kind?: string } } }[];
+            seed?: {
+              scenario?: OldScenario;
+              combat?: {
+                operation?: { origin?: { choiceEvent?: unknown } };
+                operations?: { origin?: { choiceEvent?: unknown } }[];
+              };
+            };
+          };
+        };
+        combat?: {
+          operation?: { origin?: { choiceEvent?: unknown } };
+          operations?: { origin?: { choiceEvent?: unknown } }[];
         };
       };
       for (const sc of [old.scenario, old.physical?.cycle?.seed?.scenario])
@@ -227,6 +240,18 @@ export function parseState(raw: unknown): State {
         )
       )
         throw new Error('Titolo scenario non valido per uno schema storico.');
+      if (
+        old.physical?.cycle?.records?.some(
+          (r) => r.intent?.choiceEvent !== undefined || r.intent?.input?.kind === 'choose-hero',
+        )
+      )
+        throw new Error('Intento collegato non valido per uno schema storico.');
+      for (const combat of [old.combat, old.physical?.cycle?.seed?.combat])
+        if (
+          combat?.operation?.origin?.choiceEvent !== undefined ||
+          combat?.operations?.some((o) => o.origin?.choiceEvent !== undefined)
+        )
+          throw new Error('Provocazione collegata non valida per uno schema storico.');
     }
     if (version === 20) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(20) }).parse(raw);

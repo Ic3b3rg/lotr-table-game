@@ -75,6 +75,10 @@ limite quattro, preparazione immediata e consumer delle abilità titolo.
 Un titolo già ottenuto dalla Compagnia presenta il messaggio fonte e non
 duplica, trasferisce o ripristina la carta rimossa. Quantità e policy titolo
 sono verificate indipendentemente dai benefici57.
+La policy della carta fonte appartiene alla finestra di attacco: rimozione
+dall'avventura per scegliere un modificatore. Riusa i sei modificatori e
+il consumer attacco già realizzati; nessun costo scarto, uso durante una
+prova ordinaria o trigger dopo preparazione viene inventato.
 
 Schema21 introduce queste forme. La migrazione20→21 è esclusivamente
 strutturale. Formati≤20 rifiutano capacità, opzioni/istruzioni/programmi nuovi

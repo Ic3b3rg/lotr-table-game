@@ -8,7 +8,6 @@ import {
 import { playableScenarioPrefab } from '../shared/clues';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
-import { validateScenarioTitle } from '../physical-resolution/scenario-title';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
@@ -51,6 +50,7 @@ import {
   beginPhysicalAction,
   physicalRequestData,
   answerScenarioPhysical,
+  requireLinkedTitle,
   type loadPhysicalSource,
 } from './physical';
 
@@ -452,7 +452,7 @@ function execute(
         sc.pack.manifest.linked && state.physical?.lastStand,
         'Titolo senza capacità fonte e fisica.',
       );
-      validateScenarioTitle(state.physical.raw, sc.pack.manifest.linked.title);
+      requireLinkedTitle(sc.pack, state.physical.raw);
       if (!probe) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
@@ -1714,8 +1714,10 @@ export function interactScenario(
       sc.pack.manifest.lair?.prefab === i!.prefab ||
       linkedDefinition(sc.pack, i!.definition)) &&
     !probe
-  )
+  ) {
+    if (linkedDefinition(sc.pack, i!.definition)) requireLinkedTitle(sc.pack, state.physical!.raw);
     preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
+  }
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
   sc.play!.attempts.push({

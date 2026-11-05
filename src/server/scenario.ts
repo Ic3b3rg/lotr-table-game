@@ -6,7 +6,7 @@ import type { State } from './state';
 import { loadScenarioPack, validateScenarioBinding } from '../scenario/pack';
 import { beginScenario, resumeScenario } from '../scenario/runtime';
 import { ApiError } from './errors';
-import { needsPhysical, loadPhysicalSource } from '../scenario/physical';
+import { needsPhysical, loadPhysicalSource, requireLinkedTitle } from '../scenario/physical';
 import { initializeOriginalCycle } from './physical-cycle';
 import { requiresProvocation } from '../scenario/deployment';
 import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
@@ -113,6 +113,7 @@ export function applyScenario(
         );
       }
     }
+    requireLinkedTitle(parsed.pack, physical?.raw);
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
     answerCampaign(state, playerId, command);

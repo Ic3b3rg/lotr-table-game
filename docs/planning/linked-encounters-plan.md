@@ -5,16 +5,16 @@ Spec: [linked-encounters-spec.md](linked-encounters-spec.md).
 Stack esistente Node24/TypeScript5.9/Zod4.6/DOM, nessuna installazione.
 Modulo profondo scenario con fisica condivisa; nessun nuovo engine.
 
-- [ ] Slice1 — RED compiler e consumer sul vero programma derivato inventato;
+- [x] Slice1 — RED compiler e consumer sul vero programma derivato inventato;
       capacità attestata dei due prefab, ispezione/commit condizionale,
       prima visita, listener nascosto e prove source-bound. GREEN e commit.
       Verifica entrambi ordini di rivelazione e i distinti ritorni falliti.
-- [ ] Slice2 — RED ritorno/titolo e schema21: scelta destinatario, binding
+- [x] Slice2 — RED ritorno/titolo e schema21: scelta destinatario, binding
       minaccia con pavimento locale, causa titolo nel consumer fisico,
       custodia/preparazione/limite e unicità. Preflight completo prima di
       costi/RNG; oldpack e seed storici respingono nuove forme. UI e guida
       nello stesso incremento. Oracle/compilazione originali solo statici.
-- [ ] Slice3 — HTTP/SQLite/Store.once, attori/fonte/copia/cursor/stale/retry/
+- [x] Slice3 — HTTP/SQLite/Store.once, attori/fonte/copia/cursor/stale/retry/
       concorrenza, provocazioni e P1/P2, sconfitta/figli e ritorni una volta.
       SIGKILL/restore packless ai nuovi confini, payload/viste interi e
       negativi risignati. GREEN e commit ordinati.

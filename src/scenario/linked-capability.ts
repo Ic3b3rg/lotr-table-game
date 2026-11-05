@@ -33,8 +33,12 @@ export function validateLinkedCapability(pack: ScenarioPack) {
       pack.manifest.failure &&
       cap.failureFingerprint === digest(pack.manifest.failure) &&
       cap.roundsFingerprint === digest(pack.manifest.rounds ?? null) &&
-      Object.values(cap.methods).every(
-        (m) => m.assemblyHash === pack.manifest.failure!.methods.signal.assemblyHash,
+      Object.entries(cap.methods).every(
+        ([name, m]) =>
+          m.assemblyHash ===
+          (name === 'sequence'
+            ? pack.sources.find((s) => s.file === 'PlayMaker.dll')?.sha256
+            : pack.manifest.failure!.methods.signal.assemblyHash),
       ),
     'Incontri collegati senza controller e owner corrispondenti.',
   );
@@ -95,6 +99,32 @@ export function validateLinkedCapability(pack: ScenarioPack) {
     pair.every((d) => d!.states.every((s) => s.actions.every((a) => allowed.has(a.op)))),
     'Permesso di campagna estraneo alla closure collegata.',
   );
+  for (const d of pair)
+    for (const s of d!.states)
+      for (const a of s.actions) {
+        if (a.op === 'set' || a.op === 'flip')
+          invariant(
+            a.target.scope === 'local' &&
+              d!.variables.some((v) => v.name === a.target.name && v.type === 'bool') &&
+              (a.op !== 'set' || typeof a.value === 'boolean'),
+            'Mutazione fuori dai binding locali collegati.',
+          );
+        if (a.op === 'broadcast')
+          invariant(
+            (d === visit
+              ? [cap.events.searched, cap.events.reveal]
+              : [cap.events.returned]
+            ).includes(a.event),
+            'Broadcast fuori dagli eventi collegati.',
+          );
+        if (a.op === 'addInt')
+          invariant(
+            d!.source === cap.threat.definition &&
+              s.index === cap.threat.state &&
+              a.index === cap.threat.action,
+            'Mutazione intera fuori dal proprio owner collegato.',
+          );
+      }
   const choose = additions.filter(({ a }) => a.op === 'chooseHero');
   const awards = additions.filter(({ a }) => a.op === 'awardTitle');
   const commits = additions.filter(({ a }) => a.op === 'choice');

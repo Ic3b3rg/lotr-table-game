@@ -17,6 +17,8 @@ export function linkedTitle(raw = lastStandFixture().raw) {
   const card =
     raw.cards.find((c) => c.family === 'title' && c.order === 2) ??
     raw.cards.filter((c) => c.family === 'title')[2];
+  card.text.value =
+    'Quando attacchi nella prova inventata, puoi rimuovere questa abilità dall’avventura per scegliere un modificatore.';
   return {
     cardId: card.id,
     cardHash: hash(card),
@@ -28,11 +30,21 @@ export function linkedTitle(raw = lastStandFixture().raw) {
       source: card.binding.value.skillModels[0].locator,
       modelId: card.binding.value.skillModels[0].modelId,
     },
+    policy: {
+      window: 'when-attacking',
+      effect: 'choose-attack-modifier',
+      cost: 'remove-from-adventure',
+    },
     alreadyOwned: 'Il riconoscimento inventato è già della Compagnia.',
   };
 }
 export function attachLinked(pack, title = linkedTitle()) {
   const template = pack.manifest.prefabs[0];
+  if (!pack.sources.some((s) => s.file === 'PlayMaker.dll'))
+    pack.sources.push({
+      file: 'PlayMaker.dll',
+      sha256: pack.manifest.failure.methods.signal.assemblyHash,
+    });
   const add = (suffix, variables, handlers, states) => {
     const p = {
       ...structuredClone(template),

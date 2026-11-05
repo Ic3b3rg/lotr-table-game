@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lairRuntime, driver } from './lair-victory-runtime-helper.mjs';
-import { attachLinked, linkedTitle } from './fixtures/linked-encounters.mjs';
+import { attachLinked, linkedTitle, sealLinked } from './fixtures/linked-encounters.mjs';
 import { hash } from './fixtures/map-freeze.mjs';
 
 export function linkedRuntime({
@@ -15,6 +15,7 @@ export function linkedRuntime({
       for (const h of fixture.catalog.heroes) Object.assign(h.stats, { wisdom, agility, wit });
       attachLinked(pack, linkedTitle(fixture.raw));
       edit(fixture, pack);
+      sealLinked(pack);
     },
   });
   const { state: s, sc } = f;

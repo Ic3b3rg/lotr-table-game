@@ -13,7 +13,7 @@ import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isConclusionReward } from './failure-capability';
 import { validateLairCapability, isLairClueReward } from './lair-capability';
-import { validateLinkedCapability } from './linked-capability';
+import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -273,7 +273,10 @@ export function parseScenarioPack(raw: unknown) {
           (a.op === 'message' && a.inspiration) ||
           (a.op === 'explore' && a.intro)
         )
-          invariant(pack.manifest.clues, 'Istruzione fuori dalla capacità indizi congelata.');
+          invariant(
+            pack.manifest.clues || linkedDefinition(pack, d.source),
+            'Istruzione fuori dalla capacità indizi o collegata congelata.',
+          );
         if (a.op === 'objective' && a.bindings)
           invariant(
             followup &&

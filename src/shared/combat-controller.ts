@@ -66,6 +66,7 @@ export const CombatOperationSchema = z.strictObject({
       roundId: z.uuid(),
       turnId: z.uuid(),
       instanceId: id,
+      choiceEvent: z.string().min(1).max(100).optional(),
     }),
   ]),
   status: z.enum(['provoking', 'returned', 'cancelled']),
