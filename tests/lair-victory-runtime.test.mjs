@@ -80,3 +80,30 @@ test('the complete victory continuation is checked before any cost, physical dra
   assert.throws(() => f.commit(), /seguito|capacità/i);
   assert.deepEqual(f.state, before);
 });
+
+test('the certified equipped-party bonus is awarded once with victory and remains separate from every hero XP reward', () => {
+  const f = lairRuntime({
+    count: 3,
+    successes: 6,
+    edit: (_, pack) => {
+      pack.manifest.failure.partyBonus.requiredSkillId =
+        pack.manifest.failure.partyBonus.skills.find((s) => s.cardId === 'basic-1').modelId;
+    },
+  });
+  f.commit();
+  f.finishPhysical();
+  f.answer({ kind: 'ack' });
+  assert.equal(f.sc.conclusion.outcome, 'victory');
+  assert.equal(f.sc.conclusion.bonusLore, 2);
+  assert.equal(f.sc.play.lore, 5);
+  assert.equal(f.sc.messageLog.filter((m) => m.id.endsWith(':party-lore')).length, 1);
+  assert.deepEqual(
+    f.sc.conclusion.xp.map((x) => [x.heroId, x.roleId, x.amount]),
+    f.state.preparation.heroes.map((h) => [h.heroId, h.roleId, 6]),
+  );
+  driver.pumpPhaseEvent(f.state);
+  driver.advanceConclusion(f.state);
+  assert.equal(f.sc.play.lore, 5);
+  assert.equal(f.sc.conclusion.transitionCount, 1);
+  assert.equal(f.sc.messageLog.filter((m) => m.id.endsWith(':party-lore')).length, 1);
+});

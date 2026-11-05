@@ -9,7 +9,7 @@ import {
   openPhysical,
   answerPhysical,
 } from '../dist/physical-resolution-library.mjs';
-import { lairCompilation } from './fixtures/lair-victory.mjs';
+import { lairCompilation, sealLair } from './fixtures/lair-victory.mjs';
 const built = buildSync({
   stdin: {
     contents: `export { pumpPhaseEvent, interactScenario, resumeScenario } from './src/scenario/runtime'; export { advanceConclusion, answerCampaign, beginHeroFailure } from './src/scenario/conclusion';`,
@@ -55,6 +55,7 @@ export function lairRuntime({ count = 3, successes = count + 2, edit = () => {} 
   for (const h of f.catalog.heroes) h.stats.wit = successes;
   for (const def of f.ir.definitions) def.body = [{ op: 'keep-faceup' }];
   edit(f, pack);
+  sealLair(pack);
   const physical = freezePhysical(
     f.raw,
     binding,
