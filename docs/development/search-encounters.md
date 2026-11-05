@@ -85,6 +85,11 @@ nella scratch ignorata; il repository contiene codice e fixture inventate.
 conversioni, reset del mazzo, ownership, concorrenza, recupero, P2/sconfitta e
 provocazioni. Le regressioni trovate includono il permesso del premio senza
 clues e il reset del mazzo in entrambi i rami. I tentativi falliti sono conservati.
+La prima canonica completa ha rilevato due regressioni nel builder fisico dei
+contesti storici senza owner:838/840, zero skip/cancel. La capacità nuova ora
+si attiva soltanto su un'istanza reale attestata; i due test esistenti e tutti
+i relativi assert restano identici. Il GREEN mirato è16/16 e la canonica
+viene ripetuta interamente dopo tutte le verifiche pesanti.
 
 La QA nativa finale ripete tre episodi interamente inventati, con precondizioni
 fissate prima dello startup: entrambe le scelte e conteggi0/1/2, tre identità
@@ -104,10 +109,15 @@ guida è conservato e ripreso sullo stesso payload; la matrice completa viene
 ripetuta prima dell'acknowledgement. Nessuno startup o pesca è ripetuto per
 quel tentativo. Tutti gli host, browser e contesti propri sono chiusi e la
 porta propria è stata nuovamente associata per verificarne il rilascio.
+Dopo la correzione del builder, gli stessi tre export inventati sono importati
+dalla UI su nuovi host vuoti e packless:72 ulteriori casi di QA, con recupero
+posti, export/restore e confronto del payload intero in sola lettura. Queste verifiche non aggiungono
+partite, startup, pescate o nuova prova gameplay. L'intera serie originale
+rimane byte-immutata e viene riletta integralmente dal nuovo validator.
 
 Il validator git-show/onLoad usa esclusivamente i sorgenti committati;
-binario1636284 byte, SHA256
-`c08206abe45703fa3d3e0d7728b448578bb19e43ec43bea9dc925d4ac6cef264`.
+binario1636257 byte, SHA256
+`5925e41b7dd719ee597dcf08618ed0c9e2511ebe3e31e46c5d47aa4c5676a746`.
 Confronta503 file/398 payload distinti e17 viste94. Le intere serie native
 96/98/100/102/104/106/108 mantengono18/14/17/19/13/20/22 snapshot e viste,
 con18/13/16/18/12/18/19 payload distinti ed export/finali. Tutte sono ripetute
