@@ -9,11 +9,16 @@ import { attachExploration } from './fixtures/exploration.mjs';
 import { endTurns } from './original-round-helper.mjs';
 import { drainFollowup, rally } from './second-shadow-helper.mjs';
 import { cycleCommand } from './physical-cycle-helper.mjs';
-import { readSession, readBackup } from './skill-test-helper.mjs';
+import { readSession, readBackup, signBackup } from './skill-test-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
 import { baseNode, baseIntent, finishPhysical, ok } from './base-products-http-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { randomUUID } from 'node:crypto';
+import { access } from 'node:fs/promises';
+import { join } from 'node:path';
+import { startHost } from './host-helper.mjs';
+import { recoverSeat } from './last-stand-helper.mjs';
+import { runtime } from './threat-helper.mjs';
 
 test('the paid visit and the later source sprint each provoke the whole live population and return once through the same ledger', async (t) => {
   const r = await readyCombat(
@@ -157,6 +162,56 @@ test('the paid visit and the later source sprint each provoke the whole live pop
     409,
   );
   assert.deepEqual((await readBackup(r.host)).payload, suspended);
+  const backup = await readBackup(r.host),
+    view = await readSession(r.host);
+  for (const edit of [
+    (b) =>
+      (b.payload.state.combat.operation.origin.sourceRequest.actorPlayerId =
+        r.other.body.player.id),
+    (b) => (b.payload.state.combat.operation.origin.sourceRequest.fingerprint = 'c'.repeat(64)),
+    (b) => (b.payload.state.combat.operation.origin.pendingId = randomUUID()),
+    (b) => (b.payload.state.combat.operation.origin.input.destinationSpaceId = null),
+  ]) {
+    const bad = structuredClone(backup);
+    edit(bad);
+    signBackup(bad);
+    assert.equal(runtime.BackupSchema.safeParse(bad).success, false);
+  }
+  await r.host.stop('SIGKILL');
+  const resumed = await startHost();
+  t.after(() => resumed.dispose());
+  for (const file of [
+    'scenario-pack',
+    'physical-content',
+    'physical-fronts',
+    'physical-last-stand',
+  ])
+    await assert.rejects(access(join(resumed.dataDir, file + '.json')));
+  const empty = await readSession(resumed);
+  assert.equal(empty.scenario, null);
+  await ok(
+    resumed.request('/api/restores', {
+      backup,
+      generation: empty.generation,
+      expectedRevision: empty.revision,
+      confirmed: true,
+    }),
+  );
+  const normalizeAdmin = (actual, expected) => {
+    const copy = structuredClone(actual);
+    for (const key of ['generation', 'revision', 'updatedAt']) copy[key] = expected[key];
+    return copy;
+  };
+  const restored = (await readBackup(resumed)).payload;
+  assert.deepEqual(
+    { ...restored, state: normalizeAdmin(restored.state, backup.payload.state) },
+    backup.payload,
+  );
+  assert.deepEqual(normalizeAdmin(await readSession(resumed), view), view);
+  assert.deepEqual(restored.state.physical.cycle.seed, origin);
+  await recoverSeat(resumed, r.player);
+  await recoverSeat(resumed, r.other);
+  r.host = resumed;
   await drainCombat(r);
   s = await readSession(r.host);
   assert.equal(s.scenario.pending, null);

@@ -115,8 +115,11 @@ export function baseIntent(s) {
   };
 }
 export async function reachBase(r, actor = r.player) {
-  await ok(cycleCommand(r, 'START_TURN', {}, actor));
   let s = await readSession(r.host);
+  if (!s.round.activeHeroId) {
+    await ok(cycleCommand(r, 'START_TURN', {}, actor));
+    s = await readSession(r.host);
+  }
   const destinationSpaceId = s.scenario.spaceBindings.find(
     (b) => b.sourceId === baseNode(s).spaceId,
   ).id;

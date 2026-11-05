@@ -14,9 +14,19 @@ import { readSession, readBackup } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { scenarioInput, startScenario } from './scenario-helper.mjs';
 import { hash } from './fixtures/map-freeze.mjs';
+import { cycleCommand } from './physical-cycle-helper.mjs';
 
 test('HTTP source test charges once, authorizes cards and conversions, rewards once and preserves the base chain', async (t) => {
   const r = await readyBase(t);
+  await ok(cycleCommand(r, 'START_TURN'));
+  const remote = await readSession(r.host),
+    remotePayload = (await readBackup(r.host)).payload;
+  assert.notEqual(
+    remote.journey.heroes[0].spaceId,
+    remote.scenario.spaceBindings.find((b) => b.sourceId === baseNode(remote).spaceId).id,
+  );
+  assert.equal((await commitBase(r)).status, 409, 'a direct event cannot visit from another space');
+  assert.deepEqual((await readBackup(r.host)).payload, remotePayload);
   await reachBase(r);
   const before = await readBackup(r.host),
     s = await readSession(r.host);
@@ -40,6 +50,7 @@ test('HTTP source test charges once, authorizes cards and conversions, rewards o
     [r.player, { kind: 'physical-choice', option: 'reveal' }, { heroId: 'hero-2' }],
     [r.player, { kind: 'choice', event: 'SOLVED' }, {}],
     [r.player, { kind: 'choice', event: 'EXTRA' }, {}],
+    [r.player, { kind: 'physical-choice', option: 'reveal' }, { pendingId: randomUUID() }],
     [r.player, { kind: 'physical-select', ids: ['foreign-copy:1'] }, {}],
     [
       r.player,
