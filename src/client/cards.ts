@@ -7,6 +7,7 @@ import type {
 } from '../shared/catalog';
 import { element, text } from './dom';
 import type { TitleSkillDefinition } from '../shared/skill-cards';
+import type { CampSkillOffer } from '../shared/camp-skills';
 type Card = SkillDefinition | TitleSkillDefinition | ItemDefinition;
 
 export function picture(name: string | undefined, label: string, className: string) {
@@ -84,6 +85,36 @@ export function createCardReader() {
     });
   }
   return {
+    campSkill(
+      offer: CampSkillOffer,
+      target: HTMLElement,
+      hero: string,
+      role: string,
+      availability: string,
+    ) {
+      const card = offer.card;
+      show(
+        card.name.text,
+        [
+          text('p', `${hero} · ${role} · ${offer.cost} XP`, 'card-type'),
+          text(
+            'p',
+            `Numero ${card.number} · ${card.success} successi · ${card.fate} destino · una copia`,
+            'card-type',
+          ),
+          text('p', card.traits.join(' · '), 'card-traits'),
+          text('p', availability, 'company-hero-owner'),
+          text('p', card.text.text, 'card-full-text'),
+          text(
+            'p',
+            'Lettura gratuita. Acquista o vendi dal campo. Le capacità si usano soltanto nelle rispettive finestre di avventura, quando disponibili.',
+            'company-help',
+          ),
+          sourceNotes([card.name, card.text], card.notes),
+        ],
+        target,
+      );
+    },
     boon(card: { name: string; text: string }, target: HTMLElement) {
       show(
         card.name,

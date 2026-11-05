@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  CampSkillsCapabilitySchema,
+  CampSkillInputSchema,
+  CampTrainingSchema,
+} from './camp-skills';
 import { SearchRecoverySchema } from './search-recovery';
 import { CombatClosureArtifactSchema } from './combat';
 import { BoonKindSchema } from './combat';
@@ -578,6 +583,7 @@ export const ScenarioPackSchema = z.strictObject({
       .strictObject({ version: z.literal('source-boons-v1'), fingerprint: HashSchema })
       .optional(),
     failure: AdventureFailureCapabilitySchema.optional(),
+    campSkills: CampSkillsCapabilitySchema.optional(),
     lair: LairCapabilitySchema.optional(),
     linked: LinkedCapabilitySchema.optional(),
     baseProducts: BaseProductsCapabilitySchema.optional(),
@@ -709,6 +715,7 @@ export const SourceSprintInputSchema = z.strictObject({
   destinationSpaceId: z.string().min(1).max(100).nullable(),
 });
 export const EncounterInputSchema = z.discriminatedUnion('kind', [
+  CampSkillInputSchema,
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
@@ -923,6 +930,7 @@ export const ScenarioSchema = z.strictObject({
                 lastStandDifficulty: z.literal(1),
                 itemCopies: z.array(CopyIdSchema).max(3),
                 titleCopies: z.array(CopyIdSchema).max(21),
+                skillCopies: z.array(CopyIdSchema).max(200).optional(),
               }),
             )
             .max(5),
@@ -932,6 +940,7 @@ export const ScenarioSchema = z.strictObject({
             )
             .max(1)
             .optional(),
+          training: CampTrainingSchema.optional(),
           sceneGlobals: z.record(z.string(), scalar),
           adventureRules: z.array(z.string().max(1000)).max(100),
           next: z

@@ -4,6 +4,7 @@ import { element, text } from './dom';
 import { sourceText } from './source-text';
 import { createGameActions } from './game-actions';
 import { cardButton, type CardReader } from './cards';
+import { campSkillShop } from './camp-skills';
 
 export function createConclusion(sync: () => Promise<void>, reader: CardReader) {
   const root = element('#campaign'),
@@ -109,7 +110,7 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         list.append(
           text(
             'li',
-            `${catalog.heroes.find((h) => h.id === reward.heroId)!.name.text} · ${catalog.roles.find((r) => r.id === reward.roleId)!.name.text}: ${reward.amount} XP disponibili.`,
+            `${catalog.heroes.find((h) => h.id === reward.heroId)!.name.text} · ${catalog.roles.find((r) => r.id === reward.roleId)!.name.text}: ${reward.amount} XP ricevuti.`,
           ),
         );
       rewards.append(list);
@@ -139,14 +140,14 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
           text('h4', name),
           text(
             'p',
-            `Pronto nel campo · ruolo per il seguito: ${role?.name.text ?? 'da scegliere'}. XP in questo ruolo: ${c.xp.find((x) => x.heroId === h.heroId && x.roleId === h.roleId)?.amount ?? 0}.`,
+            `Pronto nel campo · ruolo per il seguito: ${role?.name.text ?? 'da scegliere'}. XP disponibili in questo ruolo: ${c.campaign!.training?.balances.find((x) => x.heroId === h.heroId && x.roleId === h.roleId)?.availableXP ?? c.xp.find((x) => x.heroId === h.heroId && x.roleId === h.roleId)?.amount ?? 0}.`,
           ),
         );
         const xp = c.xp.filter((x) => x.heroId === h.heroId);
         entry.append(
           text(
             'p',
-            `Esperienza conservata: ${xp.map((x) => `${catalog!.roles.find((r) => r.id === x.roleId)!.name.text} ${x.amount} XP`).join(', ')}. Nessun XP speso.`,
+            `Premi storici conservati: ${xp.map((x) => `${catalog!.roles.find((r) => r.id === x.roleId)!.name.text} ${x.amount} XP`).join(', ')}.`,
           ),
         );
         for (const copy of h.itemCopies) {
@@ -182,6 +183,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
           };
           entry.append(form);
         }
+        entry.append(
+          campSkillShop(session, catalog, h.heroId, player, reader, (input) => submit(input)),
+        );
         heroes.append(entry);
       }
     },

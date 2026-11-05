@@ -2,6 +2,7 @@ import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } fr
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
+import { CampSkillInputSchema, CampSkillReceiptSchema } from './camp-skills';
 import { CombatIntentSchema, CombatViewSchema, ResumedJourneySchema } from './combat-controller';
 import { CatalogSummarySchema, ContentIdSchema } from './catalog';
 import { CopyIdSchema, PreparationViewSchema } from './preparation';
@@ -45,7 +46,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(26),
+  schemaVersion: z.literal(27),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -72,6 +73,7 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  CampSkillInputSchema,
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -332,18 +334,27 @@ export const ReceiptSchema = z.union([
     source: HashSchema,
     completed: z.boolean(),
   }),
-  z.strictObject({
-    requestId: IntentIdSchema,
-    type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
-    resumedJourney: ResumedJourneySchema.optional(),
-    appliedRevision: z.int().nonnegative(),
-    scenarioId: z.uuid(),
-    pendingId: z.uuid().nullable(),
-    source: z.string().max(300),
-    kind: z.string().max(50),
-    completed: z.boolean().optional(),
-    phase: z.enum(['setup', 'action']),
-  }),
+  z
+    .strictObject({
+      requestId: IntentIdSchema,
+      type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
+      resumedJourney: ResumedJourneySchema.optional(),
+      appliedRevision: z.int().nonnegative(),
+      scenarioId: z.uuid(),
+      pendingId: z.uuid().nullable(),
+      source: z.string().max(300),
+      kind: z.string().max(50),
+      completed: z.boolean().optional(),
+      phase: z.enum(['setup', 'action']),
+      skill: CampSkillReceiptSchema.optional(),
+    })
+    .refine(
+      (receipt) =>
+        receipt.kind === 'camp-skill'
+          ? receipt.type === 'SCENARIO_INPUT' && receipt.skill !== undefined
+          : receipt.skill === undefined,
+      { message: 'Riepilogo abilità senza transazione del campo corrispondente.', path: ['skill'] },
+    ),
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.enum(['GENERATE_ADVENTURE_MAP', 'RESUME_ADVENTURE_MAP']),

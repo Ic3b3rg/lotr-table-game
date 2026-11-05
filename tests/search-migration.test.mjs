@@ -78,7 +78,7 @@ test('normal dictionary words remain valid and the migration changes only schema
   });
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const raw = (await readBackup(r.host)).payload.state;
-  assert.equal(raw.schemaVersion, 26);
+  assert.equal(raw.schemaVersion, 27);
   for (let schemaVersion = 10; schemaVersion <= 24; schemaVersion++) {
     const old = { ...structuredClone(raw), schemaVersion };
     if (schemaVersion === 10) delete old.physical;
