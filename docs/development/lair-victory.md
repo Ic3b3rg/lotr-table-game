@@ -169,3 +169,13 @@ La scratch privata contiene README, ricevute originali e rilocate, oracle,
 compilazione, log dei tentativi, checkpoint, input lock, chiusura delle sole
 superfici proprie e sigillo finale. Non vengono distribuiti contenuti originali.
 I commit sono locali: nessun push, PR, merge o scrittura GitHub.
+
+## Integrazione del root
+
+[Review Standards/Spec e verifica indipendente](../reviews/2026-11-05-lair-victory.md):
+nessun rilievo bloccante, un suggerimento di manutenzione facoltativo.
+Il root riproduce primarie, oracle e tre output del compiler identici,
+503 confronti interi e le viste17/18/14/17 con export/finali. Suite733/733,
+552249,210708ms a concorrenza4, codice consegnato invariato. Audit UI distinto
+fra168 casi completi e24 ispezioni/annullamenti, tutti inventati; nessuna
+nuova partita originale o accettazione89/33. Quantità57 e gate preservati.
