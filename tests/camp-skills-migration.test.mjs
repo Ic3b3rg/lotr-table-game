@@ -4,8 +4,20 @@ import { buildSync } from 'esbuild';
 import { readyScenario, startScenario } from './scenario-helper.mjs';
 import { readBackup } from './skill-test-helper.mjs';
 
-const code = buildSync({ stdin: { contents: "export {parseState} from './src/server/state';", resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { parseState } = await import('data:text/javascript;base64,' + Buffer.from(code.outputFiles[0].contents).toString('base64'));
+const code = buildSync({
+  stdin: {
+    contents: "export {parseState} from './src/server/state';",
+    resolveDir: process.cwd(),
+    loader: 'ts',
+  },
+  bundle: true,
+  write: false,
+  platform: 'node',
+  format: 'esm',
+});
+const { parseState } = await import(
+  'data:text/javascript;base64,' + Buffer.from(code.outputFiles[0].contents).toString('base64')
+);
 
 test('historical formats through26 reject every camp field and intent at its actual path, including the frozen seed', () => {
   for (let schemaVersion = 1; schemaVersion <= 26; schemaVersion++) {
@@ -15,9 +27,25 @@ test('historical formats through26 reject every camp field and intent at its act
       { conclusion: { campaign: { heroes: [{ skillCopies: [] }] } } },
       { commands: [{ kind: 'camp-skill' }] },
     ]) {
-      for (const seed of [false, true]) assert.throws(() => parseState(seed ? { schemaVersion, physical: { cycle: { seed: { scenario } } } } : { schemaVersion, scenario }), /campo.*storico/i);
+      for (const seed of [false, true])
+        assert.throws(
+          () =>
+            parseState(
+              seed
+                ? { schemaVersion, physical: { cycle: { seed: { scenario } } } }
+                : { schemaVersion, scenario },
+            ),
+          /campo.*storico/i,
+        );
     }
-    assert.throws(() => parseState({ schemaVersion, physical: { cycle: { records: [{ intent: { input: { kind: 'camp-skill' } } }] } } }), /campo.*storico/i);
+    assert.throws(
+      () =>
+        parseState({
+          schemaVersion,
+          physical: { cycle: { records: [{ intent: { input: { kind: 'camp-skill' } } }] } },
+        }),
+      /campo.*storico/i,
+    );
   }
 });
 
