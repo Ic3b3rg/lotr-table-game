@@ -16,7 +16,7 @@ import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
 import { validateItemCapability } from './item-capability';
-import { validateSearches } from './searches';
+import { validateSearches, searchDefinition } from './searches';
 import {
   validateFirstCombat,
   firstCombatDefinition,
@@ -291,6 +291,7 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             pack.manifest.clues ||
               linkedDefinition(pack, d.source) ||
+              searchDefinition(pack, d.source) ||
               baseProductsDefinition(pack, d.source) ||
               firstCombatDefinition(pack, d.source),
             'Istruzione fuori dalla capacità indizi o collegata congelata.',
