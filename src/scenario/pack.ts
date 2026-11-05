@@ -8,6 +8,7 @@ import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { verifyCombatClosure } from '../combat/compiler';
 import { validateShadowCapability } from './shadow-capability';
 import { validateThreatCapability } from './threat-capability';
+import { validateLiveGroups } from './live-groups';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isFailureReward } from './failure-capability';
@@ -84,6 +85,7 @@ export function parseScenarioPack(raw: unknown) {
   const rounds = pack.manifest.rounds;
   const followup = pack.manifest.followup;
   validateThreatCapability(pack);
+  validateLiveGroups(pack);
   if (followup) {
     invariant(original && rounds, 'Seguito senza fase originale.');
     const deployment = verifySourceDeployment(followup.deployment);
@@ -344,15 +346,16 @@ export function parseScenarioPack(raw: unknown) {
         );
         if (a.op === 'physical')
           invariant(
-            pack.manifest.scope ===
-              (a.program.profile === 'source-fronts-v1'
-                ? 'synthetic-physical-p1'
-                : 'synthetic-physical-p0') &&
+            (a.program.profile !== 'source-fronts-v1' || !a.program.groupRules) &&
+              pack.manifest.scope ===
+                (a.program.profile === 'source-fronts-v1'
+                  ? 'synthetic-physical-p1'
+                  : 'synthetic-physical-p0') &&
               pack.name.toLocaleLowerCase('it-IT').includes('sintetic') &&
               d.source === pack.principal &&
               s.actions.length === 1 &&
               a.origin.parameterHash === digest(a.program),
-            'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti.',
+            'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti; i gruppi attivi sono derivati dal controller congelato.',
           );
         const refs = [
           ...('target' in a && typeof a.target === 'object' ? [a.target] : []),

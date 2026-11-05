@@ -9,6 +9,7 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { sourceDarknessHeroes } from './darkness';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
+import { liveGroupRules } from './live-groups';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
 export function encounterProgram(state: State, action: ScenarioAction): PhysicalProgram {
@@ -64,6 +65,7 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
+    ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
     darknessHeroes: sc.pack.manifest.threatContinuations
@@ -79,6 +81,7 @@ export function spawnPhysicalProgram(
   invariant(!!a.trial !== !!a.suffering, 'Spawn senza singola conseguenza fonte.');
   return {
     profile: 'source-fronts-v1',
+    ...liveGroupRules(state),
     initialCredits: state.physical!.heroes.map(() => 0),
     limits: state.physical!.heroes.map(() => ({
       kind: 'requires-capability',

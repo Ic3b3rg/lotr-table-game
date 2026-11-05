@@ -52,11 +52,18 @@ const CompilationSchema = z.strictObject({
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.liveGroups
+      ? input.liveGroupsCertificate?.instructionHash === digest(pack.manifest.liveGroups)
+      : !input.liveGroupsCertificate,
+    'Gruppi attivi assenti o non attestati.',
+  );
   invariant(
     pack.manifest.threatContinuations
       ? input.threatContinuationsCertificate?.instructionHash ===

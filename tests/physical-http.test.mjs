@@ -14,7 +14,7 @@ test('HTTP: source-bound physical children use normal scenario requests and reda
     { host, player, other } = ready;
   const s = await reachPhysical(ready),
     q = s.scenario.pending;
-  assert.equal(s.schemaVersion, 18);
+  assert.equal(s.schemaVersion, 19);
   assert.equal(q.actorPlayerId, other.body.player.id);
   assert.equal(q.heroId, 'hero-2');
   assert.equal(s.physical.active.heroId, 'hero-1');

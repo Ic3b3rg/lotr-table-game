@@ -54,6 +54,19 @@ padre sospeso e la conclusione immediata già prevista. Con superstiti conserva
 risultati, carte, costi e continuazione fino a un unico ritorno. Le perdite
 differite conservano la finestra fonte. Nessun executor nuovo.
 
+Il confine nuovo segue l'intero ammontare fisico del destinatario e i suoi
+fronti, prima del prossimo destinatario. Ultimo Sforzo risolve anche gli
+obblighi causati ad altri eroi dai discendenti. Nell'oscurità conserva la
+scelta fra obblighi e reazioni simultanee pertinenti a quel subito; nessun
+controllo nel mezzo delle pescate.
+
+Il ritorno comprende anche il reset collettivo già previsto prima della
+Riorganizzazione: lo slot0 è un riferimento fonte, non un permesso di saltare
+il reset dei superstiti. Il marker abilita questo consumer collettivo;
+le carte dello sconfitto restano intatte. Al termine si sincronizza la sola
+sconfitta già registrata con il progresso della nuova fase, senza nuova
+valutazione della perdita, così un eroe rimosso non trattiene gli altri.
+
 Non cambiano PlayerCount, budget, minaccia, campagne, proprietà o stock.
 Il preflight completo precede costi/RNG, conserva popolazioni integrali e
 gate tardivi. I consumer senza marker conservano la semantica storica:
