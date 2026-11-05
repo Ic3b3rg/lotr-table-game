@@ -67,9 +67,9 @@ formati anche all'origine, conservando i normali nomi dei dizionari.
 Il pack112 è ricostruito byte-identico con fingerprint
 `065471143eabbfc15b4dffa16fa787c280b69757f442a6f79bc09b03c98a7704`.
 Il nuovo fingerprint è
-`eedd0f1a806c8648aea18f211c56bef43098f7ecb71e225c4021030bd9d360eb`:
-656343 byte, SHA256
-`d52f0812446ff60ea4f2d266e052ff6914e5be9e176f30cfc8b10091f41b29a7`.
+`8f1b22eafa1f90b99e90ef2954eb0010b868bce683b7e62b6a5e967c3c296986`:
+658484 byte, SHA256
+`307852652f7c49e8a7220ea84fa65302d1cd60bd9973a1ec6984f3e0f8703386`.
 Tre compilazioni sono byte-identiche;37 definizioni/301 stati/322 azioni/27
 deferred e i certificati precedenti rimangono invariati.
 
@@ -135,3 +135,19 @@ Implementer unico nel checkout assegnato, senza deleghe, installazioni,
 checkout aggiuntivi o scritture GitHub/push/PR/merge. Le superfici protette e
 il live del proprietario non sono stati toccati. Root esegue Standards/Spec
 fresche e integrazione.
+
+## Integrazione del root
+
+[Standards/Spec e verifica indipendente](../reviews/2026-11-05-camp-skills.md):
+zero violazioni Standards e un suggerimento facoltativo; un P2 Spec sulle
+ricevute finanziarie corretto con tre regressioni RED→GREEN. Il root
+allinea inoltre quattro termini al manuale italiano, senza cambiare
+prezzi, quantità o meccaniche. Il fingerprint sopra è quello del pack
+statico corretto; la consegna originale rimane conservata privatamente.
+
+Sul prodotto corretto passano19/19 prove mirate, l’intero corpus e tutte
+le serie storiche/proprie,80 casi QA inventati e30 prove recovery.
+Canonica root **883/883**, npm exit0, concorrenza4 da sola,1038,112secondi,
+HEAD pulito e invariato. I limiti57/156 e l’assenza di una partita originale
+completa rimangono invariati. Il rapporto distingue la QA accettata dal
+fallimento opzionale conservato su un’immagine aggiuntiva della guida.
