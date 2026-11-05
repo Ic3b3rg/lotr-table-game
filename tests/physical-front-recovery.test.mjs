@@ -97,7 +97,7 @@ test('schema11 pending P0 imports as12 without changing its physical program, en
   signBackup(backup);
   assert.equal((await restore(ready.host, backup)).status, 200);
   const after = await readBackup(ready.host);
-  assert.equal(after.payload.state.schemaVersion, 18);
+  assert.equal(after.payload.state.schemaVersion, 19);
   assert.deepEqual(after.payload.state.physical, expected.payload.state.physical);
   assert.deepEqual(after.payload.state.scenario, expected.payload.state.scenario);
   assert.deepEqual(after.payload.commands, expected.payload.commands);
@@ -113,7 +113,7 @@ test('schema12 pending P1a migrates intact and rejects a newer cycle disguised a
   const r = await restore(ready.host, backup);
   assert.equal(r.status, 200, await r.text());
   const after = await readBackup(ready.host);
-  assert.equal(after.payload.state.schemaVersion, 18);
+  assert.equal(after.payload.state.schemaVersion, 19);
   assert.deepEqual(after.payload.state.physical, original.payload.state.physical);
   assert.deepEqual(after.payload.state.scenario, original.payload.state.scenario);
   assert.deepEqual(after.payload.commands, original.payload.commands);

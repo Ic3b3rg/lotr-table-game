@@ -327,6 +327,15 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    liveGroups: z
+      .strictObject({
+        version: z.literal('source-live-groups-v1'),
+        evidenceHash: HashSchema,
+        roundsFingerprint: HashSchema,
+        followupFingerprint: HashSchema,
+        failureFingerprint: HashSchema,
+      })
+      .optional(),
     threatContinuations: ThreatContinuationsSchema.optional(),
     boons: z
       .strictObject({ version: z.literal('source-boons-v1'), fingerprint: HashSchema })

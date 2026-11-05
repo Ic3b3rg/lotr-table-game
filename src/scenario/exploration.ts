@@ -185,6 +185,7 @@ export function rewardExploration(state: State) {
       },
       {
         profile: 'source-fronts-v1',
+        ...liveGroupRules(state),
         initialCredits: p.heroes.map(() => 0),
         limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
         darknessHeroes: [],
@@ -216,3 +217,4 @@ export function rewardExploration(state: State) {
   frame.reward =
     state.preparation.heroes.find((h) => h.heroId === frame.heroId)!.inspiration - before;
 }
+import { liveGroupRules } from './live-groups';

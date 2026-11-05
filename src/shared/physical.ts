@@ -187,6 +187,7 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 ]);
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
+  groupRules: z.literal('source-live-groups-v1').optional(),
   combat: CombatPhysicalContextSchema.optional(),
   deferFrontier: z.literal('combat-frontier-v1').optional(),
   children: z.array(FrontChildSchema).min(1).max(32),
@@ -229,6 +230,7 @@ const activeBase = {
   actorPlayerId: z.uuid(),
 };
 export const PhysicalDecisionSchema = z.strictObject({
+  purpose: z.enum(['group-order', 'negation']).optional(),
   scoutTopAllowed: z.boolean().optional(),
   ...activeBase,
   kind: z.literal('decision'),

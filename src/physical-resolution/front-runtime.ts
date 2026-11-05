@@ -359,6 +359,7 @@ class FrontReplay {
     title: string,
     options: { id: string; label: string; unavailable?: string }[],
     recipient = hero,
+    purpose?: Decision['purpose'],
   ) {
     invariant(options.length > 0, 'Scelta senza alternative lecite.');
     if (options.length === 1 && !options[0]!.unavailable) return options[0]!.id;
@@ -366,6 +367,7 @@ class FrontReplay {
       hero,
       path,
       {
+        ...(purpose ? { purpose } : {}),
         mode: 'choose',
         title,
         options,
@@ -632,7 +634,7 @@ class FrontReplay {
     path: string,
     targets: number[],
     f: (n: number, path: string) => void,
-    activeOnly = false,
+    activeOnly = this.liveGroups,
   ) {
     let left = targets.filter((n) => !activeOnly || this.lastStand.active(n));
     while (left.length) {
@@ -646,12 +648,50 @@ class FrontReplay {
             id: String(n),
             label: this.catalog.heroes.find((h) => h.id === this.hero(n).heroId)!.name.text,
           })),
+          actor,
+          this.liveGroups ? 'group-order' : undefined,
         ),
       );
       left.splice(left.indexOf(selected), 1);
       f(selected, `${path}/hero-${selected}`);
       if (activeOnly) left = left.filter((n) => this.lastStand.active(n));
     }
+  }
+  private get liveGroups() {
+    return (
+      this.run.program.profile === 'source-fronts-v1' &&
+      this.run.program.groupRules === 'source-live-groups-v1'
+    );
+  }
+  /** One complete recipient source, including fronts, precedes the next group choice. */
+  private settleCollective(reactions: LastStandReaction[] = []) {
+    if (!this.liveGroups) return;
+    invariant(this.run.lastStandRules, 'Gruppi attivi senza regole Ultimo Sforzo congelate.');
+    this.lastStand.settle(this.run, reactions);
+    const terminal = this.s.lastStand?.terminal;
+    if (terminal)
+      this.gate(
+        this.p.heroes.findIndex((h) => h.heroId === terminal.heroId),
+        'adventure-loss-consumer-unavailable',
+      );
+  }
+  private darknessReactions(hero: number, suffered: number, index: number, path: string) {
+    const result = this.result;
+    return this.eventEffects(hero, 'after-darkness-suffering-batch', suffered).map(
+      (effect, n): LastStandReaction => ({
+        id: `darkness:${index}:${hero}:${n}`,
+        hero,
+        label: `Risolvi ${this.cards.get(effect.copy)!.name.value}`,
+        available: () =>
+          this.faceup.has(effect.copy) &&
+          this.lastStand.active(effect.owner) &&
+          this.lastStand.active(hero),
+        resolve: () => {
+          this.result = result;
+          this.eventEffect(hero, effect, `${path}/darkness-${hero}/trigger-${n}`, false);
+        },
+      }),
+    );
   }
   private down(copy: string) {
     this.faceup.delete(copy);
@@ -1255,6 +1295,7 @@ class FrontReplay {
           if (successes) {
             const cannotDamage = this.cannotPreventDamage(hero);
             const input = this.ask(hero, `${path}/negate`, {
+              ...(this.liveGroups ? { purpose: 'negation' as const } : {}),
               mode: 'allocate',
               title: `Assegna fino a ${successes} successi, una sola volta. Puoi subire volontariamente.`,
               options: [],
@@ -2240,7 +2281,13 @@ class FrontReplay {
           };
           parent.results.push(this.result);
           const path = `${run.id}/${index}`;
-          if (!this.lastStand.active(child.hero) && child.kind !== 'group-suffer') {
+          const collective =
+            child.kind === 'group-suffer' ||
+            (this.liveGroups &&
+              (child.kind === 'group-test' ||
+                child.kind === 'darkness' ||
+                child.kind === 'rally-reset'));
+          if (!this.lastStand.active(child.hero) && !collective) {
             parent.completedChildren++;
             continue;
           }
@@ -2358,33 +2405,12 @@ class FrontReplay {
                   orderPath,
                   child.negate,
                 );
-                batches.push({ hero, suffered });
+                if (this.liveGroups)
+                  this.settleCollective(this.darknessReactions(hero, suffered, index, path));
+                else batches.push({ hero, suffered });
               });
-              const result = this.result;
               for (const batch of batches)
-                for (const [n, effect] of this.eventEffects(
-                  batch.hero,
-                  'after-darkness-suffering-batch',
-                  batch.suffered,
-                ).entries())
-                  reactions.push({
-                    id: `darkness:${index}:${batch.hero}:${n}`,
-                    hero: batch.hero,
-                    label: `Risolvi ${this.cards.get(effect.copy)!.name.value}`,
-                    available: () =>
-                      this.faceup.has(effect.copy) &&
-                      this.lastStand.active(effect.owner) &&
-                      this.lastStand.active(batch.hero),
-                    resolve: () => {
-                      this.result = result;
-                      this.eventEffect(
-                        batch.hero,
-                        effect,
-                        `${path}/darkness-${batch.hero}/trigger-${n}`,
-                        false,
-                      );
-                    },
-                  });
+                reactions.push(...this.darknessReactions(batch.hero, batch.suffered, index, path));
               break;
             }
             case 'inspiration':
@@ -2407,6 +2433,7 @@ class FrontReplay {
                     orderPath,
                     child.negate,
                   );
+                  this.settleCollective();
                 },
                 true,
               );
@@ -2449,6 +2476,7 @@ class FrontReplay {
                     child.failure.face,
                     `${orderPath}/failure`,
                   );
+                this.settleCollective();
               });
               break;
             }

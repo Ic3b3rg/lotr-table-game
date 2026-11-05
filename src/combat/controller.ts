@@ -223,6 +223,7 @@ export function openCombatPhysical(
     : { preparation: structuredClone(state.preparation!), boons: [], depletion: [] };
   const program: Extract<PhysicalProgram, { profile: 'source-fronts-v1' }> = {
     profile: 'source-fronts-v1',
+    ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
     darknessHeroes: combatDarknessHeroes(state),
@@ -1239,3 +1240,4 @@ export function nextProvocation(state: State) {
   advanceCombat(state);
   return true;
 }
+import { liveGroupRules } from '../scenario/live-groups';

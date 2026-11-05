@@ -24,6 +24,7 @@ import { ApiError } from './errors';
 import { beginHeroFailure, advanceConclusion } from '../scenario/conclusion';
 import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
+import { liveGroupRules } from '../scenario/live-groups';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
@@ -110,6 +111,7 @@ function finish(
     round.phase = 'rally';
     round.shadowStep = null;
   }
+  if (state.scenario!.pack.manifest.liveGroups) syncPhysicalDefeat(state);
 }
 function openSourceDarkness(state: State, record: CycleState['records'][number]) {
   const affected = darknessHeroes(state);
@@ -165,6 +167,7 @@ function runSource(
   };
   const program: PhysicalProgram = {
     profile: 'source-fronts-v1',
+    ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
     darknessHeroes: darknessHeroes(state),

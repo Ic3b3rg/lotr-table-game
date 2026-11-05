@@ -304,22 +304,31 @@ export function createPhysicalControls(
       const active = view.active;
       if (active) {
         const actor = session.players.find((p) => p.id === active.actorPlayerId);
+        const purpose = active.kind === 'decision' ? active.purpose : undefined;
         root.append(
           text(
             'h4',
-            active.kind === 'prevent'
-              ? `Prevenzione per ${name(active.heroId)}`
-              : active.kind === 'discard'
-                ? `Scarto per ${name(active.heroId)}`
-                : active.kind === 'decision'
-                  ? `Decisione per ${name(active.heroId)}`
-                  : `Conseguenza sospesa per ${name(active.heroId)}`,
+            purpose === 'group-order'
+              ? 'Ordine dei superstiti'
+              : purpose === 'negation'
+                ? `Negazione per ${name(active.heroId)}`
+                : active.kind === 'prevent'
+                  ? `Prevenzione per ${name(active.heroId)}`
+                  : active.kind === 'discard'
+                    ? `Scarto per ${name(active.heroId)}`
+                    : active.kind === 'decision'
+                      ? `Decisione per ${name(active.heroId)}`
+                      : `Conseguenza sospesa per ${name(active.heroId)}`,
           ),
         );
         root.append(
           text(
             'p',
-            `Agisce ${actor?.name ?? 'il proprietario'} con ${name(active.actorHeroId)}.`,
+            purpose === 'group-order'
+              ? `Il gruppo concorda l’ordine. ${actor?.name ?? 'Il proprietario indicato'} registra la scelta con ${name(active.actorHeroId)}; il proprietario dell’eroe scelto risolve la sua prova e le conseguenze. Dopo tutti i superstiti riprende la fonte.`
+              : purpose === 'negation'
+                ? `${actor?.name ?? 'Il proprietario indicato'} nega per ${name(active.heroId)} e risolve il residuo. Poi prosegue l’ordine dei superstiti e riprende la fonte.`
+                : `Agisce ${actor?.name ?? 'il proprietario'} con ${name(active.actorHeroId)}.`,
             'physical-actor',
           ),
         );
@@ -504,7 +513,7 @@ export function createPhysicalControls(
           list.append(
             text(
               'li',
-              `${view.fronts ? `Fonte per ${name(r.heroId)} · totali tra gli eroi` : name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti${view.fronts ? '' : ' coperti'}; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
+              `${['group-test', 'group-suffer', 'darkness'].includes(r.kind) ? 'Fonte collettiva · totali tra gli eroi' : view.fronts ? `Fonte per ${name(r.heroId)} · totali tra gli eroi` : name(r.heroId)} · ${quantities(r.prevented.damage, r.prevented.fear)} prevenuti; ${quantities(r.transferred.damage, r.transferred.fear)} ricevuti${view.fronts ? '' : ' coperti'}; ${quantities(r.returned.damage, r.returned.fear)} restituiti sotto i mazzi.`,
             ),
           );
         results.append(list);

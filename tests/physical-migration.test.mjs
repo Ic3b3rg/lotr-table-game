@@ -34,7 +34,7 @@ test('schema10 pending scenario migrates and imports intact without retroactive 
     });
   assert.equal(r.status, 200, await r.text());
   const imported = await readSession(destination);
-  assert.equal(imported.schemaVersion, 18);
+  assert.equal(imported.schemaVersion, 19);
   assert.equal(imported.physical, null);
   for (const key of [
     'scenario',
