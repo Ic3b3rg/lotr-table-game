@@ -10,6 +10,7 @@ import { invariant } from '../map-freeze/validate';
 import { sourceDarknessHeroes } from './darkness';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
 import { liveGroupRules } from './live-groups';
+import { searchDefinition } from './searches';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
 export function encounterProgram(state: State, action: ScenarioAction): PhysicalProgram {
@@ -66,7 +67,13 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
         target: action.op === 'sourceTest' ? action.target : null,
       },
     ];
-  else if (action.op === 'message' && action.inspiration)
+  else if (action.op === 'message' && action.recovery) {
+    invariant(
+      searchDefinition(sc.pack, sc.instances.find((i) => i.id === attempt.instanceId)!.definition),
+      'Conseguenza senza owner ricerca.',
+    );
+    children = [{ kind: 'search-recovery', hero, effect: action.recovery }];
+  } else if (action.op === 'message' && action.inspiration)
     children = [{ kind: 'inspiration', hero, amount: action.inspiration }];
   else if (action.op === 'message' && action.boon)
     children = [{ kind: 'source-boon', hero, boon: action.boon }];

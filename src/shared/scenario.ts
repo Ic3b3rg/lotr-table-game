@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SearchRecoverySchema } from './search-recovery';
 import { CombatClosureArtifactSchema } from './combat';
 import { BoonKindSchema } from './combat';
 import { FirstCombatCapabilitySchema, FirstCombatStateSchema } from './mission-combat';
@@ -136,6 +137,35 @@ const LinkedCapabilitySchema = z.strictObject({
     threat: methodEvidence,
     broadcast: methodEvidence,
     sequence: methodEvidence,
+  }),
+});
+const searchOwner = <R extends string>(role: R) =>
+  z.strictObject({
+    role: z.literal(role),
+    prefab: SourceSchema,
+    prefabHash: HashSchema,
+    definitionHash: HashSchema,
+    objectHash: HashSchema,
+    lifecycleHash: HashSchema,
+    certificateHash: HashSchema,
+    model: z.strictObject({ source: SourceSchema, objectHash: HashSchema }),
+    node: z.strictObject({ source: SourceSchema, objectHash: HashSchema }),
+  });
+const SearchesCapabilitySchema = z.strictObject({
+  version: z.literal('source-search-encounters-v1'),
+  evidenceHash: HashSchema,
+  ownedProductIds: z.tuple([z.literal(0)]),
+  encounters: z.tuple([searchOwner('choice'), searchOwner('challenge')]),
+  roundsFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.strictObject({
+    confirm: methodEvidence,
+    cancel: methodEvidence,
+    challenge: methodEvidence,
+    sum: methodEvidence,
+    sequence: methodEvidence,
+    hide: methodEvidence,
+    release: methodEvidence,
   }),
 });
 const productModel = <I extends number>(id: I) =>
@@ -320,6 +350,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
     inspiration: z.literal(1).optional(),
+    recovery: SearchRecoverySchema.optional(),
     boon: BoonKindSchema.optional(),
     sprint: z.literal(1).optional(),
     consequence: z
@@ -512,6 +543,7 @@ export const ScenarioPackSchema = z.strictObject({
     baseProducts: BaseProductsCapabilitySchema.optional(),
     items: ItemsCapabilitySchema.optional(),
     firstCombat: FirstCombatCapabilitySchema.optional(),
+    searches: SearchesCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),

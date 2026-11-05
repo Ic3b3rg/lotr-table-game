@@ -23,7 +23,9 @@ export function decisionForm(
   const button = text(
     'button',
     q.mode === 'scout'
-      ? 'Risolvi la Scoperta'
+      ? q.scoutPrepareAllowed === false
+        ? 'Disponi le carte'
+        : 'Risolvi la Scoperta'
       : q.mode === 'select'
         ? 'Applica la selezione'
         : 'Applica la prevenzione',
@@ -110,7 +112,9 @@ export function decisionForm(
       const dest = select(`physical-scout-destination-${n}`, `${o.label} · destinazione`, [
         { id: 'bottom', label: 'Fondo del mazzo' },
         ...(q.scoutTopAllowed === false ? [] : [{ id: 'top', label: 'Cima del mazzo' }]),
-        { id: 'prepare', label: 'Prepara questa carta' },
+        ...(q.scoutPrepareAllowed === false
+          ? []
+          : [{ id: 'prepare', label: 'Prepara questa carta' }]),
       ]);
       const order = select(
         `physical-scout-order-${n}`,
@@ -122,20 +126,23 @@ export function decisionForm(
     });
     const hero = session.preparation?.heroes.find((h) => h.heroId === q.actorHeroId);
     const copies = [...new Set([...(hero?.prepared ?? []), ...q.options.map((o) => o.id)])];
-    const discard = select(
-      'physical-scout-discard',
-      'Scarto solo se si supera il limite di quattro preparate',
-      [
-        { id: '', label: 'Nessuna carta' },
-        ...copies.map((id) => ({
-          id,
-          label:
-            catalog?.skills.find((s) => s.id === definitionId(id))?.name.text ??
-            session.physical?.lastStand?.titles.find((t) => t.copy === id)?.name ??
-            id,
-        })),
-      ],
-    );
+    const discard =
+      q.scoutPrepareAllowed === false
+        ? null
+        : select(
+            'physical-scout-discard',
+            'Scarto solo se si supera il limite di quattro preparate',
+            [
+              { id: '', label: 'Nessuna carta' },
+              ...copies.map((id) => ({
+                id,
+                label:
+                  catalog?.skills.find((s) => s.id === definitionId(id))?.name.text ??
+                  session.physical?.lastStand?.titles.find((t) => t.copy === id)?.name ??
+                  id,
+              })),
+            ],
+          );
     value = () => {
       const prepared = rows.filter((r) => r.dest.value === 'prepare'),
         ordered = [...rows].sort((a, b) => Number(a.order.value) - Number(b.order.value));
@@ -144,18 +151,20 @@ export function decisionForm(
         prepared.length <= 1 &&
         (q.scoutTopAllowed !== false || !rows.some((r) => r.dest.value === 'top')) &&
         new Set(rows.map((r) => r.order.value)).size === rows.length &&
-        Boolean(discard.value) === over &&
-        (!discard.value ||
+        Boolean(discard?.value) === over &&
+        (!discard?.value ||
           hero?.prepared.includes(discard.value) ||
           prepared[0]?.id === discard.value);
       status.textContent = valid
         ? 'Disposizione completa: le altre carte restano nell’ordine scelto.'
-        : 'Prepara al massimo una carta; usa posizioni diverse e scarta solo per il limite di quattro.';
+        : q.scoutPrepareAllowed === false
+          ? 'Assegna tutte le carte alla cima o al fondo e usa posizioni diverse.'
+          : 'Prepara al massimo una carta; usa posizioni diverse e scarta solo per il limite di quattro.';
       return valid
         ? {
             kind: 'physical-scout',
             prepare: prepared[0]?.id ?? null,
-            discard: discard.value || null,
+            discard: discard?.value || null,
             top: ordered.filter((r) => r.dest.value === 'top').map((r) => r.id),
             bottom: ordered.filter((r) => r.dest.value === 'bottom').map((r) => r.id),
           }

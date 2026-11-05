@@ -14,6 +14,7 @@ import { LastStandViewSchema } from './last-stand';
 import { StatSchema } from './skill-tests';
 import { ScenarioTitleGrantSchema } from './scenario-title';
 import { ItemGrantSchema } from './item-inventory';
+import { SearchRecoverySchema } from './search-recovery';
 
 export const SourceTestViewSchema = z.strictObject({
   heroId: ContentIdSchema,
@@ -95,6 +96,7 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('search-recovery'), hero: slot, effect: SearchRecoverySchema }),
   z.strictObject({ kind: z.literal('source-boon'), hero: slot, boon: BoonKindSchema }),
   z.strictObject({
     kind: z.literal('scenario-item'),
@@ -247,6 +249,7 @@ const activeBase = {
 export const PhysicalDecisionSchema = z.strictObject({
   purpose: z.enum(['group-order', 'negation']).optional(),
   scoutTopAllowed: z.boolean().optional(),
+  scoutPrepareAllowed: z.literal(false).optional(),
   ...activeBase,
   kind: z.literal('decision'),
   cursor: z.string().regex(/^[a-f0-9]{64}$/),
@@ -322,6 +325,7 @@ export const PhysicalResultSchema = z.strictObject({
     'flip',
     'turn-down',
     'scout',
+    'search-recovery',
     'event',
     'end-turn',
     'rally-reset',
