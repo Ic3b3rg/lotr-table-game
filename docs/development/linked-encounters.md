@@ -180,3 +180,13 @@ Safari o Windows. Originali, narrativa, carte, IR/IL, JSON, immagini e
 credenziali sintetiche rimangono soltanto nella scratch ignorata, anche
 nella nuova storia Git. Input, comandi, tentativi e sigillo sono privati
 in `.scratch/linked102/`.
+
+## Integrazione del root
+
+[Review Standards/Spec e verifica indipendente](../reviews/2026-11-05-linked-encounters.md):
+nessun rilievo nei due assi. Il root riproduce primarie, workbook/oracle e tre
+output compiler identici,503 confronti interi e le viste17/18/14/17/19 con
+export/finali. Suite757/757,624174,140792ms a concorrenza4, codice consegnato
+invariato. Audit UI distinto fra192 casi completi,48 ispezioni/annullamenti
+e4 letture del titolo; tutti inventati. Quantità57 e gate preservati, nessuna
+nuova partita originale, ripresa156 o accettazione89/33.
