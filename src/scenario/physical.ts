@@ -232,6 +232,7 @@ export function physicalRequestData(
       action.op === 'confirm' ||
       action.op === 'sourceTest' ||
       action.op === 'challenge' ||
+      action.op === 'addItem' ||
       ((action.op === 'awardTitle' || action.op === 'choice') &&
         linkedDefinition(state.scenario!.pack, instance.definition)) ||
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||

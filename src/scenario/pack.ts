@@ -15,6 +15,7 @@ import { validateFailureCapability, isConclusionReward } from './failure-capabil
 import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
+import { validateItemCapability } from './item-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -25,6 +26,7 @@ export function parseScenarioPack(raw: unknown) {
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
   validateLinkedCapability(pack);
   validateBaseProducts(pack);
+  validateItemCapability(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -328,6 +330,8 @@ export function parseScenarioPack(raw: unknown) {
             'choice',
             'nullProduct',
             'ownsProducts',
+            'addItem',
+            'modalWait',
             'lore',
           ].includes(a.op) ||
           (a.op === 'message' && (a.consequence || a.inspiration || a.sprint))
@@ -470,6 +474,11 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.items)
+    invariant(
+      digest(p.context.ownedProductIds) === digest(pack.manifest.items.ownedProductIds),
+      'Prodotti inventario diversi dalla realizzazione.',
+    );
   if (pack.manifest.baseProducts)
     invariant(
       digest(p.context.ownedProductIds) === digest(pack.manifest.baseProducts.ownedProductIds),

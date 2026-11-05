@@ -39,7 +39,7 @@ test('schema21 migrates structurally; every older format rejects the new input, 
   const raw = (await readBackup(host)).payload.state,
     old = { ...raw, schemaVersion: 21 },
     before = structuredClone(old);
-  assert.deepEqual(runtime.parseState(old), { ...old, schemaVersion: 22 });
+  assert.deepEqual(runtime.parseState(old), { ...old, schemaVersion: 23 });
   assert.deepEqual(old, before);
   const forms = [
     { pack: { manifest: { baseProducts: {} } } },

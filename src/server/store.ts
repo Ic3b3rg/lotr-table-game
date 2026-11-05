@@ -58,7 +58,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 22,
+      schemaVersion: 23,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -374,6 +374,7 @@ export function publicSession(state: State) {
   const physical = physicalView(
     state.physical,
     state.scenario?.pack.manifest.scope === 'original-encounter-v1',
+    !!state.scenario?.conclusion?.campaign,
   );
   const nextShadow = sourceShadowAvailability(state);
   if (physical && nextShadow) physical.nextShadow = nextShadow;

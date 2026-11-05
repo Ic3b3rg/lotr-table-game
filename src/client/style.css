@@ -9,6 +9,7 @@
   --gold: #b19962;
   --error: #9b352b;
   --space: 8px;
+  --scroll-clearance: 124px;
   font-family:
     system-ui,
     -apple-system,
@@ -722,6 +723,8 @@ details[open] {
   background: #19282b;
   padding: clamp(20px, 4vw, 40px);
   margin: 32px 0;
+  max-height: calc(100svh - var(--scroll-clearance) - 48px);
+  overflow-y: auto;
   border: 1px solid #ba985a;
   border-radius: 3px;
   scroll-margin-top: 24px;
@@ -1347,7 +1350,7 @@ details[open] {
 
 /* A stable place for help; the current task stays in the page. */
 html {
-  scroll-padding-top: 124px;
+  scroll-padding-top: var(--scroll-clearance);
   scrollbar-color: #758571 #f3f0e7;
 }
 input,

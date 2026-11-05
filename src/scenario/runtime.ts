@@ -9,6 +9,7 @@ import { playableScenarioPrefab } from '../shared/clues';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
 import { baseProductsDefinition, validateBaseProducts } from './base-products';
+import { itemDefinition, requireItemCapability } from './item-capability';
 import { applySprintMove, preflightSprint, sprintActor, sprintDestinations } from './sprint';
 import { explorationSource } from '../shared/exploration';
 import { objectiveText } from './objective';
@@ -423,7 +424,8 @@ function execute(
       );
     else if (a.op === 'challenge' || a.op === 'sourceTest') {
       const successes =
-          a.op === 'sourceTest' && baseProductsDefinition(sc.pack, i.definition)
+          a.op === 'sourceTest' &&
+          (baseProductsDefinition(sc.pack, i.definition) || itemDefinition(sc.pack, i.definition))
             ? probeChoice(probe, 2) * a.target
             : probeChoice(probe, 100),
         event =
@@ -442,6 +444,25 @@ function execute(
     return;
   }
   switch (a.op) {
+    case 'modalWait': {
+      const modal = sc.pack.manifest.items?.modal;
+      invariant(
+        itemDefinition(sc.pack, i.definition) &&
+          modal?.state === i.state &&
+          modal.waiter === a.index &&
+          i.started.includes(modal.owner) &&
+          !i.completed.includes(modal.owner),
+        'Attesa senza proprietario del popup condiviso.',
+      );
+      return;
+    }
+    case 'addItem':
+      requireItemCapability(state);
+      if (!probe) {
+        beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+        return;
+      }
+      break;
     case 'chooseHero': {
       const actor = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
       invariant(actor, 'Destinatario senza attore del tentativo.');
@@ -1906,6 +1927,7 @@ export function interactScenario(
       'Input prodotti diverso dal freeze base attestato.',
     );
   }
+  if (itemDefinition(sc.pack, i!.definition)) requireItemCapability(state);
   const entry = encounterEntry(sc.pack, i!, sc.globals);
   let entryChoice:
     | NonNullable<NonNullable<Scenario['play']>['attempts'][number]['entryChoice']>
@@ -1935,6 +1957,7 @@ export function interactScenario(
     (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
       sc.pack.manifest.lair?.prefab === i!.prefab ||
       baseProductsDefinition(sc.pack, i!.definition) ||
+      itemDefinition(sc.pack, i!.definition) ||
       linkedDefinition(sc.pack, i!.definition)) &&
     !probe
   ) {

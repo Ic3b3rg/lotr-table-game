@@ -77,10 +77,10 @@ export function createCardReader() {
     heading.id = 'reading-title';
     content.replaceChildren(heading, ...nodes);
     panel.hidden = false;
+    panel.scrollTop = 0;
     panel.focus({ preventScroll: true });
-    panel.scrollIntoView({
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      block: 'nearest',
+    requestAnimationFrame(() => {
+      if (!panel.hidden) panel.scrollIntoView({ behavior: 'instant', block: 'start' });
     });
   }
   return {
@@ -133,6 +133,28 @@ export function createCardReader() {
           sourceNotes([hero.name, hero.ability]),
           text('h4', 'Le cinque carte eroe'),
           deck,
+        ],
+        target,
+      );
+    },
+    inventoryItem(card: ItemDefinition, target: HTMLElement, owner: string, consumption: string) {
+      show(
+        card.name.text,
+        [
+          text(
+            'p',
+            `Accessorio · rango ${['', 'I', 'II', 'III'][card.rank]} · proprietà della Compagnia`,
+            'card-type',
+          ),
+          text('p', owner, 'company-hero-owner'),
+          text('p', consumption, 'company-help'),
+          text('p', card.text.text, 'card-full-text'),
+          text(
+            'p',
+            'Consumare rimuove un segnalino disponibile. La capacità si usa nella finestra indicata sulla carta; non richiede un’azione salvo istruzione esplicita. Durante questa avventura l’accessorio resta all’eroe che lo ha ottenuto.',
+            'company-help',
+          ),
+          sourceNotes([card.name, card.text], card.notes),
         ],
         target,
       );

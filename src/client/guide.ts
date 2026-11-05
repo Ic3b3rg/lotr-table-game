@@ -4,6 +4,18 @@ import { element, text } from './dom';
 
 const TOPICS = [
   {
+    id: 'inventory',
+    title: 'Oggetti ottenuti, inventario e consumo',
+    target: '#company-inventory',
+    action: 'Torna all’inventario',
+    paragraphs: [
+      'Una ricerca può assegnare un accessorio dopo una prova. Leggere e annullare l’ispezione è gratuito; la conferma paga un’azione. Le carte determinano l’esito. Se la fonte permette un nuovo tentativo, ripeterlo richiede una nuova interazione e il relativo costo.',
+      'Quando la fonte consente di scegliere chi ottiene l’oggetto, indica un eroe ammesso dal messaggio: quell’eroe lo equipaggia subito. La copia appartiene alla Compagnia e rimane a quell’eroe durante l’avventura. Non si può trasferirla liberamente fra telefoni o eroi.',
+      'Apri l’inventario per vedere eroe e giocatore, carta e segnalini consumo rimasti. Ogni consumo rimuove un segnalino dalla stessa copia. A zero, la capacità che richiede consumo non è disponibile. Le finestre di gioco mostrano l’uso facoltativo e il costo quando pertinenti; leggere la carta non la attiva.',
+      'Alla conclusione la copia torna nell’inventario comune e i segnalini dell’avventura sono rimossi. Premi, custodia e consumo sono salvati: ricarica o ripristino non ricreano copie. La scelta dell’equipaggiamento del prossimo avvio e gli avanzamenti generici attendono il seguito del campo.',
+    ],
+  },
+  {
     id: 'camp',
     title: 'Vittoria, sconfitta, premi e primo campo',
     target: '#campaign',

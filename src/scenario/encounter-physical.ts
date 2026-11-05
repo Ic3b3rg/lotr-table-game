@@ -32,6 +32,17 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
         sufferedFear: 0,
       },
     ];
+  } else if (action.op === 'addItem') {
+    const cap = sc.pack.manifest.items;
+    invariant(cap && cap.grant.model.source === action.itemModel, 'Oggetto senza capacità fonte.');
+    children = [
+      {
+        kind: 'scenario-item',
+        hero,
+        grant: cap.grant,
+        message: action.text.map((t) => (t.kind === 'text' ? t.text : 'accessorio')).join(''),
+      },
+    ];
   } else if (action.op === 'awardTitle') {
     const owner = sc.instances.find((i) => i.id === attempt.instanceId)!;
     const recipient = (action.recipient.scope === 'local' ? owner.variables : sc.globals)[
