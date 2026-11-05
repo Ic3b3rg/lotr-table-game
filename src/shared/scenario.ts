@@ -135,6 +135,40 @@ const LinkedCapabilitySchema = z.strictObject({
     sequence: methodEvidence,
   }),
 });
+const productModel = <I extends number>(id: I) =>
+  z.strictObject({ id: z.literal(id), source: SourceSchema, objectHash: HashSchema });
+const BaseProductsCapabilitySchema = z.strictObject({
+  version: z.literal('source-base-products-v1'),
+  prefab: SourceSchema,
+  definitionHash: HashSchema,
+  prefabHash: HashSchema,
+  sourceObjectHash: HashSchema,
+  lifecycleHash: HashSchema,
+  sourceCertificateHash: HashSchema,
+  evidenceHash: HashSchema,
+  ownedProductIds: z.tuple([z.literal(0)]),
+  models: z.tuple([productModel(0), productModel(5)]),
+  gate: z.strictObject({
+    state: z.int().nonnegative(),
+    action: z.int().nonnegative(),
+    excludedTarget: z.int().nonnegative(),
+    capability: z.literal('outside-approved-base-products'),
+  }),
+  excludedStates: z.array(z.int().nonnegative()).length(5),
+  roundsFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.strictObject({
+    owns: methodEvidence,
+    isOwned: methodEvidence,
+    product: methodEvidence,
+    compare: methodEvidence,
+    add: methodEvidence,
+    confirm: methodEvidence,
+    cancel: methodEvidence,
+    hide: methodEvidence,
+    release: methodEvidence,
+  }),
+});
 const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
@@ -213,6 +247,11 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('chooseHero', { text: SourceTextSchema, target: VariableRefSchema }),
   action('awardTitle', { recipient: VariableRefSchema, titleModel: SourceSchema }),
   action('nullProduct', { products: z.tuple([z.null()]), falseEvent: z.string().min(1).max(100) }),
+  action('ownsProducts', {
+    products: z.tuple([SourceSchema]),
+    ownEvent: z.string().min(1).max(100),
+    missingEvent: z.string().min(1).max(100),
+  }),
   action('lore', { amount: z.int().min(1).max(99) }),
   action('awardXP', { amount: z.int().min(0).max(99) }),
   action('nextAdventure', { source: SourceSchema, id: Int32Schema }),
@@ -224,6 +263,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
     inspiration: z.literal(1).optional(),
+    sprint: z.literal(1).optional(),
     consequence: z
       .strictObject({
         family: z.enum(['damage', 'fear']),
@@ -396,6 +436,7 @@ export const ScenarioPackSchema = z.strictObject({
     failure: AdventureFailureCapabilitySchema.optional(),
     lair: LairCapabilitySchema.optional(),
     linked: LinkedCapabilitySchema.optional(),
+    baseProducts: BaseProductsCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -515,11 +556,16 @@ export const ScenarioPackSchema = z.strictObject({
 export type ScenarioPack = z.infer<typeof ScenarioPackSchema>;
 export type ScenarioDefinition = z.infer<typeof ScenarioDefinitionSchema>;
 export type VariableRef = z.infer<typeof VariableRefSchema>;
+export const SourceSprintInputSchema = z.strictObject({
+  kind: z.literal('source-sprint'),
+  destinationSpaceId: z.string().min(1).max(100).nullable(),
+});
 export const EncounterInputSchema = z.discriminatedUnion('kind', [
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
   z.strictObject({ kind: z.literal('choose-hero'), heroId: ContentIdSchema }),
+  SourceSprintInputSchema,
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -595,6 +641,7 @@ export const ScenarioRequestSchema = z.strictObject({
     'physical',
     'choice',
     'hero-choice',
+    'sprint',
     'exploration-intro',
     'exploration-outro',
     'deployment-intro',
@@ -659,6 +706,9 @@ const ShadowExplorationAttemptSchema = z.strictObject({
     frameId: z.uuid(),
     attemptId: z.uuid(),
   }),
+});
+const SprintExplorationAttemptSchema = TurnExplorationAttemptSchema.extend({
+  sprintOrigin: z.strictObject({ version: z.literal('source-sprint-v1'), attemptId: z.uuid() }),
 });
 export const ScenarioSchema = z.strictObject({
   conclusion: z
@@ -751,7 +801,13 @@ export const ScenarioSchema = z.strictObject({
       version: z.literal('source-exploration-v1'),
       active: z.uuid().nullable(),
       attempts: z
-        .array(z.union([TurnExplorationAttemptSchema, ShadowExplorationAttemptSchema]))
+        .array(
+          z.union([
+            TurnExplorationAttemptSchema,
+            ShadowExplorationAttemptSchema,
+            SprintExplorationAttemptSchema,
+          ]),
+        )
         .max(200),
     })
     .optional(),
@@ -816,6 +872,13 @@ export const ScenarioSchema = z.strictObject({
   tasks: z
     .array(
       z.discriminatedUnion('kind', [
+        z.strictObject({
+          ...taskBase,
+          kind: z.literal('sprint'),
+          attemptId: z.uuid(),
+          fromSpaceId: z.string().min(1).max(100),
+          stage: z.enum(['choice', 'exploring']),
+        }),
         z.strictObject({
           ...taskBase,
           kind: z.literal('spawnRandom'),

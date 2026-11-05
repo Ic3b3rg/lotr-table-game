@@ -10,12 +10,25 @@ import { openPhysical } from '../physical-resolution/runtime';
 import { applyGrantedMove, applyJourneyCommand } from '../server/journey-map';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { ApiError } from '../server/errors';
+import { applySprintMove, sprintExplorationProblem } from './sprint';
+
+export type ExplorationGrant = string | { sprintAttemptId: string };
 
 export type ExplorationCommand = Omit<Extract<Command, { type: 'EXPLORE_SCENARIO' }>, 'turnId'> & {
   turnId: string | null;
 };
 
-function explorationContext(state: State, c: ExplorationCommand, grantId?: string) {
+function explorationContext(state: State, c: ExplorationCommand, grantId?: ExplorationGrant) {
+  if (grantId && typeof grantId !== 'string') {
+    invariant(
+      c.turnId !== null && state.scenario!.pack.manifest.baseProducts,
+      'Scatto fuori dal proprio turno.',
+    );
+    return {
+      turnId: c.turnId,
+      sprintOrigin: { version: 'source-sprint-v1' as const, attemptId: grantId.sprintAttemptId },
+    };
+  }
   if (c.turnId !== null) return { turnId: c.turnId };
   const sc = state.scenario!,
     cs = state.combat;
@@ -53,7 +66,8 @@ export function prepareExploration(
   playerId: string,
   c: ExplorationCommand,
   entropy: string,
-  grantId?: string,
+  grantId?: ExplorationGrant,
+  preflight = false,
 ): ScenarioInstance {
   const sc = state.scenario!,
     p = state.mapGeneration;
@@ -80,12 +94,16 @@ export function prepareExploration(
   const view = sc.tiles.find((t) => t.source === space!.tileSource)!;
   if (!view?.visible || view.explored)
     fail('EXPLORATION_UNAVAILABLE', 'Scegli una tessera visibile ancora da esplorare.');
-  const problem = explorationProblem(sc, p.projection, space!.tileSource);
+  const problem =
+    typeof grantId === 'object'
+      ? sprintExplorationProblem(state, space!.tileSource)
+      : explorationProblem(sc, p.projection, space!.tileSource);
   if (problem) fail('EXPLORATION_CAPABILITY', problem);
   if (
     sc.phase !== 'action' ||
     sc.pending ||
-    sc.play?.active ||
+    (sc.play?.active &&
+      (typeof grantId !== 'object' || sc.play.active !== grantId.sprintAttemptId)) ||
     sc.explorations!.active ||
     state.physical?.snapshot.active ||
     state.physical?.cycle?.pending
@@ -94,7 +112,9 @@ export function prepareExploration(
   if (defeatedHeroes(state).includes(c.heroId)) fail('HERO_DEFEATED', 'Questo eroe è sconfitto.');
   const context = explorationContext(state, c, grantId);
   // The existing journey interface owns position, adjacency, player, turn and budget checks.
-  if (grantId) applyGrantedMove(state, grantId, c.heroId, c.fromSpaceId, c.destinationSpaceId);
+  if (typeof grantId === 'object')
+    applySprintMove(state, grantId.sprintAttemptId, c.fromSpaceId, c.destinationSpaceId);
+  else if (grantId) applyGrantedMove(state, grantId, c.heroId, c.fromSpaceId, c.destinationSpaceId);
   else {
     invariant(c.turnId !== null, 'Esplorazione ordinaria senza turno.');
     applyJourneyCommand(state, playerId, { ...c, turnId: c.turnId, type: 'MOVE_HERO' }, null);
@@ -137,7 +157,10 @@ export function prepareExploration(
     movementCost: 1,
     actionCost: 0,
     entropy,
-    intro: new PhysicalRandom(entropy).index(presentations.length),
+    intro:
+      preflight && typeof grantId === 'object'
+        ? 0
+        : new PhysicalRandom(entropy).index(presentations.length),
     reward: 0,
     returned: false,
   });

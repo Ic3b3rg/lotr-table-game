@@ -52,6 +52,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       openCards ||
       q.kind === 'physical' ||
       q.kind === 'choice' ||
+      q.kind === 'sprint' ||
       q.kind === 'hero-choice';
     next.textContent =
       q?.kind === 'scout'
@@ -84,27 +85,31 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           ? current.physical?.active?.kind === 'gate'
             ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
             : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
-          : q?.kind === 'hero-choice'
-            ? `${actor?.name ?? 'Il proprietario indicato'} registra l’eroe destinatario concordato dalla Compagnia. Può essere diverso da ${hero?.name.text ?? 'chi ha agito'}. Il titolo si prepara subito; il costo dell’interazione è già pagato.`
-            : q?.kind === 'choice'
-              ? `${actor?.name ?? 'Il proprietario indicato'} sceglie come proseguire. L’azione è già pagata; la scelta è obbligatoria.`
-              : q && explorer
-                ? `${actor?.name ?? 'Il proprietario indicato'} continua l’esplorazione con ${hero?.name.text ?? 'l’eroe di turno'}. L’ingresso ha usato 1 movimento, senza altre azioni. Movimenti residui: ${current.journey?.travel?.remaining ?? 0}. Segui l’istruzione qui sotto.`
-                : q?.heroId
-                  ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-                  : q
-                    ? 'Un partecipante conferma per il gruppo.'
-                    : activeHero
-                      ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                      : sourcePhases && current.round?.phase === 'rally'
-                        ? 'Riorganizzazione · ogni proprietario completa Scoperta. Il nuovo round attende tutti gli eroi.'
-                        : sourcePhases && current.round?.phase === 'shadow'
-                          ? 'Ombra · leggete il prossimo passo nella sezione del round.'
-                          : sourcePhases && turnsEnded
-                            ? 'I turni sono conclusi. Il gruppo può iniziare l’Ombra nella sezione del round.'
-                            : turnsEnded
-                              ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
-                              : 'Avvio completato · scegliete il prossimo eroe di turno.';
+          : q?.kind === 'sprint'
+            ? current.combat?.current
+              ? 'Completa la provocazione qui sotto. Lo Scatto attende; azione e carte della prova restano salvate.'
+              : `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Prova fallita, azione già pagata. Puoi scattare di 1 casella oppure rimanere qui; poi rimuovi il segnalino e riprendi il turno. Il viaggio conserva i suoi movimenti.`
+            : q?.kind === 'hero-choice'
+              ? `${actor?.name ?? 'Il proprietario indicato'} registra l’eroe destinatario concordato dalla Compagnia. Può essere diverso da ${hero?.name.text ?? 'chi ha agito'}. Il titolo si prepara subito; il costo dell’interazione è già pagato.`
+              : q?.kind === 'choice'
+                ? `${actor?.name ?? 'Il proprietario indicato'} sceglie come proseguire. L’azione è già pagata; la scelta è obbligatoria.`
+                : q && explorer
+                  ? `${actor?.name ?? 'Il proprietario indicato'} continua l’esplorazione con ${hero?.name.text ?? 'l’eroe di turno'}. L’ingresso ha usato 1 movimento, senza altre azioni. Movimenti residui: ${current.journey?.travel?.remaining ?? 0}. Segui l’istruzione qui sotto.`
+                  : q?.heroId
+                    ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+                    : q
+                      ? 'Un partecipante conferma per il gruppo.'
+                      : activeHero
+                        ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+                        : sourcePhases && current.round?.phase === 'rally'
+                          ? 'Riorganizzazione · ogni proprietario completa Scoperta. Il nuovo round attende tutti gli eroi.'
+                          : sourcePhases && current.round?.phase === 'shadow'
+                            ? 'Ombra · leggete il prossimo passo nella sezione del round.'
+                            : sourcePhases && turnsEnded
+                              ? 'I turni sono conclusi. Il gruppo può iniziare l’Ombra nella sezione del round.'
+                              : turnsEnded
+                                ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                                : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -257,15 +262,18 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
             );
         }
         if (
-          (q?.kind === 'choice' || q?.kind === 'hero-choice') &&
+          (q?.kind === 'choice' || q?.kind === 'hero-choice' || q?.kind === 'sprint') &&
+          !(q.kind === 'sprint' && current.combat?.current) &&
           (!q.actorPlayerId || q.actorPlayerId === identity?.id)
         ) {
           const fields = document.createElement('fieldset'),
             legend = text(
               'legend',
-              q.kind === 'hero-choice'
-                ? 'Scegli l’eroe che riceve il titolo'
-                : 'Scegli come proseguire',
+              q.kind === 'sprint'
+                ? 'Scatto 1 facoltativo: scegli dove proseguire'
+                : q.kind === 'hero-choice'
+                  ? 'Scegli l’eroe che riceve il titolo'
+                  : 'Scegli come proseguire',
             );
           fields.append(legend);
           for (const o of q.options ?? []) {
@@ -286,9 +294,14 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                   sourceFingerprint: q.fingerprint,
                   heroId: q.heroId,
                   input:
-                    q.kind === 'hero-choice'
-                      ? { kind: 'choose-hero', heroId: o.event }
-                      : { kind: 'choice', event: o.event },
+                    q.kind === 'sprint'
+                      ? {
+                          kind: 'source-sprint',
+                          destinationSpaceId: o.event === 'stay' ? null : o.event.slice(5),
+                        }
+                      : q.kind === 'hero-choice'
+                        ? { kind: 'choose-hero', heroId: o.event }
+                        : { kind: 'choice', event: o.event },
                 },
                 true,
               );

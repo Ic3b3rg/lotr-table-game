@@ -8,8 +8,16 @@ import {
 import { playableScenarioPrefab } from '../shared/clues';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
+import { baseProductsDefinition, validateBaseProducts } from './base-products';
+import { applySprintMove, preflightSprint, sprintActor, sprintDestinations } from './sprint';
+import { explorationSource } from '../shared/exploration';
 import { objectiveText } from './objective';
-import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
+import {
+  prepareExploration,
+  rewardExploration,
+  type ExplorationCommand,
+  type ExplorationGrant,
+} from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
@@ -259,6 +267,14 @@ function probeChoice(probe: SourceProbe, count: number) {
   invariant(result < count, 'Ramo di verifica estraneo alla fonte.');
   return result;
 }
+function probeSprint(probe: SourceProbe, q: ScenarioRequest) {
+  const event = q.options![probeChoice(probe, q.options!.length)]!.event;
+  invariant(event === 'stay' || event.startsWith('move:'), 'Scatto senza opzione fonte.');
+  return {
+    kind: 'source-sprint' as const,
+    destinationSpaceId: event === 'stay' ? null : event.slice(5),
+  };
+}
 /** Traverse the real consumer on disposable mutable state, replacing only physical outcomes
  * and nonbranching deployment. No cards, random draws or source opcodes are executed elsewhere. */
 function preflightContinuation(state: State, start: (work: State, probe: SourceProbe) => void) {
@@ -300,25 +316,28 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
             'exploration-outro',
             'choice',
             'hero-choice',
+            'sprint',
             'campaign-map',
             'campaign-story',
           ].includes(q.kind),
           'Richiesta fuori dalla closure degli indizi.',
         );
         const input =
-          q.kind === 'hero-choice'
-            ? {
-                kind: 'choose-hero' as const,
-                heroId:
-                  work.preparation!.heroes[probeChoice(probe, work.preparation!.heroes.length)]!
-                    .heroId,
-              }
-            : q.kind === 'choice'
+          q.kind === 'sprint'
+            ? probeSprint(probe, q)
+            : q.kind === 'hero-choice'
               ? {
-                  kind: 'choice' as const,
-                  event: q.options![probeChoice(probe, q.options!.length)]!.event,
+                  kind: 'choose-hero' as const,
+                  heroId:
+                    work.preparation!.heroes[probeChoice(probe, work.preparation!.heroes.length)]!
+                      .heroId,
                 }
-              : { kind: 'ack' as const };
+              : q.kind === 'choice'
+                ? {
+                    kind: 'choice' as const,
+                    event: q.options![probeChoice(probe, q.options!.length)]!.event,
+                  }
+                : { kind: 'ack' as const };
         const command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }> = {
           type: 'SCENARIO_INPUT',
           requestId: 'preflight-source-continuation-only',
@@ -403,7 +422,10 @@ function execute(
         'Impegno senza seguito fonte.',
       );
     else if (a.op === 'challenge' || a.op === 'sourceTest') {
-      const successes = probeChoice(probe, 100),
+      const successes =
+          a.op === 'sourceTest' && baseProductsDefinition(sc.pack, i.definition)
+            ? probeChoice(probe, 2) * a.target
+            : probeChoice(probe, 100),
         event =
           a.op === 'challenge'
             ? challengeResult(sc, i, a, successes).event
@@ -505,6 +527,27 @@ function execute(
     case 'nullProduct':
       invariant(send(sc, i, a.falseEvent), 'Guardia nulla senza ramo fonte.');
       return;
+    case 'ownsProducts': {
+      const cap = sc.pack.manifest.baseProducts;
+      invariant(
+        cap &&
+          cap.ownedProductIds?.length === 1 &&
+          cap.ownedProductIds[0] === 0 &&
+          baseProductsDefinition(sc.pack, i.definition) &&
+          cap.models[1].source === a.products[0],
+        'Prodotto senza attestazione base.',
+      );
+      const all = a.products.every((source) => {
+        const model = cap.models.find((m) => m.source === source);
+        invariant(model, 'Prodotto sconosciuto nella guardia.');
+        return (cap.ownedProductIds as number[]).includes(model.id);
+      });
+      invariant(
+        send(sc, i, all ? a.ownEvent : a.missingEvent),
+        'Guardia prodotti senza ramo fonte.',
+      );
+      return;
+    }
     case 'lore':
       invariant(sc.play && sc.phase === 'action', 'Premio fuori incontro.');
       sc.play.lore += a.amount;
@@ -690,6 +733,27 @@ function execute(
       break;
     }
     case 'message':
+      if (a.sprint) {
+        const actor = sc.play?.attempts.find((a) => a.id === sc.play?.active);
+        invariant(
+          actor && baseProductsDefinition(sc.pack, i.definition),
+          'Scatto senza fonte base.',
+        );
+        if (defeatedHeroes(state).includes(actor.heroId)) {
+          logMessage(sc, i, a.index);
+          break;
+        }
+        sc.tasks.push({
+          kind: 'sprint',
+          instanceId: i.id,
+          entry: i.entry,
+          action: a.index,
+          attemptId: actor.id,
+          fromSpaceId: state.journey!.heroes.find((h) => h.heroId === actor.heroId)!.spaceId,
+          stage: 'choice',
+        });
+        return;
+      }
       if (a.consequence || a.inspiration) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
@@ -916,6 +980,53 @@ function advanceTask(state: State) {
   if (!task) return false;
   const owner = sc.instances.find((i) => i.id === task.instanceId)!;
   invariant(owner.entry === task.entry, 'Continuazione fonte scaduta.');
+  if (task.kind === 'sprint') {
+    const actor = sprintActor(state, task),
+      a = current(sc, owner).actions.find((a) => a.index === task.action)!;
+    invariant(a.op === 'message' && a.sprint, 'Scatto fuori dal proprio packet.');
+    if (task.stage === 'choice' && !defeatedHeroes(state).includes(actor.heroId)) {
+      preflightSprint(state, task);
+      request(state, {
+        instanceId: owner.id,
+        state: owner.state,
+        entry: owner.entry,
+        action: a.index,
+        kind: 'sprint',
+        text: a.text,
+        heroId: actor.heroId,
+        actorPlayerId: actor.playerId,
+        stage: 'ready',
+        tileSource: null,
+        options: [
+          {
+            event: 'stay',
+            label: [{ kind: 'text', style: 'plain', text: 'Rimani qui · rinuncia allo Scatto' }],
+          },
+          ...sprintDestinations(state, task).map((s) => ({
+            event: `move:${s.id}`,
+            label: [{ kind: 'text' as const, style: 'plain' as const, text: `Scatta: ${s.label}` }],
+          })),
+        ],
+      });
+      return true;
+    }
+    if (task.stage === 'exploring') {
+      const frame = sc.explorations?.attempts.find(
+        (a) =>
+          'sprintOrigin' in a &&
+          a.sprintOrigin.attemptId === task.attemptId &&
+          a.id === sc.explorations?.active,
+      );
+      invariant(frame, 'Scatto senza esplorazione figlia.');
+      if (!sc.instances.find((i) => i.id === frame.instanceId)!.stopped) return false;
+      frame.returned = true;
+      sc.explorations!.active = null;
+    }
+    logMessage(sc, owner, a.index);
+    complete(owner, a.index);
+    sc.tasks.pop();
+    return true;
+  }
   if (task.kind === 'spawnRandom') {
     const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
     invariant(a.op === 'spawnRandom', 'Spawn senza istruzione fonte.');
@@ -1218,7 +1329,7 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
       if (
-        (sc.pack.manifest.followup || sc.pack.manifest.linked) &&
+        (sc.pack.manifest.followup || sc.pack.manifest.linked || sc.pack.manifest.baseProducts) &&
         progress &&
         sc.instances.some((i) => !i.stopped && !i.settled)
       )
@@ -1259,6 +1370,25 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     if (!progress) throw new Error('Startup fermo senza richiesta completabile.');
   }
   throw new Error('Limite executor startup superato.');
+}
+
+/** A completed provocation may remove the actor; finish only its immediate source callback. */
+export function finishDefeatedSprint(state: State, heroId: string) {
+  const sc = state.scenario!,
+    task = sc.tasks.at(-1);
+  invariant(
+    task?.kind === 'sprint' &&
+      task.stage === 'choice' &&
+      sprintActor(state, task).heroId === heroId &&
+      defeatedHeroes(state).includes(heroId),
+    'Callback dello Scatto estraneo alla sconfitta.',
+  );
+  const i = sc.instances.find((i) => i.id === task.instanceId)!;
+  sc.pending = null;
+  logMessage(sc, i, task.action);
+  complete(i, task.action);
+  sc.tasks.pop();
+  pump(state);
 }
 export function beginScenario(
   state: State,
@@ -1375,6 +1505,7 @@ export function resumeScenario(
   command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }>,
   physicalPath?: string,
   probe?: SourceProbe,
+  explorationEntropy?: string,
 ) {
   const sc = state.scenario,
     q = sc?.pending;
@@ -1400,6 +1531,10 @@ export function resumeScenario(
       'SCENARIO_ACTOR',
       'Questa richiesta spetta al giocatore che controlla l’eroe indicato.',
     );
+  if (q.kind === 'sprint' && !probe)
+    preflightContinuation(state, (work, probe) =>
+      resumeScenario(work, playerId, command, physicalPath, probe, explorationEntropy),
+    );
   const i = sc.instances.find((i) => i.id === q.instanceId)!;
   const input = command.input,
     base = {
@@ -1413,7 +1548,71 @@ export function resumeScenario(
       'SCENARIO_INPUT_REQUIRED',
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
-  if (q.kind === 'deployment-intro' || q.kind === 'deployment') {
+  if (q.kind === 'sprint') {
+    const task = sc.tasks.at(-1),
+      a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    if (input.kind !== 'source-sprint') throw wrong();
+    invariant(
+      task?.kind === 'sprint' &&
+        task.stage === 'choice' &&
+        task.instanceId === i.id &&
+        task.entry === q.entry &&
+        task.action === q.action &&
+        a.op === 'message' &&
+        a.sprint,
+      'Scatto fuori dalla concessione corrente.',
+    );
+    const actor = sprintActor(state, task);
+    if (defeatedHeroes(state).includes(actor.heroId)) throw wrong();
+    preflightSprint(state, task);
+    const destination = input.destinationSpaceId;
+    if (destination !== null && !sprintDestinations(state, task).some((s) => s.id === destination))
+      throw wrong();
+    sc.pending = null;
+    if (destination === null) {
+      logMessage(sc, i, a.index);
+      complete(i, a.index);
+      sc.tasks.pop();
+    } else {
+      const p = projection(state),
+        source = sc.spaceBindings.find((b) => b.id === destination)!.sourceId,
+        space = p.spaces.find((s) => s.id === source)!;
+      if (sc.tiles.find((t) => t.source === space.tileSource)!.explored) {
+        applySprintMove(state, actor.id, task.fromSpaceId, destination);
+        logMessage(sc, i, a.index);
+        complete(i, a.index);
+        sc.tasks.pop();
+      } else {
+        invariant(
+          probe || explorationEntropy,
+          'Scatto senza entropia persistita prima dell’esplorazione.',
+        );
+        task.stage = 'exploring';
+        exploreScenario(
+          state,
+          playerId,
+          {
+            ...base,
+            type: 'EXPLORE_SCENARIO',
+            scenarioId: sc.id,
+            packFingerprint: sc.packFingerprint,
+            projectionFingerprint: sc.projectionFingerprint,
+            sourceFingerprint: digest(explorationSource(sc, space.tileSource)),
+            mapId: state.journey!.id,
+            heroId: actor.heroId,
+            roundId: actor.roundId,
+            turnId: actor.turnId,
+            fromSpaceId: task.fromSpaceId,
+            destinationSpaceId: destination,
+          },
+          probe ? '0'.repeat(64) : explorationEntropy!,
+          { sprintAttemptId: actor.id },
+          probe,
+        );
+        return;
+      }
+    }
+  } else if (q.kind === 'deployment-intro' || q.kind === 'deployment') {
     if (input.kind !== 'ack') throw wrong();
     const task = sc.tasks.at(-1),
       a = current(sc, i).actions.find((a) => a.index === q.action)!;
@@ -1618,14 +1817,14 @@ export function exploreScenario(
   playerId: string,
   c: ExplorationCommand,
   entropy: string,
-  grantId?: string,
+  grantId?: ExplorationGrant,
   probe?: SourceProbe,
 ) {
-  if (state.scenario!.pack.manifest.clues && !probe)
+  if (state.scenario!.pack.manifest.clues && !probe && typeof grantId !== 'object')
     preflightContinuation(state, (work, probe) =>
       exploreScenario(work, playerId, c, entropy, grantId, probe),
     );
-  const i = prepareExploration(state, playerId, c, entropy, grantId),
+  const i = prepareExploration(state, playerId, c, entropy, grantId, !!probe),
     sc = state.scenario!;
   runInstance(state, i, false, probe);
   sc.events.push({ id: eventId(sc, 'NODE CLICKED'), event: 'NODE CLICKED', receivers: [i.id] });
@@ -1684,6 +1883,14 @@ export function interactScenario(
   const progress = round.heroes.find((h) => h.heroId === c.heroId)!;
   if (progress.actionsUsed >= 2) fail('NO_ACTIONS', 'Questo eroe ha già usato le sue due azioni.');
   const prefab = sc.pack.manifest.prefabs.find((m) => m.source === i!.prefab)!;
+  if (baseProductsDefinition(sc.pack, i!.definition)) {
+    validateBaseProducts(sc.pack);
+    invariant(
+      digest(projection(state).context.ownedProductIds) ===
+        digest(sc.pack.manifest.baseProducts!.ownedProductIds),
+      'Input prodotti diverso dal freeze base attestato.',
+    );
+  }
   const entry = encounterEntry(sc.pack, i!, sc.globals);
   let entryChoice:
     | NonNullable<NonNullable<Scenario['play']>['attempts'][number]['entryChoice']>
@@ -1712,6 +1919,7 @@ export function interactScenario(
   if (
     (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
       sc.pack.manifest.lair?.prefab === i!.prefab ||
+      baseProductsDefinition(sc.pack, i!.definition) ||
       linkedDefinition(sc.pack, i!.definition)) &&
     !probe
   ) {

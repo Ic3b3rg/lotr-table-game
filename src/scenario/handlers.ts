@@ -6,7 +6,7 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'FFG.JIME.Actions.DisplayMessageCancelConfirm': ['confirm', 'sourceTest'],
   'FFG.JIME.Actions.DisplayMessageChallenge': 'challenge',
   'FFG.JIME.Actions.DisplayMessageMultipleChoice': 'choice',
-  'FFG.JIME.OwnsProducts': 'nullProduct',
+  'FFG.JIME.OwnsProducts': ['nullProduct', 'ownsProducts'],
   'FFG.JIME.Actions.AddLore': 'lore',
   'FFG.JIME.Actions.AwardXP': 'awardXP',
   'FFG.JIME.Actions.SetNextAdventure': 'nextAdventure',

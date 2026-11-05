@@ -1,4 +1,4 @@
-import { ScenarioViewSchema, EncounterIntentSchema } from './scenario';
+import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
 import { z } from 'zod';
@@ -45,7 +45,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(21),
+  schemaVersion: z.literal(22),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -79,6 +79,7 @@ export const ScenarioInputSchema = z.discriminatedUnion('kind', [
   }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
   z.strictObject({ kind: z.literal('choose-hero'), heroId: ContentIdSchema }),
+  SourceSprintInputSchema,
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('scout-reveal') }),

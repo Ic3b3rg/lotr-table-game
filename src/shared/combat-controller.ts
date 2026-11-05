@@ -3,6 +3,7 @@ import { ContentIdSchema } from './catalog';
 import { HashSchema } from './generated-map';
 import { CopyIdSchema } from './preparation';
 import { StatSchema } from './skill-tests';
+import { SourceSprintInputSchema } from './scenario';
 import {
   AttackOutcomeSchema,
   AttackTestResultSchema,
@@ -59,6 +60,14 @@ export const CombatOperationSchema = z.strictObject({
   origin: z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('movement'), ...movement }),
     z.strictObject({ kind: z.literal('exploration'), ...movement, ...source, entropy: HashSchema }),
+    z.strictObject({
+      kind: z.literal('source-sprint'),
+      ...source,
+      heroId: ContentIdSchema,
+      pendingId: z.uuid(),
+      input: SourceSprintInputSchema,
+      entropy: HashSchema,
+    }),
     z.strictObject({
       kind: z.literal('interaction'),
       ...source,
