@@ -21,7 +21,7 @@ Modulo profondo scenario con fisica condivisa; nessun nuovo engine.
 - [x] Slice4 — QA DOM/Input inventata, precondizioni ante-startup, tre
       identità autonome su porta propria4403 e quattro larghezze; guida,
       lettore/focus/tastiera, export/restore e chiusura superfici proprie.
-- [ ] Slice5 — Validator finale dal codice committato e confronti interi
+- [x] Slice5 — Validator finale dal codice committato e confronti interi
       503/17/18/14/17 più export/finali; byte/hash prima del parse, sole
       migrazioni dichiarate. Poi suite canonica a concorrenza4 da sola,
       typecheck/formato/diff/privacy nuova storia. Report tecnico pubblico,

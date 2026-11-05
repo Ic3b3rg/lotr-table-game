@@ -153,7 +153,7 @@ test('late resource-return and physical-pool dependencies gate the whole real co
       delete d.handlers.INVENTED_SUPPLIED;
       d.deferredHandlers.INVENTED_SUPPLIED = 'invented missing return owner';
     } else {
-      // Entire finite damage pool already resides below a hero limit in this invented precondition.
+      // The entire finite damage pool is held in this isolated area precondition.
       f.physical.snapshot.areas[0].damage.push(...f.physical.snapshot.decks.damage.splice(0));
     }
     f.state.round.activeHeroId = f.heroes[1].heroId;

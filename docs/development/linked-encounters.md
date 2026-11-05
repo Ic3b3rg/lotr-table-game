@@ -153,6 +153,22 @@ modifica ammessa nei confronti è schemaVersion21. Altri19 snapshot/viste
 propri,18 payload distinti, export e finale passano lo stesso validator.
 Copie identiche non sono presentate come nuove prove indipendenti.
 
+## Verifica finale
+
+La suite canonica finale passa757/757 (733 precedenti e24 nuovi), zero
+fail/skip/cancellazioni, in623703.751666ms a concorrenza4. È eseguita da sola
+dopo QA e validator pesanti. Passano typecheck, Prettier e diff check.
+I23 file test preesistenti modificati cambiano soltanto le attese dello
+schema20→21; nessun caso, asserzione, deadline o soglia è ridotto e non sono
+aggiunte suppression. La verifica privacy controlla291 stringhe fonte contro
+diff, nuovi file e tutta la nuova storia, senza corrispondenze.
+
+Il primo giro completo aveva esposto una precondizione casuale nel nuovo
+test di provocazione. La fixture è corretta tramite viaggio e attivazione
+fonte, con controlli aggiuntivi sull’intera popolazione; tutti i casi sono
+conservati. Tentativi e log sono distinti nelle evidenze private. La seconda
+suite completa è verde; nessun cambiamento runtime dopo la QA o i confronti.
+
 ## Limiti
 
 Le quantità57 originali restano null/non verificate: «Mantieni il blocco
