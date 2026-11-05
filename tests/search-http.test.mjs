@@ -13,6 +13,7 @@ import {
 import { readBackup, readSession } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
 import { scenarioInput } from './scenario-helper.mjs';
+import { cycleCommand } from './physical-cycle-helper.mjs';
 
 test('HTTP choice pays once, retains both options and keeps the entire origin and residual travel', async (t) => {
   for (const event of ['RESTORE', 'STUDY']) {
@@ -138,6 +139,16 @@ test('HTTP count outcomes use paid conversion, preserve the local binding, and r
 
 test('HTTP concurrent commands and stale/foreign owner, hero, source and cursor preserve whole payload/view', async (t) => {
   const r = await readySearches(t);
+  await ok(cycleCommand(r, 'START_TURN'));
+  const remote = await readSession(r.host),
+    remotePayload = (await readBackup(r.host)).payload;
+  assert.notEqual(
+    remote.journey.heroes.find((h) => h.heroId === remote.round.activeHeroId).spaceId,
+    remote.scenario.spaceBindings.find((b) => b.sourceId === searchNode(remote).spaceId).id,
+  );
+  assert.equal((await commitSearch(r)).status, 409);
+  assert.deepEqual((await readBackup(r.host)).payload, remotePayload);
+  assert.deepEqual(await readSession(r.host), remote);
   await reachSearch(r);
   const s = await readSession(r.host),
     intent = searchIntent(s),
