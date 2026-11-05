@@ -106,6 +106,21 @@ export function attachCampItems(pack, catalog) {
     ),
     cards,
   };
+  if (pack.manifest.items) {
+    const items = pack.manifest.items;
+    cap.product.source = items.product.source;
+    cap.product.objectHash = items.product.objectHash;
+    const initial = cards.find((c) => c.cardId === 'trinket');
+    const next = cards.find((c) => c.cardId === 'invented-trinket-2');
+    initial.model = {
+      ...initial.model,
+      ...items.grant.model,
+      upgradeCost: items.grant.upgrade.threshold,
+      upgrades: [items.grant.upgrade.choices[0].source],
+    };
+    next.model = { ...next.model, ...items.grant.upgrade.choices[0], upgradeCost: 52 };
+    cap.product.items = cards.map((c) => ({ source: c.model.source, quantity: c.quantity }));
+  }
   pack.manifest.campItems = cap;
   return cap;
 }
@@ -115,4 +130,25 @@ export function campItemCompilation() {
   attachCampItems(input.pack, catalog);
   input.campItemsCertificate = { instructionHash: hash(input.pack.manifest.campItems) };
   return input;
+}
+
+export function addGroupCampCards(catalog) {
+  const trinket = catalog.items.find((c) => c.id === 'trinket');
+  trinket.upgrades = ['invented-trinket-2'];
+  catalog.items.push(
+    {
+      ...structuredClone(trinket),
+      id: 'invented-trinket-2',
+      rank: 2,
+      name: { ...trinket.name, text: 'Accessorio comune migliorato inventato' },
+      upgrades: ['invented-trinket-3'],
+    },
+    {
+      ...structuredClone(trinket),
+      id: 'invented-trinket-3',
+      rank: 3,
+      name: { ...trinket.name, text: 'Accessorio comune finale inventato' },
+      upgrades: [],
+    },
+  );
 }

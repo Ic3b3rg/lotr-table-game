@@ -128,3 +128,44 @@ test('camp item UI reads alternatives freely, requires explicit confirmation, an
   ]);
   assert.ok(b.nodes.some((n) => n.textContent.includes('3') && n.textContent.includes('Sapienza')));
 });
+
+test('item choices name the exact alternative and current holder for keyboard and assistive technology', () => {
+  const b = browser(),
+    f = fixture();
+  b.campItemInventory(f.session, f.catalog, 'hero-1', { id: 'owner-1' }, {}, async () => true);
+  const choice = b.nodes.find((n) => n.dataset.campUpgrade === 'advanced:1');
+  assert.match(choice['aria-label'], /Oggetto advanced/);
+  assert.match(choice['aria-label'], /Eroe 1/);
+  assert.match(choice['aria-label'], /rango 2/);
+});
+
+test('ownership, insufficient lore, claimed copies and anonymous PC remain blocked after connection refresh while readers stay available', () => {
+  for (const player of [{ id: 'owner-1' }, { id: 'owner-2' }, null]) {
+    const b = browser(),
+      f = fixture();
+    f.session.scenario.play.lore = 2;
+    const reads = [];
+    b.campItemInventory(
+      f.session,
+      f.catalog,
+      'hero-1',
+      player,
+      { campItem: (...args) => reads.push(args) },
+      async () => true,
+    );
+    b.setOnline(true);
+    assert.ok(b.nodes.filter((n) => n.dataset.campUpgrade).every((n) => n.disabled));
+    b.nodes.find((n) => n.className === 'physical-card').click();
+    assert.equal(reads.length, 1);
+  }
+  const b = browser(),
+    f = fixture();
+  f.session.scenario.conclusion.campaign.heroes[1].itemCopies = ['advanced:1', 'armor:2'];
+  b.campItemInventory(f.session, f.catalog, 'hero-1', { id: 'owner-1' }, {}, async () => true);
+  b.setOnline(true);
+  assert.equal(b.nodes.find((n) => n.dataset.campUpgrade === 'advanced:1').disabled, true);
+  assert.equal(
+    b.nodes.find((n) => n.dataset.campUpgrade === 'invented-alternative:1').disabled,
+    false,
+  );
+});

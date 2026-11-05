@@ -145,18 +145,26 @@ export function campItemInventory(
       offer.className = 'camp-offer';
       offer.append(
         cardButton(upgraded, (caller) =>
-          reader.campItem(next, upgraded, caller, holder, sc.play!.lore),
+          reader.campItem(next, upgraded, caller, `Alternativa per ${holder}`, sc.play!.lore),
         ),
       );
       for (let n = 1; n <= next.quantity; n++) {
         const upgradedCopy = `${next.cardId}:${n}`,
           choice = document.createElement('button'),
-          held = all.includes(upgradedCopy);
+          held = all.includes(upgradedCopy),
+          heldHero = campaign.heroes.find((h) => h.itemCopies.includes(upgradedCopy)),
+          heldName = heldHero
+            ? catalog.heroes.find((h) => h.id === heldHero.heroId)!.name.text
+            : 'Compagnia';
         choice.type = 'button';
         choice.className = 'company-action';
         choice.textContent = held
-          ? `Copia ${n} già posseduta`
+          ? `Copia ${n} già posseduta da ${heldName}`
           : `Scegli questa alternativa · copia ${n}`;
+        choice.setAttribute(
+          'aria-label',
+          `Scegli ${upgraded.name.text} per ${holder}, copia ${n}, rango ${upgraded.rank}`,
+        );
         choice.dataset.campUpgrade = upgradedCopy;
         choice.disabled = !mine || !sufficient || held || c.stage !== 'camp';
         choice.dataset.blocked = String(choice.disabled);

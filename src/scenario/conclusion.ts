@@ -363,7 +363,7 @@ export function answerCampaign(
     throw new ApiError(
       409,
       'CAMPAIGN_CAPABILITY',
-      'Il campo è salvato. La prossima avventura e gli acquisti richiedono materiale ulteriore; nessuna spesa o partenza è stata applicata.',
+      'Il campo è salvato. La prossima avventura richiede la propria mappa e le proprie istruzioni; nessuna partenza, spesa o capacità futura è stata applicata.',
     );
   sc.pending = null;
   campaignRequest(state);

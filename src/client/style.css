@@ -2072,6 +2072,8 @@ body[data-scenario='setup'] #scout-discard-controls {
 }
 .camp-item-confirmation button {
   margin-block: 0.25rem;
+  margin-inline-end: 0.5rem;
+  max-width: 100%;
 }
 .camp-replacement {
   font-weight: 700;

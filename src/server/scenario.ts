@@ -28,6 +28,8 @@ export function scenarioOffer(state: State, path: string) {
   try {
     const { pack, fingerprint } = loadScenarioPack(path);
     validateScenarioBinding(pack, state.mapGeneration.projection);
+    validateCampCatalog(pack, state.content!);
+    validateCampItemsCatalog(pack, state.content!);
     validatePreparedPolicies(pack, state.content);
     validateCombatParty(state, pack);
     validateFailureParty(state, pack);
