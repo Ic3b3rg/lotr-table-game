@@ -16,6 +16,7 @@ export function itemPolicy(catalog) {
   };
 }
 export function attachItem(pack, catalog = catalogFixture(), target = null, difficulty = 2) {
+  const modelSource = (id) => `${pack.sources[0].file}:${id}`;
   const p = target ?? {
     ...structuredClone(pack.manifest.prefabs[0]),
     source: 'example.assets:47901',
@@ -78,7 +79,7 @@ export function attachItem(pack, catalog = catalogFixture(), target = null, diff
         18,
         [
           native(0, 'addItem', 'FFG.JIME.Actions.AddItemToInventory', {
-            itemModel: 'example.assets:98201',
+            itemModel: modelSource(98201),
             text: text(
               'Hai ottenuto l’accessorio inventato. Scegli chi lo ottiene fra te e gli eroi vicini.',
             ),
@@ -104,19 +105,19 @@ export function attachItem(pack, catalog = catalogFixture(), target = null, diff
     sourceCertificateHash: 'a'.repeat(64),
     evidenceHash: hash('invented bounded evidence'),
     ownedProductIds: [0],
-    product: { id: 0, source: 'example.assets:98200', objectHash: hash('product') },
+    product: { id: 0, source: modelSource(98200), objectHash: hash('product') },
     initialInventory: [],
     baseSkillModelIds: pack.manifest.failure.partyBonus.skills.flatMap((s) =>
       s.modelId === null ? [] : [s.modelId],
     ),
     collectorSkillId: 9001,
-    titleModel: { source: 'example.assets:98203', modelId: 9002, objectHash: hash('title') },
+    titleModel: { source: modelSource(98203), modelId: 9002, objectHash: hash('title') },
     modal: { state: 13, owner: 0, waiter: 1 },
     grant: {
       cardId: 'trinket',
       cardHash: hash(catalog.items.find((c) => c.id === 'trinket')),
       model: {
-        source: 'example.assets:98201',
+        source: modelSource(98201),
         modelId: 9003,
         objectHash: hash('item'),
         type: 2,
@@ -127,7 +128,7 @@ export function attachItem(pack, catalog = catalogFixture(), target = null, diff
       policyHash: hash(itemPolicy(catalog)),
       upgrade: {
         threshold: 26,
-        choices: [{ source: 'example.assets:98202', modelId: 9004, objectHash: hash('upgrade') }],
+        choices: [{ source: modelSource(98202), modelId: 9004, objectHash: hash('upgrade') }],
       },
     },
     roundsFingerprint: hash(pack.manifest.rounds ?? null),
