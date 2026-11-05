@@ -29,6 +29,11 @@ test('HTTP Store.once plays both reveal orders, keeps one cost and return across
         let s = await firstVisit(r);
         assert.equal(linkedNode(s).variables.seen, true);
         assert.equal(linkedNode(s, 1).visible, !beforeExploration);
+        if (!beforeExploration) {
+          const sameSpace = (await readBackup(r.host)).payload;
+          assert.equal((await commitLinked(r, 1, r.player)).status, 409);
+          assert.deepEqual((await readBackup(r.host)).payload, sameSpace);
+        }
         s = await getResource(r);
         assert.equal(linkedNode(s).variables.supplied, true);
         assert.equal(linkedNode(s, 1).stopped, true);
@@ -116,6 +121,7 @@ test('HTTP source-bound cards and paid conversions reject actor, source, copy, c
     [{ kind: 'physical-choice', option: 'invented-foreign-copy:1' }, {}, 409],
     [{ kind: 'physical-choice', option: 'resolve' }, { sourceFingerprint: 'f'.repeat(64) }, 409],
     [{ kind: 'physical-choice', option: 'resolve' }, { pendingId: randomUUID() }, 409],
+    [{ kind: 'physical-choice', option: 'resolve' }, { heroId: 'hero-2' }, 409],
     [{ kind: 'physical-choice', option: 'resolve' }, { cursor: 'f'.repeat(64) }, 422],
   ]) {
     assert.equal(

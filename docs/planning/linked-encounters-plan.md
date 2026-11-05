@@ -18,7 +18,7 @@ Modulo profondo scenario con fisica condivisa; nessun nuovo engine.
       concorrenza, provocazioni e P1/P2, sconfitta/figli e ritorni una volta.
       SIGKILL/restore packless ai nuovi confini, payload/viste interi e
       negativi risignati. GREEN e commit ordinati.
-- [ ] Slice4 — QA DOM/Input inventata, precondizioni ante-startup, tre
+- [x] Slice4 — QA DOM/Input inventata, precondizioni ante-startup, tre
       identità autonome su porta propria4403 e quattro larghezze; guida,
       lettore/focus/tastiera, export/restore e chiusura superfici proprie.
 - [ ] Slice5 — Validator finale dal codice committato e confronti interi

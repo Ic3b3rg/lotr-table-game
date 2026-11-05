@@ -108,6 +108,49 @@ una anche tramite HTTP con payload invariato. Nove ulteriori SIGKILL al
 punto di commit SQLite verificano rollback intero con receipt e ricostruzione
 identica del candidato al retry, salvo updatedAt.
 
+## UI nativa inventata
+
+Tre contesti indipendenti giocano la stessa fixture, dichiarata e congelata
+prima dello startup. Bootstrap API soltanto per Compagnia e mappa iniziali;
+poi DOM/Input per avvio, prima visita, rivelazione precedente all’esplorazione,
+prova fallita, danno, ritorno e titolo a un terzo destinatario. HTTP Node GET
+ed evaluate sono di sola lettura. Nessun rewind, risultato impostato o reroll.
+
+Venti matrici producono240 combinazioni delle tre identità e quattro
+larghezze320/768/1024/1440: attore, attesa, carte/totali, ispezione/annullamento,
+guida, lettore, focus, tastiera e assenza overflow. Altre quattro verifiche
+riguardano la copia titolo pubblica del destinatario e il suo lettore entro
+il viewport. HTTP IPv4 esercita l’assenza di crypto.subtle.688 screenshot
+finali sono conservati; cinque immagini sono state ispezionate direttamente,
+senza dichiarare ispezione manuale dell’intero insieme.
+
+L’export nativo coincide col payload completo; due modifiche risignate sono
+rifiutate via filepicker/restore422 senza mutazioni. Restore corrente e
+recupero dei tre posti sono verificati. I log distinguono un409 stale del
+driver dai due422 intenzionali. Zero eccezioni runtime e caricamenti falliti
+rilevati. I tentativi di sincronizzazione del driver conservano lo stesso
+stato e origine. Browser e host propri sono chiusi con verifica dei PID
+propri e riapertura/chiusura della sola porta4403; nessun inventario globale.
+
+## Confronti integrali
+
+Il validator reale è ricostruito dal codice committato,1542661 byte,
+SHA256 `e0b866bdd2c45ce207ef07258728d5992665dd8dab48abee63e2a6e75be98389`.
+I byte coincidono con quelli usati per la UI. Espone BackupSchema,
+publicSession e i due seam del preflight Ombra, senza esenzioni.
+
+Passano503 file ricevuti,398 payload distinti e17 viste94 intere,
+913356631 byte comprese le viste. L’unione dei batch confronta ogni indice
+esattamente una volta, con byte/hash prima del parse e sole migrazioni
+strutturali dichiarate. Il checkpoint156 conserva il gate57 e l’intero
+payload nel solo preflight statico in memoria, senza proseguire il gioco.
+
+Passano separatamente18 snapshot/viste96,14 snapshot/viste98 e17 snapshot/
+viste100, con export e finali; i payload distinti sono18/13/16. La sola
+modifica ammessa nei confronti è schemaVersion21. Altri19 snapshot/viste
+propri,18 payload distinti, export e finale passano lo stesso validator.
+Copie identiche non sono presentate come nuove prove indipendenti.
+
 ## Limiti
 
 Le quantità57 originali restano null/non verificate: «Mantieni il blocco
