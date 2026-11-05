@@ -9,6 +9,11 @@ import { playableScenarioPrefab } from '../shared/clues';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
 import { searchDefinition, validateSearches } from './searches';
+import {
+  threatTokenDefinition,
+  validateThreatTokens,
+  requireThreatTokenResources,
+} from './threat-tokens';
 import { baseProductsDefinition, validateBaseProducts } from './base-products';
 import { itemDefinition, requireItemCapability } from './item-capability';
 import {
@@ -238,9 +243,10 @@ function messageRequest(
   const explorer = sc.conclusion
     ? undefined
     : sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
-  const searchActor = searchDefinition(sc.pack, i.definition)
-    ? sc.play?.attempts.find((a) => a.id === sc.play!.active)
-    : undefined;
+  const searchActor =
+    searchDefinition(sc.pack, i.definition) || threatTokenDefinition(sc.pack, i.definition)
+      ? sc.play?.attempts.find((a) => a.id === sc.play!.active)
+      : undefined;
   request(state, {
     instanceId: i.id,
     state: i.state,
@@ -451,7 +457,9 @@ function execute(
     else if (a.op === 'challenge' || a.op === 'sourceTest') {
       const successes =
           a.op === 'sourceTest' &&
-          (baseProductsDefinition(sc.pack, i.definition) || itemDefinition(sc.pack, i.definition))
+          (baseProductsDefinition(sc.pack, i.definition) ||
+            itemDefinition(sc.pack, i.definition) ||
+            threatTokenDefinition(sc.pack, i.definition))
             ? probeChoice(probe, 2) * a.target
             : probeChoice(probe, 100),
         event =
@@ -619,6 +627,18 @@ function execute(
       invariant(send(sc, i, a.falseEvent), 'Guardia nulla senza ramo fonte.');
       return;
     case 'ownsProducts': {
+      if (threatTokenDefinition(sc.pack, i.definition)) {
+        const cap = sc.pack.manifest.threatTokens!;
+        invariant(
+          i.state === cap.gate.state &&
+            a.index === cap.gate.action &&
+            a.products.length === 1 &&
+            a.products[0] === null,
+          'Guardia NULL diversa dalla fonte attestata.',
+        );
+        invariant(send(sc, i, a.missingEvent), 'Guardia NULL senza ramo non posseduto.');
+        return;
+      }
       const cap = sc.pack.manifest.baseProducts;
       invariant(
         cap &&
@@ -705,16 +725,19 @@ function execute(
             ? a.value.value
             : variable(sc, i, a.value.ref)[a.value.ref.name];
       invariant(typeof v === 'number' && typeof n === 'number', 'IntAdd richiede int.');
-      const floor = sc.pack.manifest.linked?.threat;
+      const floors = [sc.pack.manifest.linked?.threat, sc.pack.manifest.threatTokens?.threat];
       const next = (v + n) | 0;
       setValue(
         sc,
         i,
         a.target,
-        floor &&
-          floor.definition === i.definition &&
-          floor.state === i.state &&
-          floor.action === a.index
+        floors.some(
+          (floor) =>
+            floor &&
+            floor.definition === i.definition &&
+            floor.state === i.state &&
+            floor.action === a.index,
+        )
           ? Math.max(0, next)
           : next,
       );
@@ -2148,6 +2171,15 @@ export function interactScenario(
       'Prodotti della ricerca diversi dal freeze.',
     );
   }
+  if (threatTokenDefinition(sc.pack, i!.definition)) {
+    validateThreatTokens(sc.pack);
+    invariant(
+      digest(projection(state).context.ownedProductIds) ===
+        digest(sc.pack.manifest.threatTokens!.ownedProductIds),
+      'Prodotti dei segnalini minaccia diversi dal freeze.',
+    );
+    requireThreatTokenResources(state, i!.definition, c.heroId);
+  }
   const entry = encounterEntry(sc.pack, i!, sc.globals);
   let entryChoice:
     | NonNullable<NonNullable<Scenario['play']>['attempts'][number]['entryChoice']>
@@ -2194,6 +2226,7 @@ export function interactScenario(
       baseProductsDefinition(sc.pack, i!.definition) ||
       itemDefinition(sc.pack, i!.definition) ||
       searchDefinition(sc.pack, i!.definition) ||
+      threatTokenDefinition(sc.pack, i!.definition) ||
       linkedDefinition(sc.pack, i!.definition)) &&
     !probe
   ) {

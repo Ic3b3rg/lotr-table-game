@@ -17,6 +17,7 @@ import { validateLinkedCapability, linkedDefinition } from './linked-capability'
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
 import { validateItemCapability } from './item-capability';
 import { validateSearches, searchDefinition } from './searches';
+import { validateThreatTokens, threatTokenDefinition } from './threat-tokens';
 import {
   validateFirstCombat,
   firstCombatDefinition,
@@ -35,6 +36,7 @@ export function parseScenarioPack(raw: unknown) {
   validateItemCapability(pack);
   validateFirstCombat(pack);
   validateSearches(pack);
+  validateThreatTokens(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -227,7 +229,8 @@ export function parseScenarioPack(raw: unknown) {
         Object.keys(s.deferredTransitions ?? {}).every((e) => s.transitions[e] === undefined) &&
           (!Object.keys(s.deferredTransitions ?? {}).length ||
             !!rounds ||
-            baseProductsDefinition(pack, d.source)),
+            baseProductsDefinition(pack, d.source) ||
+            threatTokenDefinition(pack, d.source)),
         'Confine condizionale ambiguo o senza capacità della fase.',
       );
       invariant(
@@ -292,6 +295,7 @@ export function parseScenarioPack(raw: unknown) {
             pack.manifest.clues ||
               linkedDefinition(pack, d.source) ||
               searchDefinition(pack, d.source) ||
+              threatTokenDefinition(pack, d.source) ||
               baseProductsDefinition(pack, d.source) ||
               firstCombatDefinition(pack, d.source),
             'Istruzione fuori dalla capacità indizi o collegata congelata.',
@@ -487,6 +491,11 @@ export function loadScenarioPack(path: string) {
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
   validateFirstCombatBinding(pack, p);
+  if (pack.manifest.threatTokens)
+    invariant(
+      digest(p.context.ownedProductIds) === digest(pack.manifest.threatTokens.ownedProductIds),
+      'Prodotti dei segnalini minaccia diversi dalla realizzazione.',
+    );
   if (pack.manifest.searches)
     invariant(
       digest(p.context.ownedProductIds) === digest(pack.manifest.searches.ownedProductIds),

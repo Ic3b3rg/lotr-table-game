@@ -56,6 +56,7 @@ const CompilationSchema = z.strictObject({
   itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   firstCombatCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   searchesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  threatTokensCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -65,6 +66,41 @@ export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
   const first = pack.manifest.firstCombat;
+  const tokens = pack.manifest.threatTokens;
+  invariant(
+    tokens
+      ? input.threatTokensCertificate?.instructionHash === digest(tokens)
+      : !input.threatTokensCertificate,
+    'Segnalini minaccia assenti o non attestati.',
+  );
+  for (const [n, owner] of (tokens?.encounters ?? []).entries()) {
+    const p = pack.manifest.prefabs.find((p) => p.source === owner.prefab),
+      d = pack.definitions.find((d) => d.source === p?.fsmSource),
+      c = certificates.find((c) => c.source === d?.source);
+    invariant(
+      c &&
+        d &&
+        c.objectHash === owner.objectHash &&
+        c.lifecycleHash === owner.lifecycleHash &&
+        digest(c) === owner.certificateHash &&
+        c.states.length === (n ? 12 : 8) &&
+        c.states.reduce((sum, s) => sum + s.actions.length, 0) === (n ? 12 : 9) &&
+        c.states.every(
+          (s) =>
+            d.states.some((t) => t.index === s.index && t.actions.length === s.actions.length) ||
+            owner.excludedStates.includes(s.index),
+        ) &&
+        c.deferredEdges.length === n &&
+        (!n ||
+          c.deferredEdges.every(
+            (e) =>
+              e.from === tokens!.gate.state &&
+              e.to === tokens!.gate.excludedTarget &&
+              e.capability === tokens!.gate.capability,
+          )),
+      'Inventario intero dei segnalini minaccia incompleto o ramo escluso non attestato.',
+    );
+  }
   const searches = pack.manifest.searches;
   invariant(
     searches

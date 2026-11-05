@@ -168,6 +168,46 @@ const SearchesCapabilitySchema = z.strictObject({
     release: methodEvidence,
   }),
 });
+const threatTokenOwner = <R extends string>(role: R) =>
+  searchOwner(role).extend({
+    admittedStates: z.array(z.int().nonnegative()).min(1).max(20),
+    excludedStates: z.array(z.int().nonnegative()).max(3),
+  });
+const ThreatTokensCapabilitySchema = z.strictObject({
+  version: z.literal('source-threat-tokens-v1'),
+  evidenceHash: HashSchema,
+  ownedProductIds: z.tuple([z.literal(0)]),
+  encounters: z.tuple([threatTokenOwner('retry'), threatTokenOwner('null-product')]),
+  gate: z.strictObject({
+    state: z.int().nonnegative(),
+    action: z.int().nonnegative(),
+    excludedTarget: z.int().nonnegative(),
+    capability: z.literal('null-product-not-owned'),
+  }),
+  threat: z.strictObject({
+    definition: SourceSchema,
+    state: z.int().nonnegative(),
+    action: z.int().nonnegative(),
+    binding: VariableRefSchema,
+    delta: z.literal(-4),
+  }),
+  roundsFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.strictObject({
+    confirm: methodEvidence,
+    cancel: methodEvidence,
+    owns: methodEvidence,
+    isOwned: methodEvidence,
+    add: methodEvidence,
+    threat: methodEvidence,
+    binding: methodEvidence,
+    getThreat: methodEvidence,
+    setThreat: methodEvidence,
+    hide: methodEvidence,
+    release: methodEvidence,
+    sequence: methodEvidence,
+  }),
+});
 const productModel = <I extends number>(id: I) =>
   z.strictObject({ id: z.literal(id), source: SourceSchema, objectHash: HashSchema });
 const BaseProductsCapabilitySchema = z.strictObject({
@@ -335,7 +375,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('awardTitle', { recipient: VariableRefSchema, titleModel: SourceSchema }),
   action('nullProduct', { products: z.tuple([z.null()]), falseEvent: z.string().min(1).max(100) }),
   action('ownsProducts', {
-    products: z.tuple([SourceSchema]),
+    products: z.tuple([SourceSchema.nullable()]),
     ownEvent: z.string().min(1).max(100),
     missingEvent: z.string().min(1).max(100),
   }),
@@ -544,6 +584,7 @@ export const ScenarioPackSchema = z.strictObject({
     items: ItemsCapabilitySchema.optional(),
     firstCombat: FirstCombatCapabilitySchema.optional(),
     searches: SearchesCapabilitySchema.optional(),
+    threatTokens: ThreatTokensCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),

@@ -11,6 +11,7 @@ import { sourceDarknessHeroes } from './darkness';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
 import { liveGroupRules } from './live-groups';
 import { searchDefinition } from './searches';
+import { threatTokenDefinition } from './threat-tokens';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
 export function encounterProgram(state: State, action: ScenarioAction): PhysicalProgram {
@@ -98,7 +99,9 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
-    ...(isSearch ? { immediateSkillReset: true as const } : {}),
+    ...(isSearch || (searchOwner && threatTokenDefinition(sc.pack, searchOwner.definition))
+      ? { immediateSkillReset: true as const }
+      : {}),
     ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
