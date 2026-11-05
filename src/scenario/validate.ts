@@ -541,7 +541,9 @@ export function scenarioReceiptProblem(
       r.scenarioId !== sc.id ||
       r.pendingId !== c.pendingId ||
       r.source !== c.source ||
-      r.kind !== c.kind
+      r.kind !== c.kind ||
+      r.kind === 'camp-skill' ||
+      r.skill !== undefined
     )
       return 'Ricevuta scenario incoerente.';
   }

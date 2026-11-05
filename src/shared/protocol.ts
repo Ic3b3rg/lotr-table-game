@@ -334,19 +334,27 @@ export const ReceiptSchema = z.union([
     source: HashSchema,
     completed: z.boolean(),
   }),
-  z.strictObject({
-    requestId: IntentIdSchema,
-    type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
-    resumedJourney: ResumedJourneySchema.optional(),
-    appliedRevision: z.int().nonnegative(),
-    scenarioId: z.uuid(),
-    pendingId: z.uuid().nullable(),
-    source: z.string().max(300),
-    kind: z.string().max(50),
-    completed: z.boolean().optional(),
-    phase: z.enum(['setup', 'action']),
-    skill: CampSkillReceiptSchema.optional(),
-  }),
+  z
+    .strictObject({
+      requestId: IntentIdSchema,
+      type: z.enum(['START_SCENARIO', 'SCENARIO_INPUT', 'INTERACT_SCENARIO']),
+      resumedJourney: ResumedJourneySchema.optional(),
+      appliedRevision: z.int().nonnegative(),
+      scenarioId: z.uuid(),
+      pendingId: z.uuid().nullable(),
+      source: z.string().max(300),
+      kind: z.string().max(50),
+      completed: z.boolean().optional(),
+      phase: z.enum(['setup', 'action']),
+      skill: CampSkillReceiptSchema.optional(),
+    })
+    .refine(
+      (receipt) =>
+        receipt.kind === 'camp-skill'
+          ? receipt.type === 'SCENARIO_INPUT' && receipt.skill !== undefined
+          : receipt.skill === undefined,
+      { message: 'Riepilogo abilità senza transazione del campo corrispondente.', path: ['skill'] },
+    ),
   z.strictObject({
     requestId: IntentIdSchema,
     type: z.enum(['GENERATE_ADVENTURE_MAP', 'RESUME_ADVENTURE_MAP']),

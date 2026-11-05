@@ -61,6 +61,21 @@ export const BackupSchema = z
       const raw = z
         .strictObject({ state: z.unknown(), commands: z.unknown() })
         .parse(backup.payload);
+      const version =
+        raw.state && typeof raw.state === 'object' && 'schemaVersion' in raw.state
+          ? raw.state.schemaVersion
+          : 1;
+      if (typeof version === 'number' && version <= 26 && Array.isArray(raw.commands))
+        for (const command of raw.commands) {
+          const receipt =
+            command && typeof command === 'object' && 'receipt' in command ? command.receipt : null;
+          if (
+            receipt &&
+            typeof receipt === 'object' &&
+            ('skill' in receipt || ('kind' in receipt && receipt.kind === 'camp-skill'))
+          )
+            throw new Error('Ricevuta del campo non valida per uno schema storico.');
+        }
       const payload = BackupPayloadSchema.parse({
         state: parseState(raw.state),
         commands: raw.commands,
