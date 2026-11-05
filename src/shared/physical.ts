@@ -11,6 +11,7 @@ import {
 import { ContentIdSchema } from './catalog';
 import { LastStandViewSchema } from './last-stand';
 import { StatSchema } from './skill-tests';
+import { ScenarioTitleGrantSchema } from './scenario-title';
 
 export const SourceTestViewSchema = z.strictObject({
   heroId: ContentIdSchema,
@@ -92,6 +93,11 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('scenario-title'),
+    hero: slot,
+    grant: ScenarioTitleGrantSchema,
+  }),
   AttackTestChildSchema,
   z.strictObject({
     kind: z.literal('last-stand-one'),
@@ -293,6 +299,7 @@ export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
   kind: z.enum([
     'inspiration',
+    'scenario-title',
     'attack-test',
     'pay-attack-grant',
     'last-stand-one',

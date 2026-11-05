@@ -52,6 +52,7 @@ const CompilationSchema = z.strictObject({
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
@@ -59,6 +60,12 @@ const CompilationSchema = z.strictObject({
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.linked
+      ? input.linkedCertificate?.instructionHash === digest(pack.manifest.linked)
+      : !input.linkedCertificate,
+    'Incontri collegati assenti o non attestati.',
+  );
   invariant(
     pack.manifest.lair
       ? input.lairCertificate?.instructionHash === digest(pack.manifest.lair)

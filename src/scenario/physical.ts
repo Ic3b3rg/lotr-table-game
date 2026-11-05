@@ -26,6 +26,8 @@ import {
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from '../server/errors';
+import { validateScenarioTitle } from '../physical-resolution/scenario-title';
+import { linkedDefinition } from './linked-capability';
 import { boonEnemyPositions } from '../server/physical-spatial';
 import { sourceCursor, type SourceEffect } from './source-cursor';
 
@@ -35,6 +37,18 @@ export function needsPhysical(pack: ScenarioPack) {
     pack.manifest.scope === 'original-encounter-v1' ||
     pack.definitions.some((d) => d.states.some((s) => s.actions.some((a) => a.op === 'physical')))
   );
+}
+export function requireLinkedTitle(pack: ScenarioPack, raw: unknown) {
+  if (!pack.manifest.linked) return;
+  try {
+    validateScenarioTitle(raw, pack.manifest.linked.title);
+  } catch {
+    throw new ApiError(
+      409,
+      'SCENARIO_TITLE_CAPABILITY',
+      'Il titolo richiesto dalla fonte non ha carta, copia e binding verificati corrispondenti. Nessun costo è stato applicato.',
+    );
+  }
 }
 export function loadPhysicalSource(path: string) {
   invariant(statSync(path).size <= PHYSICAL_CONTENT_LIMITS.bytes, 'Raw fisico troppo grande.');
@@ -99,6 +113,7 @@ export function initializeScenarioPhysical(
   }
   invariant(source && !state.physical, 'Materiale fisico assente o inizializzazione duplicata.');
   const sc = state.scenario!;
+  requireLinkedTitle(sc.pack, source.raw);
   if (sc.pack.manifest.boons && source.boons?.fingerprint !== sc.pack.manifest.boons.fingerprint)
     throw new ApiError(
       409,
@@ -211,12 +226,14 @@ export function physicalRequestData(
   effect: SourceEffect,
   active: PhysicalActive,
 ): Omit<ScenarioRequest, 'id' | 'fingerprint'> {
-  const { action } = sourceCursor(state, effect);
+  const { action, instance } = sourceCursor(state, effect);
   invariant(
     action.op === 'physical' ||
       action.op === 'confirm' ||
       action.op === 'sourceTest' ||
       action.op === 'challenge' ||
+      ((action.op === 'awardTitle' || action.op === 'choice') &&
+        linkedDefinition(state.scenario!.pack, instance.definition)) ||
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
       (action.op === 'message' && (action.consequence || action.inspiration)),
     'Richiesta fisica senza programma fonte.',
@@ -227,7 +244,16 @@ export function physicalRequestData(
     entry: effect.entry,
     action: effect.action,
     kind: 'physical',
-    text: action.text,
+    text:
+      action.op === 'awardTitle'
+        ? [
+            {
+              kind: 'text',
+              style: 'plain',
+              text: 'Titolo assegnato: completa l’istruzione qui sotto.',
+            },
+          ]
+        : action.text,
     heroId: active.actorHeroId,
     actorPlayerId: active.actorPlayerId,
     stage: 'ready',

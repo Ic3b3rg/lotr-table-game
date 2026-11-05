@@ -49,6 +49,8 @@ const TOPICS = [
     action: 'Torna all’incontro',
     paragraphs: [
       'Nel turno dell’eroe, raggiungi la casella del segnalino e apri l’ispezione dalla mappa. Leggere e annullare è gratuito. Conferma la ricerca per spendere una sola azione. Le prove e le scelte successive continuano quell’interazione.',
+      'Nei luoghi collegati, una prima visita può rivelare un altro segnalino. La visita rimane compiuta anche lasciando il luogo o fallendo la prova. Quando torni, scegli l’opzione con costo soltanto se è disponibile; leggere e allontanarsi non consumano azioni. Una scelta fra alternative indica quale prova affrontare: il suo esito viene calcolato dalle carte.',
+      'Quando l’avventura assegna un titolo, il gruppo concorda chi lo riceve e il proprietario indicato registra la scelta. Il destinatario può essere un altro eroe. La carta si prepara subito, completando l’eventuale scarto per il limite quattro; un titolo già ottenuto dalla Compagnia non crea un’altra copia.',
       'Il primo controllo superato appartiene alla Compagnia e rimane valido anche se un ramo fallisce o agisce un altro eroe. I successi del conteggio si accumulano nel segnalino. I progressi e la Sapienza ottenuta sono visibili nell’avventura.',
       'Rivela le carte della prova indicata e usa soltanto le conversioni disponibili, pagando il costo. Una Scoperta o un’altra conseguenza figlia si completa prima della prova padre. La scelta obbligatoria rimane aperta fino alla decisione del proprietario.',
       'Danni e paure risolvono le carte, le prevenzioni e l’eventuale Ultimo Sforzo prima di restituire il turno. I movimenti residui del viaggio rimangono disponibili nello stesso turno. Reload e ripristino ritrovano la stessa istruzione e gli stessi costi.',

@@ -45,7 +45,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(20),
+  schemaVersion: z.literal(21),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -78,6 +78,7 @@ export const ScenarioInputSchema = z.discriminatedUnion('kind', [
     roleId: ContentIdSchema,
   }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
+  z.strictObject({ kind: z.literal('choose-hero'), heroId: ContentIdSchema }),
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('scout-reveal') }),

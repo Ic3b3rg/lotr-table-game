@@ -13,6 +13,7 @@ import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isConclusionReward } from './failure-capability';
 import { validateLairCapability, isLairClueReward } from './lair-capability';
+import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -21,6 +22,7 @@ export function parseScenarioPack(raw: unknown) {
     'Manifest originale incompleto o estraneo.',
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
+  validateLinkedCapability(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -231,6 +233,8 @@ export function parseScenarioPack(raw: unknown) {
         const typeOf = (ref: { scope: 'local' | 'global'; name: string }) =>
           (ref.scope === 'local' ? locals : globals).get(ref.name)?.type;
         const integerRefs = [
+          ...(a.op === 'chooseHero' ? [a.target] : []),
+          ...(a.op === 'awardTitle' ? [a.recipient] : []),
           ...(a.op === 'copyInt'
             ? [a.target, ...(a.value.kind === 'variable' ? [a.value.ref] : [])]
             : []),
@@ -252,6 +256,11 @@ export function parseScenarioPack(raw: unknown) {
             (a.op !== 'focus' || a.positions.every((ref) => typeOf(ref) === 'vector')),
           'Tipo del binding della nuova istruzione incoerente.',
         );
+        if (a.op === 'choice')
+          invariant(
+            a.options.every((o) => !o.requirement || typeOf(o.requirement) === 'bool'),
+            'Opzione con requisito non booleano.',
+          );
         if (a.op === 'message')
           invariant(
             !(a.inspiration && a.consequence),
@@ -264,7 +273,10 @@ export function parseScenarioPack(raw: unknown) {
           (a.op === 'message' && a.inspiration) ||
           (a.op === 'explore' && a.intro)
         )
-          invariant(pack.manifest.clues, 'Istruzione fuori dalla capacità indizi congelata.');
+          invariant(
+            pack.manifest.clues || linkedDefinition(pack, d.source),
+            'Istruzione fuori dalla capacità indizi o collegata congelata.',
+          );
         if (a.op === 'objective' && a.bindings)
           invariant(
             followup &&
@@ -348,7 +360,9 @@ export function parseScenarioPack(raw: unknown) {
         );
         if (a.op === 'physical')
           invariant(
-            (a.program.profile !== 'source-fronts-v1' || !a.program.groupRules) &&
+            (a.program.profile !== 'source-fronts-v1' ||
+              (!a.program.groupRules &&
+                !a.program.children.some((c) => c.kind === 'scenario-title'))) &&
               pack.manifest.scope ===
                 (a.program.profile === 'source-fronts-v1'
                   ? 'synthetic-physical-p1'

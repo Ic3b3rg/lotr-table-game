@@ -22,6 +22,9 @@ import { STAT_LABELS } from '../shared/skill-tests';
 import { validateBoonArtifact } from './boon-program';
 import { boonAvailability, boonAcquisitionProblems, validateBoonCustody } from './boon-stock';
 import { boonProgramProblems } from './boon-continuation';
+import { validateScenarioTitle } from './scenario-title';
+import type { ScenarioTitleGrant } from '../shared/scenario-title';
+import { AttackModifierSchema } from '../shared/combat';
 import type { BoonKind } from '../shared/boons';
 import { BoonKindSchema } from '../shared/combat';
 import type {
@@ -60,6 +63,7 @@ class FrontReplay {
   private readonly rng;
   private readonly cards = new Map<string, PhysicalCard>();
   private readonly faceup = new Set<string>();
+  private readonly scenarioTitles = new Map<string, ScenarioTitleGrant>();
   private readonly s: PhysicalSnapshot;
   private readonly seenRequests = new Set<string>();
   private readonly seenPending = new Set<string>();
@@ -920,7 +924,8 @@ class FrontReplay {
   }
   private titleCard(copy: string) {
     const id = definitionId(copy);
-    if (!this.p.lastStand?.titles.some((t) => t.cardId === id)) return undefined;
+    if (!this.p.lastStand?.titles.some((t) => t.cardId === id) && !this.scenarioTitles.has(id))
+      return undefined;
     return requirePhysicalFamily(this.p.raw, 'title').cards.find((c) => c.id === id);
   }
   private skillSymbols(copy: string) {
@@ -968,9 +973,9 @@ class FrontReplay {
       !t.removed &&
       !t.pending &&
       h.prepared.includes(t.copy)
-        ? this.p
-            .lastStand!.titles.find((d) => d.cardId === t.cardId)!
-            .effects.map((effect, index) => ({ copy: t.copy, effect, index }))
+        ? (this.p
+            .lastStand!.titles.find((d) => d.cardId === t.cardId)
+            ?.effects.map((effect, index) => ({ copy: t.copy, effect, index })) ?? [])
         : [],
     );
   }
@@ -1962,7 +1967,35 @@ class FrontReplay {
       const choices = attack.slots.filter(
         (s) => !allocations.some((a) => a.slotId === s.id) && s.cost <= successes - spent,
       );
-      const input = this.ask(hero, `${path}/${allocations.length}`, {
+      const titleOffers = (this.s.lastStand?.titles ?? []).flatMap((t) =>
+        t.heroId === this.hero(hero).heroId &&
+        !t.removed &&
+        !t.pending &&
+        this.hero(hero).prepared.includes(t.copy) &&
+        this.scenarioTitles.has(t.cardId)
+          ? AttackModifierSchema.options.map((modifier) => ({
+              id: `title-modifier:${t.copy}:${modifier}`,
+              copy: t.copy,
+              modifier,
+              label: `${this.skillName(t.copy)} · rimuovi dall’avventura: ${
+                (
+                  {
+                    pierce: 'Perforare',
+                    smite: 'Punire',
+                    lethal: 'Letale',
+                    sunder: 'Squarciare',
+                    stun: 'Stordire',
+                    cleave: 'Fendere',
+                  } as const
+                )[modifier]
+              }`,
+            }))
+          : [],
+      );
+      const decisionPath = this.scenarioTitles.size
+        ? `${path}/${allocations.length}/${modifiers.length}`
+        : `${path}/${allocations.length}`;
+      const input = this.ask(hero, decisionPath, {
         mode: 'choose',
         title: `${successes - spent} successi disponibili; ${spent} spesi. Anteprima: ${hits} colpi. Ogni slot può essere pagato una sola volta.`,
         options: [
@@ -1971,6 +2004,7 @@ class FrontReplay {
             id: `slot:${s.id}`,
             label: `${s.label} · spendi ${s.cost} successi`,
           })),
+          ...titleOffers.map(({ id, label }) => ({ id, label })),
         ],
         minimum: 1,
         maximum: 1,
@@ -1978,6 +2012,12 @@ class FrontReplay {
       });
       invariant(input.kind === 'physical-choice', 'Scelta slot richiesta.');
       if (input.option === 'apply') break;
+      const title = titleOffers.find((o) => o.id === input.option);
+      if (title) {
+        this.removeTitle(hero, title.copy);
+        modifiers.push(title.modifier);
+        continue;
+      }
       const slot = choices.find((s) => `slot:${s.id}` === input.option);
       invariant(slot, 'Slot già speso/estraneo o successi insufficienti.');
       allocations.push({
@@ -2158,6 +2198,15 @@ class FrontReplay {
         'I crediti sintetici non pagano capacità originali.',
       );
       validatePhysicalProgram(run.program, this.p.heroes.length);
+      for (const child of run.program.children)
+        if (child.kind === 'scenario-title') {
+          invariant(
+            this.p.version === 3 && run.lastStandRules && run.spatial,
+            'Acquisizione titolo senza causa scenario e consumer corrente.',
+          );
+          validateScenarioTitle(this.p.raw, child.grant);
+          this.scenarioTitles.set(child.grant.cardId, child.grant);
+        }
       sources.add(run.source.effectId);
       runIds.add(run.id);
       this.run = run;
@@ -2287,11 +2336,33 @@ class FrontReplay {
               (child.kind === 'group-test' ||
                 child.kind === 'darkness' ||
                 child.kind === 'rally-reset'));
-          if (!this.lastStand.active(child.hero) && !collective) {
+          if (
+            !this.lastStand.active(child.hero) &&
+            !collective &&
+            child.kind !== 'scenario-title'
+          ) {
             parent.completedChildren++;
             continue;
           }
           switch (child.kind) {
+            case 'scenario-title':
+              invariant(this.s.lastStand, 'Titolo senza custodia fisica inizializzata.');
+              if (this.s.lastStand.titles.some((t) => t.cardId === child.grant.cardId)) {
+                const response = this.ask(child.hero, `${path}/already-owned`, {
+                  mode: 'choose',
+                  title: child.grant.alreadyOwned,
+                  options: [{ id: 'ack', label: 'Continua' }],
+                  minimum: 1,
+                  maximum: 1,
+                  remaining: empty(),
+                });
+                invariant(
+                  response.kind === 'physical-choice' && response.option === 'ack',
+                  'Titolo già ottenuto senza conferma del messaggio fonte.',
+                );
+              } else
+                this.awardTitle(child.hero, child.grant.cardId, `${path}/scenario-title`, path);
+              break;
             case 'last-stand-one':
               invariant(
                 this.combat &&

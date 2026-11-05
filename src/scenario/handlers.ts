@@ -12,6 +12,8 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'FFG.JIME.Actions.SetNextAdventure': 'nextAdventure',
   'FFG.JIME.Actions.ProceedToNextGame': 'proceed',
   'FFG.JIME.Actions.EndGame': 'endGame',
+  'FFG.JIME.Actions.DisplayMessagePlayerChoice': 'chooseHero',
+  'FFG.JIME.Actions.AwardTitle': 'awardTitle',
   'Synthetic.PhysicalProgram': 'physical',
   'FFG.JIME.Actions.DisplayMessage': 'message',
   'FFG.JIME.Actions.GetStartTileId': 'getStart',
