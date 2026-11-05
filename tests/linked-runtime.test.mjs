@@ -3,10 +3,16 @@ import assert from 'node:assert/strict';
 import { linkedRuntime, leaveFirst } from './linked-runtime-helper.mjs';
 
 test('first paid visit can be left, passed or failed and updates before the ordered broadcasts', () => {
-  for (const outcome of ['leave', 'pass', 'fail']) {
+  for (const [outcome, capped] of ['leave', 'pass', 'fail'].flatMap((outcome) =>
+    [false, true].map((capped) => [outcome, capped]),
+  )) {
+    let initialInspiration;
     const f = linkedRuntime({
         wisdom: outcome === 'fail' ? 1 : 2,
         edit: (raw) => {
+          const cap = raw.catalog.heroes[0].stats.inspiration;
+          initialInspiration = capped ? cap : cap - 1;
+          raw.context.preparation.heroes[0].inspiration = initialInspiration;
           if (outcome === 'fail')
             for (const c of raw.catalog.skills) {
               c.success = 0;
@@ -39,6 +45,13 @@ test('first paid visit can be left, passed or failed and updates before the orde
     assert.equal(f.sc.play.active, null);
     assert.equal(f.sc.play.attempts[0].returned, true);
     assert.equal(f.state.round.heroes[0].actionsUsed, 1);
+    assert.equal(
+      f.state.preparation.heroes[0].inspiration,
+      Math.min(
+        f.state.content.heroes[0].stats.inspiration,
+        initialInspiration + (outcome === 'pass' ? 1 : 0),
+      ),
+    );
   }
 });
 
