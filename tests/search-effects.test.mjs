@@ -253,3 +253,25 @@ test('a search reward resets the exhausted skill deck before either printed alte
   f.answer({ kind: 'ack' });
   assert.equal(f.i.stopped, true);
 });
+test('the zero-count inspiration outcome resets an exhausted skill deck before the source message', () => {
+  const f = searchRuntime({
+    role: 'challenge',
+    success: 0,
+    fate: 0,
+    edit: (raw) => {
+      raw.catalog.heroes[0].stats.wisdom = raw.context.preparation.heroes[0].deck.length;
+    },
+  });
+  const copies = [...f.state.preparation.heroes[0].deck];
+  f.commit();
+  f.answer({ kind: 'physical-choice', option: 'reveal' });
+  f.answer({ kind: 'physical-choice', option: 'resolve' });
+  const h = f.state.preparation.heroes[0];
+  assert.equal(f.i.variables.tally, 0);
+  assert.equal(f.sc.pending.kind, 'message');
+  assert.deepEqual(h.discard, []);
+  assert.deepEqual([...h.deck].sort(), [...copies].sort());
+  assert.deepEqual(f.physical.snapshot.random.at(-1).population, copies);
+  f.answer({ kind: 'ack' });
+  assert.equal(f.i.stopped, true);
+});

@@ -48,6 +48,7 @@ test('schemas through24 reject new search forms at owned paths and in the immuta
         },
       },
       { physical: { runs: [{ program: { children: [{ kind: 'search-recovery' }] } }] } },
+      { physical: { runs: [{ program: { immediateSkillReset: true } }] } },
       { physical: { snapshot: { active: { scoutPrepareAllowed: false } } } },
       { physical: { snapshot: { parents: [{ results: [{ kind: 'search-recovery' }] }] } } },
     ])
@@ -64,7 +65,13 @@ test('schemas through24 reject new search forms at owned paths and in the immuta
 });
 test('normal dictionary words remain valid and the migration changes only schemaVersion', async (t) => {
   const r = await readyScenario(t, (pack) => {
-    for (const name of ['searches', 'recovery', 'search-recovery', 'scoutPrepareAllowed']) {
+    for (const name of [
+      'searches',
+      'recovery',
+      'search-recovery',
+      'scoutPrepareAllowed',
+      'immediateSkillReset',
+    ]) {
       pack.globals.push({ name, type: 'string', value: name });
       pack.definitions[0].variables.push({ name, type: 'string', value: name });
     }

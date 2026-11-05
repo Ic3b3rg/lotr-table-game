@@ -204,6 +204,7 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 ]);
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
+  immediateSkillReset: z.literal(true).optional(),
   groupRules: z.literal('source-live-groups-v1').optional(),
   combat: CombatPhysicalContextSchema.optional(),
   deferFrontier: z.literal('combat-frontier-v1').optional(),

@@ -27,7 +27,9 @@ export function validateSearches(pack: ScenarioPack) {
       d.states.some((s) =>
         s.actions.some(
           (a) =>
-            a.op === 'physical' && a.program.children.some((c) => c.kind === 'search-recovery'),
+            a.op === 'physical' &&
+            ((a.program.profile === 'source-fronts-v1' && a.program.immediateSkillReset) ||
+              a.program.children.some((c) => c.kind === 'search-recovery')),
         ),
       ),
     ),

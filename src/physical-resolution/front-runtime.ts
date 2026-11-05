@@ -1979,7 +1979,13 @@ class FrontReplay {
       if (attack) this.spendAttackSlots(hero, attack, successes, addedHits, `${path}/slots`);
       this.r.revealed.pop();
       h.discard.push(...cards);
-      if (this.p.boons && !h.deck.length && h.discard.length) {
+      if (
+        (this.p.boons ||
+          (this.run.program.profile === 'source-fronts-v1' &&
+            this.run.program.immediateSkillReset)) &&
+        !h.deck.length &&
+        h.discard.length
+      ) {
         h.deck = this.random(`${path}/after-test-refill`, h.discard, h.discard.length);
         h.discard = [];
       }

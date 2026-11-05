@@ -99,6 +99,9 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
+    ...(searchDefinition(sc.pack, sc.instances.find((i) => i.id === attempt.instanceId)!.definition)
+      ? { immediateSkillReset: true as const }
+      : {}),
     ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),

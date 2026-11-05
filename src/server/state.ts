@@ -333,7 +333,7 @@ function hasFirstCombatForms(raw: object) {
   );
 }
 function hasSearchForms(raw: object) {
-  type Program = { children?: { kind?: string }[] };
+  type Program = { immediateSkillReset?: unknown; children?: { kind?: string }[] };
   type SearchScenario = {
     pack?: {
       manifest?: { searches?: unknown };
@@ -363,7 +363,8 @@ function hasSearchForms(raw: object) {
     };
   };
   const seed = value.physical?.cycle?.seed;
-  const program = (p?: Program) => p?.children?.some((c) => c.kind === 'search-recovery');
+  const program = (p?: Program) =>
+    p?.immediateSkillReset !== undefined || p?.children?.some((c) => c.kind === 'search-recovery');
   return (
     [value.scenario, seed?.scenario].some(
       (sc) =>
