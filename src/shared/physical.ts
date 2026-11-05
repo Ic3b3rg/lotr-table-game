@@ -12,6 +12,7 @@ import { ContentIdSchema } from './catalog';
 import { LastStandViewSchema } from './last-stand';
 import { StatSchema } from './skill-tests';
 import { ScenarioTitleGrantSchema } from './scenario-title';
+import { ItemGrantSchema } from './item-inventory';
 
 export const SourceTestViewSchema = z.strictObject({
   heroId: ContentIdSchema,
@@ -93,6 +94,12 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('scenario-item'),
+    hero: slot,
+    grant: ItemGrantSchema,
+    message: z.string().min(1).max(20000),
+  }),
   z.strictObject({
     kind: z.literal('scenario-title'),
     hero: slot,
@@ -300,6 +307,7 @@ export const PhysicalResultSchema = z.strictObject({
   kind: z.enum([
     'inspiration',
     'scenario-title',
+    'scenario-item',
     'attack-test',
     'pay-attack-grant',
     'last-stand-one',
@@ -354,6 +362,18 @@ export const PhysicalParentSchema = z.strictObject({
   results: z.array(PhysicalResultSchema).max(32),
 });
 export const PhysicalViewSchema = z.strictObject({
+  inventory: z
+    .array(
+      z.strictObject({
+        copy: z.string().min(1).max(120),
+        cardId: ContentIdSchema,
+        heroId: ContentIdSchema.nullable(),
+        remaining: z.int().nonnegative().nullable(),
+        capacity: z.int().min(1).max(3),
+      }),
+    )
+    .max(1)
+    .optional(),
   nextShadow: z
     .strictObject({ enabled: z.boolean(), reason: z.string().max(2000).nullable() })
     .optional(),

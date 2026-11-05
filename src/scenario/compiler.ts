@@ -53,6 +53,7 @@ const CompilationSchema = z.strictObject({
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -61,6 +62,25 @@ const CompilationSchema = z.strictObject({
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  const items = pack.manifest.items;
+  invariant(
+    items ? input.itemsCertificate?.instructionHash === digest(items) : !input.itemsCertificate,
+    'Inventario assente o non attestato.',
+  );
+  if (items) {
+    const p = pack.manifest.prefabs.find((p) => p.source === items.prefab),
+      c = certificates.find((c) => c.source === p?.fsmSource);
+    invariant(
+      c &&
+        c.objectHash === items.sourceObjectHash &&
+        c.lifecycleHash === items.lifecycleHash &&
+        digest(c) === items.sourceCertificateHash &&
+        c.states.length === 9 &&
+        c.states.reduce((n, s) => n + s.actions.length, 0) === 10 &&
+        !c.deferredEdges.length,
+      'Closure inventario completa non attestata.',
+    );
+  }
   const base = pack.manifest.baseProducts;
   invariant(
     base

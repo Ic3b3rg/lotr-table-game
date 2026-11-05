@@ -23,6 +23,7 @@ import { validateBoonArtifact } from './boon-program';
 import { boonAvailability, boonAcquisitionProblems, validateBoonCustody } from './boon-stock';
 import { boonProgramProblems } from './boon-continuation';
 import { validateScenarioTitle } from './scenario-title';
+import { validateItemGrant } from './item-inventory';
 import type { ScenarioTitleGrant } from '../shared/scenario-title';
 import { AttackModifierSchema } from '../shared/combat';
 import type { BoonKind } from '../shared/boons';
@@ -440,7 +441,12 @@ class FrontReplay {
   ): { copy: string; effect: PolicyEffect; effectIndex: number }[] {
     if (!this.lastStand.active(hero)) return [];
     const h = resources.preparation.heroes[hero]!,
-      sources = [h.heroId, ...h.prepared, ...h.itemCopies];
+      sources = [
+        h.heroId,
+        ...h.prepared,
+        ...h.itemCopies,
+        ...(resources.itemCustody ?? []).filter((c) => c.heroId === h.heroId).map((c) => c.copy),
+      ];
     const policies = sources.flatMap((copy) => {
       if (resources.depletion.some((d) => d.copy === copy && d.remaining === 0)) return [];
       const id = copy === h.heroId ? copy : definitionId(copy);
@@ -730,7 +736,12 @@ class FrontReplay {
   private eligibleTrinkets(hero: number, other = false, resources = this.resources) {
     return resources.preparation.heroes.flatMap((h, n) =>
       this.lastStand.active(n) && (other ? n !== hero : n === hero)
-        ? h.itemCopies
+        ? [
+            ...h.itemCopies,
+            ...(resources.itemCustody ?? [])
+              .filter((c) => c.heroId === h.heroId)
+              .map((c) => c.copy),
+          ]
             .filter(
               (c) =>
                 this.catalog.items.find((i) => i.id === definitionId(c))?.slot === 'trinket' &&
@@ -1380,7 +1391,8 @@ class FrontReplay {
                     },
                   ];
                 if (
-                  e.op === 'fear-facedown' &&
+                  (e.op === 'fear-facedown' || (e.op === 'fear-facedown-only' && self)) &&
+                  !used.has(id) &&
                   remaining.fear &&
                   this.resources.depletion.some((d) => d.copy === copy && d.remaining > 0)
                 )
@@ -1392,7 +1404,10 @@ class FrontReplay {
                       e,
                       n: 1,
                       families: ['fear'] as Family[],
-                      cost: 'Consuma 1 segnalino del monile',
+                      cost:
+                        e.op === 'fear-facedown-only'
+                          ? 'Consuma 1 segnalino: subisci tutte le paure coperte'
+                          : 'Consuma 1 segnalino del monile',
                     },
                   ];
                 return [];
@@ -1420,6 +1435,12 @@ class FrontReplay {
           );
           if (selected === 'close') break;
           const offer = offers.find((o) => o.id === selected)!;
+          if (offer.e.op === 'fear-facedown-only') {
+            this.resources.depletion.find((d) => d.copy === offer.copy)!.remaining--;
+            faceFear = 'facedown';
+            used.add(offer.id);
+            continue;
+          }
           const available = {
             damage:
               !cannotDamage &&
@@ -2199,7 +2220,13 @@ class FrontReplay {
       );
       validatePhysicalProgram(run.program, this.p.heroes.length);
       for (const child of run.program.children)
-        if (child.kind === 'scenario-title') {
+        if (child.kind === 'scenario-item') {
+          invariant(
+            this.p.version === 3 && run.lastStandRules && run.spatial,
+            'Oggetto senza causa scenario e consumer corrente.',
+          );
+          validateItemGrant(this.catalog, this.artifact, child.grant);
+        } else if (child.kind === 'scenario-title') {
           invariant(
             this.p.version === 3 && run.lastStandRules && run.spatial,
             'Acquisizione titolo senza causa scenario e consumer corrente.',
@@ -2285,7 +2312,7 @@ class FrontReplay {
           'Risorse iniziali senza conservazione della compagnia.',
         );
         invariant(
-          !context.depletion.length && !context.boons.length,
+          !context.depletion.length && !context.boons.length && !context.itemCustody?.length,
           'Acquisizioni di accessori e benefici richiedono un consumer fonte dedicato.',
         );
       }
@@ -2339,12 +2366,63 @@ class FrontReplay {
           if (
             !this.lastStand.active(child.hero) &&
             !collective &&
-            child.kind !== 'scenario-title'
+            child.kind !== 'scenario-title' &&
+            child.kind !== 'scenario-item'
           ) {
             parent.completedChildren++;
             continue;
           }
           switch (child.kind) {
+            case 'scenario-item': {
+              validateItemGrant(this.catalog, this.artifact, child.grant);
+              const custody = (this.resources.itemCustody ??= []);
+              if (custody.some((c) => c.modelId === child.grant.model.modelId)) break;
+              invariant(
+                !custody.length && this.p.heroes.length >= 2,
+                'Inventario non ammesso o titolo senza consumer.',
+              );
+              const copy = `${child.grant.cardId}:1`,
+                owner = this.hero(child.hero).heroId;
+              invariant(
+                !this.resources.depletion.some((d) => d.copy === copy) &&
+                  !this.resources.preparation.heroes.some((h) => h.itemCopies.includes(copy)),
+                'Copia oggetto già assegnata.',
+              );
+              const entry = {
+                copy,
+                cardId: child.grant.cardId,
+                modelId: child.grant.model.modelId,
+                heroId: owner,
+                source: run.source.effectId,
+              };
+              custody.push(entry);
+              this.resources.depletion.push({ copy, remaining: child.grant.depletion });
+              const recipients = this.p.heroes.flatMap((h, n) =>
+                this.lastStand.active(n) && (n === child.hero || this.nearby(child.hero, n))
+                  ? [
+                      {
+                        id: h.heroId,
+                        label: `${this.catalog.heroes.find((d) => d.id === h.heroId)!.name.text} · ottiene ed equipaggia l’accessorio`,
+                      },
+                    ]
+                  : [],
+              );
+              invariant(recipients.length > 0, 'Nessun eroe può ottenere l’oggetto.');
+              const choice = this.ask(child.hero, `${path}/gain-item`, {
+                mode: 'choose',
+                title: child.message,
+                options: recipients,
+                minimum: 1,
+                maximum: 1,
+                remaining: empty(),
+              });
+              invariant(
+                choice.kind === 'physical-choice' && recipients.some((o) => o.id === choice.option),
+                'Destinatario oggetto non vicino o non attivo.',
+              );
+              entry.heroId = choice.option;
+              break;
+            }
             case 'scenario-title':
               invariant(this.s.lastStand, 'Titolo senza custodia fisica inizializzata.');
               if (this.s.lastStand.titles.some((t) => t.cardId === child.grant.cardId)) {

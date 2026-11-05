@@ -1,3 +1,4 @@
+import { validateItemStartup } from '../scenario/item-capability';
 import { validateCombatParty } from '../combat/party';
 import { validatePreparedPolicies } from '../scenario/prepared-effects';
 import { definitionId } from '../shared/preparation';
@@ -115,6 +116,15 @@ export function applyScenario(
       }
     }
     requireLinkedTitle(parsed.pack, physical?.raw);
+    try {
+      validateItemStartup(state, parsed.pack, physical?.fronts);
+    } catch {
+      throw new ApiError(
+        409,
+        'ITEM_SOURCE_REQUIRED',
+        'L’oggetto richiede carta, quantità, inventario e capacità verificati prima dell’avvio. Nessuna modifica è stata applicata.',
+      );
+    }
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
     answerCampaign(state, playerId, command);

@@ -9,7 +9,11 @@ import type { PhysicalCard } from '../physical-content/catalog';
 import { boonAvailability } from './boon-stock';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
-export function physicalView(p: PhysicalState | null, original = false): PhysicalView | null {
+export function physicalView(
+  p: PhysicalState | null,
+  original = false,
+  ended = false,
+): PhysicalView | null {
   if (!p) return null;
   const up = new Set(p.snapshot.resolution?.faceup ?? []);
   const view: PhysicalView = {
@@ -25,6 +29,20 @@ export function physicalView(p: PhysicalState | null, original = false): Physica
     active: structuredClone(p.snapshot.active),
     parents: structuredClone(p.snapshot.parents),
   };
+  const resources = p.snapshot.resolution?.resources;
+  if (resources?.itemCustody)
+    view.inventory = resources.itemCustody.map((c) => {
+      const effect = p
+        .fronts!.artifact.policies.find((p) => p.id === c.cardId)!
+        .effects.find((e) => e.op === 'fear-facedown-only')!;
+      return {
+        copy: c.copy,
+        cardId: c.cardId,
+        heroId: ended ? null : c.heroId,
+        remaining: ended ? null : resources.depletion.find((d) => d.copy === c.copy)!.remaining,
+        capacity: effect.op === 'fear-facedown-only' ? effect.depletion : 1,
+      };
+    });
   const boonCards = (p.raw as { cards: PhysicalCard[] }).cards.filter(
     (c) => c.family === 'boon' && c.name.status === 'verified' && c.text.status === 'verified',
   );

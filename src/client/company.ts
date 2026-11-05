@@ -1,3 +1,4 @@
+import { createInventory } from './inventory';
 import { createCombat } from './combat';
 import { createScenario } from './scenario';
 import { createConclusion } from './conclusion';
@@ -19,6 +20,7 @@ import type { GenerationOffer } from '../shared/generated-map';
 export function createCompany(sync: () => Promise<void>) {
   const reader = createCardReader();
   const scenario = createScenario(sync, reader);
+  const inventory = createInventory(reader);
   const conclusion = createConclusion(sync, reader);
   const combat = createCombat(sync, reader);
   const preparation = createPreparation(sync, reader);
@@ -113,6 +115,7 @@ export function createCompany(sync: () => Promise<void>) {
         catalog,
         scenarioOffer,
       );
+      inventory.update(session, catalog);
       conclusion.update(session, location.pathname === '/join' ? player : null, catalog);
       if (session.scenario) {
         element('#rounds').hidden = session.scenario.phase !== 'action';

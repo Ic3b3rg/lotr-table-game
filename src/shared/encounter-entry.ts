@@ -14,7 +14,19 @@ export function encounterEntry(
   while (d && index !== undefined && !visited.has(index)) {
     visited.add(index);
     const s = d.states.find((s) => s.index === index);
-    if (!s || s.actions.length !== 1) return null;
+    const modal = pack.manifest.items?.modal;
+    const paired =
+      s &&
+      modal &&
+      pack.manifest.prefabs.some(
+        (p) => p.source === pack.manifest.items?.prefab && p.fsmSource === d.source,
+      ) &&
+      modal?.state === s?.index &&
+      s.actions.length === 2 &&
+      s.actions[0]?.index === modal.owner &&
+      s.actions[1]?.index === modal.waiter &&
+      s.actions[1]?.op === 'modalWait';
+    if (!s || (s.actions.length !== 1 && !paired)) return null;
     const a = s.actions[0]!;
     if (a.op === 'confirm' || a.op === 'choice') return { state: s.index, action: a };
     if (a.op !== 'branchBool') return null;

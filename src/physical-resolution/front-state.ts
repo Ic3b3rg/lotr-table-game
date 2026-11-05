@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ItemCustodySchema } from '../shared/item-inventory';
 import { BoonCustodySchema } from '../shared/boons';
 import { AttackTestViewSchema } from '../shared/combat';
 import { CatalogSchema } from '../shared/catalog';
@@ -7,6 +8,7 @@ import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
 export const FrontResourcesSchema = z.strictObject({
   boonCustody: BoonCustodySchema.optional(),
+  itemCustody: ItemCustodySchema.optional(),
   preparation: PreparationSchema,
   combatUses: z
     .array(

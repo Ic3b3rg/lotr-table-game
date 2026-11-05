@@ -137,6 +137,28 @@ export function createCardReader() {
         target,
       );
     },
+    inventoryItem(card: ItemDefinition, target: HTMLElement, owner: string, consumption: string) {
+      show(
+        card.name.text,
+        [
+          text(
+            'p',
+            `Accessorio · rango ${['', 'I', 'II', 'III'][card.rank]} · proprietà della Compagnia`,
+            'card-type',
+          ),
+          text('p', owner, 'company-hero-owner'),
+          text('p', consumption, 'company-help'),
+          text('p', card.text.text, 'card-full-text'),
+          text(
+            'p',
+            'Consumare rimuove un segnalino disponibile. La capacità si usa nella finestra indicata sulla carta; non richiede un’azione salvo istruzione esplicita. Durante questa avventura l’accessorio resta all’eroe che lo ha ottenuto.',
+            'company-help',
+          ),
+          sourceNotes([card.name, card.text], card.notes),
+        ],
+        target,
+      );
+    },
     card(card: Card, target: HTMLElement) {
       const summary =
         'rank' in card

@@ -199,6 +199,7 @@ export const PolicyEffectSchema = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('after-prepare-flip-fear') }),
   z.strictObject({ op: z.literal('after-guard-inspiration') }),
   z.strictObject({ op: z.literal('after-test-spend-inspiration') }),
+  z.strictObject({ op: z.literal('fear-facedown-only'), depletion: z.int().min(1).max(3) }),
   z.strictObject({ op: z.literal('fear-facedown'), depletion: z.int().min(1).max(3) }),
   z.strictObject({ op: z.literal('ignore-card-resource-loss') }),
 ]);

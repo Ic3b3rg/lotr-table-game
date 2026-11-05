@@ -237,6 +237,13 @@ export function applyConclusionAction(
       : [];
     if (sc.pack.manifest.followup) reset.push(sc.pack.manifest.followup.enemyPointsBinding);
     c.campaign = {
+      ...(sc.pack.manifest.items
+        ? {
+            inventory: (state.physical?.snapshot.resolution?.resources?.itemCustody ?? []).map(
+              ({ copy, cardId, modelId }) => ({ copy, cardId, modelId }),
+            ),
+          }
+        : {}),
       heroes: state.preparation!.heroes.map((h) => ({
         heroId: h.heroId,
         roleId: h.roleId,

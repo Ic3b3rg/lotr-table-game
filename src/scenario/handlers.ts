@@ -3,10 +3,11 @@ import { invariant } from '../map-freeze/validate';
 
 /** Source types whose bounded semantics have an explicit IR handler. */
 const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op'][]> = {
-  'FFG.JIME.Actions.DisplayMessageCancelConfirm': ['confirm', 'sourceTest'],
+  'FFG.JIME.Actions.DisplayMessageCancelConfirm': ['confirm', 'sourceTest', 'modalWait'],
   'FFG.JIME.Actions.DisplayMessageChallenge': 'challenge',
   'FFG.JIME.Actions.DisplayMessageMultipleChoice': 'choice',
   'FFG.JIME.OwnsProducts': ['nullProduct', 'ownsProducts'],
+  'FFG.JIME.Actions.AddItemToInventory': 'addItem',
   'FFG.JIME.Actions.AddLore': 'lore',
   'FFG.JIME.Actions.AwardXP': 'awardXP',
   'FFG.JIME.Actions.SetNextAdventure': 'nextAdventure',

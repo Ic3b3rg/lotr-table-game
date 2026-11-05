@@ -6,6 +6,7 @@ import { CopyIdSchema } from './preparation';
 import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
 import { ScenarioTitleGrantSchema } from './scenario-title';
+import { ItemGrantSchema } from './item-inventory';
 import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
 import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
 import { NegatedSufferingSchema } from './negated-suffering';
@@ -169,6 +170,52 @@ const BaseProductsCapabilitySchema = z.strictObject({
     release: methodEvidence,
   }),
 });
+const ItemsCapabilitySchema = z.strictObject({
+  version: z.literal('source-item-inventory-v1'),
+  prefab: SourceSchema,
+  prefabHash: HashSchema,
+  definitionHash: HashSchema,
+  sourceObjectHash: HashSchema,
+  lifecycleHash: HashSchema,
+  sourceCertificateHash: HashSchema,
+  evidenceHash: HashSchema,
+  ownedProductIds: z.tuple([z.literal(0)]),
+  product: productModel(0),
+  initialInventory: z.array(z.never()).length(0),
+  baseSkillModelIds: z.array(Int32Schema).min(1).max(200),
+  collectorSkillId: Int32Schema,
+  titleModel: z.strictObject({
+    source: SourceSchema,
+    modelId: Int32Schema,
+    objectHash: HashSchema,
+  }),
+  modal: z.strictObject({
+    state: z.int().nonnegative(),
+    owner: z.int().nonnegative(),
+    waiter: z.int().nonnegative(),
+  }),
+  grant: ItemGrantSchema,
+  roundsFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.record(
+    z.enum([
+      'enter',
+      'progress',
+      'title',
+      'titleProgress',
+      'upgrade',
+      'owned',
+      'nonMounts',
+      'skill',
+      'modalUpdate',
+      'modalOpen',
+      'modalClose',
+      'modalCallback',
+      'sequence',
+    ]),
+    methodEvidence,
+  ),
+});
 const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
@@ -203,6 +250,14 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     confirmEvent: z.string().min(1).max(100),
     cancelEvent: z.string().min(1).max(100),
   }),
+  action('modalWait', {
+    text: SourceTextSchema,
+    label: SourceTextSchema,
+    cancelLabel: SourceTextSchema,
+    confirmEvent: z.string().min(1).max(100),
+    cancelEvent: z.string().min(1).max(100),
+  }),
+  action('addItem', { itemModel: SourceSchema, text: SourceTextSchema }),
   action('sourceTest', {
     text: SourceTextSchema,
     stat: StatSchema,
@@ -437,6 +492,7 @@ export const ScenarioPackSchema = z.strictObject({
     lair: LairCapabilitySchema.optional(),
     linked: LinkedCapabilitySchema.optional(),
     baseProducts: BaseProductsCapabilitySchema.optional(),
+    items: ItemsCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -776,6 +832,12 @@ export const ScenarioSchema = z.strictObject({
               }),
             )
             .max(5),
+          inventory: z
+            .array(
+              z.strictObject({ copy: CopyIdSchema, cardId: ContentIdSchema, modelId: Int32Schema }),
+            )
+            .max(1)
+            .optional(),
           sceneGlobals: z.record(z.string(), scalar),
           adventureRules: z.array(z.string().max(1000)).max(100),
           next: z
