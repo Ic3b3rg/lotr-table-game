@@ -84,6 +84,7 @@ export function compileScenarioPack(raw: unknown) {
         c.lifecycleHash === owner.lifecycleHash &&
         digest(c) === owner.certificateHash &&
         c.states.length === (n ? 12 : 8) &&
+        new Set(c.states.map((s) => s.index)).size === c.states.length &&
         c.states.reduce((sum, s) => sum + s.actions.length, 0) === (n ? 12 : 9) &&
         c.states.every(
           (s) =>
@@ -100,6 +101,19 @@ export function compileScenarioPack(raw: unknown) {
           )),
       'Inventario intero dei segnalini minaccia incompleto o ramo escluso non attestato.',
     );
+    if (n) {
+      const excluded = c.states.filter((s) => owner.excludedStates.includes(s.index));
+      invariant(
+        excluded.length === 3 &&
+          excluded.every((s) => s.actions.length === 1 && s.actions[0]?.index === 0) &&
+          [
+            'FFG.JIME.Actions.DisplayMessage',
+            'FFG.JIME.Actions.DisplayMessagePlayerChoice',
+            'FFG.JIME.Actions.ModifyCorruption',
+          ].every((type) => excluded.some((s) => s.actions[0]?.type === type)),
+        'Azioni fonte del ramo NULL escluso omesse o sostituite.',
+      );
+    }
   }
   const searches = pack.manifest.searches;
   invariant(

@@ -76,3 +76,21 @@ test('resigned programs cannot reinterpret null, admit corruption, swap tests or
     assert.throws(() => compileScenarioPack(i));
   }
 });
+
+test('resigned whole certificates cannot hide a missing excluded state behind a duplicate or replace its source action class', () => {
+  for (const edit of [
+    (c) => {
+      c.states[c.states.length - 1] = structuredClone(c.states.at(-2));
+    },
+    (c) => {
+      c.states.at(-1).actions[0].type = 'FFG.Common.Actions.FinishFSM';
+    },
+  ]) {
+    const i = threatTokenCompilation(),
+      c = i.certificates.at(-1);
+    edit(c);
+    i.pack.manifest.threatTokens.encounters[1].certificateHash = hash(c);
+    i.threatTokensCertificate.instructionHash = hash(i.pack.manifest.threatTokens);
+    assert.throws(() => compileScenarioPack(i));
+  }
+});
