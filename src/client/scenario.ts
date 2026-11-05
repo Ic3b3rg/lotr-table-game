@@ -131,12 +131,13 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         ? 'Attacchi, provocazioni e attivazioni dell’Ombra usano carte, capacità e conseguenze reali. Seguite le richieste fino alle Scoperte e al prossimo turno. L’avventura completa è ancora in sviluppo.'
         : 'Attacchi e provocazioni usano carte, capacità e conseguenze reali. Le successive attivazioni dell’Ombra e il seguito dell’avventura richiedono ancora i loro effetti.';
     if (sc?.pack.manifest.clues)
-      element('#scenario-limit').textContent =
-        'I quattro incontri che custodiscono gli indizi sono giocabili. Ogni traccia aggiorna la missione e rivela i luoghi previsti. Seguite le richieste fino al ritorno al turno. L’interazione finale del covo e la conclusione dell’avventura richiedono ancora i loro effetti.';
+      element('#scenario-limit').textContent = sc.pack.manifest.lair
+        ? 'Seguite gli indizi fino al covo. Cercate un passaggio, completate le prove con le carte e conservate il progresso fra i tentativi. Il successo conduce ai premi e al primo campo.'
+        : 'I quattro incontri che custodiscono gli indizi sono giocabili. Ogni traccia aggiorna la missione e rivela i luoghi previsti. Seguite le richieste fino al ritorno al turno. L’interazione finale del covo e la conclusione dell’avventura richiedono ancora i loro effetti.';
     if (sc?.pack.manifest.threatContinuations)
       element('#scenario-limit').textContent =
         (sc.pack.manifest.clues ? 'Gli incontri degli indizi restano giocabili. ' : '') +
-        'Le soglie abilitate seguono messaggi e collocazioni fino al ritorno al round oppure alla conclusione per minaccia. I gruppi appena collocati attendono la prossima Ombra. Altri incontri, benefici non disponibili e vittoria conservano i propri limiti.';
+        `Le soglie abilitate seguono messaggi e collocazioni fino al ritorno al round oppure alla conclusione per minaccia. I gruppi appena collocati attendono la prossima Ombra. Altri incontri e benefici non disponibili conservano i propri limiti.${sc.pack.manifest.lair ? '' : ' La vittoria attende il proprio seguito.'}`;
     refreshActions();
   }
   agreed.oninput = () => {

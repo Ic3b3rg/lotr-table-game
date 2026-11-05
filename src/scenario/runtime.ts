@@ -1,5 +1,10 @@
 import { HANDOFF_TEXT } from '../shared/scenario';
-import { applyConclusionAction } from './conclusion';
+import {
+  applyConclusionAction,
+  beginSourceVictory,
+  advanceConclusion,
+  answerCampaign,
+} from './conclusion';
 import { playableScenarioPrefab } from '../shared/clues';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
@@ -276,10 +281,12 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
       };
     try {
       start(work, probe);
+      if (work.scenario!.pack.manifest.lair) advanceConclusion(work);
       for (let n = 0; work.scenario!.pending; n++) {
         invariant(n < 2000, 'Continuazione fonte ciclica.');
         const s = work.scenario!,
           q = s.pending!;
+        if (s.conclusion?.stage === 'camp') break;
         invariant(
           [
             'message',
@@ -289,6 +296,8 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
             'exploration-intro',
             'exploration-outro',
             'choice',
+            'campaign-map',
+            'campaign-story',
           ].includes(q.kind),
           'Richiesta fuori dalla closure degli indizi.',
         );
@@ -299,25 +308,24 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
                 event: q.options![probeChoice(probe, q.options!.length)]!.event,
               }
             : { kind: 'ack' as const };
-        resumeScenario(
-          work,
-          q.actorPlayerId ?? work.players[0]!.id,
-          {
-            type: 'SCENARIO_INPUT',
-            requestId: 'preflight-source-continuation-only',
-            generation: work.generation,
-            expectedRevision: work.revision,
-            scenarioId: s.id,
-            packFingerprint: s.packFingerprint,
-            projectionFingerprint: s.projectionFingerprint,
-            pendingId: q.id,
-            sourceFingerprint: q.fingerprint,
-            heroId: q.heroId,
-            input,
-          },
-          undefined,
-          probe,
-        );
+        const command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }> = {
+          type: 'SCENARIO_INPUT',
+          requestId: 'preflight-source-continuation-only',
+          generation: work.generation,
+          expectedRevision: work.revision,
+          scenarioId: s.id,
+          packFingerprint: s.packFingerprint,
+          projectionFingerprint: s.projectionFingerprint,
+          pendingId: q.id,
+          sourceFingerprint: q.fingerprint,
+          heroId: q.heroId,
+          input,
+        };
+        if (s.conclusion && s.conclusion.stage !== 'conclusion')
+          answerCampaign(work, q.actorPlayerId ?? work.players[0]!.id, command);
+        else
+          resumeScenario(work, q.actorPlayerId ?? work.players[0]!.id, command, undefined, probe);
+        if (s.pack.manifest.lair) advanceConclusion(work);
       }
       invariant(
         !work.scenario!.tasks.length &&
@@ -337,7 +345,13 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
     }
   }
 }
-function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: SourceProbe) {
+function execute(
+  state: State,
+  i: ScenarioInstance,
+  a: ScenarioAction,
+  probe?: SourceProbe,
+  requestId?: string,
+) {
   const sc = state.scenario!,
     p = projection(state);
   if (
@@ -388,6 +402,10 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: S
     return;
   }
   switch (a.op) {
+    case 'endGame':
+      invariant(requestId, 'Segnale del covo senza comando fonte.');
+      beginSourceVictory(state, i.id, actionKey(i, a.index), requestId);
+      break;
     case 'confirm':
       if (i.kind === 'exploration') {
         complete(i, a.index);
@@ -650,7 +668,13 @@ function execute(state: State, i: ScenarioInstance, a: ScenarioAction, probe?: S
   }
   complete(i, a.index);
 }
-function runInstance(state: State, i: ScenarioInstance, synchronous = false, probe?: SourceProbe) {
+function runInstance(
+  state: State,
+  i: ScenarioInstance,
+  synchronous = false,
+  probe?: SourceProbe,
+  requestId?: string,
+) {
   const sc = state.scenario!;
   let progress = false;
   for (let n = 0; n < 1000; n++) {
@@ -715,7 +739,7 @@ function runInstance(state: State, i: ScenarioInstance, synchronous = false, pro
         action: a.index,
         op: a.op,
       });
-      execute(state, i, a, probe);
+      execute(state, i, a, probe, requestId);
       progress = true;
       if (i.entry !== entry || i.stopped) break;
     }
@@ -1079,14 +1103,23 @@ function advanceTask(state: State) {
   sc.tasks.pop();
   return true;
 }
-function pump(state: State, probe?: SourceProbe) {
+function pump(state: State, probe?: SourceProbe, requestId?: string) {
   const sc = state.scenario!;
   for (let n = 0; n < 2000; n++) {
     let progress = false;
     for (const i of sc.instances.filter((i) => !sc.conclusion || i.kind === 'principal'))
-      progress = runInstance(state, i, false, probe) || progress;
+      progress = runInstance(state, i, false, probe, requestId) || progress;
     if (sc.pending) return;
-    if (sc.conclusion) return;
+    if (sc.conclusion) {
+      if (sc.conclusion.outcome === 'victory') {
+        const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active);
+        if (attempt && sc.instances.find((i) => i.id === attempt.instanceId)!.stopped) {
+          attempt.returned = true;
+          sc.play!.active = null;
+        }
+      }
+      return;
+    }
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
       if (
@@ -1469,7 +1502,7 @@ export function resumeScenario(
       complete(i, q.action);
     }
   }
-  pump(state, probe);
+  pump(state, probe, command.requestId);
 }
 
 export function exploreScenario(
@@ -1555,7 +1588,11 @@ export function interactScenario(
       'INTERACTION_RESOURCE',
       `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
     );
-  if (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) && !probe)
+  if (
+    (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
+      sc.pack.manifest.lair?.prefab === i!.prefab) &&
+    !probe
+  )
     preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
@@ -1577,5 +1614,5 @@ export function interactScenario(
     receivers: [i!.id],
   });
   invariant(send(sc, i!, 'NODE CLICKED'), 'Handler incontro non compilato.');
-  pump(state, probe);
+  pump(state, probe, c.requestId);
 }

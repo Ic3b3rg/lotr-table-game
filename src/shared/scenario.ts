@@ -92,6 +92,17 @@ export const AdventureFailureCapabilitySchema = z.strictObject({
       .max(1000),
   }),
 });
+const LairCapabilitySchema = z.strictObject({
+  version: z.literal('source-lair-victory-v1'),
+  prefab: SourceSchema,
+  event: z.string().min(1).max(100),
+  evidenceHash: HashSchema,
+  definitionHash: HashSchema,
+  principalHash: HashSchema,
+  cluesFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.strictObject({ end: methodEvidence, challenge: methodEvidence, sum: methodEvidence }),
+});
 const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
@@ -165,6 +176,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('awardXP', { amount: z.int().min(0).max(99) }),
   action('nextAdventure', { source: SourceSchema, id: Int32Schema }),
   action('proceed', {}),
+  action('endGame', { success: z.literal(true) }),
   action('physical', { text: SourceTextSchema, program: PhysicalProgramSchema }),
   action('message', {
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
@@ -341,6 +353,7 @@ export const ScenarioPackSchema = z.strictObject({
       .strictObject({ version: z.literal('source-boons-v1'), fingerprint: HashSchema })
       .optional(),
     failure: AdventureFailureCapabilitySchema.optional(),
+    lair: LairCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -605,11 +618,27 @@ const ShadowExplorationAttemptSchema = z.strictObject({
 export const ScenarioSchema = z.strictObject({
   conclusion: z
     .strictObject({
-      version: z.literal('source-adventure-failure-v1'),
+      version: z.enum(['source-adventure-failure-v1', 'source-lair-victory-v1']),
       id: z.uuid(),
-      outcome: z.literal('failure'),
-      timing: z.enum(['no-active-heroes', 'shadow-start', 'threat-start', 'threat-increase']),
+      outcome: z.enum(['failure', 'victory']),
+      timing: z.enum([
+        'no-active-heroes',
+        'shadow-start',
+        'threat-start',
+        'threat-increase',
+        'source-end',
+      ]),
       cause: z.union([
+        z.strictObject({
+          kind: z.literal('source-victory'),
+          instanceId: z.string().min(1).max(200),
+          effectId: z.string().min(1).max(300),
+          instructionHash: HashSchema,
+          attemptId: z.uuid(),
+          heroId: ContentIdSchema,
+          playerId: z.uuid(),
+          controllerHash: HashSchema,
+        }),
         ThreatCauseSchema,
         z.strictObject({
           runId: z.uuid(),

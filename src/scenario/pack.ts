@@ -11,7 +11,8 @@ import { validateThreatCapability } from './threat-capability';
 import { validateLiveGroups } from './live-groups';
 import { validateClueCapability } from './clue-capability';
 import { playableScenarioPrefab } from '../shared/clues';
-import { validateFailureCapability, isFailureReward } from './failure-capability';
+import { validateFailureCapability, isConclusionReward } from './failure-capability';
+import { validateLairCapability, isLairClueReward } from './lair-capability';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -20,6 +21,7 @@ export function parseScenarioPack(raw: unknown) {
     'Manifest originale incompleto o estraneo.',
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
+  validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
   const exploration = pack.manifest.exploration;
@@ -307,10 +309,10 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             original &&
               ((a.op === 'confirm' && d.source === pack.manifest.exploration?.definition) ||
-                (a.op === 'lore' && isFailureReward(pack, d.source, s.index)) ||
+                (a.op === 'lore' && isConclusionReward(pack, d.source, s.index)) ||
                 (a.op === 'lore' &&
                   pack.manifest.clues &&
-                  (d.source === pack.principal ||
+                  ((d.source === pack.principal && isLairClueReward(pack, s.index)) ||
                     pack.manifest.prefabs.some(
                       (p) =>
                         p.source === pack.manifest.clues!.fort.prefab && p.fsmSource === d.source,

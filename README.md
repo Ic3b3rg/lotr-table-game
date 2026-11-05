@@ -135,6 +135,36 @@ separatamente. Questo incremento arriva al primo turno; l'intera avventura
 resta nel perimetro di #33. Le sessioni precedenti conservano il percorso
 dimostrativo descritto sotto, comprese le sue conferme manuali dell'Ombra.
 
+## Covo e primo campo nei nuovi avvii
+
+Un pacchetto privato che comprende l’interazione certificata del covo permette
+ora di cercare il passaggio e raggiungere la vittoria e il primo campo.
+Questa capacità deve essere presente prima di avviare l’avventura: sostituire
+un file sul PC conserva il blocco di una partita già iniziata.
+
+Con l’eroe di turno nella casella del covo, ispezionate il segnalino.
+Chiudere l’ispezione è gratuito; confermare consuma un’azione e completa
+le provocazioni e i costi delle carte attive. Il proprietario risolve la
+prova con le carte rivelate e le conversioni disponibili. Il progresso resta
+salvato dopo un fallimento: un nuovo tentativo può essere continuato da un
+altro eroe e da un altro telefono. Seguite le conseguenze fino al ritorno.
+
+Il successo conduce ai premi e alla destinazione indicata, quindi al campo.
+Gli XP restano nel ruolo che li ha ricevuti, anche per gli eroi sconfitti;
+la Sapienza appartiene alla compagnia. Un partecipante conferma per il gruppo;
+gli altri leggono e attendono. Nel campo ciascun proprietario può scegliere
+il ruolo del proprio eroe. Acquisti, potenziamenti e avventura successiva
+attendono ancora i rispettivi contenuti.
+
+Lo schema corrente è20. L’aggiornamento dei salvataggi precedenti è soltanto
+strutturale: conserva carte, origine, ricevute e richieste senza aggiungere
+capacità. Il software precedente non legge questo nuovo schema; per tornare
+indietro serve una copia precedente. Le quantità dei benefici restano non
+verificate e il loro blocco viene mantenuto. La verifica positiva del covo è
+interamente inventata e non certifica una partita originale completa.
+[Contratto](docs/planning/lair-victory-spec.md) e
+[risultati tecnici](docs/development/lair-victory.md).
+
 ## Carte coperte: prova P0
 
 Il consumer fisico gestisce due mazzi comuni da28 copie, conseguenze coperte,

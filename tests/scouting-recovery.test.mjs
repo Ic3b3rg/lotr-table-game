@@ -109,7 +109,7 @@ test('schema 3 con prova aperta migra su avvio e importazione senza ripescare', 
   const restarted = await startHost({ LOTR_DATA_DIR: host.dataDir });
   t.after(() => restarted.stop());
   const migrated = await readSession(restarted);
-  assert.equal(migrated.schemaVersion, 19);
+  assert.equal(migrated.schemaVersion, 20);
   assert.equal(migrated.scout, null);
   assert.deepEqual(migrated.skillTest, before.skillTest);
   assert.deepEqual(migrated.preparation, before.preparation);
