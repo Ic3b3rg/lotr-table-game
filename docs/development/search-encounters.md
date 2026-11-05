@@ -141,3 +141,7 @@ esplicita; nessun proxy, filtro, reroll o riduzione delle popolazioni.
 Inventario106,108, Scatto, indizi, titoli, vittoria/sconfitta e campo mantengono
 le rispettive capacità. Non sono chiuse89/33/65/57 né certificati il gioco o
 l'avventura completi. Nessun tavolo live del proprietario è dichiarato aggiornato.
+
+## Integrazione del root
+
+Due review fresche senza rilievi, Standards0/Spec0. Il root riproduce fonti/oracle e compilazioni, interi salvataggi/viste/export storici e49snapshot nativi, verifica444casi più72restore e legge cinque immagini. Seconda canonica isolata840/840, exit code0, zero fail/skip/cancel, con tipi/formato/diff/privacy verificati. La prima aveva un HTTP500 in un test storico: non riprodotto in cinque prove mirate e nella ripetizione completa; causa non dichiarata risolta, log conservato e diagnostica aggiunta al solo helper del test. Nessuna modifica di prodotto del root. [Review e limiti](../reviews/2026-11-05-search-encounters.md).57resta null/unverified e156statico/gated.
