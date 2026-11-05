@@ -16,6 +16,7 @@ import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
 import { validateItemCapability } from './item-capability';
+import { validateSearches, searchDefinition } from './searches';
 import {
   validateFirstCombat,
   firstCombatDefinition,
@@ -33,6 +34,7 @@ export function parseScenarioPack(raw: unknown) {
   validateBaseProducts(pack);
   validateItemCapability(pack);
   validateFirstCombat(pack);
+  validateSearches(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -275,7 +277,8 @@ export function parseScenarioPack(raw: unknown) {
           );
         if (a.op === 'message')
           invariant(
-            [a.inspiration, a.consequence, a.sprint, a.boon].filter(Boolean).length <= 1,
+            [a.inspiration, a.consequence, a.sprint, a.boon, a.recovery].filter(Boolean).length <=
+              1,
             'Messaggio con conseguenze concorrenti non compilate.',
           );
         if (
@@ -288,6 +291,7 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             pack.manifest.clues ||
               linkedDefinition(pack, d.source) ||
+              searchDefinition(pack, d.source) ||
               baseProductsDefinition(pack, d.source) ||
               firstCombatDefinition(pack, d.source),
             'Istruzione fuori dalla capacità indizi o collegata congelata.',
@@ -341,7 +345,8 @@ export function parseScenarioPack(raw: unknown) {
             'modalWait',
             'lore',
           ].includes(a.op) ||
-          (a.op === 'message' && (a.consequence || a.inspiration || a.sprint || a.boon))
+          (a.op === 'message' &&
+            (a.consequence || a.inspiration || a.sprint || a.boon || a.recovery))
         )
           invariant(
             original &&
@@ -482,6 +487,11 @@ export function loadScenarioPack(path: string) {
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
   validateFirstCombatBinding(pack, p);
+  if (pack.manifest.searches)
+    invariant(
+      digest(p.context.ownedProductIds) === digest(pack.manifest.searches.ownedProductIds),
+      'Prodotti della ricerca diversi dalla realizzazione.',
+    );
   if (pack.manifest.items)
     invariant(
       digest(p.context.ownedProductIds) === digest(pack.manifest.items.ownedProductIds),

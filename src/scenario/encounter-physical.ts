@@ -10,6 +10,7 @@ import { invariant } from '../map-freeze/validate';
 import { sourceDarknessHeroes } from './darkness';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
 import { liveGroupRules } from './live-groups';
+import { searchDefinition } from './searches';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
 export function encounterProgram(state: State, action: ScenarioAction): PhysicalProgram {
@@ -19,6 +20,8 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   invariant(attempt, 'Istruzione incontro senza attore del padre.');
   const hero = p.heroes.findIndex((h) => h.heroId === attempt.heroId);
   invariant(hero >= 0, 'Attore incontro fuori compagnia.');
+  const searchOwner = sc.instances.find((i) => i.id === attempt.instanceId),
+    isSearch = searchOwner && searchDefinition(sc.pack, searchOwner.definition);
   let children: Extract<PhysicalProgram, { profile: 'source-fronts-v1' }>['children'];
   if (action.op === 'confirm' || action.op === 'choice') {
     const node = sc.instances.find((i) => i.id === attempt.instanceId)!;
@@ -66,7 +69,10 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
         target: action.op === 'sourceTest' ? action.target : null,
       },
     ];
-  else if (action.op === 'message' && action.inspiration)
+  else if (action.op === 'message' && action.recovery) {
+    invariant(isSearch, 'Conseguenza senza owner ricerca.');
+    children = [{ kind: 'search-recovery', hero, effect: action.recovery }];
+  } else if (action.op === 'message' && action.inspiration)
     children = [{ kind: 'inspiration', hero, amount: action.inspiration }];
   else if (action.op === 'message' && action.boon)
     children = [{ kind: 'source-boon', hero, boon: action.boon }];
@@ -92,6 +98,7 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
+    ...(isSearch ? { immediateSkillReset: true as const } : {}),
     ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),

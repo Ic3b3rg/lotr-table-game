@@ -55,6 +55,7 @@ const CompilationSchema = z.strictObject({
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   firstCombatCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  searchesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -64,6 +65,33 @@ export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
   const first = pack.manifest.firstCombat;
+  const searches = pack.manifest.searches;
+  invariant(
+    searches
+      ? input.searchesCertificate?.instructionHash === digest(searches)
+      : !input.searchesCertificate,
+    'Ricerche assenti o non attestate.',
+  );
+  for (const [n, owner] of (searches?.encounters ?? []).entries()) {
+    const p = pack.manifest.prefabs.find((p) => p.source === owner.prefab),
+      d = pack.definitions.find((d) => d.source === p?.fsmSource),
+      c = certificates.find((c) => c.source === d?.source);
+    invariant(
+      c &&
+        d &&
+        c.objectHash === owner.objectHash &&
+        c.lifecycleHash === owner.lifecycleHash &&
+        digest(c) === owner.certificateHash &&
+        c.states.length === 8 + n &&
+        c.states.length === d.states.length &&
+        c.states.reduce((sum, s) => sum + s.actions.length, 0) === 8 + n &&
+        !c.deferredEdges.length &&
+        c.states.every((s) =>
+          d.states.some((t) => t.index === s.index && t.actions.length === s.actions.length),
+        ),
+      'Certificato intero della ricerca incompleto.',
+    );
+  }
   invariant(
     first
       ? input.firstCombatCertificate?.instructionHash === digest(first)

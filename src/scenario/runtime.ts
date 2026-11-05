@@ -8,6 +8,7 @@ import {
 import { playableScenarioPrefab } from '../shared/clues';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
+import { searchDefinition, validateSearches } from './searches';
 import { baseProductsDefinition, validateBaseProducts } from './base-products';
 import { itemDefinition, requireItemCapability } from './item-capability';
 import {
@@ -237,6 +238,9 @@ function messageRequest(
   const explorer = sc.conclusion
     ? undefined
     : sc.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
+  const searchActor = searchDefinition(sc.pack, i.definition)
+    ? sc.play?.attempts.find((a) => a.id === sc.play!.active)
+    : undefined;
   request(state, {
     instanceId: i.id,
     state: i.state,
@@ -244,8 +248,8 @@ function messageRequest(
     action: a.index,
     kind,
     text: a.text,
-    heroId: hero?.heroId ?? explorer?.heroId ?? null,
-    actorPlayerId: hero?.playerId ?? explorer?.playerId ?? null,
+    heroId: hero?.heroId ?? explorer?.heroId ?? searchActor?.heroId ?? null,
+    actorPlayerId: hero?.playerId ?? explorer?.playerId ?? searchActor?.playerId ?? null,
     stage: 'ready',
     tileSource: a.mode === 'tile' ? visible.at(-1)!.source : null,
   });
@@ -401,13 +405,26 @@ function execute(
         sc.play?.attempts.find((a) => a.id === sc.play!.active)?.entryChoice?.state === i.state) ||
       a.op === 'sourceTest' ||
       a.op === 'challenge' ||
-      (a.op === 'message' && (a.consequence || a.inspiration || a.boon)))
+      (a.op === 'message' && (a.consequence || a.inspiration || a.boon || a.recovery)))
   ) {
     invariant(
       state.physical?.version === 3 && state.physical.fronts && state.physical.lastStand,
       'Closure fisica non posseduta.',
     );
     validatePhysicalProgram(encounterProgram(state, a), state.physical.heroes.length);
+    if (
+      a.op === 'message' &&
+      a.recovery &&
+      a.recovery.kind !== 'discard-physical' &&
+      a.recovery.kind !== 'look'
+    ) {
+      const actor = sc.play!.attempts.find((a) => a.id === sc.play!.active)!,
+        hero = state.preparation!.heroes.find((h) => h.heroId === actor.heroId)!;
+      // The count test can move any revealed card into discard before its reward.
+      // Check the whole owned population, including cards not selected by this probe.
+      for (const copy of [...hero.deck, ...hero.discard, ...hero.prepared])
+        requirePreparedCapability(sc.pack, copy);
+    }
     if (a.op === 'message' && a.consequence) {
       const { family, amount } = a.consequence;
       if (probe.supply[family] < amount)
@@ -420,7 +437,7 @@ function execute(
       // choice or hypothetical return may supply a later mandatory message.
       probe.supply[family] -= amount;
     }
-    if (a.op === 'message' && (a.inspiration || a.boon)) {
+    if (a.op === 'message' && (a.inspiration || a.boon || a.recovery)) {
       messageRequest(state, i, a);
       return;
     }
@@ -852,7 +869,7 @@ function execute(
         });
         return;
       }
-      if (a.consequence || a.inspiration || a.boon) {
+      if (a.consequence || a.inspiration || a.boon || a.recovery) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
@@ -1251,7 +1268,7 @@ function advanceTask(state: State) {
       sc.tasks.pop();
       // A resource child can complete without presenting a physical decision.
       // Its source DisplayMessage still owns an acknowledgement before FINISHED.
-      if (a.op === 'message' && (a.inspiration || a.boon)) {
+      if (a.op === 'message' && (a.inspiration || a.boon || a.recovery)) {
         messageRequest(state, owner, a);
         return true;
       }
@@ -2123,6 +2140,14 @@ export function interactScenario(
     );
   }
   if (itemDefinition(sc.pack, i!.definition)) requireItemCapability(state);
+  if (searchDefinition(sc.pack, i!.definition)) {
+    validateSearches(sc.pack);
+    invariant(
+      digest(projection(state).context.ownedProductIds) ===
+        digest(sc.pack.manifest.searches!.ownedProductIds),
+      'Prodotti della ricerca diversi dal freeze.',
+    );
+  }
   const entry = encounterEntry(sc.pack, i!, sc.globals);
   let entryChoice:
     | NonNullable<NonNullable<Scenario['play']>['attempts'][number]['entryChoice']>
@@ -2168,6 +2193,7 @@ export function interactScenario(
       sc.pack.manifest.lair?.prefab === i!.prefab ||
       baseProductsDefinition(sc.pack, i!.definition) ||
       itemDefinition(sc.pack, i!.definition) ||
+      searchDefinition(sc.pack, i!.definition) ||
       linkedDefinition(sc.pack, i!.definition)) &&
     !probe
   ) {

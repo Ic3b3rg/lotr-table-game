@@ -56,7 +56,8 @@ export async function drainFollowup(ready) {
     const s = await readSession(ready.host);
     if (!s.scenario.pending) return s;
     const r = await answerFollowup(ready, s);
-    assert.equal(r.status, 200, await r.text());
+    const body = await r.text();
+    assert.equal(r.status, 200, r.status >= 500 ? `${body}\n${ready.host.diagnostics()}` : body);
   }
   assert.fail('source followup did not return');
 }

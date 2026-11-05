@@ -1560,13 +1560,14 @@ class FrontReplay {
     }
     return cards;
   }
-  private scout(hero: number, count: number, path: string, rally = false) {
+  private scout(hero: number, count: number, path: string, rally = false, prepare = true) {
     this.frame(path, hero, null, 'scout', count, () => {
       const h = this.hero(hero),
         cards = this.reveal(hero, count, path);
       if (!cards.length) return;
       this.r.revealed.push({ heroId: h.heroId, cards: [...cards] });
       const input = this.ask(hero, `${path}/arrange`, {
+        ...(!prepare ? { scoutPrepareAllowed: false as const } : {}),
         ...(this.run.spatial
           ? {
               scoutTopAllowed:
@@ -1575,13 +1576,19 @@ class FrontReplay {
             }
           : {}),
         mode: 'scout',
-        title: `Scoperta ${count}: prepara al massimo una carta e ordina le altre.`,
+        title: prepare
+          ? `Scoperta ${count}: prepara al massimo una carta e ordina le altre.`
+          : `Guarda ${count} carte: disponile in cima o in fondo al mazzo.`,
         options: cards.map((id) => ({ id, label: this.skillName(id) })),
         minimum: 0,
         maximum: cards.length,
         remaining: empty(),
       });
       invariant(input.kind === 'physical-scout', 'Scoperta richiede una disposizione.');
+      invariant(
+        prepare || (!input.prepare && !input.discard),
+        'Questa disposizione non concede preparazione o scarto.',
+      );
       const assigned = [...(input.prepare ? [input.prepare] : []), ...input.top, ...input.bottom];
       invariant(
         assigned.length === cards.length &&
@@ -1608,6 +1615,32 @@ class FrontReplay {
       if (input.prepare && (this.run.spatial || h.prepared.includes(input.prepare)))
         this.afterPrepare(hero, input.prepare, path);
     });
+  }
+  private prepareDiscard(hero: number, path: string) {
+    const h = this.hero(hero),
+      copy = this.select(
+        hero,
+        `${path}/select`,
+        'Scegli una carta dagli scarti da preparare.',
+        h.discard.map((id) => ({ id, label: this.skillName(id) })),
+        Math.min(1, h.discard.length),
+      )[0];
+    if (!copy) return;
+    h.discard.splice(h.discard.indexOf(copy), 1);
+    const prepared = [...h.prepared, copy],
+      discarded =
+        prepared.length > 4
+          ? this.select(
+              hero,
+              `${path}/prepared-limit`,
+              'Scegli una carta preparata da scartare per il limite quattro.',
+              prepared.map((id) => ({ id, label: this.skillName(id) })),
+              1,
+            )[0]!
+          : null;
+    h.prepared = prepared.filter((id) => id !== discarded);
+    if (discarded) h.discard.push(discarded);
+    if (this.run.spatial || h.prepared.includes(copy)) this.afterPrepare(hero, copy, path);
   }
   private test(
     hero: number,
@@ -1946,7 +1979,13 @@ class FrontReplay {
       if (attack) this.spendAttackSlots(hero, attack, successes, addedHits, `${path}/slots`);
       this.r.revealed.pop();
       h.discard.push(...cards);
-      if (this.p.boons && !h.deck.length && h.discard.length) {
+      if (
+        (this.p.boons ||
+          (this.run.program.profile === 'source-fronts-v1' &&
+            this.run.program.immediateSkillReset)) &&
+        !h.deck.length &&
+        h.discard.length
+      ) {
         h.deck = this.random(`${path}/after-test-refill`, h.discard, h.discard.length);
         h.discard = [];
       }
@@ -2704,6 +2743,37 @@ class FrontReplay {
                 child.mode === 'upTo',
               );
               break;
+            case 'search-recovery': {
+              const effect = child.effect;
+              const hero = this.hero(child.hero);
+              if (!hero.deck.length && hero.discard.length) {
+                hero.deck = this.random(`${path}/skill-reset`, hero.discard, hero.discard.length);
+                hero.discard = [];
+              }
+              if (effect.kind === 'discard-physical')
+                this.physicalSelection(child.hero, ['damage', 'fear'], 'any', path, effect.count);
+              else if (effect.kind === 'scout-or-prepare') {
+                const input = this.ask(child.hero, `${path}/effect`, {
+                  mode: 'choose',
+                  title: `Scegli: Scoperta ${effect.count} oppure prepara una carta dagli scarti.`,
+                  options: [
+                    { id: 'scout', label: `Scoperta ${effect.count}` },
+                    { id: 'prepare-discard', label: 'Prepara una carta dagli scarti' },
+                  ],
+                  minimum: 1,
+                  maximum: 1,
+                  remaining: empty(),
+                });
+                invariant(
+                  input.kind === 'physical-choice' &&
+                    ['scout', 'prepare-discard'].includes(input.option),
+                  'Conseguenza ricerca senza scelta fonte.',
+                );
+                if (input.option === 'scout') this.scout(child.hero, effect.count, `${path}/scout`);
+                else this.prepareDiscard(child.hero, `${path}/prepare-discard`);
+              } else this.scout(child.hero, effect.count, path, false, effect.kind === 'scout');
+              break;
+            }
             case 'scout':
               this.scout(child.hero, child.count, path);
               break;

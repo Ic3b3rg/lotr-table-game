@@ -236,7 +236,7 @@ export function physicalRequestData(
       ((action.op === 'awardTitle' || action.op === 'choice') &&
         linkedDefinition(state.scenario!.pack, instance.definition)) ||
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
-      (action.op === 'message' && (action.consequence || action.inspiration)),
+      (action.op === 'message' && (action.consequence || action.inspiration || action.recovery)),
     'Richiesta fisica senza programma fonte.',
   );
   return {
