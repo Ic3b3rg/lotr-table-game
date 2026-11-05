@@ -55,6 +55,9 @@ export function validateItemCapability(pack: ScenarioPack) {
       cap.initialInventory.length === 0 &&
       cap.ownedProductIds.length === 1 &&
       cap.ownedProductIds[0] === 0 &&
+      [cap.product, cap.grant.model, ...cap.grant.upgrade.choices, cap.titleModel].every((model) =>
+        pack.sources.some((source) => source.file === model.source.split(':')[0]),
+      ) &&
       !cap.baseSkillModelIds.includes(cap.collectorSkillId) &&
       new Set(cap.baseSkillModelIds).size === cap.baseSkillModelIds.length &&
       pack.manifest.failure.partyBonus.skills.every(

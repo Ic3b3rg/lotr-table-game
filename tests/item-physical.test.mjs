@@ -17,6 +17,7 @@ test('gained trinket uses its own printed depletion to change fear face without 
     pack = itemCompilation().pack;
   attachItem(pack, f.catalog);
   const grant = pack.manifest.items.grant;
+  for (const hero of f.catalog.heroes) hero.stats.fear = 20;
   f.ir.policies.push(itemPolicy(f.catalog));
   for (const d of f.ir.definitions) d.body = [{ op: 'keep-faceup' }];
   const p = freezePhysical(
@@ -77,5 +78,46 @@ test('gained trinket uses its own printed depletion to change fear face without 
   assert.equal(p.snapshot.resolution.resources.depletion[0].remaining, 1);
   assert.equal(p.snapshot.parents.at(-1).results[0].prevented.fear, 0);
   assert.equal(p.snapshot.parents.at(-1).results[0].transferred.fear, 2);
+  validatePhysical(p);
+  open(3, [
+    {
+      kind: 'suffer',
+      hero: 1,
+      face: 'faceup',
+      cards: [{ family: 'fear', amount: 1 }],
+      prevention: [],
+    },
+  ]);
+  assert.equal(p.snapshot.active, null, 'another hero cannot consume the equipped copy');
+  assert.equal(p.snapshot.resolution.resources.depletion[0].remaining, 1);
+  open(4, [
+    {
+      kind: 'suffer',
+      hero: 0,
+      face: 'faceup',
+      cards: [{ family: 'fear', amount: 1 }],
+      prevention: [],
+    },
+  ]);
+  const second = p.snapshot.active.options.find((o) => o.id !== 'close');
+  assert.ok(second);
+  answer(second.id);
+  assert.equal(p.snapshot.resolution.resources.depletion[0].remaining, 0);
+  open(5, [
+    {
+      kind: 'suffer',
+      hero: 0,
+      face: 'faceup',
+      cards: [{ family: 'fear', amount: 1 }],
+      prevention: [],
+    },
+  ]);
+  assert.equal(p.snapshot.active, null, 'zero depletion cannot activate again');
+  assert.equal(p.snapshot.areas[0].fear.length, 4);
+  assert.equal(
+    p.snapshot.resolution.faceup.filter((c) => p.snapshot.areas[0].fear.includes(c)).length,
+    1,
+  );
+  assert.ok(p.snapshot.parents.every((parent) => parent.returnCount === 1));
   validatePhysical(p);
 });
