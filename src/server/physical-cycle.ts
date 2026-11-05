@@ -28,7 +28,12 @@ import { liveGroupRules } from '../scenario/live-groups';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
-import { interactScenario, exploreScenario, finishDefeatedSprint } from '../scenario/runtime';
+import {
+  interactScenario,
+  exploreScenario,
+  finishDefeatedSprint,
+  finishInvalidatedSprint,
+} from '../scenario/runtime';
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { scenarioStateProblem, scenarioReceiptProblem } from '../scenario/validate';
 import {
@@ -289,7 +294,12 @@ function executeIntent(
     const { expectedRevision: _, type: __, ...fields } = c;
     const origin = CombatOperationSchema.shape.origin.parse(
       c.type === 'SCENARIO_INPUT'
-        ? { ...fields, kind: 'source-sprint', entropy: record.explorationEntropy! }
+        ? {
+            ...fields,
+            kind: 'source-sprint',
+            entropy: record.explorationEntropy!,
+            sourceRequest: state.scenario!.pending,
+          }
         : c.type === 'INTERACT_SCENARIO'
           ? { ...fields, kind: 'interaction' as const }
           : c.type === 'EXPLORE_SCENARIO'
@@ -306,6 +316,7 @@ function executeIntent(
       reason: null,
     };
     state.combat.operation = op;
+    if (op.origin.kind === 'source-sprint') state.scenario!.pending = null;
     nextProvocation(state);
     return c.type === 'MOVE_HERO'
       ? {
@@ -709,11 +720,20 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
           : origin.kind === 'exploration'
             ? 'EXPLORE_SCENARIO'
             : 'INTERACT_SCENARIO';
-    const { entropy: __, ...intentFields } = fields as typeof fields & { entropy?: string };
+    const {
+      entropy: __,
+      sourceRequest: ___,
+      ...intentFields
+    } = fields as typeof fields & {
+      entropy?: string;
+      sourceRequest?: unknown;
+    };
     const intent = { ...intentFields, type, expectedRevision: state.revision };
     // A child may have changed legality. A failed return keeps all prior consequences and pays nothing new.
     const work = structuredClone(state);
     work.combat!.operation = null;
+    if (origin.kind === 'source-sprint')
+      work.scenario!.pending = structuredClone(origin.sourceRequest);
     try {
       const receipt = execute(
         work,
@@ -756,6 +776,8 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
       op.status = 'cancelled';
       op.reason =
         'Dopo le conseguenze, il comando sospeso non è più legale. Nessun nuovo costo è stato applicato.';
+      if (origin.kind === 'source-sprint' && !state.physical!.snapshot.lastStand?.terminal)
+        finishInvalidatedSprint(state, origin.heroId);
     }
   }
   state.combat!.operations.push(structuredClone(op));

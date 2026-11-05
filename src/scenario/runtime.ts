@@ -1374,13 +1374,28 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
 
 /** A completed provocation may remove the actor; finish only its immediate source callback. */
 export function finishDefeatedSprint(state: State, heroId: string) {
+  invariant(!state.physical!.snapshot.lastStand?.terminal, 'Callback sospeso senza superstiti.');
+  invariant(defeatedHeroes(state).includes(heroId), 'Callback senza sconfitta dell’attore.');
+  finishSprintCallback(state, heroId);
+}
+export function finishInvalidatedSprint(state: State, heroId: string) {
+  const op = state.combat?.operation;
+  invariant(
+    op?.origin.kind === 'source-sprint' &&
+      op.origin.heroId === heroId &&
+      op.status === 'cancelled' &&
+      !state.physical!.snapshot.lastStand?.terminal,
+    'Callback senza comando fonte invalidato.',
+  );
+  finishSprintCallback(state, heroId);
+}
+function finishSprintCallback(state: State, heroId: string) {
   const sc = state.scenario!,
     task = sc.tasks.at(-1);
   invariant(
     task?.kind === 'sprint' &&
       task.stage === 'choice' &&
-      sprintActor(state, task).heroId === heroId &&
-      defeatedHeroes(state).includes(heroId),
+      sprintActor(state, task).heroId === heroId,
     'Callback dello Scatto estraneo alla sconfitta.',
   );
   const i = sc.instances.find((i) => i.id === task.instanceId)!;

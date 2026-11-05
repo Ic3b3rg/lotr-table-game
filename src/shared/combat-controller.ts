@@ -3,7 +3,7 @@ import { ContentIdSchema } from './catalog';
 import { HashSchema } from './generated-map';
 import { CopyIdSchema } from './preparation';
 import { StatSchema } from './skill-tests';
-import { SourceSprintInputSchema } from './scenario';
+import { SourceSprintInputSchema, ScenarioRequestSchema } from './scenario';
 import {
   AttackOutcomeSchema,
   AttackTestResultSchema,
@@ -66,6 +66,7 @@ export const CombatOperationSchema = z.strictObject({
       heroId: ContentIdSchema,
       pendingId: z.uuid(),
       input: SourceSprintInputSchema,
+      sourceRequest: ScenarioRequestSchema,
       entropy: HashSchema,
     }),
     z.strictObject({
