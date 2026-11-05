@@ -94,6 +94,12 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       sc?.pack.manifest.threatTokens?.encounters.find((e) =>
         sc.instances.some((i) => i.id === lastAttempt.instanceId && i.prefab === e.prefab),
       );
+    const returnedInCurrentTurn =
+      lastAttempt?.returned &&
+      current.round?.phase === 'action' &&
+      active === lastAttempt.heroId &&
+      current.round.id === lastAttempt.roundId &&
+      current.round.turnId === lastAttempt.turnId;
     const lastTest = sc?.play?.tests.filter((t) => t.attemptId === lastAttempt?.id).at(-1);
     const retryFailed =
       tokenOwner?.role === 'retry' &&
@@ -139,7 +145,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                               ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
                               : q
                                 ? 'Un partecipante conferma per il gruppo.'
-                                : lastToken && lastAttempt?.returned
+                                : lastToken && returnedInCurrentTurn
                                   ? lastToken.role === 'retry' &&
                                     sc.instances.find((i) => i.id === lastAttempt.instanceId)
                                       ?.visible

@@ -10,6 +10,7 @@ const bundle = buildSync({
       export {createGuidedStart} from './src/client/guided-start';
       export {createJourneyMap} from './src/client/journey-map';
       export {createPhysicalControls} from './src/client/physical';
+      export {createScenario} from './src/client/scenario';
       export {setOnline} from './src/client/actions';`,
     resolveDir: process.cwd(),
   },
@@ -251,6 +252,58 @@ test('a frozen original phase source guides Shadow, owner scouting and the next 
   ui.update(s, player, { kind: 'available' });
   assert.match(b.document.querySelector('#start-instruction').textContent, /nuovo round/);
   assert.equal(b.document.querySelector('#start-action').href, '#rounds');
+});
+
+test('a returned threat attempt guides only its own action turn and yields to the current round phase', () => {
+  for (const role of ['retry', 'null-product']) {
+    const b = browser(),
+      s = session(),
+      ui = b.createScenario(async () => {}, {}),
+      content = { heroes: [{ id: hero.heroId, name: { text: 'Eroe inventato' } }] };
+    s.physical = null;
+    s.scenario.completedSetup = [];
+    s.scenario.effects = [];
+    s.scenario.globals = {};
+    s.scenario.pack.manifest.rounds = { version: 'source-rounds-v1' };
+    s.scenario.pack.manifest.threatTokens = {
+      encounters: [{ role, prefab: s.scenario.instances[0].prefab }],
+    };
+    s.scenario.play = {
+      active: null,
+      lore: 0,
+      tests: [],
+      attempts: [
+        {
+          id: 'attempt-invented',
+          instanceId: s.scenario.instances[0].id,
+          heroId: hero.heroId,
+          roundId: s.round.id,
+          turnId: s.round.turnId,
+          returned: true,
+        },
+      ],
+    };
+    const update = () => {
+      ui.update(s, player, content, { available: false });
+      return b.document.querySelector('#scenario-status').textContent;
+    };
+    assert.match(update(), role === 'retry' ? /nuova azione/ : /Interazione conclusa/);
+    s.round.activeHeroId = null;
+    s.round.heroes[0].turnEnded = true;
+    assert.match(update(), /turni sono conclusi.*Ombra/);
+    s.round.phase = 'shadow';
+    assert.match(update(), /^Ombra/);
+    s.round.phase = 'rally';
+    assert.match(update(), /^Riorganizzazione/);
+    s.round.phase = 'action';
+    s.round.heroes[0].turnEnded = false;
+    assert.match(update(), /scegliete il prossimo eroe/);
+    s.round.activeHeroId = hero.heroId;
+    s.round.id = 'next-round-invented';
+    s.round.turnId = 'next-turn-invented';
+    assert.match(update(), /Eroe inventato è di turno/);
+    assert.doesNotMatch(update(), /segnalino resta|Interazione conclusa/);
+  }
 });
 
 test('a source scouting request shows only its revealed skill faces with reader access', () => {
