@@ -996,6 +996,7 @@ export const ScenarioViewSchema = ScenarioSchema.extend({
           z.union([
             TurnExplorationAttemptSchema.omit({ entropy: true }),
             ShadowExplorationAttemptSchema.omit({ entropy: true }),
+            SprintExplorationAttemptSchema.omit({ entropy: true }),
           ]),
         )
         .max(200),
