@@ -27,6 +27,7 @@ export async function readyMission(
     agility = 2,
     shadow = false,
     edit = () => {},
+    catalogEdit: customizeCatalog = () => {},
   } = {},
 ) {
   const f = boonFixture(verified),
@@ -42,6 +43,7 @@ export async function readyMission(
       h.stats.might = might;
       h.stats.agility = agility;
     }
+    customizeCatalog(c);
   };
   return readyRounds(
     t,
