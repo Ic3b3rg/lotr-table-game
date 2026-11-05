@@ -114,8 +114,8 @@ export async function readySearches(t, options = {}) {
           ? { kind: 'scout-reveal' }
           : {
               kind: 'scout-resolve',
-              prepareCopy: s.scout.revealed[0],
-              top: s.scout.revealed.slice(1),
+              prepareCopy: options.setupPrepare === false ? null : s.scout.revealed[0],
+              top: options.setupPrepare === false ? s.scout.revealed : s.scout.revealed.slice(1),
               bottom: [],
               discardPreparedCopy: null,
             }

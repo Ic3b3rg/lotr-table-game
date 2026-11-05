@@ -224,3 +224,32 @@ test('discarding a prepared limit during the source reward runs real P2, preserv
   assert.throws(() => f.commit());
   assert.deepEqual(f.state, before);
 });
+test('a search reward resets the exhausted skill deck before either printed alternative without filtering the empty discard option', () => {
+  const f = searchRuntime({
+    role: 'challenge',
+    success: 1,
+    fate: 0,
+    edit: (raw) => {
+      raw.catalog.heroes[0].stats.wisdom = raw.context.preparation.heroes[0].deck.length;
+    },
+  });
+  const copies = [...f.state.preparation.heroes[0].deck];
+  f.commit();
+  f.answer({ kind: 'physical-choice', option: 'reveal' });
+  f.answer({ kind: 'physical-choice', option: 'resolve' });
+  const h = f.state.preparation.heroes[0];
+  assert.equal(h.deck.length, copies.length);
+  assert.deepEqual(h.discard, []);
+  assert.deepEqual([...h.deck].sort(), [...copies].sort());
+  assert.deepEqual(
+    f.physical.snapshot.active.options.map((o) => o.id),
+    ['scout', 'prepare-discard'],
+  );
+  assert.deepEqual(f.physical.snapshot.random.at(-1).population, copies);
+  f.answer({ kind: 'physical-choice', option: 'prepare-discard' });
+  assert.equal(f.sc.pending.kind, 'message');
+  assert.equal(f.physical.snapshot.active, null);
+  assert.deepEqual(f.state.preparation.heroes[0].prepared, []);
+  f.answer({ kind: 'ack' });
+  assert.equal(f.i.stopped, true);
+});

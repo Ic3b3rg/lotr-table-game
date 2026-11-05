@@ -2739,6 +2739,11 @@ class FrontReplay {
               break;
             case 'search-recovery': {
               const effect = child.effect;
+              const hero = this.hero(child.hero);
+              if (!hero.deck.length && hero.discard.length) {
+                hero.deck = this.random(`${path}/skill-reset`, hero.discard, hero.discard.length);
+                hero.discard = [];
+              }
               if (effect.kind === 'discard-physical')
                 this.physicalSelection(child.hero, ['damage', 'fear'], 'any', path, effect.count);
               else if (effect.kind === 'scout-or-prepare') {
