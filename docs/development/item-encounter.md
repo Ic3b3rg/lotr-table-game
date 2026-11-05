@@ -149,7 +149,7 @@ dei soli PID propri e riapertura/chiusura della sola porta4407.
 
 Il validator ricostruito da sorgenti committate misura1585954 byte, SHA256
 `eab35ae1c1de600b8aa4795e0a247b1e0f06c6e73023e563124959ad24d93289`.
-Passano503 file,398 payload distinti,17 viste94 intere e913356631 byte
+Passano 503 file,398 payload distinti,17 viste94 intere e913356631 byte
 comprese le viste. Tutti gli indici sono confrontati una volta esatta nella
 serie finale, byte/hash prima del parse. Le sole migrazioni sono
 schemaVersion23 e il già dichiarato physical:null nei formati≤10 che ne
@@ -192,3 +192,26 @@ Primarie, prosa/carte originali, IR/FSM/IL, JSON e immagini restano nella
 scratch ignorata, anche nella nuova storia Git. Comandi, tentativi,
 provenienza, adattamenti e sigillo sono in `.scratch/item109/`. Il root
 esegue le due review fresche e l’integrazione dopo questa consegna.
+
+## Review e integrazione del root
+
+Due review fresche concluse senza rilievi: Standards 0 violazioni/smell
+sostanziali, Spec 0 scostamenti. Nessuna modifica root al codice consegnato.
+Root **789/789**, zero fail/skip/cancel/todo, 720068,542125 ms, concorrenza4
+da sola dopo i controlli pesanti; tipi, formato, diff e privacy verdi.
+
+Riletti primarie, lifecycle, 65 corpi IL, righe Equipment16–18 del workbook
+e oracle 9/10 con 1536 casi. Quattro output compiler e freeze104 identici.
+Passano 503 confronti e tutte le serie96/98/100/102/104/106 con payload,
+viste, export e finali interi. Il validator root è ricostruito dal commit
+finale e confrontato con quello usato per i riscontri.
+
+L’audit UI riguarda le prove inventate ricevute: 204 casi completi e 24
+ispezioni, tre identità e quattro larghezze. Il ritorno al campo è inoltre
+verificato nel runtime automatico, senza dichiarare una nuova partita
+originale. Il root ispeziona quattro catture; un’area Chromium non dipinta
+non viene usata come prova visiva del contenuto. Tentativi, differenze
+amministrative dei helper e limiti nella
+[review del root](../reviews/2026-11-05-item-encounter.md).
+
+57 null/unverified e 156 intatto/gated; nessuna accettazione completa89/33.
