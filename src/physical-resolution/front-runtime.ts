@@ -2373,6 +2373,13 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'source-boon':
+              invariant(
+                this.p.version === 3 && run.lastStandRules && run.spatial,
+                'Beneficio senza causa scenario corrente.',
+              );
+              this.gainBoon(child.hero, child.boon, `${path}/source-boon`);
+              break;
             case 'scenario-item': {
               validateItemGrant(this.catalog, this.artifact, child.grant);
               const custody = (this.resources.itemCustody ??= []);

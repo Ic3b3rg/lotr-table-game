@@ -32,7 +32,8 @@ import {
 } from './movement';
 import { physicalLimits } from '../physical-resolution/effects';
 import { applyGrantedMove } from '../server/journey-map';
-import { exploreScenario } from '../scenario/runtime';
+import { exploreScenario, deliverFirstCombatDefeat, pumpPhaseEvent } from '../scenario/runtime';
+import { firstCombatGroup, sourceAttackGrant } from '../scenario/first-combat';
 import { explorationSource, explorationProblem } from '../shared/exploration';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { combatDarknessHeroes } from '../scenario/darkness';
@@ -131,13 +132,14 @@ export function attackOffers(state: State, heroId: string): CombatAttackOffer[] 
           )
           .map((items) => {
             const missing = preflightCombatOperation(state, a, g, heroId, 'counterattack');
-            const reason = g.logic
-              ? 'Il seguito di questo gruppo non è disponibile.'
-              : missing.includes('boon-quantities-57')
-                ? 'Una possibile conseguenza richiede benefici la cui riserva non è ancora verificata.'
-                : missing.length
-                  ? 'Una conseguenza necessaria non è ancora disponibile.'
-                  : null;
+            const reason =
+              g.logic && !firstCombatGroup(state, g)
+                ? 'Il seguito di questo gruppo non è disponibile.'
+                : missing.includes('boon-quantities-57')
+                  ? 'Una possibile conseguenza richiede benefici la cui riserva non è ancora verificata.'
+                  : missing.length
+                    ? 'Una conseguenza necessaria non è ancora disponibile.'
+                    : null;
             return {
               heroId,
               groupId: g.id,
@@ -418,15 +420,26 @@ export function startHeroAttack(
   const grant = c.grantId
     ? cs!.grants.find((g) => g.id === c.grantId && g.status === 'offered')
     : null;
+  const sourceGrant = sourceAttackGrant(state);
+  const missionGrant = sourceGrant?.id === c.grantId ? sourceGrant : null;
   if (
     c.grantId &&
+    !missionGrant &&
     (!grant ||
       grant.recipientHeroId !== c.heroId ||
       cs!.active !== grant.parentId ||
       current(state).stage !== 'await-grant')
   )
     fail('ATTACK_GRANT', 'La concessione d’attacco è cambiata.');
-  if (!grant) {
+  if (
+    missionGrant &&
+    (cs!.active ||
+      missionGrant.actorHeroId !== c.heroId ||
+      missionGrant.playerId !== playerId ||
+      missionGrant.groupId !== c.groupId)
+  )
+    fail('ATTACK_GRANT', 'L’attacco concesso appartiene al suo eroe e al gruppo appena collocato.');
+  if (!grant && !missionGrant) {
     if (cs!.active || cs!.operation || state.physical!.snapshot.active || state.scenario!.pending)
       fail('COMBAT_PENDING', 'Concludi la conseguenza corrente.');
     if (state.round!.activeHeroId !== c.heroId) fail('TURN_CHANGED', 'Questo eroe non è di turno.');
@@ -445,8 +458,19 @@ export function startHeroAttack(
   );
   attempt.itemCopies = [...c.itemCopies];
   attempt.stat = c.stat;
-  attempt.cost = grant ? 'grant' : 'action';
-  attempt.grantId = grant?.id ?? null;
+  attempt.cost = grant || missionGrant ? 'grant' : 'action';
+  attempt.grantId = grant?.id ?? missionGrant?.id ?? null;
+  if (missionGrant) {
+    missionGrant.grant = 'used';
+    missionGrant.attackId = attempt.id;
+    state.scenario!.pending = null;
+    const task = state.scenario!.tasks.at(-1);
+    invariant(
+      task?.kind === 'spawnFixed' && task.effectId === missionGrant.effectId,
+      'Attacco senza padre di spawn.',
+    );
+    task.stage = 'attack';
+  }
   const p = state.physical!,
     hero = p.heroes.findIndex((h) => h.heroId === c.heroId);
   const children: Extract<PhysicalProgram, { profile: 'source-fronts-v1' }>['children'] = [];
@@ -578,6 +602,12 @@ function complete(state: State, attempt: CombatAttempt) {
     state.combat!.active = attempt.parentId;
     if (attempt.kind === 'hero-attack') current(state).stage = 'after-attack';
   } else state.combat!.active = null;
+  const grant = state.scenario?.firstCombat?.spawns.find((s) => s.attackId === attempt.id);
+  if (grant) {
+    invariant(grant.grant === 'used' && !grant.returned, 'Ritorno dell’attacco fonte duplicato.');
+    grant.returned = true;
+    pumpPhaseEvent(state);
+  }
 }
 export function advanceCombat(state: State) {
   const cs = state.combat!;
@@ -831,7 +861,10 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
         custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
         heroIds: [a.heroId],
       });
-      invariant(!missing.length && !g.logic, 'Closure della provocazione figlia non preflightata.');
+      invariant(
+        !missing.length && (!g.logic || firstCombatGroup(state, g)),
+        'Closure della provocazione figlia non preflightata.',
+      );
       move.provoked.push(g.id);
       const child = newAttempt(
         state,
@@ -934,7 +967,12 @@ function grantOffers(state: State, attempt: CombatAttempt) {
     );
 }
 export function combatPending(state: State): CombatView['pending'] {
-  if (!state.combat?.active || state.physical?.snapshot.active) return null;
+  if (
+    !state.combat?.active ||
+    state.physical?.snapshot.active ||
+    (state.scenario?.pack.manifest.firstCombat && state.scenario.pending)
+  )
+    return null;
   const a = current(state),
     h = state.preparation!.heroes.find((h) => h.heroId === a.heroId)!;
   let title = '',
@@ -1061,6 +1099,7 @@ export function answerCombat(
     a.reward = { heroId, amount: state.preparation!.heroes[hero]!.inspiration - before };
     a.runId = null;
     a.stage = 'after-attack';
+    deliverFirstCombatDefeat(state, a.id, a.groupId);
   } else {
     const offer = grantOffers(state, a).find((o) => o.id === c.choice)!;
     state.combat!.grants.push({
@@ -1081,9 +1120,13 @@ export function combatView(state: State): CombatView | undefined {
   if (!state.combat) return undefined;
   const a = state.combat.active ? current(state) : null;
   const grant = state.combat.grants.find((g) => g.status === 'offered' && g.parentId === a?.id);
-  const turnHero = grant?.recipientHeroId ?? state.round?.activeHeroId;
+  const sourceGrant = sourceAttackGrant(state);
+  const turnHero = grant?.recipientHeroId ?? sourceGrant?.actorHeroId ?? state.round?.activeHeroId;
   const available =
-    turnHero && (!a || !!grant) && !state.physical?.snapshot.active && !state.scenario?.pending;
+    turnHero &&
+    (!a || !!grant) &&
+    !state.physical?.snapshot.active &&
+    (!state.scenario?.pending || !!sourceGrant);
   const replacements = state.preparation!.heroes.flatMap((h) =>
     combatArtifact(state)
       .compiled.clauses.filter((c) => c.window === 'before-test' && c.effect.op === 'replace-stat')
@@ -1100,6 +1143,8 @@ export function combatView(state: State): CombatView | undefined {
   );
   const last = state.combat.attempts.filter((a) => a.returned).at(-1);
   const returnLabel = (a: CombatAttempt) => {
+    if (state.scenario?.firstCombat?.spawns.some((s) => s.attackId === a.id))
+      return 'Riprende l’incontro che ha concesso l’attacco, con azioni e movimenti conservati.';
     if (a.activation && a.returned) {
       if (state.round?.phase === 'action')
         return 'L’Ombra è conclusa. Riprendete i turni nel nuovo round.';
@@ -1119,7 +1164,11 @@ export function combatView(state: State): CombatView | undefined {
   };
   return {
     artifactFingerprint: state.combat.artifactFingerprint,
-    attacks: available ? attackOffers(state, turnHero!) : [],
+    attacks: available
+      ? attackOffers(state, turnHero!).filter(
+          (o) => !sourceGrant || o.groupId === sourceGrant.groupId,
+        )
+      : [],
     replacements,
     current: a
       ? {
@@ -1181,7 +1230,11 @@ export function combatView(state: State): CombatView | undefined {
         }
       : null,
     pending: combatPending(state),
-    grant: grant ? { id: grant.id, heroId: grant.recipientHeroId, parentId: grant.parentId } : null,
+    grant: grant
+      ? { id: grant.id, heroId: grant.recipientHeroId, parentId: grant.parentId }
+      : sourceGrant
+        ? { id: sourceGrant.id, heroId: sourceGrant.actorHeroId, parentId: sourceGrant.id }
+        : null,
     last: last
       ? {
           heroId: last.heroId,
@@ -1217,7 +1270,7 @@ export function nextProvocation(state: State) {
       op.origin.heroId,
       'provocation',
     );
-    if (g.logic || missing.length)
+    if ((g.logic && !firstCombatGroup(state, g)) || missing.length)
       fail(
         'PROVOCATION_CLOSURE',
         missing.includes('boon-quantities-57')

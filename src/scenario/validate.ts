@@ -1,4 +1,5 @@
 import { initialCombat } from '../combat/controller';
+import { validateFirstCombatState } from './first-combat';
 import { objectiveText } from './objective';
 import { sectionOrder } from './section-order';
 import { validateSourcePlayReceipts } from './play-receipts';
@@ -23,6 +24,7 @@ export function scenarioStateProblem(state: State): string | null {
   try {
     const sc = state.scenario;
     if (!sc) return state.physical || state.combat ? 'Consumer fisico senza scenario fonte.' : null;
+    validateFirstCombatState(state);
     if (state.combat) {
       invariant(
         sc.pack.manifest.combat,

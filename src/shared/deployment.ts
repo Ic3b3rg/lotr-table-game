@@ -44,6 +44,7 @@ export const DeployedGroupSchema = z.strictObject({
   attackReduction: count.optional(),
   logic: SourceSchema.nullable(),
   placed: z.boolean(),
+  removed: z.literal('timer').optional(),
   spaceId: z.string().max(200),
   tileSource: SourceSchema,
   position: VectorSchema,

@@ -14,6 +14,7 @@ import { activeCompany, activationTargets } from '../combat/movement';
 import { effectiveGroup, reachableBoonKinds } from '../combat/group';
 import { beginHeroFailure, beginThreatFailure, validateFailureParty } from './conclusion';
 import { preflightBoonRequests, type BoonRequest } from '../physical-resolution/boon-stock';
+import { firstCombatRefreshReady } from './first-combat';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -240,7 +241,7 @@ function preflightActivations(state: State) {
     );
   const work = structuredClone(state);
   for (const g of livingEnemyGroups(work)) {
-    if (g.logic)
+    if (g.logic && !firstCombatRefreshReady(work, g))
       fail(
         'Il seguito e il refresh di questo gruppo non sono ancora disponibili. Nessun effetto dell’Ombra è stato applicato.',
       );
@@ -361,7 +362,10 @@ function refreshSourceGroups(state: State) {
   if (!cap) return;
   const frame = activeFrame(state);
   for (const g of livingEnemyGroups(state)) {
-    invariant(!g.logic, 'BEFORE_UNEXHAUST richiede il consumer della logica nemica.');
+    invariant(
+      !g.logic || firstCombatRefreshReady(state, g),
+      'BEFORE_UNEXHAUST richiede il consumer della logica nemica.',
+    );
     // Source groups with no logic have no receiver for BEFORE_UNEXHAUST.
     // Record that event boundary before changing either property.
     invariant(!frame.refreshed!.includes(g.id), 'Refresh duplicato.');

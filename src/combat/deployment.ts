@@ -212,21 +212,7 @@ export function generateDeployment(raw: DeploymentArtifact, context: DeploymentC
     }
     if (f(1 - f(remaining / initial)) > spentTarget) break;
   }
-  const used = c.inPlay.map((g) => g.tokenId);
-  const normals = a.normalBanners.filter((id) => !used.includes(id)),
-    elites = a.eliteBanners.filter((id) => !used.includes(id));
-  const assigned = [...c.inPlay];
-  for (const g of groups) {
-    const ids = g.bonuses.length ? elites : normals;
-    if (
-      g.bonuses.length ||
-      assigned.some((old) => old.source === g.source && !old.bonuses.length)
-    ) {
-      check(ids.length, 'Banner deployment esauriti.');
-      g.tokenId = ids.shift()!;
-    }
-    assigned.push(g);
-  }
+  assignGroupTokens(a, c.inPlay, groups);
   shuffle('space-order', spaces, (s) => s.id);
   const placed: DeployedGroup[] = [];
   for (const g of groups) {
@@ -241,4 +227,27 @@ export function generateDeployment(raw: DeploymentArtifact, context: DeploymentC
     placed.push(g);
   }
   return result(null);
+}
+
+/** Shared source banner allocation for generated and source-fixed groups. */
+export function assignGroupTokens(
+  a: DeploymentArtifact['compiled'],
+  inPlay: DeployedGroup[],
+  groups: DeployedGroup[],
+) {
+  const used = inPlay.map((g) => g.tokenId);
+  const normals = a.normalBanners.filter((id) => !used.includes(id)),
+    elites = a.eliteBanners.filter((id) => !used.includes(id));
+  const assigned = [...inPlay];
+  for (const g of groups) {
+    const ids = g.bonuses.length ? elites : normals;
+    if (
+      g.bonuses.length ||
+      assigned.some((old) => old.source === g.source && !old.bonuses.length)
+    ) {
+      check(ids.length, 'Banner deployment esauriti.');
+      g.tokenId = ids.shift()!;
+    }
+    assigned.push(g);
+  }
 }

@@ -5,6 +5,7 @@ import { preflightCombatGroup, effectiveGroup, reachableBoonKinds } from './grou
 import { nearestThreatSteps, groupInRange, activationDistance } from './movement';
 import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
+import { firstCombatGroup, firstCombatCallbackProblems } from '../scenario/first-combat';
 import { preflightBoonRequests } from '../physical-resolution/boon-stock';
 
 /** Finite mandatory closure, including ready groups reachable through forced moves. No pool is filtered. */
@@ -22,6 +23,8 @@ export function preflightCombatOperation(
   }
   const sc = state.scenario!,
     groups = sc.enemies!.groups.filter((g) => g.placed && g.figures.some((f) => f.health > 0));
+  if (firstCombatGroup(state, first) && !groups.some((g) => g.id === first.id))
+    groups.unshift(first);
   const heroSpace = sc.spaceBindings.find(
     (b) => b.id === state.journey!.heroes.find((h) => h.heroId === heroId)!.spaceId,
   )!.sourceId;
@@ -44,7 +47,10 @@ export function preflightCombatOperation(
         heroIds: [heroId],
       }))
         missing.add(dep);
-      if (g.logic) missing.add('scenario-combat-continuation');
+      if (g.logic) {
+        if (!firstCombatGroup(state, g)) missing.add('scenario-combat-continuation');
+        else for (const problem of firstCombatCallbackProblems(state)) missing.add(problem);
+      }
       const model = a.compiled.models.find((m) => m.source === g.source)!;
       const size = g.figures.filter((f) => f.health > 0).length;
       const canMove = model.instructions.some(

@@ -10,7 +10,7 @@ test('schema20 migrates structurally and every older format rejects linked forms
   const raw = (await readBackup(host)).payload.state;
   const old = { ...raw, schemaVersion: 20 },
     before = structuredClone(old);
-  assert.deepEqual(runtime.parseState(old), { ...old, schemaVersion: 23 });
+  assert.deepEqual(runtime.parseState(old), { ...old, schemaVersion: 24 });
   assert.deepEqual(old, before);
   const forms = [
     { pack: { manifest: { linked: {} } } },

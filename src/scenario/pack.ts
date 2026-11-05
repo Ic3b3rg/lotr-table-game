@@ -16,6 +16,11 @@ import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
 import { validateBaseProducts, baseProductsDefinition } from './base-products';
 import { validateItemCapability } from './item-capability';
+import {
+  validateFirstCombat,
+  firstCombatDefinition,
+  validateFirstCombatBinding,
+} from './first-combat';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -27,6 +32,7 @@ export function parseScenarioPack(raw: unknown) {
   validateLinkedCapability(pack);
   validateBaseProducts(pack);
   validateItemCapability(pack);
+  validateFirstCombat(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -269,7 +275,7 @@ export function parseScenarioPack(raw: unknown) {
           );
         if (a.op === 'message')
           invariant(
-            [a.inspiration, a.consequence, a.sprint].filter(Boolean).length <= 1,
+            [a.inspiration, a.consequence, a.sprint, a.boon].filter(Boolean).length <= 1,
             'Messaggio con conseguenze concorrenti non compilate.',
           );
         if (
@@ -282,7 +288,8 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             pack.manifest.clues ||
               linkedDefinition(pack, d.source) ||
-              baseProductsDefinition(pack, d.source),
+              baseProductsDefinition(pack, d.source) ||
+              firstCombatDefinition(pack, d.source),
             'Istruzione fuori dalla capacità indizi o collegata congelata.',
           );
         if (a.op === 'objective' && a.bindings)
@@ -334,7 +341,7 @@ export function parseScenarioPack(raw: unknown) {
             'modalWait',
             'lore',
           ].includes(a.op) ||
-          (a.op === 'message' && (a.consequence || a.inspiration || a.sprint))
+          (a.op === 'message' && (a.consequence || a.inspiration || a.sprint || a.boon))
         )
           invariant(
             original &&
@@ -474,6 +481,7 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  validateFirstCombatBinding(pack, p);
   if (pack.manifest.items)
     invariant(
       digest(p.context.ownedProductIds) === digest(pack.manifest.items.ownedProductIds),

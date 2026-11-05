@@ -71,6 +71,13 @@ export function boonProgramProblems(
   );
   let uncertainSurvival = false;
   for (const [index, child] of program.children.entries()) {
+    if (child.kind === 'source-boon') {
+      if (!p.boons.runtimeReady) return ['boon-quantities-57'];
+      possible.get(child.boon)!.add(p.heroes[child.hero]!.heroId);
+      if (possible.get(child.boon)!.size > p.boons.stock.quantities![child.boon])
+        return ['boon-supply-exhaustion-rule'];
+      continue;
+    }
     if (
       child.kind === 'end-turn' &&
       program.children

@@ -1,6 +1,7 @@
 import type { ScenarioPack } from '../shared/scenario';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { firstCombatDefinition } from './first-combat';
 
 export function linkedDefinition(pack: ScenarioPack, source: string) {
   return pack.manifest.linked?.encounters.some(
@@ -19,7 +20,9 @@ export function validateLinkedCapability(pack: ScenarioPack) {
           (a) =>
             a.op === 'chooseHero' ||
             a.op === 'awardTitle' ||
-            (a.op === 'choice' && a.options.some((o) => o.cost || o.requirement)),
+            (a.op === 'choice' &&
+              !firstCombatDefinition(pack, d.source) &&
+              a.options.some((o) => o.cost || o.requirement)),
         )
         .map((a) => ({ d, s, a })),
     ),

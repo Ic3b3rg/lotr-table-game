@@ -68,6 +68,8 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
     ];
   else if (action.op === 'message' && action.inspiration)
     children = [{ kind: 'inspiration', hero, amount: action.inspiration }];
+  else if (action.op === 'message' && action.boon)
+    children = [{ kind: 'source-boon', hero, boon: action.boon }];
   else {
     invariant(action.op === 'message' && action.consequence, 'Conseguenza senza Message fonte.');
     const c = action.consequence;
