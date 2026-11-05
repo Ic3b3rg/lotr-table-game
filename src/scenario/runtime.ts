@@ -60,7 +60,7 @@ import {
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { comparisonSort } from '../map-generation/comparison-sort';
-import { materializeDeployment, deploymentText } from './deployment';
+import { materializeDeployment, deploymentText, livingEnemyGroups } from './deployment';
 import type { Command } from '../shared/protocol';
 import { persistentEffects } from '../physical-resolution/effects';
 import {
@@ -491,9 +491,7 @@ function execute(
     }
     case 'removeEnemies':
       invariant(sc.pack.manifest.firstCombat && sc.firstCombat, 'Rimozione senza capacità fonte.');
-      for (const g of sc.enemies!.groups.filter(
-        (g) => !g.removed && g.figures.some((f) => f.health > 0),
-      )) {
+      for (const g of livingEnemyGroups(state)) {
         g.placed = false;
         g.tokenId = -1;
         g.removed = 'timer';

@@ -10,6 +10,7 @@ import type { DeployedGroup } from '../shared/deployment';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { createFigures } from '../combat/figures';
 import { assignGroupTokens } from '../combat/deployment';
+import { livingEnemyGroups } from './deployment';
 import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
 import { ApiError } from '../server/errors';
 
@@ -552,7 +553,7 @@ export function spawnFirstCombat(
     };
     assignGroupTokens(
       verifySourceDeployment(sc.pack.manifest.followup!.deployment).compiled,
-      sc.enemies!.groups.filter((g) => !g.removed && g.figures.some((f) => f.health > 0)),
+      livingEnemyGroups(state),
       [group],
     );
     sc.enemies!.groups.push(group);
