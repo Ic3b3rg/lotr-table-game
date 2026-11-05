@@ -15,7 +15,7 @@ Review focus: capacità nel seed storico; ricompense in stati estranei;
 attore sconfitto fra costo e prova; successo con perdita differita già dovuta;
 preflight di premi/campo prima di carte/RNG. Ognuno ha un test nella slice1–2.
 
-- [ ] Slice1 — RED compiler/consumer e schema: fixture lair inventata,
+- [x] Slice1 — RED compiler/consumer e schema: fixture lair inventata,
   certificati/binding, EndGame owner, due rami premio, legacy seed; prova reale
   con fallimento e nuovo ingresso, limite incluso e valore successivo.
   Files: shared/scenario/protocol/clues, scenario/compiler/handlers/pack/

@@ -23,7 +23,7 @@ R20275,188796 byte,35 stati; due modelli805/806,344/396 byte. Due lettori
 concordi, parametri raw confrontati col normalizzato ricevuto, puntatori
 controllati. Nessuna esecuzione Unity/JIT o partita originale.
 
-La prova è Arguzia, la somma è il binding locale persistente; il limite
+La prova è Ingegno, la somma è il binding locale persistente; il limite
 dinamico è inizializzato nella finestra PRE_REVEAL dalla numerosità intera
 della Compagnia. Non si ricalcola sui superstiti. `0600117c` aggiunge il
 risultato e limita0…99; `0600117b` sceglie il primo ResultPair il cui massimo

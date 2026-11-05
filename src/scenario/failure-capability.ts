@@ -1,14 +1,18 @@
 import type { ScenarioPack } from '../shared/scenario';
 import { invariant } from '../map-freeze/validate';
+import { digest } from '../map-freeze/hash';
 
-export function isFailureReward(pack: ScenarioPack, source: string, state: number) {
+export function isConclusionReward(pack: ScenarioPack, source: string, state: number) {
   const cap = pack.manifest.failure;
   if (!cap || source !== pack.principal) return false;
   const d = pack.definitions.find((d) => d.source === source)!;
-  return d.states.find((s) => s.index === d.handlers[cap.event])?.transitions.FINISHED === state;
+  return (
+    d.states.find((s) => s.index === d.handlers[cap.event])?.transitions.FINISHED === state ||
+    (pack.manifest.lair && d.handlers[pack.manifest.lair.event] === state)
+  );
 }
 
-/** Only this certified principal path may use campaign mutation instructions. */
+/** Only the certified failure/victory paths may use campaign mutation instructions. */
 export function validateFailureCapability(pack: ScenarioPack) {
   const cap = pack.manifest.failure;
   const operations = pack.definitions.flatMap((d) =>
@@ -25,20 +29,24 @@ export function validateFailureCapability(pack: ScenarioPack) {
     'Conclusione fuori dal consumer originale.',
   );
   const d = pack.definitions.find((d) => d.source === pack.principal)!;
-  const path: ScenarioPack['definitions'][number]['states'] = [];
-  let index = d.handlers[cap.event];
-  const seen = new Set<number>();
-  while (index !== undefined) {
-    invariant(!seen.has(index), 'Seguito della conclusione ciclico.');
-    seen.add(index);
-    const s = d.states.find((s) => s.index === index);
-    invariant(
-      s && !Object.keys(s.deferredTransitions ?? {}).length,
-      'Seguito terminale incompleto.',
-    );
-    path.push(s);
-    index = s.transitions.FINISHED;
-  }
+  const follow = (event: string) => {
+    const path: ScenarioPack['definitions'][number]['states'] = [];
+    let index = d.handlers[event];
+    const seen = new Set<number>();
+    while (index !== undefined) {
+      invariant(!seen.has(index), 'Seguito della conclusione ciclico.');
+      seen.add(index);
+      const s = d.states.find((s) => s.index === index);
+      invariant(
+        s && !Object.keys(s.deferredTransitions ?? {}).length,
+        'Seguito terminale incompleto.',
+      );
+      path.push(s);
+      index = s.transitions.FINISHED;
+    }
+    return path;
+  };
+  const path = follow(cap.event);
   invariant(
     path.length === 4 &&
       path.map((s) => s.actions.map((a) => a.op).join(',')).join(';') ===
@@ -53,8 +61,26 @@ export function validateFailureCapability(pack: ScenarioPack) {
     next.op === 'nextAdventure' && next.source === cap.next.source && next.id === cap.next.id,
     'Destinazione diversa dal modello referenziato.',
   );
+  const victory = pack.manifest.lair ? follow(pack.manifest.lair.event) : [];
+  if (pack.manifest.lair) {
+    const won = victory[0]?.actions[0];
+    invariant(
+      victory.length === 3 &&
+        victory.map((s) => s.actions.map((a) => a.op).join(',')).join(';') ===
+          'set,awardXP,lore;nextAdventure,proceed;stop' &&
+        victory[1] === path[2] &&
+        victory[2] === path[3] &&
+        won?.op === 'set' &&
+        won.value === true &&
+        flag.op === 'set' &&
+        digest(won.target) === digest(flag.target) &&
+        Object.keys(victory[0]!.transitions).join(',') === 'FINISHED',
+      'Closure della conclusione vittoriosa incoerente.',
+    );
+  }
   invariant(
-    operations.length === 3 && operations.every((a) => path.some((s) => s.actions.includes(a))),
+    operations.length === (victory.length ? 4 : 3) &&
+      operations.every((a) => [...path, ...victory].some((s) => s.actions.includes(a))),
     'Operazioni di conclusione fuori dal ramo certificato.',
   );
   invariant(!d.deferredHandlers[cap.event], 'Conclusione ancora gated.');

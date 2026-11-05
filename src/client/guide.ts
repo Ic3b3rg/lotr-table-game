@@ -5,10 +5,11 @@ import { element, text } from './dom';
 const TOPICS = [
   {
     id: 'camp',
-    title: 'Sconfitta, premi e primo campo',
+    title: 'Vittoria, sconfitta, premi e primo campo',
     target: '#campaign',
     action: 'Torna al campo',
     paragraphs: [
+      'Negli avvii che comprendono l’interazione del covo, raggiungi la sua casella con l’eroe di turno e ispeziona il segnalino. Annullare è gratuito. Confermare paga un’azione; le provocazioni e i costi delle carte attive devono essere completati. La prova usa le carte e le conversioni disponibili. I successi si aggiungono al progresso salvato: un tentativo fallito permette di riprendere con una nuova interazione. Il messaggio di successo conduce alla vittoria, ai premi e al campo.',
       'Se un eroe è sconfitto, i superstiti completano i propri turni e la compagnia perde all’inizio della prossima Ombra. Senza superstiti la perdita è immediata. Una sconfitta durante l’Ombra già iniziata attende il confine previsto; le conseguenze ancora dovute si completano prima del seguito.',
       'Negli avvii con il seguito della minaccia, raggiungere il limite conclude l’avventura dopo tutti i messaggi, le conseguenze e le collocazioni delle soglie raggiunte. Se il limite è già raggiunto prima della fase, la perdita precede i suoi effetti. Il riepilogo mostra minaccia prima/dopo e causa del termine.',
       'Un partecipante conferma per il gruppo i messaggi della conclusione. Gli XP vengono applicati al ruolo che ciascun eroe aveva in quel momento. La Sapienza è condivisa. Il riepilogo indica quali premi sono già applicati: reload e ripristino non li assegnano una seconda volta.',

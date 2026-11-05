@@ -6,7 +6,7 @@ import { readBackup, readSession, signBackup } from './skill-test-helper.mjs';
 test('current schema restores an old schema16 payload without inventing a boon capability or copying stock', async (t) => {
   const host = await startHost();
   t.after(() => host.dispose());
-  assert.equal((await readSession(host)).schemaVersion, 19);
+  assert.equal((await readSession(host)).schemaVersion, 20);
   const backup = await readBackup(host),
     at = await readSession(host);
   backup.payload.state.schemaVersion = 16;
@@ -19,7 +19,7 @@ test('current schema restores an old schema16 payload without inventing a boon c
   });
   assert.equal(response.status, 200, await response.text());
   const after = await readBackup(host);
-  assert.equal(after.payload.state.schemaVersion, 19);
+  assert.equal(after.payload.state.schemaVersion, 20);
   assert.equal(after.payload.state.physical, null);
   assert.deepEqual(after.payload.commands, backup.payload.commands);
 });

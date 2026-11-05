@@ -51,6 +51,7 @@ const CompilationSchema = z.strictObject({
   shadowCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   cluesCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
@@ -58,6 +59,12 @@ const CompilationSchema = z.strictObject({
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.lair
+      ? input.lairCertificate?.instructionHash === digest(pack.manifest.lair)
+      : !input.lairCertificate,
+    'Covo assente o non attestato.',
+  );
   invariant(
     pack.manifest.liveGroups
       ? input.liveGroupsCertificate?.instructionHash === digest(pack.manifest.liveGroups)

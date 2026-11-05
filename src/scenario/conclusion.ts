@@ -93,6 +93,54 @@ function beginFailure(
   requestId: string,
   cause: NonNullable<Scenario['conclusion']>['cause'],
 ) {
+  return beginConclusion(state, 'failure', timing, requestId, cause);
+}
+
+/** Only the frozen EndGame instruction can signal victory; physical results own the path. */
+export function beginSourceVictory(
+  state: State,
+  instanceId: string,
+  effectId: string,
+  requestId: string,
+) {
+  const sc = state.scenario!,
+    cap = sc.pack.manifest.lair,
+    instance = sc.instances.find((i) => i.id === instanceId),
+    effect = sc.effects.find((e) => e.id === effectId),
+    action = sc.pack.definitions
+      .find((d) => d.source === instance?.definition)
+      ?.states.find((s) => s.index === effect?.state)
+      ?.actions.find((a) => a.index === effect?.action),
+    attempt = sc.play?.attempts.find((a) => a.id === sc.play?.active);
+  invariant(
+    !sc.conclusion &&
+      cap &&
+      instance?.prefab === cap.prefab &&
+      effect?.instanceId === instanceId &&
+      action?.op === 'endGame' &&
+      action.success &&
+      attempt?.instanceId === instanceId &&
+      requestId,
+    'Vittoria senza istruzione, attore e tentativo del covo.',
+  );
+  return beginConclusion(state, 'victory', 'source-end', requestId, {
+    kind: 'source-victory',
+    instanceId,
+    effectId,
+    instructionHash: digest(action),
+    attemptId: attempt.id,
+    heroId: attempt.heroId,
+    playerId: attempt.playerId,
+    controllerHash: sc.pack.manifest.failure!.methods.signal.bodyHash,
+  });
+}
+function beginConclusion(
+  state: State,
+  outcome: NonNullable<Scenario['conclusion']>['outcome'],
+  timing: NonNullable<Scenario['conclusion']>['timing'],
+  requestId: string,
+  cause: NonNullable<Scenario['conclusion']>['cause'],
+) {
   const sc = state.scenario!,
     cap = sc.pack.manifest.failure!;
   validateFailureParty(state);
@@ -106,9 +154,9 @@ function beginFailure(
     ? cap.partyBonus.amount
     : 0;
   sc.conclusion = {
-    version: cap.version,
+    version: outcome === 'victory' ? sc.pack.manifest.lair!.version : cap.version,
     id: cycleUUID({ scenario: sc.id, requestId, timing, cause }),
-    outcome: 'failure',
+    outcome,
     timing,
     cause,
     triggerRequestId: requestId,
@@ -143,7 +191,12 @@ function beginFailure(
   // Only the principal receives the controller's event; its terminal path owns progress.
   sc.pending = null;
   invariant(
-    startPhaseEvent(state, principal.id, cap.event, true),
+    startPhaseEvent(
+      state,
+      principal.id,
+      outcome === 'victory' ? sc.pack.manifest.lair!.event : cap.event,
+      true,
+    ),
     'Conclusione senza ricevitore principale.',
   );
   return true;

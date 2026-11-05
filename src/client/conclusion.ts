@@ -75,14 +75,18 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         c.stage === 'camp'
           ? 'Il primo campo'
           : c.stage === 'conclusion'
-            ? 'L’avventura termina in una sconfitta'
+            ? c.outcome === 'victory'
+              ? 'L’avventura è vinta'
+              : 'L’avventura termina in una sconfitta'
             : 'Il cammino della compagnia';
       status.textContent =
-        ('kind' in c.cause && c.cause.kind === 'threat'
-          ? `La minaccia ${c.cause.before} → ${c.cause.after} ha raggiunto il limite ${c.cause.limit}: la compagnia perde ${c.timing === 'threat-start' ? 'prima degli effetti della prossima Ombra' : 'dopo aver completato le soglie raggiunte'}.`
-          : c.timing === 'shadow-start'
-            ? 'Un eroe è stato sconfitto: la compagnia perde all’inizio della prossima Ombra.'
-            : 'Non restano eroi attivi: la compagnia perde subito.') +
+        (c.outcome === 'victory'
+          ? 'La ricerca del passaggio è riuscita: la compagnia ha vinto. I risultati e i premi sono salvati.'
+          : 'kind' in c.cause && c.cause.kind === 'threat'
+            ? `La minaccia ${c.cause.before} → ${c.cause.after} ha raggiunto il limite ${c.cause.limit}: la compagnia perde ${c.timing === 'threat-start' ? 'prima degli effetti della prossima Ombra' : 'dopo aver completato le soglie raggiunte'}.`
+            : c.timing === 'shadow-start'
+              ? 'Un eroe è stato sconfitto: la compagnia perde all’inizio della prossima Ombra.'
+              : 'Non restano eroi attivi: la compagnia perde subito.') +
         (c.stage === 'camp'
           ? ' Il campo è salvato. Ogni proprietario può scegliere il ruolo del proprio eroe per il seguito.'
           : player
