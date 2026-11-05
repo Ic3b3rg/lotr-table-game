@@ -144,3 +144,7 @@ deadline o soglie.
 I 26 file di test preesistenti cambiano soltanto l’aspettativa della versione corrente.
 Le tre regressioni della prima canonica e tutti i tentativi precedenti sono conservati
 con diagnosi e comandi nelle prove private. Nessun push, PR, merge o partita originale.
+
+## Integrazione del root
+
+Due review fresche: Standards senza violazioni, un suggerimento P3 risolto riusando `livingEnemyGroups` nei due punti; Spec senza rilievi. Il root riproduce le fonti/oracle e le compilazioni statiche, confronta nuovamente tutti i salvataggi/viste/export storici e i22snapshot nativi dal proprio commit, verifica132casi QA e legge cinque schermate. La propria canonica isolata conclude816/816, zero fallimenti/skip/cancellazioni; tipi, formato, diff e privacy sono verdi. Il riepilogo è estratto dal log originale dopo la correzione di un parser del formato console. Nessuna partita originale avviata o ripresa156;57resta null/unverified e gated. [Review e limiti](../reviews/2026-11-05-mission-combat.md).
