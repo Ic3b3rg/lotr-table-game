@@ -178,23 +178,52 @@ const VersionSixStateSchema = PreviousStateSchema.omit({ group: true }).extend({
 });
 const VersionSevenStateSchema = PreviousStateSchema.extend({ schemaVersion: z.literal(7) });
 function hasBaseProductForms(raw: object) {
-  const pending: unknown[] = [raw],
-    seen = new Set<object>();
-  while (pending.length) {
-    const value = pending.pop();
-    if (!value || typeof value !== 'object' || seen.has(value)) continue;
-    seen.add(value);
-    if (
-      'baseProducts' in value ||
-      'sprintOrigin' in value ||
-      ('op' in value && value.op === 'ownsProducts') ||
-      ('op' in value && value.op === 'message' && 'sprint' in value) ||
-      ('kind' in value && (value.kind === 'sprint' || value.kind === 'source-sprint'))
-    )
-      return true;
-    pending.push(...Object.values(value));
-  }
-  return false;
+  type ScenarioForms = {
+    pack?: {
+      manifest?: { baseProducts?: unknown };
+      definitions?: { states?: { actions?: { op?: string; sprint?: unknown }[] }[] }[];
+    };
+    pending?: { kind?: string };
+    tasks?: { kind?: string }[];
+    explorations?: { attempts?: { sprintOrigin?: unknown }[] };
+  };
+  type CombatForms = {
+    operation?: { origin?: { kind?: string } };
+    operations?: { origin?: { kind?: string } }[];
+  };
+  const old = raw as {
+    scenario?: ScenarioForms;
+    combat?: CombatForms;
+    physical?: {
+      cycle?: {
+        seed?: { scenario?: ScenarioForms; combat?: CombatForms };
+        records?: { intent?: { input?: { kind?: string } } }[];
+      };
+    };
+  };
+  // Variable dictionaries and event names are data, even when they share these names.
+  return (
+    [old.scenario, old.physical?.cycle?.seed?.scenario].some(
+      (sc) =>
+        sc?.pack?.manifest?.baseProducts !== undefined ||
+        sc?.pack?.definitions?.some((d) =>
+          d.states?.some((s) =>
+            s.actions?.some(
+              (a) => a.op === 'ownsProducts' || (a.op === 'message' && a.sprint !== undefined),
+            ),
+          ),
+        ) ||
+        sc?.pending?.kind === 'sprint' ||
+        sc?.tasks?.some((t) => t.kind === 'sprint') ||
+        sc?.explorations?.attempts?.some((a) => a.sprintOrigin !== undefined),
+    ) ||
+    [old.combat, old.physical?.cycle?.seed?.combat].some(
+      (combat) =>
+        combat?.operation?.origin?.kind === 'source-sprint' ||
+        combat?.operations?.some((op) => op.origin?.kind === 'source-sprint'),
+    ) ||
+    old.physical?.cycle?.records?.some((r) => r.intent?.input?.kind === 'source-sprint')
+  );
 }
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
