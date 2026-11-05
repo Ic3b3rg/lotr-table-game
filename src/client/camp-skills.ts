@@ -88,6 +88,7 @@ export function campSkillShop(
       button.dataset.campOperation = operation;
       button.disabled =
         !mine || c.stage !== 'camp' || (!owned && (!!holder || balance.availableXP < offer.cost));
+      button.dataset.blocked = String(button.disabled);
       button.textContent = owned ? `Vendi · +${offer.cost} XP` : `Acquista · −${offer.cost} XP`;
       button.setAttribute(
         'aria-label',

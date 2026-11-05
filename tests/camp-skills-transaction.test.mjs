@@ -114,6 +114,7 @@ performCommand(store,process.argv[3],CommandSchema.parse(JSON.parse(process.argv
     ).json();
     const committed = await readBackup(r.host),
       committedView = await readSession(r.host);
+    const rawCandidate = structuredClone(candidate);
     candidate.state.updatedAt = committed.payload.state.updatedAt;
     assert.deepEqual(committed.payload, candidate);
     assert.deepEqual(
@@ -157,6 +158,7 @@ performCommand(store,process.argv[3],CommandSchema.parse(JSON.parse(process.argv
       before,
       view,
       candidate,
+      rawCandidate,
       committed,
       committedView,
       restored,

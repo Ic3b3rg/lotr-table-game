@@ -8,7 +8,8 @@ import { campCompilation } from './fixtures/camp-skills.mjs';
 function browser() {
   const bundle = buildSync({
     stdin: {
-      contents: "export {campSkillShop} from './src/client/camp-skills';",
+      contents:
+        "export {campSkillShop} from './src/client/camp-skills'; export {setOnline, refreshActions} from './src/client/actions';",
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -36,7 +37,11 @@ function browser() {
   runInNewContext(bundle, {
     module,
     exports: module.exports,
-    document: { createElement: (tag) => new Element(tag) },
+    document: {
+      createElement: (tag) => new Element(tag),
+      querySelectorAll: () =>
+        nodes.filter((n) => n.tag === 'button' && n.dataset.write !== undefined),
+    },
     HTMLElement: Element,
   });
   return { ...module.exports, nodes };
@@ -92,6 +97,7 @@ test('camp UI offers a real bound purchase, reader price and role balance; other
       { campSkill: (...args) => readings.push(args) },
       (input) => intents.push(input),
     );
+    b.setOnline(true);
     const buttons = b.nodes.filter((n) => n.dataset.campOperation === 'buy');
     assert.equal(buttons.length, 9);
     assert.equal(buttons[0].disabled, player?.id !== 'owner-1');
