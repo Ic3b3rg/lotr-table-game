@@ -86,7 +86,7 @@ test('schema18 migration preserves the full schema17 payload and never installs 
   const host = await startHost();
   t.after(() => host.dispose());
   const raw = (await readBackup(host)).payload.state;
-  assert.equal(raw.schemaVersion, 20);
+  assert.equal(raw.schemaVersion, 21);
   const old = structuredClone(raw);
   old.schemaVersion = 17;
   assert.deepEqual(runtime.parseState(old), raw);

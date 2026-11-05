@@ -20,7 +20,7 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   const hero = p.heroes.findIndex((h) => h.heroId === attempt.heroId);
   invariant(hero >= 0, 'Attore incontro fuori compagnia.');
   let children: Extract<PhysicalProgram, { profile: 'source-fronts-v1' }>['children'];
-  if (action.op === 'confirm') {
+  if (action.op === 'confirm' || action.op === 'choice') {
     const node = sc.instances.find((i) => i.id === attempt.instanceId)!;
     const prefab = sc.pack.manifest.prefabs.find((m) => m.source === node.prefab)!;
     children = [
@@ -32,6 +32,20 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
         sufferedFear: 0,
       },
     ];
+  } else if (action.op === 'awardTitle') {
+    const owner = sc.instances.find((i) => i.id === attempt.instanceId)!;
+    const recipient = (action.recipient.scope === 'local' ? owner.variables : sc.globals)[
+      action.recipient.name
+    ];
+    invariant(
+      typeof recipient === 'number' &&
+        Number.isInteger(recipient) &&
+        recipient >= 0 &&
+        recipient < p.heroes.length,
+      'Destinatario titolo senza indice fonte valido.',
+    );
+    invariant(sc.pack.manifest.linked, 'Titolo senza capacità congelata.');
+    children = [{ kind: 'scenario-title', hero: recipient, grant: sc.pack.manifest.linked.title }];
   } else if (action.op === 'sourceTest' || action.op === 'challenge')
     children = [
       {

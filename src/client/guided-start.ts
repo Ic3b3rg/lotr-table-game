@@ -284,13 +284,15 @@ export function createGuidedStart(sync: () => Promise<void>) {
             );
             heading = explorer
               ? 'Esplora la tessera'
-              : q.kind === 'choice'
-                ? 'Scegli come proseguire'
-                : q.kind === 'physical'
-                  ? session.round?.phase === 'shadow'
-                    ? 'Risolvi la prova dell’Ombra'
-                    : 'Completa la prova o la conseguenza dell’incontro'
-                  : 'Segui l’istruzione dell’avventura';
+              : q.kind === 'hero-choice'
+                ? 'Scegli il destinatario del titolo'
+                : q.kind === 'choice'
+                  ? 'Scegli come proseguire'
+                  : q.kind === 'physical'
+                    ? session.round?.phase === 'shadow'
+                      ? 'Risolvi la prova dell’Ombra'
+                      : 'Completa la prova o la conseguenza dell’incontro'
+                    : 'Segui l’istruzione dell’avventura';
             const actor = q.actorPlayerId
               ? (session.players.find((p) => p.id === q.actorPlayerId)?.name ??
                 'Il proprietario indicato')

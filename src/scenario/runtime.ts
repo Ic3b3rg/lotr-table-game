@@ -6,6 +6,9 @@ import {
   answerCampaign,
 } from './conclusion';
 import { playableScenarioPrefab } from '../shared/clues';
+import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
+import { linkedDefinition } from './linked-capability';
+import { validateScenarioTitle } from '../physical-resolution/scenario-title';
 import { objectiveText } from './objective';
 import { prepareExploration, rewardExploration, type ExplorationCommand } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
@@ -296,18 +299,26 @@ function preflightContinuation(state: State, start: (work: State, probe: SourceP
             'exploration-intro',
             'exploration-outro',
             'choice',
+            'hero-choice',
             'campaign-map',
             'campaign-story',
           ].includes(q.kind),
           'Richiesta fuori dalla closure degli indizi.',
         );
         const input =
-          q.kind === 'choice'
+          q.kind === 'hero-choice'
             ? {
-                kind: 'choice' as const,
-                event: q.options![probeChoice(probe, q.options!.length)]!.event,
+                kind: 'choose-hero' as const,
+                heroId:
+                  work.preparation!.heroes[probeChoice(probe, work.preparation!.heroes.length)]!
+                    .heroId,
               }
-            : { kind: 'ack' as const };
+            : q.kind === 'choice'
+              ? {
+                  kind: 'choice' as const,
+                  event: q.options![probeChoice(probe, q.options!.length)]!.event,
+                }
+              : { kind: 'ack' as const };
         const command: Extract<ScenarioCommand, { type: 'SCENARIO_INPUT' }> = {
           type: 'SCENARIO_INPUT',
           requestId: 'preflight-source-continuation-only',
@@ -357,6 +368,8 @@ function execute(
   if (
     probe &&
     ((a.op === 'confirm' && i.kind !== 'exploration') ||
+      (a.op === 'choice' &&
+        sc.play?.attempts.find((a) => a.id === sc.play!.active)?.entryChoice?.state === i.state) ||
       a.op === 'sourceTest' ||
       a.op === 'challenge' ||
       (a.op === 'message' && (a.consequence || a.inspiration)))
@@ -384,6 +397,11 @@ function execute(
     }
     complete(i, a.index);
     if (a.op === 'confirm') invariant(send(sc, i, a.confirmEvent), 'Conferma senza seguito fonte.');
+    else if (a.op === 'choice')
+      invariant(
+        send(sc, i, sc.play!.attempts.find((a) => a.id === sc.play!.active)!.entryChoice!.event),
+        'Impegno senza seguito fonte.',
+      );
     else if (a.op === 'challenge' || a.op === 'sourceTest') {
       const successes = probeChoice(probe, 100),
         event =
@@ -402,6 +420,44 @@ function execute(
     return;
   }
   switch (a.op) {
+    case 'chooseHero': {
+      const actor = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
+      invariant(actor, 'Destinatario senza attore del tentativo.');
+      request(state, {
+        instanceId: i.id,
+        state: i.state,
+        entry: i.entry,
+        action: a.index,
+        kind: 'hero-choice',
+        text: a.text,
+        options: state.preparation!.heroes.map((h) => ({
+          event: h.heroId,
+          label: [
+            {
+              kind: 'text',
+              style: 'plain',
+              text: state.content!.heroes.find((d) => d.id === h.heroId)!.name.text,
+            },
+          ],
+        })),
+        heroId: actor.heroId,
+        actorPlayerId: actor.playerId,
+        stage: 'ready',
+        tileSource: null,
+      });
+      return;
+    }
+    case 'awardTitle':
+      invariant(
+        sc.pack.manifest.linked && state.physical?.lastStand,
+        'Titolo senza capacità fonte e fisica.',
+      );
+      validateScenarioTitle(state.physical.raw, sc.pack.manifest.linked.title);
+      if (!probe) {
+        beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+        return;
+      }
+      break;
     case 'endGame':
       invariant(requestId, 'Segnale del covo senza comando fonte.');
       beginSourceVictory(state, i.id, actionKey(i, a.index), requestId);
@@ -421,6 +477,14 @@ function execute(
     case 'choice': {
       const actor = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
       invariant(actor, 'Scelta senza padre incontro.');
+      if (actor.entryChoice?.state === i.state && actor.entryChoice.action === a.index) {
+        if (probe) {
+          complete(i, a.index);
+          invariant(send(sc, i, actor.entryChoice.event), 'Impegno senza seguito fonte.');
+        } else
+          beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
+        return;
+      }
       request(state, {
         instanceId: i.id,
         state: i.state,
@@ -428,7 +492,9 @@ function execute(
         action: a.index,
         kind: 'choice',
         text: a.text,
-        options: [...a.options, ...(a.cancel ? [a.cancel] : [])],
+        options: [...encounterOptions(a, i, sc.globals), ...(a.cancel ? [a.cancel] : [])].map(
+          ({ event, label }) => ({ event, label }),
+        ),
         heroId: actor.heroId,
         actorPlayerId: actor.playerId,
         stage: 'ready',
@@ -473,7 +539,17 @@ function execute(
       const tile = resolveTile(state, i, a.tile),
         marker = sc.explorationMarkers?.find((m) => m.tileSource === tile.source);
       invariant(
-        send(sc, i, !marker || !marker.visible ? a.trueEvent : a.falseEvent),
+        send(
+          sc,
+          i,
+          (
+            linkedDefinition(sc.pack, i.definition)
+              ? sc.tiles.some((t) => t.source === tile.source && t.visible && t.explored)
+              : !marker || !marker.visible
+          )
+            ? a.trueEvent
+            : a.falseEvent,
+        ),
         'Esplorazione senza ramo fonte.',
       );
       return;
@@ -495,7 +571,19 @@ function execute(
             ? a.value.value
             : variable(sc, i, a.value.ref)[a.value.ref.name];
       invariant(typeof v === 'number' && typeof n === 'number', 'IntAdd richiede int.');
-      setValue(sc, i, a.target, (v + n) | 0);
+      const floor = sc.pack.manifest.linked?.threat;
+      const next = (v + n) | 0;
+      setValue(
+        sc,
+        i,
+        a.target,
+        floor &&
+          floor.definition === i.definition &&
+          floor.state === i.state &&
+          floor.action === a.index
+          ? Math.max(0, next)
+          : next,
+      );
       break;
     }
     case 'subtractInt':
@@ -741,7 +829,7 @@ function runInstance(
       });
       execute(state, i, a, probe, requestId);
       progress = true;
-      if (i.entry !== entry || i.stopped) break;
+      if (i.entry !== entry || (i.stopped && !linkedDefinition(sc.pack, i.definition))) break;
     }
     if (i.entry !== entry) continue;
     if (i.stopped) return progress;
@@ -882,7 +970,14 @@ function advanceTask(state: State) {
       complete(owner, task.action);
       if (a.op === 'confirm')
         invariant(send(sc, owner, a.confirmEvent), 'Conferma senza seguito fonte.');
-      else if (a.op === 'sourceTest' || a.op === 'challenge') {
+      else if (a.op === 'choice') {
+        const committed = sc.play!.attempts.find((a) => a.id === sc.play!.active)!.entryChoice;
+        invariant(
+          committed?.state === owner.state && committed.action === a.index,
+          'Costo senza scelta impegnativa fonte.',
+        );
+        invariant(send(sc, owner, committed.event), 'Impegno senza seguito fonte.');
+      } else if (a.op === 'sourceTest' || a.op === 'challenge') {
         const successes = parent.results.find((r) => r.kind === 'test')?.successes;
         invariant(successes !== undefined, 'Prova padre senza risultato.');
         let total: number | null = null;
@@ -1123,7 +1218,7 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     if (advanceTask(state)) continue;
     if (sc.phase === 'action') {
       if (
-        sc.pack.manifest.followup &&
+        (sc.pack.manifest.followup || sc.pack.manifest.linked) &&
         progress &&
         sc.instances.some((i) => !i.stopped && !i.settled)
       )
@@ -1357,6 +1452,19 @@ export function resumeScenario(
     sc.pending = null;
   } else if (q.kind === 'physical') {
     answerScenarioPhysical(state, playerId, command, physicalPath);
+  } else if (q.kind === 'hero-choice') {
+    const a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    if (
+      a.op !== 'chooseHero' ||
+      input.kind !== 'choose-hero' ||
+      !q.options?.some((o) => o.event === input.heroId)
+    )
+      throw wrong();
+    const index = state.preparation!.heroes.findIndex((h) => h.heroId === input.heroId);
+    invariant(index >= 0, 'Destinatario fuori dalla Compagnia.');
+    setValue(sc, i, a.target, index);
+    sc.pending = null;
+    complete(i, q.action);
   } else if (q.kind === 'choice') {
     const a = current(sc, i).actions.find((a) => a.index === q.action)!;
     if (
@@ -1576,6 +1684,19 @@ export function interactScenario(
   const progress = round.heroes.find((h) => h.heroId === c.heroId)!;
   if (progress.actionsUsed >= 2) fail('NO_ACTIONS', 'Questo eroe ha già usato le sue due azioni.');
   const prefab = sc.pack.manifest.prefabs.find((m) => m.source === i!.prefab)!;
+  const entry = encounterEntry(sc.pack, i!, sc.globals);
+  let entryChoice:
+    | NonNullable<NonNullable<Scenario['play']>['attempts'][number]['entryChoice']>
+    | undefined;
+  if (entry?.action.op === 'choice') {
+    const option = encounterOptions(entry.action, i!, sc.globals).find(
+      (o) => o.event === c.choiceEvent && o.cost === 'interact',
+    );
+    if (!linkedDefinition(sc.pack, i!.definition) || !option)
+      fail('SCENARIO_CHOICE_CHANGED', 'Scegli un’interazione disponibile nella visita corrente.');
+    entryChoice = { state: entry.state, action: entry.action.index, event: option!.event };
+  } else if (c.choiceEvent !== undefined)
+    fail('SCENARIO_CHOICE_CHANGED', 'Questa visita non prevede l’opzione indicata.');
   const inspiration =
     prefab.nodeType === 'threat'
       ? persistentEffects(state.physical!, c.heroId).reduce(
@@ -1590,7 +1711,8 @@ export function interactScenario(
     );
   if (
     (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
-      sc.pack.manifest.lair?.prefab === i!.prefab) &&
+      sc.pack.manifest.lair?.prefab === i!.prefab ||
+      linkedDefinition(sc.pack, i!.definition)) &&
     !probe
   )
     preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
@@ -1605,6 +1727,7 @@ export function interactScenario(
     turnId: round.turnId!,
     requestId: c.requestId,
     cost: 1,
+    ...(entryChoice ? { entryChoice } : {}),
     returned: false,
   });
   sc.play!.active = id;

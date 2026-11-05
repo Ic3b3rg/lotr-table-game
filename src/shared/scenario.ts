@@ -5,6 +5,7 @@ import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
 import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
+import { ScenarioTitleGrantSchema } from './scenario-title';
 import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
 import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
 import { NegatedSufferingSchema } from './negated-suffering';
@@ -103,6 +104,37 @@ const LairCapabilitySchema = z.strictObject({
   failureFingerprint: HashSchema,
   methods: z.strictObject({ end: methodEvidence, challenge: methodEvidence, sum: methodEvidence }),
 });
+const LinkedCapabilitySchema = z.strictObject({
+  version: z.literal('source-linked-encounters-v1'),
+  evidenceHash: HashSchema,
+  encounters: z.tuple([
+    z.strictObject({ prefab: SourceSchema, definitionHash: HashSchema }),
+    z.strictObject({ prefab: SourceSchema, definitionHash: HashSchema }),
+  ]),
+  events: z.strictObject({
+    searched: z.string().min(1).max(100),
+    reveal: z.string().min(1).max(100),
+    returned: z.string().min(1).max(100),
+  }),
+  threat: z.strictObject({
+    definition: SourceSchema,
+    state: z.int().nonnegative(),
+    action: z.int().nonnegative(),
+    binding: VariableRefSchema,
+    delta: Int32Schema.refine((n) => n < 0),
+  }),
+  title: ScenarioTitleGrantSchema,
+  roundsFingerprint: HashSchema,
+  failureFingerprint: HashSchema,
+  methods: z.strictObject({
+    choose: methodEvidence,
+    award: methodEvidence,
+    unique: methodEvidence,
+    threat: methodEvidence,
+    broadcast: methodEvidence,
+    sequence: methodEvidence,
+  }),
+});
 const scalar = z.union([Int32Schema, z.boolean(), VectorSchema, z.string().max(1000)]);
 const variable = z.strictObject({
   name: z.string().min(1).max(150),
@@ -164,13 +196,22 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('choice', {
     text: SourceTextSchema,
     options: z
-      .array(z.strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema }))
+      .array(
+        z.strictObject({
+          event: z.string().min(1).max(100),
+          label: SourceTextSchema,
+          requirement: VariableRefSchema.optional(),
+          cost: z.literal('interact').optional(),
+        }),
+      )
       .min(1)
       .max(20),
     cancel: z
       .strictObject({ event: z.string().min(1).max(100), label: SourceTextSchema })
       .nullable(),
   }),
+  action('chooseHero', { text: SourceTextSchema, target: VariableRefSchema }),
+  action('awardTitle', { recipient: VariableRefSchema, titleModel: SourceSchema }),
   action('nullProduct', { products: z.tuple([z.null()]), falseEvent: z.string().min(1).max(100) }),
   action('lore', { amount: z.int().min(1).max(99) }),
   action('awardXP', { amount: z.int().min(0).max(99) }),
@@ -354,6 +395,7 @@ export const ScenarioPackSchema = z.strictObject({
       .optional(),
     failure: AdventureFailureCapabilitySchema.optional(),
     lair: LairCapabilitySchema.optional(),
+    linked: LinkedCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -477,6 +519,7 @@ export const EncounterInputSchema = z.discriminatedUnion('kind', [
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
+  z.strictObject({ kind: z.literal('choose-hero'), heroId: ContentIdSchema }),
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -498,6 +541,7 @@ export const EncounterIntentSchema = z.discriminatedUnion('type', [
     roundId: z.uuid(),
     turnId: z.uuid(),
     sourceFingerprint: HashSchema,
+    choiceEvent: z.string().min(1).max(100).optional(),
   }),
   z.strictObject({
     ...playBinding,
@@ -550,6 +594,7 @@ export const ScenarioRequestSchema = z.strictObject({
     'handoff',
     'physical',
     'choice',
+    'hero-choice',
     'exploration-intro',
     'exploration-outro',
     'deployment-intro',
@@ -725,6 +770,13 @@ export const ScenarioSchema = z.strictObject({
             turnId: z.uuid(),
             requestId: z.string().min(24).max(80),
             cost: z.literal(1),
+            entryChoice: z
+              .strictObject({
+                state: z.int().nonnegative(),
+                action: z.int().nonnegative(),
+                event: z.string().min(1).max(100),
+              })
+              .optional(),
             returned: z.boolean(),
             interrupted: z.literal('hero-defeated').optional(),
           }),

@@ -10,7 +10,7 @@ test('schema18 migrates structurally and older formats reject new group rules ev
   const raw = (await readBackup(host)).payload.state;
   const previous = { ...raw, schemaVersion: 18 };
   const before = structuredClone(previous);
-  assert.deepEqual(runtime.parseState(previous), { ...previous, schemaVersion: 20 });
+  assert.deepEqual(runtime.parseState(previous), { ...previous, schemaVersion: 21 });
   assert.deepEqual(previous, before);
   for (const schemaVersion of [18, 17, 15, 10])
     for (const change of [

@@ -231,7 +231,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
     update(session: Session, identity: Player | null, content: Catalog | null) {
       current = session;
       player = identity;
-      inspection.update(session, identity);
+      inspection.update(session, identity, content);
       exploration.update(session, identity, content);
       catalog = content;
       root.hidden = !content || session.preparation?.status !== 'prepared';

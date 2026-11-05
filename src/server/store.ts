@@ -58,7 +58,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 20,
+      schemaVersion: 21,
       physical: null,
       scenario: null,
       mapGeneration: null,

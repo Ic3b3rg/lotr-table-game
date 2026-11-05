@@ -22,6 +22,7 @@ import { STAT_LABELS } from '../shared/skill-tests';
 import { validateBoonArtifact } from './boon-program';
 import { boonAvailability, boonAcquisitionProblems, validateBoonCustody } from './boon-stock';
 import { boonProgramProblems } from './boon-continuation';
+import { validateScenarioTitle } from './scenario-title';
 import type { BoonKind } from '../shared/boons';
 import { BoonKindSchema } from '../shared/combat';
 import type {
@@ -60,6 +61,7 @@ class FrontReplay {
   private readonly rng;
   private readonly cards = new Map<string, PhysicalCard>();
   private readonly faceup = new Set<string>();
+  private readonly scenarioTitles = new Map<string, ReturnType<typeof validateScenarioTitle>>();
   private readonly s: PhysicalSnapshot;
   private readonly seenRequests = new Set<string>();
   private readonly seenPending = new Set<string>();
@@ -920,7 +922,8 @@ class FrontReplay {
   }
   private titleCard(copy: string) {
     const id = definitionId(copy);
-    if (!this.p.lastStand?.titles.some((t) => t.cardId === id)) return undefined;
+    if (!this.p.lastStand?.titles.some((t) => t.cardId === id) && !this.scenarioTitles.has(id))
+      return undefined;
     return requirePhysicalFamily(this.p.raw, 'title').cards.find((c) => c.id === id);
   }
   private skillSymbols(copy: string) {
@@ -968,9 +971,9 @@ class FrontReplay {
       !t.removed &&
       !t.pending &&
       h.prepared.includes(t.copy)
-        ? this.p
-            .lastStand!.titles.find((d) => d.cardId === t.cardId)!
-            .effects.map((effect, index) => ({ copy: t.copy, effect, index }))
+        ? (this.p
+            .lastStand!.titles.find((d) => d.cardId === t.cardId)
+            ?.effects.map((effect, index) => ({ copy: t.copy, effect, index })) ?? [])
         : [],
     );
   }
@@ -2158,6 +2161,17 @@ class FrontReplay {
         'I crediti sintetici non pagano capacità originali.',
       );
       validatePhysicalProgram(run.program, this.p.heroes.length);
+      for (const child of run.program.children)
+        if (child.kind === 'scenario-title') {
+          invariant(
+            this.p.version === 3 && run.lastStandRules && run.spatial,
+            'Acquisizione titolo senza causa scenario e consumer corrente.',
+          );
+          this.scenarioTitles.set(
+            child.grant.cardId,
+            validateScenarioTitle(this.p.raw, child.grant),
+          );
+        }
       sources.add(run.source.effectId);
       runIds.add(run.id);
       this.run = run;
@@ -2287,11 +2301,23 @@ class FrontReplay {
               (child.kind === 'group-test' ||
                 child.kind === 'darkness' ||
                 child.kind === 'rally-reset'));
-          if (!this.lastStand.active(child.hero) && !collective) {
+          if (
+            !this.lastStand.active(child.hero) &&
+            !collective &&
+            child.kind !== 'scenario-title'
+          ) {
             parent.completedChildren++;
             continue;
           }
           switch (child.kind) {
+            case 'scenario-title':
+              invariant(this.s.lastStand, 'Titolo senza custodia fisica inizializzata.');
+              if (this.s.lastStand.titles.some((t) => t.cardId === child.grant.cardId))
+                this.choose(child.hero, `${path}/already-owned`, child.grant.alreadyOwned, [
+                  { id: 'ack', label: 'Continua' },
+                ]);
+              else this.awardTitle(child.hero, child.grant.cardId, `${path}/scenario-title`, path);
+              break;
             case 'last-stand-one':
               invariant(
                 this.combat &&

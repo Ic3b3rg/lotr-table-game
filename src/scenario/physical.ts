@@ -26,6 +26,7 @@ import {
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from '../server/errors';
+import { validateScenarioTitle } from '../physical-resolution/scenario-title';
 import { boonEnemyPositions } from '../server/physical-spatial';
 import { sourceCursor, type SourceEffect } from './source-cursor';
 
@@ -99,6 +100,7 @@ export function initializeScenarioPhysical(
   }
   invariant(source && !state.physical, 'Materiale fisico assente o inizializzazione duplicata.');
   const sc = state.scenario!;
+  if (sc.pack.manifest.linked) validateScenarioTitle(source.raw, sc.pack.manifest.linked.title);
   if (sc.pack.manifest.boons && source.boons?.fingerprint !== sc.pack.manifest.boons.fingerprint)
     throw new ApiError(
       409,

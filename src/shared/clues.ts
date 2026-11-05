@@ -5,6 +5,7 @@ export function playableScenarioPrefab(pack: ScenarioPack, source: string) {
   return !!(
     pack.manifest.playablePrefabs?.includes(source) ||
     pack.manifest.clues?.encounters.includes(source) ||
-    pack.manifest.lair?.prefab === source
+    pack.manifest.lair?.prefab === source ||
+    pack.manifest.linked?.encounters.some((e) => e.prefab === source)
   );
 }
