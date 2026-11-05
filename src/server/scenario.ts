@@ -50,6 +50,7 @@ export function applyScenario(
   command: ScenarioCommand,
   path: string,
   physicalPath: string,
+  explorationEntropy?: string,
 ) {
   if (state.revision !== command.expectedRevision)
     throw new ApiError(
@@ -117,7 +118,7 @@ export function applyScenario(
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
     answerCampaign(state, playerId, command);
-  else resumeScenario(state, playerId, command, physicalPath);
+  else resumeScenario(state, playerId, command, physicalPath, undefined, explorationEntropy);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
   const kind = command.type === 'START_SCENARIO' ? 'start' : command.input.kind;

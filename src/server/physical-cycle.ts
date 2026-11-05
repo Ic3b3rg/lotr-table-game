@@ -28,7 +28,12 @@ import { liveGroupRules } from '../scenario/live-groups';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
-import { interactScenario, exploreScenario } from '../scenario/runtime';
+import {
+  interactScenario,
+  exploreScenario,
+  finishDefeatedSprint,
+  finishInvalidatedSprint,
+} from '../scenario/runtime';
 import { applyScenario, allowScenarioPlay } from './scenario';
 import { scenarioStateProblem, scenarioReceiptProblem } from '../scenario/validate';
 import {
@@ -251,10 +256,21 @@ function executeIntent(
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
   if (cycle.version === 2)
     allowScenarioPlay(state, { ...c, requestId: record.requestId, generation: state.generation });
+  const sprint =
+    c.type === 'SCENARIO_INPUT' &&
+    c.input.kind === 'source-sprint' &&
+    c.input.destinationSpaceId !== null;
   invariant(
-    (c.type === 'EXPLORE_SCENARIO') === !!record.explorationEntropy,
+    (c.type === 'EXPLORE_SCENARIO' || sprint) === !!record.explorationEntropy,
     'Entropia esplorazione fuori dal suo intento.',
   );
+  if (
+    !returning &&
+    c.type === 'SCENARIO_INPUT' &&
+    c.input.kind === 'source-sprint' &&
+    (state.combat?.active || state.combat?.operation)
+  )
+    fail('COMBAT_PENDING', 'Completa la provocazione prima del ritorno allo Scatto.');
   invariant(
     (c.type === 'BEGIN_SHADOW' && !!state.scenario!.pack.manifest.followup) ===
       !!record.shadowEntropy,
@@ -263,7 +279,12 @@ function executeIntent(
   if (
     !returning &&
     state.combat &&
-    (c.type === 'MOVE_HERO' || c.type === 'INTERACT_SCENARIO' || c.type === 'EXPLORE_SCENARIO') &&
+    (c.type === 'MOVE_HERO' ||
+      c.type === 'INTERACT_SCENARIO' ||
+      c.type === 'EXPLORE_SCENARIO' ||
+      sprint) &&
+    'heroId' in c &&
+    c.heroId &&
     requiresProvocation(state, c.heroId)
   ) {
     // Validate the complete original command on a disposable copy before opening any provocation.
@@ -272,11 +293,18 @@ function executeIntent(
     execute(work, ledger, record, true);
     const { expectedRevision: _, type: __, ...fields } = c;
     const origin = CombatOperationSchema.shape.origin.parse(
-      c.type === 'INTERACT_SCENARIO'
-        ? { ...fields, kind: 'interaction' as const }
-        : c.type === 'EXPLORE_SCENARIO'
-          ? { ...fields, kind: 'exploration' as const, entropy: record.explorationEntropy! }
-          : { ...fields, kind: 'movement' as const },
+      c.type === 'SCENARIO_INPUT'
+        ? {
+            ...fields,
+            kind: 'source-sprint',
+            entropy: record.explorationEntropy!,
+            sourceRequest: state.scenario!.pending,
+          }
+        : c.type === 'INTERACT_SCENARIO'
+          ? { ...fields, kind: 'interaction' as const }
+          : c.type === 'EXPLORE_SCENARIO'
+            ? { ...fields, kind: 'exploration' as const, entropy: record.explorationEntropy! }
+            : { ...fields, kind: 'movement' as const },
     );
     const op: NonNullable<State['combat']>['operations'][number] = {
       id: uuid({ request: record.requestId, kind: 'provocation-return' }),
@@ -288,6 +316,7 @@ function executeIntent(
       reason: null,
     };
     state.combat.operation = op;
+    if (op.origin.kind === 'source-sprint') state.scenario!.pending = null;
     nextProvocation(state);
     return c.type === 'MOVE_HERO'
       ? {
@@ -301,33 +330,43 @@ function executeIntent(
           turnId: c.turnId,
           completed: false,
         }
-      : c.type === 'INTERACT_SCENARIO'
+      : c.type === 'SCENARIO_INPUT'
         ? {
             ...base,
-            type: c.type,
+            type: 'SCENARIO_INPUT',
             scenarioId: c.scenarioId,
-            pendingId: null,
+            pendingId: c.pendingId,
             source: c.sourceFingerprint,
-            kind: 'provoking',
+            kind: 'source-sprint',
             phase: 'action',
-            completed: false,
           }
-        : {
-            ...base,
-            type: c.type,
-            scenarioId: c.scenarioId,
-            pendingId: null,
-            source: c.sourceFingerprint,
-            kind: 'explore',
-            phase: 'action',
-            mapId: c.mapId,
-            heroId: c.heroId,
-            spaceId: state.journey!.heroes.find((h) => h.heroId === c.heroId)!.spaceId,
-            movesRemaining: state.journey!.travel!.remaining,
-            roundId: c.roundId,
-            turnId: c.turnId,
-            completed: false,
-          };
+        : c.type === 'INTERACT_SCENARIO'
+          ? {
+              ...base,
+              type: c.type,
+              scenarioId: c.scenarioId,
+              pendingId: null,
+              source: c.sourceFingerprint,
+              kind: 'provoking',
+              phase: 'action',
+              completed: false,
+            }
+          : {
+              ...base,
+              type: c.type,
+              scenarioId: c.scenarioId,
+              pendingId: null,
+              source: c.sourceFingerprint,
+              kind: 'explore',
+              phase: 'action',
+              mapId: c.mapId,
+              heroId: c.heroId,
+              spaceId: state.journey!.heroes.find((h) => h.heroId === c.heroId)!.spaceId,
+              movesRemaining: state.journey!.travel!.remaining,
+              roundId: c.roundId,
+              turnId: c.turnId,
+              completed: false,
+            };
   }
   if (c.type === 'START_ATTACK' || c.type === 'COMBAT_INPUT') {
     const attempt =
@@ -381,7 +420,14 @@ function executeIntent(
     invariant(cycle.version === 2, 'Comando fonte in un ledger storico.');
     const command = { ...c, requestId: record.requestId, generation: state.generation };
     if (command.type === 'SCENARIO_INPUT') {
-      const result = applyScenario(state, record.playerId, command, '', '');
+      const result = applyScenario(
+        state,
+        record.playerId,
+        command,
+        '',
+        '',
+        record.explorationEntropy,
+      );
       if (advanceSourceShadow(state)) {
         const id = runSource(state, record, [{ kind: 'rally-reset', hero: 0 }]);
         const task = {
@@ -661,20 +707,33 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
   if (defeatedHeroes(state).includes(op.origin.heroId)) {
     op.status = 'cancelled';
     op.reason = 'L’eroe è sconfitto: il comando sospeso termina.';
+    if (op.origin.kind === 'source-sprint' && !state.physical!.snapshot.lastStand?.terminal)
+      finishDefeatedSprint(state, op.origin.heroId);
   } else {
     const origin = op.origin;
     const { kind: _, ...fields } = origin;
     const type =
-      origin.kind === 'movement'
-        ? 'MOVE_HERO'
-        : origin.kind === 'exploration'
-          ? 'EXPLORE_SCENARIO'
-          : 'INTERACT_SCENARIO';
-    const { entropy: __, ...intentFields } = fields as typeof fields & { entropy?: string };
+      origin.kind === 'source-sprint'
+        ? 'SCENARIO_INPUT'
+        : origin.kind === 'movement'
+          ? 'MOVE_HERO'
+          : origin.kind === 'exploration'
+            ? 'EXPLORE_SCENARIO'
+            : 'INTERACT_SCENARIO';
+    const {
+      entropy: __,
+      sourceRequest: ___,
+      ...intentFields
+    } = fields as typeof fields & {
+      entropy?: string;
+      sourceRequest?: unknown;
+    };
     const intent = { ...intentFields, type, expectedRevision: state.revision };
     // A child may have changed legality. A failed return keeps all prior consequences and pays nothing new.
     const work = structuredClone(state);
     work.combat!.operation = null;
+    if (origin.kind === 'source-sprint')
+      work.scenario!.pending = structuredClone(origin.sourceRequest);
     try {
       const receipt = execute(
         work,
@@ -684,7 +743,9 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
           playerId: op.playerId,
           requestId: op.requestId,
           intent: originalIntents.parse(intent),
-          ...(origin.kind === 'exploration' ? { explorationEntropy: origin.entropy } : {}),
+          ...(origin.kind === 'exploration' || origin.kind === 'source-sprint'
+            ? { explorationEntropy: origin.entropy }
+            : {}),
         },
         true,
       );
@@ -715,6 +776,8 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
       op.status = 'cancelled';
       op.reason =
         'Dopo le conseguenze, il comando sospeso non è più legale. Nessun nuovo costo è stato applicato.';
+      if (origin.kind === 'source-sprint' && !state.physical!.snapshot.lastStand?.terminal)
+        finishInvalidatedSprint(state, origin.heroId);
     }
   }
   state.combat!.operations.push(structuredClone(op));
@@ -856,7 +919,10 @@ export function applyPhysicalCycle(
     requestId,
     intent: c,
     ...(p.lastStand ? { lastStandRules: p.lastStand.rules } : {}),
-    ...(c.type === 'EXPLORE_SCENARIO'
+    ...(c.type === 'EXPLORE_SCENARIO' ||
+    (c.type === 'SCENARIO_INPUT' &&
+      c.input.kind === 'source-sprint' &&
+      c.input.destinationSpaceId !== null)
       ? { explorationEntropy: randomBytes(32).toString('hex') }
       : {}),
     ...(c.type === 'BEGIN_SHADOW' && state.scenario!.pack.manifest.followup

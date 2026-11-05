@@ -150,6 +150,7 @@ const TOPICS = [
       'Si usano carte abilità, non dadi. Scegli la caratteristica e la soglia indicate dalla prova. Riveli dal mazzo un numero di carte pari alla caratteristica, con l’eventuale modificatore già determinato dal gruppo; almeno una carta. Nelle carte rivelate conta solo i simboli: ignora il testo.',
       'Ogni simbolo successo vale un successo. Puoi spendere un’ispirazione per trasformare un fato in un successo, una conversione alla volta. Senza ispirazione, il fato non vale un successo. Se raggiungi la soglia superi la prova; nelle prove senza soglia confermi soltanto il numero dei successi.',
       'La pesca è salvata prima che appaia sugli schermi. L’animazione mostra quelle stesse carte; ricaricare o convertire fato non pesca di nuovo. Concludi la prova per scartare le carte rivelate. Le prove originali mostrano le capacità eseguibili e i loro costi. Le prove libere mantengono i propri limiti: consultate le carte prima di procedere.',
+      'L’esito di un incontro segue le carte: non è una seconda conferma della ricerca. Se il fallimento concede Scatto 1, il proprietario dell’eroe sceglie una casella adiacente oppure rimane qui. Provocazioni ed esplorazione si completano prima del ritorno; lo Scatto concesso conserva i movimenti del viaggio già iniziato.',
       'Durante un round, scegli “Interazione” per consumare un’azione. “Effetto già determinato” è riservato a una prova richiesta da un effetto effettivo e non consuma azioni. Registra ispirazione ottenuta soltanto quando una regola o una capacità la assegna.',
     ],
   },

@@ -14,6 +14,7 @@ import { playableScenarioPrefab } from '../shared/clues';
 import { validateFailureCapability, isConclusionReward } from './failure-capability';
 import { validateLairCapability, isLairClueReward } from './lair-capability';
 import { validateLinkedCapability, linkedDefinition } from './linked-capability';
+import { validateBaseProducts, baseProductsDefinition } from './base-products';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
@@ -23,6 +24,7 @@ export function parseScenarioPack(raw: unknown) {
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
   validateLinkedCapability(pack);
+  validateBaseProducts(pack);
   validateLairCapability(pack);
   validateClueCapability(pack);
   validateFailureCapability(pack);
@@ -213,7 +215,9 @@ export function parseScenarioPack(raw: unknown) {
     for (const s of d.states) {
       invariant(
         Object.keys(s.deferredTransitions ?? {}).every((e) => s.transitions[e] === undefined) &&
-          (!Object.keys(s.deferredTransitions ?? {}).length || !!rounds),
+          (!Object.keys(s.deferredTransitions ?? {}).length ||
+            !!rounds ||
+            baseProductsDefinition(pack, d.source)),
         'Confine condizionale ambiguo o senza capacità della fase.',
       );
       invariant(
@@ -263,7 +267,7 @@ export function parseScenarioPack(raw: unknown) {
           );
         if (a.op === 'message')
           invariant(
-            !(a.inspiration && a.consequence),
+            [a.inspiration, a.consequence, a.sprint].filter(Boolean).length <= 1,
             'Messaggio con conseguenze concorrenti non compilate.',
           );
         if (
@@ -274,7 +278,9 @@ export function parseScenarioPack(raw: unknown) {
           (a.op === 'explore' && a.intro)
         )
           invariant(
-            pack.manifest.clues || linkedDefinition(pack, d.source),
+            pack.manifest.clues ||
+              linkedDefinition(pack, d.source) ||
+              baseProductsDefinition(pack, d.source),
             'Istruzione fuori dalla capacità indizi o collegata congelata.',
           );
         if (a.op === 'objective' && a.bindings)
@@ -315,8 +321,16 @@ export function parseScenarioPack(raw: unknown) {
             'Esplorazione senza presentazione certificata.',
           );
         if (
-          ['confirm', 'sourceTest', 'challenge', 'choice', 'nullProduct', 'lore'].includes(a.op) ||
-          (a.op === 'message' && (a.consequence || a.inspiration))
+          [
+            'confirm',
+            'sourceTest',
+            'challenge',
+            'choice',
+            'nullProduct',
+            'ownsProducts',
+            'lore',
+          ].includes(a.op) ||
+          (a.op === 'message' && (a.consequence || a.inspiration || a.sprint))
         )
           invariant(
             original &&
@@ -456,6 +470,11 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.baseProducts)
+    invariant(
+      digest(p.context.ownedProductIds) === digest(pack.manifest.baseProducts.ownedProductIds),
+      'Prodotti della realizzazione fuori dal perimetro base attestato.',
+    );
   if (pack.manifest.clues)
     invariant(
       pack.manifest.clues.projectionFingerprint === p.fingerprint,

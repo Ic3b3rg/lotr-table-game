@@ -53,6 +53,7 @@ const CompilationSchema = z.strictObject({
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
@@ -60,6 +61,35 @@ const CompilationSchema = z.strictObject({
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  const base = pack.manifest.baseProducts;
+  invariant(
+    base
+      ? input.baseProductsCertificate?.instructionHash === digest(base)
+      : !input.baseProductsCertificate,
+    'Input prodotti base assente o non attestato.',
+  );
+  if (base) {
+    const p = pack.manifest.prefabs.find((p) => p.source === base.prefab),
+      c = certificates.find((c) => c.source === p?.fsmSource),
+      d = pack.definitions.find((d) => d.source === p?.fsmSource);
+    invariant(
+      c &&
+        d &&
+        c.objectHash === base.sourceObjectHash &&
+        c.lifecycleHash === base.lifecycleHash &&
+        digest(c) === base.sourceCertificateHash &&
+        c.states.length === 14 &&
+        c.states.reduce((n, s) => n + s.actions.length, 0) === 14 &&
+        c.states.every(
+          (s) => d.states.some((v) => v.index === s.index) || base.excludedStates.includes(s.index),
+        ) &&
+        c.deferredEdges.length === 1 &&
+        c.deferredEdges[0]?.from === base.gate.state &&
+        c.deferredEdges[0]?.to === base.gate.excludedTarget &&
+        c.deferredEdges[0]?.capability === base.gate.capability,
+      'Closure completa e ramo escluso non attestati.',
+    );
+  }
   invariant(
     pack.manifest.linked
       ? input.linkedCertificate?.instructionHash === digest(pack.manifest.linked)
