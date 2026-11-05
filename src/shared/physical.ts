@@ -7,6 +7,7 @@ import {
   AttackOutcomeSchema,
   CombatAdditionSchema,
   CombatPhysicalContextSchema,
+  BoonKindSchema,
 } from './combat';
 import { ContentIdSchema } from './catalog';
 import { LastStandViewSchema } from './last-stand';
@@ -94,6 +95,7 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('source-boon'), hero: slot, boon: BoonKindSchema }),
   z.strictObject({
     kind: z.literal('scenario-item'),
     hero: slot,
@@ -308,6 +310,7 @@ export const PhysicalResultSchema = z.strictObject({
     'inspiration',
     'scenario-title',
     'scenario-item',
+    'source-boon',
     'attack-test',
     'pay-attack-grant',
     'last-stand-one',

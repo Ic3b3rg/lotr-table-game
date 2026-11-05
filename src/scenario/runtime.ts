@@ -10,6 +10,15 @@ import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
 import { baseProductsDefinition, validateBaseProducts } from './base-products';
 import { itemDefinition, requireItemCapability } from './item-capability';
+import {
+  firstCombatDefinition,
+  requireFirstCombat,
+  spawnFirstCombat,
+  firstCombatGroup,
+  recordFirstCombatCallback,
+} from './first-combat';
+import { preflightCombatOperation } from '../combat/preflight';
+import { verifyCombatClosure } from '../combat/compiler';
 import { applySprintMove, preflightSprint, sprintActor, sprintDestinations } from './sprint';
 import { explorationSource } from '../shared/exploration';
 import { objectiveText } from './objective';
@@ -51,7 +60,7 @@ import {
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { defeatedHeroes } from '../server/physical-defeat';
 import { comparisonSort } from '../map-generation/comparison-sort';
-import { materializeDeployment, deploymentText } from './deployment';
+import { materializeDeployment, deploymentText, livingEnemyGroups } from './deployment';
 import type { Command } from '../shared/protocol';
 import { persistentEffects } from '../physical-resolution/effects';
 import {
@@ -392,7 +401,7 @@ function execute(
         sc.play?.attempts.find((a) => a.id === sc.play!.active)?.entryChoice?.state === i.state) ||
       a.op === 'sourceTest' ||
       a.op === 'challenge' ||
-      (a.op === 'message' && (a.consequence || a.inspiration)))
+      (a.op === 'message' && (a.consequence || a.inspiration || a.boon)))
   ) {
     invariant(
       state.physical?.version === 3 && state.physical.fronts && state.physical.lastStand,
@@ -411,7 +420,7 @@ function execute(
       // choice or hypothetical return may supply a later mandatory message.
       probe.supply[family] -= amount;
     }
-    if (a.op === 'message' && a.inspiration) {
+    if (a.op === 'message' && (a.inspiration || a.boon)) {
       messageRequest(state, i, a);
       return;
     }
@@ -444,6 +453,50 @@ function execute(
     return;
   }
   switch (a.op) {
+    case 'spawnFixed': {
+      const receipt = spawnFirstCombat(state, a, actionKey(i, a.index));
+      const g = sc.enemies!.groups.find((g) => g.id === receipt.groupId);
+      if (g) {
+        const missing = preflightCombatOperation(
+          state,
+          verifyCombatClosure(sc.pack.manifest.combat),
+          g,
+          receipt.actorHeroId,
+          'provocation',
+        );
+        if (missing.length)
+          throw new ApiError(
+            409,
+            missing.includes('boon-quantities-57')
+              ? 'SCENARIO_BOON_CAPABILITY'
+              : 'SCENARIO_COMBAT_CAPABILITY',
+            'Una conseguenza del gruppo richiede riserve di benefici o consumer non ancora verificati. Nessun costo, carta o scelta casuale è stato applicato.',
+          );
+      }
+      if (probe || !g) {
+        receipt.grant = receipt.grant === 'offered' ? 'declined' : receipt.grant;
+        receipt.returned = true;
+        complete(i, a.index);
+        invariant(send(sc, i, g ? a.successEvent : a.failureEvent), 'Spawn senza callback fonte.');
+      } else
+        sc.tasks.push({
+          kind: 'spawnFixed',
+          instanceId: i.id,
+          entry: i.entry,
+          action: a.index,
+          effectId: receipt.effectId,
+          stage: 'placement',
+        });
+      return;
+    }
+    case 'removeEnemies':
+      invariant(sc.pack.manifest.firstCombat && sc.firstCombat, 'Rimozione senza capacità fonte.');
+      for (const g of livingEnemyGroups(state)) {
+        g.placed = false;
+        g.tokenId = -1;
+        g.removed = 'timer';
+      }
+      break;
     case 'modalWait': {
       const modal = sc.pack.manifest.items?.modal;
       invariant(
@@ -693,10 +746,34 @@ function execute(
     }
     case 'broadcast':
       broadcast(sc, a.event);
+      if (
+        sc.pack.manifest.firstCombat &&
+        Object.values(sc.pack.manifest.firstCombat.events).includes(a.event)
+      ) {
+        // SendEvent enters each receiver before the sender emits its next event.
+        // Existing packs retain their published scheduling contract.
+        const delivery = sc.events.at(-1)!;
+        for (const id of delivery.receivers) {
+          const receiver = sc.instances.find((r) => r.id === id)!;
+          if (receiver !== i) runInstance(state, receiver, false, probe, requestId);
+        }
+      }
       break;
     case 'send': {
       const receiver = sc.instances.find((r) => r.definition === a.definition);
       invariant(receiver, 'Receiver indirizzato non inizializzato.');
+      const first = sc.pack.manifest.firstCombat;
+      if (
+        first &&
+        a.definition === first.definitions.find((d) => d.role === 'logic')!.source &&
+        a.event === first.events.defeated
+      )
+        recordFirstCombatCallback(
+          state,
+          actionKey(i, a.index),
+          'timer',
+          sc.firstCombat!.spawns[0]?.groupId ?? null,
+        );
       sc.events.push({ id: eventId(sc, a.event), event: a.event, receivers: [receiver.id] });
       invariant(send(sc, receiver, a.event), 'Callback indirizzato senza seguito fonte.');
       break;
@@ -775,7 +852,7 @@ function execute(
         });
         return;
       }
-      if (a.consequence || a.inspiration) {
+      if (a.consequence || a.inspiration || a.boon) {
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
@@ -995,12 +1072,24 @@ export function startPhaseEvent(state: State, id: string, event: string, process
 export function pumpPhaseEvent(state: State) {
   pump(state);
 }
+export function deliverFirstCombatDefeat(state: State, attackId: string, groupId: string) {
+  if (!state.scenario?.pack.manifest.firstCombat) return;
+  const sc = state.scenario!,
+    group = sc.enemies!.groups.find((g) => g.id === groupId)!;
+  if (!firstCombatGroup(state, group)) return;
+  const logic = recordFirstCombatCallback(state, attackId, 'defeated', groupId),
+    event = sc.pack.manifest.firstCombat!.events.defeated;
+  sc.events.push({ id: eventId(sc, event), event, receivers: [logic.id] });
+  invariant(send(sc, logic, event), 'Sconfitta senza callback del proprio gruppo.');
+  pump(state);
+}
 function advanceTask(state: State) {
   const sc = state.scenario!,
     task = sc.tasks.at(-1);
   if (!task) return false;
   const owner = sc.instances.find((i) => i.id === task.instanceId)!;
-  invariant(owner.entry === task.entry, 'Continuazione fonte scaduta.');
+  if (task.kind !== 'spawnFixed' || task.stage !== 'following')
+    invariant(owner.entry === task.entry, 'Continuazione fonte scaduta.');
   if (task.kind === 'sprint') {
     const actor = sprintActor(state, task),
       a = current(sc, owner).actions.find((a) => a.index === task.action)!;
@@ -1045,6 +1134,73 @@ function advanceTask(state: State) {
     }
     logMessage(sc, owner, a.index);
     complete(owner, a.index);
+    sc.tasks.pop();
+    return true;
+  }
+  if (task.kind === 'spawnFixed') {
+    const effect = sc.effects.find((e) => e.id === task.effectId)!;
+    const a = definition(sc, owner)
+      .states.find((s) => s.index === effect.state)!
+      .actions.find((a) => a.index === effect.action)!;
+    invariant(a.op === 'spawnFixed', 'Spawn senza istruzione proprietaria.');
+    const receipt = sc.firstCombat!.spawns.find((s) => s.effectId === task.effectId)!;
+    const g = sc.enemies!.groups.find((g) => g.id === receipt.groupId)!;
+    invariant(g && firstCombatGroup(state, g), 'Spawn senza binding reciproco.');
+    if (task.stage === 'placement') {
+      g.placed = true;
+      request(state, {
+        instanceId: owner.id,
+        state: owner.state,
+        entry: owner.entry,
+        action: a.index,
+        kind: 'deployment',
+        text: a.text,
+        heroId: receipt.actorHeroId,
+        actorPlayerId: receipt.playerId,
+        stage: 'ready',
+        tileSource: g.tileSource,
+      });
+      return true;
+    }
+    if (task.stage === 'following') {
+      if (!owner.settled || owner.processing !== 0) return false;
+      // Close the source's principal continuation before the optional attack.
+      // Its objective must precede any later DEFEATED callback objective.
+      task.entry = owner.entry;
+      task.stage = 'grant';
+    }
+    if (receipt.grant === 'offered') {
+      if (defeatedHeroes(state).includes(receipt.actorHeroId)) receipt.grant = 'ineligible';
+      else {
+        request(state, {
+          instanceId: owner.id,
+          state: owner.state,
+          entry: owner.entry,
+          action: a.index,
+          kind: 'source-attack',
+          text: [
+            {
+              kind: 'text',
+              text: 'Puoi attaccare il gruppo appena collocato senza usare un’altra azione. Scegli armi e spese nel Combattimento, oppure rinuncia qui.',
+              style: 'plain',
+            },
+          ],
+          options: [
+            {
+              event: 'decline-source-attack',
+              label: [{ kind: 'text', text: 'Rinuncia all’attacco e prosegui', style: 'plain' }],
+            },
+          ],
+          heroId: receipt.actorHeroId,
+          actorPlayerId: receipt.playerId,
+          stage: 'ready',
+          tileSource: g.tileSource,
+        });
+        return true;
+      }
+    }
+    if (receipt.grant === 'used' && !receipt.returned) return false;
+    receipt.returned = true;
     sc.tasks.pop();
     return true;
   }
@@ -1095,7 +1251,7 @@ function advanceTask(state: State) {
       sc.tasks.pop();
       // A resource child can complete without presenting a physical decision.
       // Its source DisplayMessage still owns an acknowledgement before FINISHED.
-      if (a.op === 'message' && a.inspiration) {
+      if (a.op === 'message' && (a.inspiration || a.boon)) {
         messageRequest(state, owner, a);
         return true;
       }
@@ -1336,6 +1492,9 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     let progress = false;
     for (const i of sc.instances.filter((i) => !sc.conclusion || i.kind === 'principal'))
       progress = runInstance(state, i, false, probe, requestId) || progress;
+    for (const cb of sc.firstCombat?.callbacks ?? [])
+      if (!cb.returned && sc.instances.find((i) => i.id === cb.logicInstanceId)!.stopped)
+        cb.returned = true;
     if (sc.pending) return;
     if (sc.conclusion) {
       if (sc.conclusion.outcome === 'victory') {
@@ -1348,6 +1507,7 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
       return;
     }
     if (advanceTask(state)) continue;
+    if (sc.tasks.some((t) => t.kind === 'spawnFixed')) return;
     if (sc.phase === 'action') {
       if (
         (sc.pack.manifest.followup || sc.pack.manifest.linked || sc.pack.manifest.baseProducts) &&
@@ -1472,6 +1632,8 @@ export function beginScenario(
       : {}),
   };
   state.scenario = sc;
+  if (sc.pack.manifest.firstCombat)
+    sc.firstCombat = { version: 'source-first-combat-v1', spawns: [], callbacks: [] };
   if (sc.pack.manifest.followup) {
     sc.globals[sc.pack.manifest.followup.playerCountBinding] = state.preparation!.heroes.length;
     sc.enemies = { entropy: null, cursor: 0, groups: [], attempts: [] };
@@ -1584,7 +1746,23 @@ export function resumeScenario(
       'SCENARIO_INPUT_REQUIRED',
       'Completa l’operazione richiesta dall’avventura; non basta una conferma.',
     );
-  if (q.kind === 'sprint') {
+  if (q.kind === 'source-attack') {
+    const task = sc.tasks.at(-1),
+      receipt = sc.firstCombat?.spawns.find(
+        (s) => s.effectId === (task?.kind === 'spawnFixed' ? task.effectId : null),
+      );
+    if (input.kind !== 'choice' || input.event !== 'decline-source-attack') throw wrong();
+    invariant(
+      task?.kind === 'spawnFixed' &&
+        task.stage === 'grant' &&
+        receipt?.grant === 'offered' &&
+        receipt.actorHeroId === q.heroId &&
+        receipt.playerId === playerId,
+      'Concessione del primo scontro scaduta.',
+    );
+    receipt.grant = 'declined';
+    sc.pending = null;
+  } else if (q.kind === 'sprint') {
     const task = sc.tasks.at(-1),
       a = current(sc, i).actions.find((a) => a.index === q.action)!;
     if (input.kind !== 'source-sprint') throw wrong();
@@ -1652,6 +1830,23 @@ export function resumeScenario(
     if (input.kind !== 'ack') throw wrong();
     const task = sc.tasks.at(-1),
       a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    if (task?.kind === 'spawnFixed') {
+      invariant(
+        a.op === 'spawnFixed' &&
+          task.instanceId === i.id &&
+          task.entry === q.entry &&
+          task.action === q.action &&
+          task.stage === 'placement',
+        'Callback del primo spawn scaduto.',
+      );
+      sc.messageLog.push({ id: task.effectId, text: structuredClone(q.text) });
+      task.stage = 'following';
+      complete(i, a.index);
+      invariant(send(sc, i, a.successEvent), 'Spawn senza ritorno al principale.');
+      sc.pending = null;
+      pump(state, probe, command.requestId);
+      return;
+    }
     invariant(
       task?.kind === 'spawnRandom' &&
         task.instanceId === i.id &&
@@ -1936,7 +2131,11 @@ export function interactScenario(
     const option = encounterOptions(entry.action, i!, sc.globals).find(
       (o) => o.event === c.choiceEvent && o.cost === 'interact',
     );
-    if (!linkedDefinition(sc.pack, i!.definition) || !option)
+    if (
+      (!linkedDefinition(sc.pack, i!.definition) &&
+        !firstCombatDefinition(sc.pack, i!.definition)) ||
+      !option
+    )
       fail('SCENARIO_CHOICE_CHANGED', 'Scegli un’interazione disponibile nella visita corrente.');
     entryChoice = { state: entry.state, action: entry.action.index, event: option!.event };
   } else if (c.choiceEvent !== undefined)
@@ -1953,6 +2152,17 @@ export function interactScenario(
       'INTERACTION_RESOURCE',
       `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
     );
+  if (firstCombatDefinition(sc.pack, i!.definition) && !probe) {
+    requireFirstCombat(state, c.heroId);
+    for (const option of encounterOptions(
+      entry!.action as Extract<ScenarioAction, { op: 'choice' }>,
+      i!,
+      sc.globals,
+    ))
+      preflightContinuation(state, (work, probe) =>
+        interactScenario(work, playerId, { ...c, choiceEvent: option.event }, probe),
+      );
+  }
   if (
     (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
       sc.pack.manifest.lair?.prefab === i!.prefab ||

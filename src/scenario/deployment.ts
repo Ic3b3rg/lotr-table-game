@@ -85,7 +85,7 @@ export function materializeDeployment(
     filter: a.filter,
     sections: a.sections,
     reserved: [],
-    inPlay: enemies.groups.filter((g) => g.figures.some((f) => f.health > 0)),
+    inPlay: livingEnemyGroups(state),
     spaces,
   });
   enemies.cursor = result.cursor;
@@ -115,7 +115,11 @@ export function deploymentText(state: State, groupId: string): SourceText {
 
 /** The controller is absent: protect costs against the current, living enemies. */
 export function livingEnemyGroups(state: State) {
-  return state.scenario?.enemies?.groups.filter((g) => g.figures.some((f) => f.health > 0)) ?? [];
+  return (
+    state.scenario?.enemies?.groups.filter(
+      (g) => !g.removed && g.figures.some((f) => f.health > 0),
+    ) ?? []
+  );
 }
 export function requiresProvocation(state: State, heroId: string) {
   const ordinary = state.journey?.heroes.find((h) => h.heroId === heroId)?.spaceId;

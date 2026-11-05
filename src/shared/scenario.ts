@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { CombatClosureArtifactSchema } from './combat';
+import { BoonKindSchema } from './combat';
+import { FirstCombatCapabilitySchema, FirstCombatStateSchema } from './mission-combat';
 import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { ContentIdSchema } from './catalog';
 import { CopyIdSchema } from './preparation';
@@ -318,6 +320,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
     inspiration: z.literal(1).optional(),
+    boon: BoonKindSchema.optional(),
     sprint: z.literal(1).optional(),
     consequence: z
       .strictObject({
@@ -365,6 +368,21 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   }),
   action('broadcast', { event: z.string().min(1).max(100) }),
   action('send', { definition: SourceSchema, event: z.string().min(1).max(100) }),
+  action('spawnFixed', {
+    model: SourceSchema,
+    logic: SourceSchema,
+    spaceId: z.string().min(1).max(200),
+    size: z.literal(2),
+    additionalPoints: z.literal(13),
+    ignoreCost: z.literal(false),
+    randomBonuses: z.literal(false),
+    bonuses: z.array(z.never()).length(0),
+    text: SourceTextSchema,
+    grant: z.boolean(),
+    successEvent: z.string().min(1).max(100),
+    failureEvent: z.string().min(1).max(100),
+  }),
+  action('removeEnemies', {}),
   action('spawnRandom', {
     suffering: NegatedSufferingSchema.optional(),
     points: VariableRefSchema,
@@ -493,6 +511,7 @@ export const ScenarioPackSchema = z.strictObject({
     linked: LinkedCapabilitySchema.optional(),
     baseProducts: BaseProductsCapabilitySchema.optional(),
     items: ItemsCapabilitySchema.optional(),
+    firstCombat: FirstCombatCapabilitySchema.optional(),
     clues: z
       .strictObject({
         version: z.literal('source-clues-v1'),
@@ -697,6 +716,7 @@ export const ScenarioRequestSchema = z.strictObject({
     'physical',
     'choice',
     'hero-choice',
+    'source-attack',
     'sprint',
     'exploration-intro',
     'exploration-outro',
@@ -767,6 +787,7 @@ const SprintExplorationAttemptSchema = TurnExplorationAttemptSchema.extend({
   sprintOrigin: z.strictObject({ version: z.literal('source-sprint-v1'), attemptId: z.uuid() }),
 });
 export const ScenarioSchema = z.strictObject({
+  firstCombat: FirstCombatStateSchema.optional(),
   conclusion: z
     .strictObject({
       version: z.enum(['source-adventure-failure-v1', 'source-lair-victory-v1']),
@@ -934,6 +955,12 @@ export const ScenarioSchema = z.strictObject({
   tasks: z
     .array(
       z.discriminatedUnion('kind', [
+        z.strictObject({
+          ...taskBase,
+          kind: z.literal('spawnFixed'),
+          effectId: z.string().min(1).max(300),
+          stage: z.enum(['placement', 'following', 'grant', 'attack']),
+        }),
         z.strictObject({
           ...taskBase,
           kind: z.literal('sprint'),

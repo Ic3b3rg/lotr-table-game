@@ -54,6 +54,7 @@ const CompilationSchema = z.strictObject({
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  firstCombatCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -62,6 +63,30 @@ const CompilationSchema = z.strictObject({
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  const first = pack.manifest.firstCombat;
+  invariant(
+    first
+      ? input.firstCombatCertificate?.instructionHash === digest(first)
+      : !input.firstCombatCertificate,
+    'Primo scontro non attestato.',
+  );
+  for (const owner of first?.definitions ?? []) {
+    const c = certificates.find((c) => c.source === owner.source),
+      d = pack.definitions.find((d) => d.source === owner.source);
+    invariant(
+      c &&
+        d &&
+        c.objectHash === owner.objectHash &&
+        c.lifecycleHash === owner.lifecycleHash &&
+        digest(c) === owner.certificateHash &&
+        c.states.length === d.states.length &&
+        c.states.every((s) =>
+          d.states.some((v) => v.index === s.index && v.actions.length === s.actions.length),
+        ) &&
+        !c.deferredEdges.length,
+      'Certificato intero del primo scontro incompleto.',
+    );
+  }
   const items = pack.manifest.items;
   invariant(
     items ? input.itemsCertificate?.instructionHash === digest(items) : !input.itemsCertificate,

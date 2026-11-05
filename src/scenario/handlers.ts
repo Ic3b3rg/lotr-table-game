@@ -40,6 +40,8 @@ const sourceHandlers: Record<string, ScenarioAction['op'] | ScenarioAction['op']
   'HutongGames.PlayMaker.Actions.IntAdd': 'addInt',
   'HutongGames.PlayMaker.Actions.IntOperator': ['subtractInt', 'multiplyInt'],
   'FFG.JIME.Actions.SpawnRandomEnemyGroups': 'spawnRandom',
+  'FFG.JIME.Actions.SpawnEnemyGroup': 'spawnFixed',
+  'FFG.JIME.Actions.EnemyGroupRemoveAll': 'removeEnemies',
   'HutongGames.PlayMaker.Actions.IntCompare': 'compareInt',
   'HutongGames.PlayMaker.Actions.IntSwitch': 'switchInt',
   'FFG.JIME.Actions.IsTileExplored': 'isExplored',

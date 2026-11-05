@@ -168,7 +168,7 @@ test('a schema13 gate produced by the released executable migrates without play 
   });
   assert.equal(r.status, 200, await r.clone().text());
   const migrated = await readBackup(ready.host);
-  assert.equal(migrated.payload.state.schemaVersion, 23);
+  assert.equal(migrated.payload.state.schemaVersion, 24);
   assert.deepEqual(migrated.payload.state.physical, p);
   assert.deepEqual(migrated.payload.commands, legacy.payload.commands);
   await recoverSeat(ready.host, ready.player);

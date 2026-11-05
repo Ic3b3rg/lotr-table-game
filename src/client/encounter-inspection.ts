@@ -20,14 +20,17 @@ export function createEncounterInspection(
   dialog.setAttribute('aria-label', 'Ispeziona il segnalino');
   const body = document.createElement('div'),
     info = text('p', '', 'company-help'),
+    choices = document.createElement('div'),
     commit = text('button', '', 'company-action') as HTMLButtonElement,
     close = text('button', 'Annulla · chiudi ispezione', 'company-action') as HTMLButtonElement;
   commit.type = 'button';
   commit.dataset.write = '';
   commit.id = 'confirm-encounter';
+  choices.id = 'encounter-choices';
   close.type = 'button';
   close.onclick = () => dialog.close();
-  dialog.append(body, info, commit, close);
+  choices.append(commit);
+  dialog.append(body, info, choices, close);
   root.append(dialog);
   let session: Session | null = null,
     player: Player | null = null,
@@ -81,6 +84,23 @@ export function createEncounterInspection(
     commit.replaceChildren(
       ...(a?.op === 'confirm' ? [sourceText(a.label)] : option ? [sourceText(option.label)] : []),
     );
+    choices.replaceChildren(commit);
+    commit.onclick = () => submitChoice();
+    delete commit.dataset.encounterChoice;
+    if (sc.pack.manifest.firstCombat?.prefab === i.prefab && a?.op === 'choice') {
+      const options = encounterOptions(a, i, sc.globals).filter((o) => o.cost === 'interact');
+      for (const [index, option] of options.entries()) {
+        const button = index === 0 ? commit : document.createElement('button');
+        button.type = 'button';
+        button.className = 'company-action';
+        button.dataset.write = '';
+        button.dataset.blocked = String(!allowed);
+        button.dataset.encounterChoice = option.event;
+        button.replaceChildren(sourceText(option.label));
+        button.onclick = () => submitChoice(option.event);
+        if (index) choices.append(button);
+      }
+    }
     body.replaceChildren(sourceText(a?.text ?? m.inspection));
     const remaining = session!.journey?.travel?.remaining ?? 0;
     info.textContent = !supported
@@ -105,7 +125,7 @@ export function createEncounterInspection(
     if (!i.visible && dialog.open) dialog.close();
     refreshActions();
   }
-  commit.onclick = async () => {
+  async function submitChoice(event?: string) {
     const s = session,
       sc = s?.scenario,
       i = node(),
@@ -116,7 +136,9 @@ export function createEncounterInspection(
     const a = confirmation(i);
     const option =
       a?.op === 'choice'
-        ? encounterOptions(a, i, sc.globals).find((o) => o.cost === 'interact')
+        ? encounterOptions(a, i, sc.globals).find(
+            (o) => o.cost === 'interact' && (event === undefined || o.event === event),
+          )
         : null;
     if (a?.op === 'choice' && !option) return;
     dialog.close();
@@ -132,7 +154,8 @@ export function createEncounterInspection(
       sourceFingerprint,
       ...(option ? { choiceEvent: option.event } : {}),
     });
-  };
+  }
+  commit.onclick = () => submitChoice();
   return {
     open(instanceId: string) {
       selected = instanceId;

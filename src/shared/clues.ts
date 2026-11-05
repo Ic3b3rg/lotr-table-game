@@ -8,6 +8,7 @@ export function playableScenarioPrefab(pack: ScenarioPack, source: string) {
     pack.manifest.lair?.prefab === source ||
     pack.manifest.baseProducts?.prefab === source ||
     pack.manifest.items?.prefab === source ||
+    pack.manifest.firstCombat?.prefab === source ||
     pack.manifest.linked?.encounters.some((e) => e.prefab === source)
   );
 }
