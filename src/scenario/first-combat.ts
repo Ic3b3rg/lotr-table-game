@@ -13,6 +13,7 @@ import { assignGroupTokens } from '../combat/deployment';
 import { livingEnemyGroups } from './deployment';
 import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
 import { ApiError } from '../server/errors';
+import { threatTokenDefinition } from './threat-tokens';
 
 export function firstCombatDefinition(pack: ScenarioPack, source: string) {
   return (
@@ -30,7 +31,9 @@ export function validateFirstCombat(pack: ScenarioPack) {
       s.actions
         .filter(
           (a) =>
-            a.op === 'spawnFixed' || a.op === 'removeEnemies' || (a.op === 'message' && a.boon),
+            a.op === 'spawnFixed' ||
+            a.op === 'removeEnemies' ||
+            (a.op === 'message' && a.boon && !threatTokenDefinition(pack, d.source)),
         )
         .map((a) => ({ d, s, a })),
     ),

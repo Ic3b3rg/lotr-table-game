@@ -1,6 +1,7 @@
 import type { ScenarioPack } from '../shared/scenario';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { threatTokenDefinition } from './threat-tokens';
 
 export function baseProductsDefinition(pack: ScenarioPack, source: string) {
   const cap = pack.manifest.baseProducts;
@@ -15,7 +16,11 @@ export function validateBaseProducts(pack: ScenarioPack) {
   const additions = pack.definitions.flatMap((d) =>
     d.states.flatMap((s) =>
       s.actions
-        .filter((a) => a.op === 'ownsProducts' || (a.op === 'message' && a.sprint))
+        .filter(
+          (a) =>
+            (a.op === 'ownsProducts' && !threatTokenDefinition(pack, d.source)) ||
+            (a.op === 'message' && a.sprint),
+        )
         .map((a) => ({ d, s, a })),
     ),
   );
