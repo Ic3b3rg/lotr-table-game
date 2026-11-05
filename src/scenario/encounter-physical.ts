@@ -20,6 +20,8 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   invariant(attempt, 'Istruzione incontro senza attore del padre.');
   const hero = p.heroes.findIndex((h) => h.heroId === attempt.heroId);
   invariant(hero >= 0, 'Attore incontro fuori compagnia.');
+  const searchOwner = sc.instances.find((i) => i.id === attempt.instanceId),
+    isSearch = searchOwner && searchDefinition(sc.pack, searchOwner.definition);
   let children: Extract<PhysicalProgram, { profile: 'source-fronts-v1' }>['children'];
   if (action.op === 'confirm' || action.op === 'choice') {
     const node = sc.instances.find((i) => i.id === attempt.instanceId)!;
@@ -68,10 +70,7 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
       },
     ];
   else if (action.op === 'message' && action.recovery) {
-    invariant(
-      searchDefinition(sc.pack, sc.instances.find((i) => i.id === attempt.instanceId)!.definition),
-      'Conseguenza senza owner ricerca.',
-    );
+    invariant(isSearch, 'Conseguenza senza owner ricerca.');
     children = [{ kind: 'search-recovery', hero, effect: action.recovery }];
   } else if (action.op === 'message' && action.inspiration)
     children = [{ kind: 'inspiration', hero, amount: action.inspiration }];
@@ -99,9 +98,7 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
-    ...(searchDefinition(sc.pack, sc.instances.find((i) => i.id === attempt.instanceId)!.definition)
-      ? { immediateSkillReset: true as const }
-      : {}),
+    ...(isSearch ? { immediateSkillReset: true as const } : {}),
     ...liveGroupRules(state),
     initialCredits: p.heroes.map(() => 0),
     limits: p.heroes.map(() => ({ kind: 'requires-capability', capability: 'source-derived' })),
