@@ -1,3 +1,4 @@
+import { CampItemsCapabilitySchema, CampItemInputSchema } from './camp-items';
 import { z } from 'zod';
 import {
   CampSkillsCapabilitySchema,
@@ -584,6 +585,7 @@ export const ScenarioPackSchema = z.strictObject({
       .optional(),
     failure: AdventureFailureCapabilitySchema.optional(),
     campSkills: CampSkillsCapabilitySchema.optional(),
+    campItems: CampItemsCapabilitySchema.optional(),
     lair: LairCapabilitySchema.optional(),
     linked: LinkedCapabilitySchema.optional(),
     baseProducts: BaseProductsCapabilitySchema.optional(),
@@ -716,6 +718,7 @@ export const SourceSprintInputSchema = z.strictObject({
 });
 export const EncounterInputSchema = z.discriminatedUnion('kind', [
   CampSkillInputSchema,
+  CampItemInputSchema,
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),

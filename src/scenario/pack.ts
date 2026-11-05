@@ -1,3 +1,4 @@
+import { validateCampItemsCapability } from './camp-items-capability';
 import { readFileSync, statSync } from 'node:fs';
 import { ScenarioPackSchema, type ScenarioPack } from '../shared/scenario';
 import type { Projection } from '../shared/generated-map';
@@ -485,6 +486,7 @@ export function parseScenarioPack(raw: unknown) {
     );
   }
   validateCampCapability(pack);
+  validateCampItemsCapability(pack);
   return { pack, fingerprint: digest(pack) };
 }
 export function loadScenarioPack(path: string) {
@@ -492,6 +494,12 @@ export function loadScenarioPack(path: string) {
   return parseScenarioPack(JSON.parse(readFileSync(path, 'utf8')));
 }
 export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
+  if (pack.manifest.campItems)
+    invariant(
+      pack.manifest.campItems.catalogFingerprint === p.context.catalogFingerprint &&
+        digest(pack.manifest.campItems.ownedProductIds) === digest(p.context.ownedProductIds),
+      'Oggetti del campo diversi dal catalogo o dai prodotti della realizzazione.',
+    );
   if (pack.manifest.campSkills)
     invariant(
       pack.manifest.campSkills.catalogFingerprint === p.context.catalogFingerprint,

@@ -1,3 +1,4 @@
+import { CampItemInputSchema, CampItemReceiptSchema } from './camp-items';
 import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
 import { PhysicalInputSchema, PhysicalViewSchema } from './physical';
@@ -46,7 +47,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(27),
+  schemaVersion: z.literal(28),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -74,6 +75,7 @@ export const IdentitySchema = z.object({
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
   CampSkillInputSchema,
+  CampItemInputSchema,
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -347,6 +349,7 @@ export const ReceiptSchema = z.union([
       completed: z.boolean().optional(),
       phase: z.enum(['setup', 'action']),
       skill: CampSkillReceiptSchema.optional(),
+      item: CampItemReceiptSchema.optional(),
     })
     .refine(
       (receipt) =>
@@ -354,6 +357,16 @@ export const ReceiptSchema = z.union([
           ? receipt.type === 'SCENARIO_INPUT' && receipt.skill !== undefined
           : receipt.skill === undefined,
       { message: 'Riepilogo abilità senza transazione del campo corrispondente.', path: ['skill'] },
+    )
+    .refine(
+      (receipt) =>
+        receipt.kind === 'camp-item'
+          ? receipt.type === 'SCENARIO_INPUT' && receipt.item !== undefined
+          : receipt.item === undefined,
+      {
+        message: 'Riepilogo oggetto senza miglioramento del campo corrispondente.',
+        path: ['item'],
+      },
     ),
   z.strictObject({
     requestId: IntentIdSchema,

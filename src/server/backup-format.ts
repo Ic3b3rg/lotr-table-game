@@ -65,6 +65,17 @@ export const BackupSchema = z
         raw.state && typeof raw.state === 'object' && 'schemaVersion' in raw.state
           ? raw.state.schemaVersion
           : 1;
+      if (typeof version === 'number' && version <= 27 && Array.isArray(raw.commands))
+        for (const command of raw.commands) {
+          const receipt =
+            command && typeof command === 'object' && 'receipt' in command ? command.receipt : null;
+          if (
+            receipt &&
+            typeof receipt === 'object' &&
+            ('item' in receipt || ('kind' in receipt && receipt.kind === 'camp-item'))
+          )
+            throw new Error('Ricevuta oggetto del campo non valida per uno schema storico.');
+        }
       if (typeof version === 'number' && version <= 26 && Array.isArray(raw.commands))
         for (const command of raw.commands) {
           const receipt =

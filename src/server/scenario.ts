@@ -1,3 +1,4 @@
+import { validateCampItemsCatalog } from '../scenario/camp-items-capability';
 import { validateItemStartup } from '../scenario/item-capability';
 import { validateCombatParty } from '../combat/party';
 import { validatePreparedPolicies } from '../scenario/prepared-effects';
@@ -12,7 +13,6 @@ import { initializeOriginalCycle } from './physical-cycle';
 import { requiresProvocation } from '../scenario/deployment';
 import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
 import { validateCampCatalog } from '../scenario/camp-capability';
-import type { CampSkillReceipt } from '../shared/camp-skills';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -55,7 +55,7 @@ export function applyScenario(
   physicalPath: string,
   explorationEntropy?: string,
 ) {
-  let skill: CampSkillReceipt | undefined;
+  let summaries: ReturnType<typeof answerCampaign> = {};
   if (state.revision !== command.expectedRevision)
     throw new ApiError(
       409,
@@ -102,6 +102,7 @@ export function applyScenario(
       );
     const parsed = loadScenarioPack(path);
     validateCampCatalog(parsed.pack, state.content!);
+    validateCampItemsCatalog(parsed.pack, state.content!);
     let physical;
     if (needsPhysical(parsed.pack)) {
       try {
@@ -131,7 +132,7 @@ export function applyScenario(
     }
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
-    skill = answerCampaign(state, playerId, command);
+    summaries = answerCampaign(state, playerId, command);
   else resumeScenario(state, playerId, command, physicalPath, undefined, explorationEntropy);
   const sc = state.scenario!;
   const source = command.type === 'START_SCENARIO' ? 'SCENARIO_BEGIN' : command.sourceFingerprint;
@@ -157,7 +158,7 @@ export function applyScenario(
     source,
     kind,
     phase: sc.phase,
-    ...(skill ? { skill } : {}),
+    ...summaries,
   };
 }
 export function allowScenarioPlay(state: State, command: Command) {
