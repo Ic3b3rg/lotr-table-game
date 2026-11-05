@@ -83,18 +83,38 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
       sc?.pack.manifest.searches?.encounters.some((e) =>
         sc.instances.some((i) => i.id === q.instanceId && i.prefab === e.prefab),
       );
+    const tokenOwner =
+      q &&
+      sc?.pack.manifest.threatTokens?.encounters.find((e) =>
+        sc.instances.some((i) => i.id === q.instanceId && i.prefab === e.prefab),
+      );
+    const lastAttempt = sc?.play?.attempts.at(-1);
+    const lastToken =
+      lastAttempt &&
+      sc?.pack.manifest.threatTokens?.encounters.find((e) =>
+        sc.instances.some((i) => i.id === lastAttempt.instanceId && i.prefab === e.prefab),
+      );
+    const lastTest = sc?.play?.tests.filter((t) => t.attemptId === lastAttempt?.id).at(-1);
+    const retryFailed =
+      tokenOwner?.role === 'retry' &&
+      lastTest &&
+      lastTest.target !== null &&
+      lastTest.successes < lastTest.target;
     const message = !sc
       ? (offer?.reason ?? 'Controllo del materiale dell’avventura…')
       : current.physical?.cycle?.pending
         ? `${current.players.find((p) => p.id === current!.physical!.active?.actorPlayerId)?.name ?? 'Il proprietario indicato'} completa la capacità qui sotto. Il comando ordinario riprende soltanto dopo tutti i figli.`
-        : current.combat?.current?.kind === 'provocation' && sc?.pack.manifest.baseProducts
+        : current.combat?.current?.kind === 'provocation' &&
+            (sc?.pack.manifest.baseProducts || sc?.pack.manifest.threatTokens)
           ? 'Completa la provocazione nella sezione Combattimento. La richiesta dell’incontro resta sospesa fino al ritorno; segui le carte e le conseguenze indicate.'
           : q?.kind === 'physical'
             ? current.physical?.active?.kind === 'gate'
               ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
-              : searchOwner
-                ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Completa l’effetto con le carte qui sotto, poi conferma il messaggio per rimuovere il segnalino e riprendere il viaggio.`
-                : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
+              : tokenOwner
+                ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Risolvi la prova con le carte e le conversioni qui sotto; poi segui l’esito e le conseguenze del segnalino.`
+                : searchOwner
+                  ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Completa l’effetto con le carte qui sotto, poi conferma il messaggio per rimuovere il segnalino e riprendere il viaggio.`
+                  : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
             : q?.kind === 'sprint'
               ? current.combat?.current
                 ? 'Completa la provocazione qui sotto. Lo Scatto attende; azione e carte della prova restano salvate.'
@@ -107,25 +127,35 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                     ? `${actor?.name ?? 'Il proprietario indicato'} registra l’eroe destinatario concordato dalla Compagnia. Può essere diverso da ${hero?.name.text ?? 'chi ha agito'}. Il titolo si prepara subito; il costo dell’interazione è già pagato.`
                     : q?.kind === 'choice'
                       ? `${actor?.name ?? 'Il proprietario indicato'} sceglie come proseguire. L’azione è già pagata; la scelta è obbligatoria.`
-                      : q?.kind === 'message' && searchOwner
-                        ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Effetto completato e azione già pagata. Conferma il messaggio: il segnalino viene rimosso e il viaggio riprende con i movimenti residui.`
-                        : q && explorer
-                          ? `${actor?.name ?? 'Il proprietario indicato'} continua l’esplorazione con ${hero?.name.text ?? 'l’eroe di turno'}. L’ingresso ha usato 1 movimento, senza altre azioni. Movimenti residui: ${current.journey?.travel?.remaining ?? 0}. Segui l’istruzione qui sotto.`
-                          : q?.heroId
-                            ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
-                            : q
-                              ? 'Un partecipante conferma per il gruppo.'
-                              : activeHero
-                                ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
-                                : sourcePhases && current.round?.phase === 'rally'
-                                  ? 'Riorganizzazione · ogni proprietario completa Scoperta. Il nuovo round attende tutti gli eroi.'
-                                  : sourcePhases && current.round?.phase === 'shadow'
-                                    ? 'Ombra · leggete il prossimo passo nella sezione del round.'
-                                    : sourcePhases && turnsEnded
-                                      ? 'I turni sono conclusi. Il gruppo può iniziare l’Ombra nella sezione del round.'
-                                      : turnsEnded
-                                        ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
-                                        : 'Avvio completato · scegliete il prossimo eroe di turno.';
+                      : q?.kind === 'message' && tokenOwner
+                        ? retryFailed
+                          ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Prova fallita e azione già pagata. Conferma il messaggio: il segnalino resta visibile. Un nuovo tentativo richiede una nuova azione.`
+                          : `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Conseguenza completata e azione già pagata. Conferma il messaggio per rimuovere il segnalino e riprendere il turno, conservando i movimenti del viaggio.`
+                        : q?.kind === 'message' && searchOwner
+                          ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Effetto completato e azione già pagata. Conferma il messaggio: il segnalino viene rimosso e il viaggio riprende con i movimenti residui.`
+                          : q && explorer
+                            ? `${actor?.name ?? 'Il proprietario indicato'} continua l’esplorazione con ${hero?.name.text ?? 'l’eroe di turno'}. L’ingresso ha usato 1 movimento, senza altre azioni. Movimenti residui: ${current.journey?.travel?.remaining ?? 0}. Segui l’istruzione qui sotto.`
+                            : q?.heroId
+                              ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. ${openCards ? 'Completa le carte rivelate qui sotto.' : 'Rivela le carte richieste.'}`
+                              : q
+                                ? 'Un partecipante conferma per il gruppo.'
+                                : lastToken && lastAttempt?.returned
+                                  ? lastToken.role === 'retry' &&
+                                    sc.instances.find((i) => i.id === lastAttempt.instanceId)
+                                      ?.visible
+                                    ? 'Il segnalino resta in attesa. Puoi ispezionarlo gratuitamente; riprovare richiede una nuova azione nel turno di un eroe nella sua casella.'
+                                    : 'Interazione conclusa e progressi salvati. Continua il turno dalla mappa oppure scegli il prossimo eroe quando il turno termina.'
+                                  : activeHero
+                                    ? `Avvio completato · ${activeHero.name.text} è di turno. Apri la mappa per viaggiare.`
+                                    : sourcePhases && current.round?.phase === 'rally'
+                                      ? 'Riorganizzazione · ogni proprietario completa Scoperta. Il nuovo round attende tutti gli eroi.'
+                                      : sourcePhases && current.round?.phase === 'shadow'
+                                        ? 'Ombra · leggete il prossimo passo nella sezione del round.'
+                                        : sourcePhases && turnsEnded
+                                          ? 'I turni sono conclusi. Il gruppo può iniziare l’Ombra nella sezione del round.'
+                                          : turnsEnded
+                                            ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
+                                            : 'Avvio completato · scegliete il prossimo eroe di turno.';
     if (status.textContent !== message) status.textContent = message;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';

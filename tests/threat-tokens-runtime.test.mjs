@@ -82,3 +82,15 @@ test('unknown stock gates the whole retry interaction before its failure or succ
   );
   assert.deepEqual(f.state, before);
 });
+
+test('the real spirit reward grants exactly one inspiration below the cap and persists through acknowledgement', () => {
+  const f = threatTokenRuntime({ role: 'null-product', success: 1, fate: 0, inspiration: 0 });
+  f.commit();
+  finishThreatTest(f);
+  assert.equal(f.state.preparation.heroes[0].inspiration, 1);
+  const rewards = structuredClone(f.physical.snapshot.parents.at(-1).results);
+  f.answer({ kind: 'ack' });
+  assert.equal(f.state.preparation.heroes[0].inspiration, 1);
+  assert.deepEqual(f.physical.snapshot.parents.at(-1).results, rewards);
+  assert.equal(f.i.stopped, true);
+});

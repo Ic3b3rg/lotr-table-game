@@ -44,6 +44,7 @@ test('whole source inventory, attestation and declared base products are require
     (i) => delete i.pack.manifest.threatTokens,
     (i) => i.pack.manifest.threatTokens.ownedProductIds.push(5),
     (i) => i.certificates.at(-1).states.pop(),
+    (i) => i.pack.manifest.threatTokens.encounters[0].admittedStates.push(80),
     (i) => i.pack.manifest.threatTokens.encounters[1].excludedStates.pop(),
     (i) => (i.pack.manifest.threatTokens.methods.threat.assemblyHash = 'f'.repeat(64)),
   ]) {

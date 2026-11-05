@@ -70,6 +70,7 @@ export function validateThreatTokens(pack: ScenarioPack) {
         !pack.manifest.linked?.encounters.some((e) => e.prefab === p.source) &&
         d.states.length === 8 + n &&
         d.states.reduce((sum, s) => sum + s.actions.length, 0) === 9 &&
+        owner.admittedStates.length === d.states.length &&
         new Set(owner.admittedStates).size === d.states.length &&
         d.states.every(
           (s) => owner.admittedStates.includes(s.index) && !owner.excludedStates.includes(s.index),
