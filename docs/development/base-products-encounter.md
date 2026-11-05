@@ -183,3 +183,24 @@ Originali, prosa, carte, IR/FSM/IL, JSON e immagini restano solo nella
 scratch ignorata, anche nella nuova storia Git. README, comandi, tentativi,
 input/byte/hash e sigillo privati in `.scratch/encounter75/`. Il root svolge
 le due review fresche e l’integrazione; nessun push o modifica GitHub.
+
+## Review e integrazione del root
+
+Due review fresche concluse: Standards ha trovato un P2 nella lettura
+storica, Spec non ha trovato scostamenti. Il walker generico scambiava
+normali nomi di globali/locali per nuove forme. Il root limita il controllo
+ai percorsi del contratto e aggiunge una regressione HTTP completa10–21
+con RED/GREEN; tutti i rifiuti delle nuove forme restano verificati.
+
+Verifica root: **773/773**, zero fail/skip/cancel/todo, concorrenza4 da sola,
+679735,193208 ms; tipi, formato, diff e privacy verdi. Ripetuti sul codice
+corretto i503 confronti e tutte le serie di viste/export/finali96/98/100/102/104,
+con payload interi e soli adattamenti strutturali. Le prove UI sopra sono
+quelle del child; la correzione root riguarda esclusivamente la migrazione
+storica. Il validator finale root include questa correzione ed è ricostruito
+dal commit, senza rivendicarlo identico a quello del child.
+
+Dettagli dei due assi, primarie/oracle, byte/hash, tentativi e limiti nella
+[review del root](../reviews/2026-11-05-base-products-encounter.md). Blocco57
+e checkpoint156 mantenuti; nessuna nuova partita originale o accettazione
+completa89/33.
