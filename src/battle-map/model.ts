@@ -44,6 +44,7 @@ export const sourceSchema = z.strictObject({
         sha256: fingerprint,
         kind: z.enum([
           'resource-manager',
+          'prefab',
           'adventure',
           'model',
           'build-settings',
@@ -67,6 +68,22 @@ export const sourceSchema = z.strictObject({
       .min(2)
       .max(16),
   }),
+  prefab: z.strictObject({ record: ref, adventure: ref }),
+  mechanics: z
+    .array(
+      z.strictObject({
+        capability: z.enum([
+          'resource-loading',
+          'board-initialization',
+          'skin-material',
+          'root-merge',
+        ]),
+        file: ref,
+        locator: z.string().min(1).max(500),
+        sha256: fingerprint,
+      }),
+    )
+    .length(4),
   adventure: z.strictObject({ record: ref, resourceKey: ref, model: ref }),
   model: z.strictObject({
     record: ref,
@@ -80,7 +97,7 @@ export const sourceSchema = z.strictObject({
   buildSettings: z.strictObject({
     record: ref,
     scenes: z
-      .array(z.strictObject({ key: ref, manager: ref }))
+      .array(z.strictObject({ index: integer, key: ref, manager: ref }))
       .min(1)
       .max(2),
   }),

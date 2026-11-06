@@ -8,7 +8,7 @@ export function compileBattleMapSource(raw: unknown) {
   const ctx = parseSource(raw),
     source = ctx.s;
   const layouts = sorted(source.alternatives).map((a) => deriveLayout(ctx, a));
-  assertEquivalent(layouts, source.tolerances.geometry);
+  assertEquivalent(layouts, source.tolerances.geometry, source.tolerances.uv);
   const body = {
     format: 'battle-map-artifact-v1' as const,
     algorithm: source.algorithm,

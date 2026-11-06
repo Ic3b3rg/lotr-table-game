@@ -189,10 +189,19 @@ export function battleSource() {
     resourceManager: {
       record: record('catalog', 'resource-manager'),
       entries: [
-        { key: 'demo-prefab', target: 'adventure' },
+        { key: 'demo-prefab', target: 'prefab' },
         { key: 'demo-model', target: 'model' },
       ],
     },
+    prefab: { record: record('prefab', 'prefab'), adventure: 'adventure' },
+    mechanics: ['resource-loading', 'board-initialization', 'skin-material', 'root-merge'].map(
+      (capability) => ({
+        capability,
+        file: 'invented',
+        locator: `method/${capability}`,
+        sha256: sha(capability),
+      }),
+    ),
     adventure: {
       record: record('adventure', 'adventure'),
       resourceKey: 'demo-prefab',
@@ -209,7 +218,7 @@ export function battleSource() {
     },
     buildSettings: {
       record: record('build', 'build-settings'),
-      scenes: alternatives.map((a) => ({ key: a.scene, manager: a.manager })),
+      scenes: alternatives.map((a, i) => ({ index: 11 + i, key: a.scene, manager: a.manager })),
     },
     materials,
     textures: [texture, otherTexture].map((r) => ({

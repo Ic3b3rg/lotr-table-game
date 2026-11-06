@@ -66,6 +66,7 @@ export function parseSource(raw: unknown) {
     rows.forEach((r) => record(r.record, kind));
   }
   record(s.resourceManager.record, 'resource-manager');
+  record(s.prefab.record, 'prefab');
   record(s.adventure.record, 'adventure');
   record(s.model.record, 'model');
   record(s.buildSettings.record, 'build-settings');
@@ -75,9 +76,15 @@ export function parseSource(raw: unknown) {
   );
   check(
     s.resourceManager.entries.find((e) => e.key === s.adventure.resourceKey)?.target ===
-      s.adventure.record,
+      s.prefab.record,
     'Resource/prefab binding mismatch.',
   );
+  check(s.prefab.adventure === s.adventure.record, 'Prefab/Adventure component binding mismatch.');
+  unique(
+    s.mechanics.map((m) => m.capability),
+    'Mechanical evidence',
+  );
+  for (const m of s.mechanics) check(files.has(m.file), 'Mechanical evidence file missing.');
   check(
     s.resourceManager.entries.find((e) => e.key === s.model.resourceKey)?.target ===
       s.model.record && s.adventure.model === s.model.record,
@@ -204,6 +211,14 @@ export function parseSource(raw: unknown) {
     s.alternatives.map((a) => a.id),
     'Merge alternatives',
   );
+  unique(
+    s.alternatives.map((a) => a.manager),
+    'Merge managers',
+  );
+  unique(
+    s.alternatives.map((a) => a.root),
+    'Merge roots',
+  );
   check(
     s.alternatives.some((a) => a.id === s.selectedAlternative),
     'Selected merge alternative missing.',
@@ -211,6 +226,10 @@ export function parseSource(raw: unknown) {
   unique(
     s.buildSettings.scenes.map((v) => v.key),
     'Build scenes',
+  );
+  unique(
+    s.buildSettings.scenes.map((v) => v.index),
+    'Build scene indices',
   );
   for (const a of s.alternatives) {
     record(a.manager, 'manager');
@@ -272,11 +291,16 @@ export function parseSource(raw: unknown) {
   for (const a of s.anchors) {
     transform(a.transform);
     if (a.record !== null) record(a.record, 'anchor');
+    check(a.kind === 'hero' || a.record !== null, 'Anchor component provenance missing.');
     check((a.kind === 'spawn') === (a.order !== null), 'Only spawn anchors have source order.');
     check((a.kind === 'wall') === (a.wall !== null), 'Wall evidence missing/unexpected.');
     if (a.wall) {
       corners(a.wall.mesh, a.wall.submesh);
-      a.wall.children.forEach(transform);
+      let parent = a.transform;
+      for (const child of a.wall.children) {
+        check(transform(child).parent === parent, 'Wall child hierarchy mismatch.');
+        parent = child;
+      }
     }
   }
   return { s, record, transform, world, corners };

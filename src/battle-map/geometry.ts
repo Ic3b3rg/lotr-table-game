@@ -345,7 +345,7 @@ export function deriveLayout(ctx: SourceContext, alternative: Alternative) {
   };
 }
 export type Layout = ReturnType<typeof deriveLayout>;
-export function assertEquivalent(layouts: Layout[], eps: number): void {
+export function assertEquivalent(layouts: Layout[], eps: number, uvEps: number): void {
   const logical = (l: Layout) => ({
     boards: l.boards.map(({ id, skin, texture }) => ({ id, skin, texture })),
     cells: l.cells,
@@ -375,7 +375,7 @@ export function assertEquivalent(layouts: Layout[], eps: number): void {
         'Merge alternatives disagree on patch geometry.',
       );
       check(
-        a.uv.every((u, j) => u.every((v, axis) => Math.abs(v - b.uv[j]![axis]!) <= eps)),
+        a.uv.every((u, j) => u.every((v, axis) => Math.abs(v - b.uv[j]![axis]!) <= uvEps)),
         'Merge alternatives disagree on patch UV.',
       );
     }

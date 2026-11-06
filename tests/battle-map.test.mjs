@@ -40,6 +40,15 @@ test('source binding, float bits, projection and visual completeness are enforce
       s.resourceManager.entries[0].target = 'model';
     },
     (s) => {
+      s.prefab.adventure = 'model';
+    },
+    (s) => {
+      s.mechanics[0].file = 'absent';
+    },
+    (s) => {
+      s.buildSettings.scenes[0].index = s.buildSettings.scenes[1].index;
+    },
+    (s) => {
       s.model.boards[0].skin = 100;
     },
     (s) => {
@@ -163,4 +172,35 @@ test('corner-only contact creates no diagonal adjacency', () => {
     a.compiled.layouts[0].geometricEdges.some((e) => e.contacts.some((c) => c.kind === 'seam')),
     false,
   );
+});
+
+test('native wall child chains, distinct merge roots and component provenance are required', () => {
+  for (const mutate of [
+    (s) => {
+      s.anchors.find((a) => a.kind === 'wall').wall.children = ['guide-t'];
+    },
+    (s) => {
+      s.alternatives[1].manager = s.alternatives[0].manager;
+      s.alternatives[1].scene = s.alternatives[0].scene;
+    },
+    (s) => {
+      s.anchors.find((a) => a.kind === 'spawn').record = null;
+    },
+  ]) {
+    const s = battleSource();
+    mutate(s);
+    assert.throws(() => compileBattleMapSource(s));
+  }
+});
+
+test('merge comparison applies UV tolerance separately from world geometry tolerance', () => {
+  const s = battleSource();
+  s.tolerances.geometry = 1e-8;
+  s.tolerances.uv = 0.0001;
+  for (const m of s.meshes.filter((m) => m.record.startsWith('mesh-violet-')))
+    for (const v of m.vertices) {
+      v.uv[0] = Math.fround(v.uv[0] + 0.00005);
+      v.uvBits = v.uv.map((n) => f32(n).float32le);
+    }
+  assert.equal(compileBattleMapSource(s).compiled.layouts.length, 2);
 });

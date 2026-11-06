@@ -61,7 +61,12 @@ serve al confronto finale, non a generare coordinate, archi o mapping.
 Ogni record ha ID, file, locator e hash dei byte oggetto; ogni file ha ID,
 byte e SHA256. I riferimenti tipizzati collegano catalogo ResourceManager,
 prefab/Adventure, modello e BoardSettings, BuildSettings, manager/board,
-materiale/texture e stream. Il modello determina Skin e ordine board;
+materiale/texture e stream. Il prefab GameObject e il componente Adventure
+sono record distinti: il catalogo punta al primo, che contiene il secondo.
+BuildSettings conserva anche l’indice scena. Quattro prove meccaniche
+(file/locator/hash: resource-loading, board-initialization, skin-material,
+root-merge) conservano i binding verificati dall’adapter sui corpi selezionati.
+Il modello determina Skin e ordine board;
 il manager determina patch e Transform. Nessuna seconda verità per bounds,
 caselle, archi o output di piazzamento viene accettata nell'ingresso.
 
@@ -102,7 +107,10 @@ Questi valori sono tolleranze delle prove, non nuovi confini fisici.
 Bounds derivati dai vertici trasformati. Due patch condividono un contatto
 quando due lati opposti coincidono entro la tolleranza e l'intervallo comune
 ha lunghezza positiva oltre la tolleranza; i soli angoli non creano archi.
-Le gerarchie patch/board/root devono collegarsi; ogni board copre il proprio
+Le gerarchie patch/board/root e dei figli muro devono collegarsi;
+i root/manager alternativi devono essere distinti e le ancore non eroiche
+richiedono provenienza del componente. Il confronto usa la tolleranza UV
+per le UV e quella geometrica per i bounds; ogni board copre il proprio
 rettangolo e tutte le patch appartengono allo stesso piano entro tolleranza.
 Si rifiutano sovrapposizioni interne significative, patch degeneri, UV invertite
 fra patch della stessa faccia, regioni disconnesse e contatti ambigui.
