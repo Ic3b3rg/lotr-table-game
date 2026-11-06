@@ -4,7 +4,9 @@
 [Specifica](../planning/startup-preparation-spec.md) e
 [piano](../planning/startup-preparation-plan.md) committati prima del prodotto.
 Singolo implementer nel checkout assegnato; integrazione e review indipendenti
-rimangono a Root.
+sono documentate nella [review Root](../reviews/2026-11-06-startup-preparation.md).
+Il rapporto seguente descrive la consegna del child; la review comprende
+la correzione del passaggio al ciclo originale e la canonica finale998/998.
 
 ## Risultato
 
