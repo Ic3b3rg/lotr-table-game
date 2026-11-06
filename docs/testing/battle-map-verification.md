@@ -135,3 +135,22 @@ generazione nemici, shuffle, avvio o ripresa di una partita originale.
 Nessuna equivalenza Unity/JIT/RNG, partita completa, telefoni fisici, Windows
 o Safari è certificata. Root esegue review Standards/Spec fresche e integrazione;
 questa consegna non scrive GitHub, non apre PR e non esegue push/merge/watch.
+
+## Integrazione Root
+
+Le due review hanno individuato lo stesso P2: compile poteva restituire
+un artifact oltre il limite condiviso di100000 nodi, poi rifiutato da verify.
+Il Root ha riprodotto il RED e aggiunto il controllo sull'artifact completo
+prima del return, con una regressione inventata al confine del budget.
+
+I19 test mirati e la nuova canonica Root sono passati: **942/942**, exit
+npm0, zero fail/cancelled/skipped/todo, stderr vuoto, ALONE/concurrency4.
+Il codice è rimasto al commit `3a4893bbdf60a1092fe0f1f12c8501411769cd51`
+per tutta l'esecuzione. I941 risultati della consegna precedente rimangono
+evidenza storica distinta.
+
+Rieseguiti adapter nativo, compilazione, matrice e confronto separato:
+19.578 verifiche di campo,24 casi negativi e otto comandi CLI. I due artifact
+validi conservano esattamente byte e fingerprint precedenti; tutti i22
+vecchi dist e223 file fonte/tool/validatori sono invariati. Dettagli e limiti
+nella [review Root](../reviews/2026-11-06-battle-map-compiler.md).

@@ -28,6 +28,10 @@ indipendenti e non aprono locator o file. Request e pin sono strict;
 nessun parametro H, seed, gameplay o consumer del packet.
 
 `verify` ricompila e confronta l'intero artifact, inclusi fonte e gate.
+Compile controlla il budget sia della fonte sia dell'artifact completo,
+prima di restituirlo o pubblicarlo. Una fonte entro i limiti può richiedere
+troppo spazio dopo l'aggiunta dei derivati: in quel caso compile fallisce
+senza rilasciare un risultato che verify non potrebbe reimportare.
 Pin attesi devono arrivare da un'autorità del futuro pack/host: digest e
 ricompilazione provano coerenza, non autenticità editoriale. Una fonte
 interamente inventata coerente è accettabile senza pin; quella originale
