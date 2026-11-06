@@ -49,7 +49,7 @@ const envelope = z.strictObject({
 export function verifyBattleMapArtifact(raw: unknown, expected?: BattleMapPins): BattleMapArtifact {
   bounded(raw);
   if (expected !== undefined) bounded(expected);
-  const pins = pinsSchema.parse(expected ?? {}),
+  const pins = pinsSchema.parse(expected === undefined ? {} : expected),
     supplied = envelope.parse(raw);
   const rebuilt = compileBattleMapSource(supplied.source);
   check(

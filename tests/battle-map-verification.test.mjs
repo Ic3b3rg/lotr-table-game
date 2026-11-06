@@ -109,6 +109,7 @@ test('a coherent new invented source is valid unpinned and rejected by original 
   );
   assert.throws(() => verifyBattleMapArtifact(original, { sourceFingerprint: 'bad' }));
   assert.throws(() => verifyBattleMapArtifact(original, { unknown: true }));
+  assert.throws(() => verifyBattleMapArtifact(original, null));
   const editorialChange = structuredClone(original);
   editorialChange.source.policy.assumptions[0] += ' changed';
   editorialChange.source.policyFingerprint = hash(editorialChange.source.policy);
@@ -161,7 +162,8 @@ test('JSON guards reject hostile trees without invoking accessors at each API bo
   assert.equal(called, 0);
   let deep = {};
   for (let i = 0; i < 26; i++) deep = { child: deep };
-  assert.throws(() => compileBattleMapSource(deep));
+  assert.throws(() => compileBattleMapSource(deep), /Limite nodi/);
+  assert.throws(() => compileBattleMapSource(new Array(100001)), /Limite array/);
   assert.throws(() => verifyBattleMapArtifact({}, new Date()));
   assert.throws(() => compileBattleMapSource({ ...battleSource(), seed: 123 }));
 });
