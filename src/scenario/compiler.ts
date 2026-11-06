@@ -53,6 +53,7 @@ const CompilationSchema = z.strictObject({
   failureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   campSkillsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   campItemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  campPreparationCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   lairCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   linkedCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   itemsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
@@ -68,6 +69,12 @@ export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
   const first = pack.manifest.firstCombat;
+  invariant(
+    pack.manifest.campPreparation
+      ? input.campPreparationCertificate?.instructionHash === digest(pack.manifest.campPreparation)
+      : !input.campPreparationCertificate,
+    'Preparazione assente o non attestata.',
+  );
   invariant(
     pack.manifest.campItems
       ? input.campItemsCertificate?.instructionHash === digest(pack.manifest.campItems)

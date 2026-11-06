@@ -1,3 +1,4 @@
+import { CampPreparationInputs, CampPreparationReceiptSchema } from './camp-preparation';
 import { CampItemInputSchema, CampItemReceiptSchema } from './camp-items';
 import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } from './scenario';
 import { CycleAnswerSchema } from './physical-cycle';
@@ -47,7 +48,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(28),
+  schemaVersion: z.literal(29),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -76,6 +77,7 @@ export const ErrorSchema = z.object({ error: z.object({ code: z.string(), messag
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
   CampSkillInputSchema,
   CampItemInputSchema,
+  ...CampPreparationInputs,
   z.strictObject({
     kind: z.literal('camp-role'),
     heroId: ContentIdSchema,
@@ -350,7 +352,15 @@ export const ReceiptSchema = z.union([
       phase: z.enum(['setup', 'action']),
       skill: CampSkillReceiptSchema.optional(),
       item: CampItemReceiptSchema.optional(),
+      preparation: CampPreparationReceiptSchema.optional(),
     })
+    .refine(
+      (r) =>
+        CampPreparationInputs.some((s) => s.shape.kind.value === r.kind)
+          ? r.type === 'SCENARIO_INPUT' && r.preparation?.action === r.kind
+          : r.preparation === undefined,
+      { message: 'Ricevuta preparazione senza intento corrispondente.', path: ['preparation'] },
+    )
     .refine(
       (receipt) =>
         receipt.kind === 'camp-skill'

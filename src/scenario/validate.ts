@@ -1,4 +1,6 @@
+import { validateCampPreparationCatalog } from './camp-preparation-capability';
 import { validateCampItemsCatalog } from './camp-items-capability';
+import { validateCampPreparationState } from './camp-preparation';
 import { validateCampItemsState } from './camp-items';
 import { initialCombat } from '../combat/controller';
 import { validateCampState } from './camp-skills';
@@ -31,8 +33,10 @@ export function scenarioStateProblem(state: State): string | null {
     if (state.content) {
       validateCampCatalog(sc.pack, state.content);
       validateCampItemsCatalog(sc.pack, state.content);
+      validateCampPreparationCatalog(sc.pack, state.content);
     }
     validateCampItemsState(state);
+    validateCampPreparationState(state);
     validateCampState(state);
     validateFirstCombatState(state);
     if (state.combat) {

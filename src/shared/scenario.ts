@@ -1,3 +1,8 @@
+import {
+  CampPreparationCapabilitySchema,
+  CampPreparationSchema,
+  CampPreparationInputs,
+} from './camp-preparation';
 import { CampItemsCapabilitySchema, CampItemInputSchema } from './camp-items';
 import { z } from 'zod';
 import {
@@ -586,6 +591,7 @@ export const ScenarioPackSchema = z.strictObject({
     failure: AdventureFailureCapabilitySchema.optional(),
     campSkills: CampSkillsCapabilitySchema.optional(),
     campItems: CampItemsCapabilitySchema.optional(),
+    campPreparation: CampPreparationCapabilitySchema.optional(),
     lair: LairCapabilitySchema.optional(),
     linked: LinkedCapabilitySchema.optional(),
     baseProducts: BaseProductsCapabilitySchema.optional(),
@@ -719,6 +725,7 @@ export const SourceSprintInputSchema = z.strictObject({
 export const EncounterInputSchema = z.discriminatedUnion('kind', [
   CampSkillInputSchema,
   CampItemInputSchema,
+  ...CampPreparationInputs,
   ...PhysicalInputSchema.options,
   z.strictObject({ kind: z.literal('ack') }),
   z.strictObject({ kind: z.literal('choice'), event: z.string().min(1).max(100) }),
@@ -806,6 +813,7 @@ export const ScenarioRequestSchema = z.strictObject({
     'deployment-intro',
     'deployment',
     'exploration-markers',
+    'camp-preparation',
     'campaign-map',
     'campaign-story',
     'camp',
@@ -905,7 +913,7 @@ export const ScenarioSchema = z.strictObject({
       episodeHash: HashSchema,
       suspendedRequest: ScenarioRequestSchema.nullable(),
       suspendedPrincipal: ScenarioInstanceSchema,
-      stage: z.enum(['conclusion', 'campaign-map', 'campaign-story', 'camp']),
+      stage: z.enum(['conclusion', 'campaign-map', 'campaign-story', 'camp', 'camp-preparation']),
       xp: z
         .array(
           z.strictObject({
@@ -944,6 +952,7 @@ export const ScenarioSchema = z.strictObject({
             .max(1)
             .optional(),
           training: CampTrainingSchema.optional(),
+          preparation: CampPreparationSchema.optional(),
           sceneGlobals: z.record(z.string(), scalar),
           adventureRules: z.array(z.string().max(1000)).max(100),
           next: z

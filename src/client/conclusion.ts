@@ -1,3 +1,4 @@
+import { campPreparation } from './camp-preparation';
 import { campItemInventory } from './camp-items';
 import type { Catalog } from '../shared/catalog';
 import type { Session, Player, ScenarioCommand } from '../shared/protocol';
@@ -46,7 +47,7 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
   function controls() {
     const c = session?.scenario?.conclusion;
     root.hidden = !c;
-    next.hidden = !c || c.stage === 'camp' || !player;
+    next.hidden = !c || ['camp', 'camp-preparation'].includes(c.stage) || !player;
     next.textContent =
       c?.stage === 'conclusion'
         ? 'Continua per il gruppo'
@@ -74,13 +75,15 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
       if (key === changed) return;
       key = changed;
       element('#campaign-title').textContent =
-        c.stage === 'camp'
-          ? 'Il primo campo'
-          : c.stage === 'conclusion'
-            ? c.outcome === 'victory'
-              ? 'L’avventura è vinta'
-              : 'L’avventura termina in una sconfitta'
-            : 'Il cammino della compagnia';
+        c.stage === 'camp-preparation'
+          ? 'Prepara la prossima avventura'
+          : c.stage === 'camp'
+            ? 'Il primo campo'
+            : c.stage === 'conclusion'
+              ? c.outcome === 'victory'
+                ? 'L’avventura è vinta'
+                : 'L’avventura termina in una sconfitta'
+              : 'Il cammino della compagnia';
       status.textContent =
         (c.outcome === 'victory'
           ? 'La ricerca del passaggio è riuscita: la compagnia ha vinto. I risultati e i premi sono salvati.'
@@ -89,11 +92,13 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
             : c.timing === 'shadow-start'
               ? 'Un eroe è stato sconfitto: la compagnia perde all’inizio della prossima Ombra.'
               : 'Non restano eroi attivi: la compagnia perde subito.') +
-        (c.stage === 'camp'
-          ? ' Il campo è salvato. Ogni proprietario può scegliere il ruolo del proprio eroe per il seguito.'
-          : player
-            ? ' Un partecipante conferma per il gruppo; gli altri leggono e attendono.'
-            : ' Un partecipante prosegue dalla propria vista personale.');
+        (c.stage === 'camp-preparation'
+          ? ' Ogni proprietario controlla e conferma le proprie scelte. La partenza resta indisponibile.'
+          : c.stage === 'camp'
+            ? ' Il campo è salvato. Ogni proprietario può scegliere il ruolo del proprio eroe per il seguito.'
+            : player
+              ? ' Un partecipante conferma per il gruppo; gli altri leggono e attendono.'
+              : ' Un partecipante prosegue dalla propria vista personale.');
       element('#campaign-message').replaceChildren(sourceText(sc!.pending!.text));
       const rewards = element('#campaign-rewards');
       rewards.replaceChildren(
@@ -117,8 +122,8 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
       rewards.append(list);
       if (c.bonusLore) rewards.append(sourceText(sc!.pack.manifest.failure!.partyBonus.text));
       const camp = element('#campaign-camp');
-      camp.hidden = c.stage !== 'camp';
-      if (c.stage !== 'camp') return;
+      camp.hidden = !['camp', 'camp-preparation'].includes(c.stage);
+      if (camp.hidden) return;
       const destination = sc!.pack.manifest.failure!.next;
       element('#campaign-destination').replaceChildren(
         text('strong', 'Prossima destinazione: '),
@@ -132,6 +137,30 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
       );
       const heroes = element('#campaign-heroes');
       heroes.replaceChildren();
+      if (c.stage === 'camp-preparation') {
+        heroes.append(campPreparation(session, catalog, player, reader, (input) => submit(input)));
+        return;
+      }
+      const start = document.createElement('button');
+      start.type = 'button';
+      start.className = 'company-action';
+      start.dataset.write = '';
+      start.textContent = 'Scegli ruoli e accessori per il seguito';
+      start.disabled = !player || !sc!.pack.manifest.campPreparation;
+      start.dataset.blocked = String(start.disabled);
+      start.onclick = () => {
+        void submit({ kind: 'camp-prepare' });
+      };
+      heroes.append(start);
+      if (!sc!.pack.manifest.campPreparation)
+        heroes.append(
+          text(
+            'p',
+            'Questo salvataggio conserva il campo. La preparazione successiva richiede le identità delle carte disponibili prima dell’avvio.',
+            'company-help',
+          ),
+        );
+
       for (const h of c.campaign!.heroes) {
         const entry = document.createElement('article');
         entry.className = 'campaign-hero';
@@ -156,7 +185,8 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         );
         if (
           session.preparation!.heroes.find((hero) => hero.heroId === h.heroId)!.playerId ===
-          player?.id
+            player?.id &&
+          !sc!.pack.manifest.campPreparation
         ) {
           const form = document.createElement('form'),
             label = document.createElement('label'),

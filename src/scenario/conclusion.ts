@@ -1,3 +1,8 @@
+import { transactCampPreparation, refreshCampPreparation } from './camp-preparation';
+import {
+  CampPreparationInputSchema,
+  type CampPreparationReceipt,
+} from '../shared/camp-preparation';
 import { transactCampItem } from './camp-items';
 import type { CampItemReceipt } from '../shared/camp-items';
 import type { State } from '../server/state';
@@ -326,7 +331,11 @@ export function answerCampaign(
   const sc = state.scenario!,
     c = sc.conclusion!,
     q = sc.pending;
-  const result: { skill?: CampSkillReceipt; item?: CampItemReceipt } = {};
+  const result: {
+    skill?: CampSkillReceipt;
+    item?: CampItemReceipt;
+    preparation?: CampPreparationReceipt;
+  } = {};
   if (
     !q ||
     command.scenarioId !== sc.id ||
@@ -341,11 +350,18 @@ export function answerCampaign(
       'SCENARIO_REQUEST_CHANGED',
       'Il passaggio della campagna è concluso o è cambiato.',
     );
-  if (command.input.kind === 'camp-item') {
+  const preparationInput = CampPreparationInputSchema.safeParse(command.input);
+  if (preparationInput.success) {
+    result.preparation = transactCampPreparation(state, playerId, preparationInput.data);
+  } else if (command.input.kind === 'camp-item') {
     result.item = transactCampItem(state, playerId, command.input);
   } else if (command.input.kind === 'camp-skill') {
     result.skill = transactCampSkill(state, playerId, command.input);
-  } else if (command.input.kind === 'camp-role' && c.stage === 'camp') {
+  } else if (
+    command.input.kind === 'camp-role' &&
+    c.stage === 'camp' &&
+    !sc.pack.manifest.campPreparation
+  ) {
     const input = command.input;
     const h = state.preparation!.heroes.find((h) => h.heroId === input.heroId);
     if (!h || h.playerId !== playerId)
@@ -365,6 +381,7 @@ export function answerCampaign(
       'CAMPAIGN_CAPABILITY',
       'Il campo è salvato. La prossima avventura richiede la propria mappa e le proprie istruzioni; nessuna partenza, spesa o capacità futura è stata applicata.',
     );
+  refreshCampPreparation(state);
   sc.pending = null;
   campaignRequest(state);
   return result;

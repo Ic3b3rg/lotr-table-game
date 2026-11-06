@@ -65,6 +65,25 @@ export const BackupSchema = z
         raw.state && typeof raw.state === 'object' && 'schemaVersion' in raw.state
           ? raw.state.schemaVersion
           : 1;
+      if (typeof version === 'number' && version <= 28 && Array.isArray(raw.commands))
+        for (const command of raw.commands) {
+          const receipt =
+            command && typeof command === 'object' && 'receipt' in command ? command.receipt : null;
+          if (
+            receipt &&
+            typeof receipt === 'object' &&
+            ('preparation' in receipt ||
+              ('kind' in receipt &&
+                [
+                  'camp-prepare',
+                  'camp-select-role',
+                  'camp-accessory',
+                  'camp-confirm',
+                  'camp-return',
+                ].includes(String(receipt.kind))))
+          )
+            throw new Error('Ricevuta preparazione non valida per uno schema storico.');
+        }
       if (typeof version === 'number' && version <= 27 && Array.isArray(raw.commands))
         for (const command of raw.commands) {
           const receipt =
