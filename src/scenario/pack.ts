@@ -404,7 +404,10 @@ export function parseScenarioPack(raw: unknown) {
           invariant(
             (a.program.profile !== 'source-fronts-v1' ||
               (!a.program.groupRules &&
-                !a.program.children.some((c) => c.kind === 'scenario-title'))) &&
+                !a.program.startupRules &&
+                !a.program.children.some((c) =>
+                  ['scenario-title', 'prepared', 'startup-scout', 'startup-test'].includes(c.kind),
+                ))) &&
               pack.manifest.scope ===
                 (a.program.profile === 'source-fronts-v1'
                   ? 'synthetic-physical-p1'
@@ -413,7 +416,7 @@ export function parseScenarioPack(raw: unknown) {
               d.source === pack.principal &&
               s.actions.length === 1 &&
               a.origin.parameterHash === digest(a.program),
-            'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti; i gruppi attivi sono derivati dal controller congelato.',
+            'Programma fisico richiede fonte sintetica esplicita, esclusiva e parametri corrispondenti; gruppi attivi e figli di startup sono derivati dai rispettivi controller congelati.',
           );
         const refs = [
           ...('target' in a && typeof a.target === 'object' ? [a.target] : []),
