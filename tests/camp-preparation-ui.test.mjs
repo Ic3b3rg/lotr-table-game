@@ -97,6 +97,10 @@ test('preparation presents personal ownership and occupied-role consequences; an
     catalog = campItemCatalog();
   b.campPreparation(s, catalog, null, {}, () => {});
   assert.equal(b.nodes.filter((n) => n.dataset.write !== undefined).length, 0);
+  assert.deepEqual(
+    b.nodes.filter((n) => n.dataset.preparationHero).map((n) => n.dataset.preparationHero),
+    ['hero-1', 'hero-2'],
+  );
   assert.ok(b.nodes.some((n) => n.textContent.includes('Prima')));
   const own = browser();
   own.campPreparation(s, catalog, { id: 'p1' }, {}, () => {});
@@ -110,4 +114,17 @@ test('preparation presents personal ownership and occupied-role consequences; an
       (n) => n.textContent.includes('partenza') && n.textContent.includes('disponibile'),
     ),
   );
+  const second = browser(),
+    before = structuredClone(s);
+  second.campPreparation(s, catalog, { id: 'p2' }, {}, () => {});
+  assert.equal(
+    second.nodes.find((n) => n.dataset.preparationHero)?.dataset.preparationHero,
+    'hero-2',
+    'the phone starts with its owner’s choices before the other heroes',
+  );
+  assert.deepEqual(
+    second.nodes.filter((n) => n.dataset.campConfirm).map((n) => n.dataset.campConfirm),
+    ['hero-2'],
+  );
+  assert.deepEqual(s, before, 'personal ordering does not mutate the shared company');
 });

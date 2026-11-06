@@ -42,7 +42,14 @@ export function campPreparation(
     b.onclick = () => submit(input);
     return b;
   };
-  for (const selection of prep.heroes) {
+  const owned = new Set(
+      session.preparation!.heroes.filter((h) => h.playerId === player?.id).map((h) => h.heroId),
+    ),
+    ordered = [
+      ...prep.heroes.filter((h) => owned.has(h.heroId)),
+      ...prep.heroes.filter((h) => !owned.has(h.heroId)),
+    ];
+  for (const selection of ordered) {
     const hero = campaign.heroes.find((h) => h.heroId === selection.heroId)!,
       name = catalog.heroes.find((h) => h.id === hero.heroId)!.name.text,
       ownerId = session.preparation!.heroes.find((h) => h.heroId === hero.heroId)!.playerId,
