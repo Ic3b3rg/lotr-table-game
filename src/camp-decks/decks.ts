@@ -3,6 +3,7 @@ import { canonical, digest } from '../map-freeze/hash';
 import { parseSource, capabilityFor } from './source';
 import {
   bounded,
+  parseJson,
   check,
   entropySchema,
   fingerprint,
@@ -102,8 +103,7 @@ export function materializeCampDecks(source: unknown, entropy: unknown) {
       capability,
       entropyDraws: 0 as const,
     };
-  bounded(entropy);
-  return buildArtifact(context, entropySchema.parse(entropy));
+  return buildArtifact(context, parseJson(entropySchema, entropy));
 }
 
 const artifactSchema = z.strictObject({
@@ -118,10 +118,8 @@ const artifactSchema = z.strictObject({
 });
 /** Reproduction proves consistency; only independently supplied pins bind authority. */
 export function verifyCampDeckArtifact(raw: unknown, expectedPins: unknown = {}): CampDeckArtifact {
-  bounded(raw);
-  bounded(expectedPins);
-  const pins = pinsSchema.parse(expectedPins);
-  const received = artifactSchema.parse(raw);
+  const received = parseJson(artifactSchema, raw);
+  const pins = parseJson(pinsSchema, expectedPins);
   const expected = materializeCampDecks(received.source, received.entropy);
   check(expected.format === 'camp-decks-artifact-v1', 'Artifact source is gated.');
   check(canonical(raw) === canonical(expected), 'Full artifact replay mismatch.');

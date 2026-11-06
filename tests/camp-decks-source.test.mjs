@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { campDeckCapability } from '../dist/camp-decks-library.mjs';
-import { source, refreshChoices, hash } from './fixtures/camp-decks.mjs';
+import {
+  campDeckCapability,
+  materializeCampDecks,
+  verifyCampDeckArtifact,
+} from '../dist/camp-decks-library.mjs';
+import { source, refreshChoices, hash, seed } from './fixtures/camp-decks.mjs';
 
 test('camp decks rederive current recipes, retaining old purchases and removed titles', () => {
   const s = source();
@@ -151,4 +155,69 @@ test('nested proxies are rejected before any reflection or property trap execute
   );
   assert.throws(() => campDeckCapability(s));
   assert.equal(traps, 0);
+});
+
+test('container budgets reject oversized arrays and objects before element descriptors', () => {
+  for (const [container, budget] of [
+    [Array(200001).fill(0), /array.*budget/i],
+    [
+      Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`field${i}`, 0])),
+      /property.*budget/i,
+    ],
+  ]) {
+    let reads = 0;
+    Object.defineProperty(container, Array.isArray(container) ? '0' : 'field0', {
+      enumerable: true,
+      configurable: true,
+      get() {
+        reads++;
+        throw Error('oversized container inspected');
+      },
+    });
+    const s = source();
+    s.campaign.provenance.history = container;
+    assert.throws(() => campDeckCapability(s), budget);
+    assert.equal(reads, 0);
+  }
+});
+
+test('polluted ordinary prototypes cannot supply inherited source, entropy or pin fields', () => {
+  const s = source();
+  const revision = s.revision;
+  delete s.revision;
+  const artifact = materializeCampDecks(source(), { seed });
+  for (const [field, invoke] of [
+    ['revision', () => campDeckCapability(s)],
+    ['seed', () => materializeCampDecks(source(), {})],
+    ['artifactFingerprint', () => verifyCampDeckArtifact(artifact, {})],
+  ]) {
+    let reads = 0;
+    let rejected = false;
+    Object.defineProperty(Object.prototype, field, {
+      configurable: true,
+      get() {
+        reads++;
+        throw Error('inherited field executed');
+      },
+    });
+    try {
+      invoke();
+    } catch {
+      rejected = true;
+    } finally {
+      delete Object.prototype[field];
+    }
+    assert.equal(rejected, true);
+    assert.equal(reads, 0, field);
+  }
+  let rejected = false;
+  Object.defineProperty(Object.prototype, 'revision', { configurable: true, value: revision });
+  try {
+    campDeckCapability(s);
+  } catch {
+    rejected = true;
+  } finally {
+    delete Object.prototype.revision;
+  }
+  assert.equal(rejected, true, 'Inherited data cannot fill a missing required JSON field.');
 });

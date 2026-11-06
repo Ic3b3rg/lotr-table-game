@@ -155,6 +155,21 @@ export function sameSet(actual: string[], expected: string[], label: string): vo
 }
 /** Same descriptor and canonical byte budgets on source, full output and replay. */
 export function bounded(value: unknown): void {
+  // Schema parsers can resolve absent fields through these ordinary prototypes.
+  // Reject polluted accessors before either canonicalization or schema traversal.
+  const checkPrototype = (prototype: object): void => {
+    const keys = Reflect.ownKeys(prototype);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]!;
+      const descriptor = Object.getOwnPropertyDescriptor(prototype, key)!;
+      check(
+        'value' in descriptor || (prototype === Object.prototype && key === '__proto__'),
+        'Inherited accessor is not JSON.',
+      );
+    }
+  };
+  checkPrototype(Object.prototype);
+  checkPrototype(Array.prototype);
   // A Proxy can run traps during the repository descriptor guard itself.
   // Inspect only descriptors on non-proxies; never evaluate an input property.
   let nodes = 0;
@@ -168,8 +183,14 @@ export function bounded(value: unknown): void {
     check(!types.isProxy(v), 'Proxy is not JSON.');
     if (seen.has(v)) return;
     seen.add(v);
-    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(v))) {
-      if (Array.isArray(v) && key === 'length') continue;
+    const array = Array.isArray(v);
+    check(!array || v.length <= PHYSICAL_CONTENT_LIMITS.nodes - nodes, 'JSON array length budget.');
+    const keys = Reflect.ownKeys(v);
+    check(array || keys.length <= 64, 'JSON property budget.');
+    check(!array || keys.length === v.length + 1, 'Sparse/extended array is not JSON.');
+    for (const key of keys) {
+      if (array && key === 'length') continue;
+      const descriptor = Object.getOwnPropertyDescriptor(v, key)!;
       check('value' in descriptor, 'Accessor is not JSON.');
       unproxied(descriptor.value, depth + 1);
     }
@@ -177,4 +198,18 @@ export function bounded(value: unknown): void {
   unproxied(value, 0);
   boundPhysicalInput(value);
   check(Buffer.byteLength(canonical(value)) <= PHYSICAL_CONTENT_LIMITS.bytes, 'JSON byte budget.');
+}
+
+/** Only own JSON data may supply schema fields, even in a polluted caller realm. */
+export function parseJson<T>(schema: z.ZodType<T>, value: unknown): T {
+  bounded(value);
+  const ownData = (v: unknown): unknown => {
+    if (v === null || typeof v !== 'object') return v;
+    if (Array.isArray(v)) return v.map(ownData);
+    const result: Record<string, unknown> = Object.create(null);
+    for (const key of Object.keys(v))
+      result[key] = ownData(Object.getOwnPropertyDescriptor(v, key)!.value);
+    return result;
+  };
+  return schema.parse(ownData(value));
 }

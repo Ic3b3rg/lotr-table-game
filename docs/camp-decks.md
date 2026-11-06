@@ -135,6 +135,11 @@ string length16,384 and 64 object properties. Both complete artifact constructio
 and verification apply the same limits; output expansion cannot publish an
 unverifiable artifact. Inputs and returned results are defensively copied.
 
+Container size limits are checked before element descriptors are inspected.
+Ordinary prototypes with inherited accessors are rejected before traversal;
+schema parsers receive only own JSON fields, including entropy and expected pins.
+Inherited data cannot supply a missing required field.
+
 ## CLI
 
 ```sh

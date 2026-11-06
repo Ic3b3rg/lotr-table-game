@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 import { readBounded, writeNew } from '../map-io/files';
 import { PHYSICAL_CONTENT_LIMITS } from '../physical-content/model';
 import { canonical } from '../map-freeze/hash';
-import { bounded, fingerprint, pinsSchema } from './model';
+import { bounded, parseJson, fingerprint, pinsSchema } from './model';
 import { campDeckCapability } from './source';
 import { materializeCampDecks, verifyCampDeckArtifact } from './decks';
 
@@ -36,7 +36,7 @@ try {
   if (command !== 'verify' && names.some((n) => n.startsWith('expect-')))
     throw new Error('Expected pins belong to verify.');
   if (values.seed !== undefined) fingerprint.parse(values.seed);
-  const pins = pinsSchema.parse({
+  const pins = parseJson(pinsSchema, {
     ...(values['expect-source'] === undefined
       ? {}
       : { sourceFingerprint: values['expect-source'] }),

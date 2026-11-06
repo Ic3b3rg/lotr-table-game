@@ -1,7 +1,7 @@
 import { digest } from '../map-freeze/hash';
 import type { CampRecipe } from '../shared/camp-preparation';
 import {
-  bounded,
+  parseJson,
   check,
   sourceSchema,
   sameSet,
@@ -74,8 +74,7 @@ function deriveRecipe(s: CampDeckSource, hero: CampDeckSource['campaign']['heroe
 
 /** All projected authority is validated before recipes or capability are consulted. */
 export function parseSource(raw: unknown) {
-  bounded(raw);
-  const s = structuredClone(sourceSchema.parse(raw));
+  const s = structuredClone(parseJson(sourceSchema, raw));
   const { cards, heroIds, roleIds } = s.catalog;
   unique(heroIds, 'Catalog heroes');
   unique(roleIds, 'Catalog roles');

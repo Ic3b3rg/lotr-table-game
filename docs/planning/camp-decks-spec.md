@@ -85,6 +85,9 @@ this module gives clients no host seed-selection policy.
 Before any schema traversal, use repository physical-content JSON budgets and
 descriptor checks: finite JSON only, ordinary/null objects and ordinary dense
 arrays, no getters, custom prototypes, symbols, cycles or sparse/inherited indices.
+Check cheap container sizes before inspecting element descriptors. Reject inherited
+accessors on ordinary prototypes before traversal, and give schema parsers only
+own JSON fields so inherited data cannot fill missing source, entropy or pin fields.
 Parsing copies defensively. Apply the same guard and canonical hashing budget to
 the complete artifact before return and to verification input, including embedded
 source, trace and preserved provenance. A bounded source that expands past the
