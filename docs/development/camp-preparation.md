@@ -105,3 +105,24 @@ e manifest byte/SHA senza autoriferimento.25337 file/11013837850 byte dei
 riferimenti ricevuti sono stati verificati in streaming e usati read-only,
 senza copiare11GB o seguire identità storiche. Root esegue review fresche,
 verifica indipendente e integrazione; nessun push, PR o GH write da questo checkout.
+
+## Integrazione del root
+
+[Review e verifiche indipendenti](../reviews/2026-11-06-camp-preparation.md):
+Standards zero violazioni e due suggerimenti facoltativi P3; Spec senza finding.
+Il root mostra per primi gli eroi del proprietario sul telefono, conservando
+l'ordine del gruppo sul PC anonimo. Il test UI esistente ha RED/GREEN e nuove
+asserzioni su proprietà, ordine e immutabilità; nessun caso Node aggiunto.
+
+Canonica root **923/923**, npm exit0, ALONE4, HEAD pulito e invariato;
+corpus503, serie complete e nuovi208JSON/51SQLite verificati con validator
+del commit finale. Il backend è byte-identico alla consegna. Un controllo
+nativo distinto sul vero applicativo ripristinato inventato verifica tre
+identità, PC anonimo, ruolo occupato, conferme e reload, quattro larghezze e
+sei PNG. I112PNG della QA consegnata precedono la correzione dell'ordine
+personale e rimangono distinti. Sorgenti e asset nativi testati coincidono
+con quelli ricostruiti dalla canonica; soli processi propri chiusi.
+
+Pack e quantità non cambiano; #57 rimane bloccata,156 statico/gated e A2
+indisponibile. Nessuna nuova accettazione originale #33 o aggiornamento della
+sessione del proprietario.
