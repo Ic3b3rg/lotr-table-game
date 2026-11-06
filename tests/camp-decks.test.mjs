@@ -239,3 +239,15 @@ test('embedded authority and result lineage do not share mutable references', ()
   a.materialized.lineage.choices[0].recipe.balances[0].availableXP = 99;
   assert.equal(a.source.choices[0].recipe.balances[0].availableXP, 11);
 });
+
+test('JSON provenance keys survive parsing without silent schema normalization', () => {
+  const s = source();
+  s.campaign.provenance = JSON.parse(
+    '{"__proto__":{"invented":true},"constructor":"invented-data","history":["invented"]}',
+  );
+  const a = realize(s);
+  assert.deepEqual(a.source.campaign.provenance, s.campaign.provenance);
+  assert.deepEqual(a.materialized.lineage.campaign.provenance, s.campaign.provenance);
+  assert.equal(Object.getPrototypeOf(a.source.campaign.provenance), Object.prototype);
+  assert.deepEqual(verifyCampDeckArtifact(JSON.parse(JSON.stringify(a))), a);
+});

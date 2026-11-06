@@ -128,3 +128,27 @@ test('unsafe JSON rejected before getters, including inherited array indices', (
   cycle.campaign.provenance.cycle = cycle;
   assert.throws(() => campDeckCapability(cycle));
 });
+
+test('nested proxies are rejected before any reflection or property trap executes', () => {
+  let traps = 0;
+  const s = source();
+  s.campaign.provenance = new Proxy(
+    {},
+    {
+      getPrototypeOf() {
+        traps++;
+        throw Error('proxy reflected');
+      },
+      ownKeys() {
+        traps++;
+        throw Error('proxy enumerated');
+      },
+      get() {
+        traps++;
+        throw Error('proxy read');
+      },
+    },
+  );
+  assert.throws(() => campDeckCapability(s));
+  assert.equal(traps, 0);
+});

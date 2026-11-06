@@ -1,10 +1,22 @@
 import { z } from 'zod';
+import { types } from 'node:util';
 import { ContentIdSchema as id } from '../shared/catalog';
 import { CopyIdSchema as copy } from '../shared/preparation';
 import { CampRecipeSchema } from '../shared/camp-preparation';
 import { boundPhysicalInput } from '../physical-content/validation';
 import { PHYSICAL_CONTENT_LIMITS } from '../physical-content/model';
 import { canonical } from '../map-freeze/hash';
+
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+// bounded() validates the entire JSON tree before every schema parse. Keep this
+// opaque to Zod's record parser, which strips legitimate own __proto__ data keys.
+const provenance = z.custom<JsonValue>((value) => value !== undefined, 'Required JSON provenance.');
 
 export const fingerprint = z.string().regex(/^[0-9a-f]{64}$/);
 const identity = z.enum(['bound', 'requires-content']);
@@ -68,7 +80,7 @@ export const sourceSchema = z.strictObject({
           balances: z
             .array(z.strictObject({ roleId: id, availableXP: z.int().nonnegative() }))
             .max(6),
-          provenance: z.json(),
+          provenance,
         }),
       )
       .min(2)
@@ -82,7 +94,7 @@ export const sourceSchema = z.strictObject({
         }),
       )
       .max(1000),
-    provenance: z.json(),
+    provenance,
   }),
   oldWeaknesses: z
     .array(
@@ -143,6 +155,26 @@ export function sameSet(actual: string[], expected: string[], label: string): vo
 }
 /** Same descriptor and canonical byte budgets on source, full output and replay. */
 export function bounded(value: unknown): void {
+  // A Proxy can run traps during the repository descriptor guard itself.
+  // Inspect only descriptors on non-proxies; never evaluate an input property.
+  let nodes = 0;
+  const seen = new Set<object>();
+  const unproxied = (v: unknown, depth: number): void => {
+    check(
+      ++nodes <= PHYSICAL_CONTENT_LIMITS.nodes && depth <= PHYSICAL_CONTENT_LIMITS.depth,
+      'JSON node/depth budget.',
+    );
+    if (v === null || typeof v !== 'object') return;
+    check(!types.isProxy(v), 'Proxy is not JSON.');
+    if (seen.has(v)) return;
+    seen.add(v);
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(v))) {
+      if (Array.isArray(v) && key === 'length') continue;
+      check('value' in descriptor, 'Accessor is not JSON.');
+      unproxied(descriptor.value, depth + 1);
+    }
+  };
+  unproxied(value, 0);
   boundPhysicalInput(value);
   check(Buffer.byteLength(canonical(value)) <= PHYSICAL_CONTENT_LIMITS.bytes, 'JSON byte budget.');
 }
