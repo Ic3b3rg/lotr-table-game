@@ -102,6 +102,8 @@ Questi valori sono tolleranze delle prove, non nuovi confini fisici.
 Bounds derivati dai vertici trasformati. Due patch condividono un contatto
 quando due lati opposti coincidono entro la tolleranza e l'intervallo comune
 ha lunghezza positiva oltre la tolleranza; i soli angoli non creano archi.
+Le gerarchie patch/board/root devono collegarsi; ogni board copre il proprio
+rettangolo e tutte le patch appartengono allo stesso piano entro tolleranza.
 Si rifiutano sovrapposizioni interne significative, patch degeneri, UV invertite
 fra patch della stessa faccia, regioni disconnesse e contatti ambigui.
 Si conservano entrambi i lati effettivi e il gap, senza spostare le ancore.
