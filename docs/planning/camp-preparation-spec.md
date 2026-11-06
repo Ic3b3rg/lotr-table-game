@@ -32,6 +32,8 @@ allowlisted, senza seguire identità storiche o eseguire helper in place.
   Nessun accessorio è una scelta valida. Proprietà comune, selezione futura
   e custodia fisica dell'episodio1 sono dati distinti; il limite dell'inventario
   A1 resta invariato. Gli upgrade usano le versioni di campagna correnti.
+  Un upgrade comune conserva la selezione sullo stesso eroe con la nuova
+  copia e invalida la sua conferma; non libera la scelta altrui.
 - La ricetta usa identità fonte: base1–6, eroe1–5, nuovo ruolo1–3, tutte le
   abilità ancora acquistate di ogni ruolo e titoli posseduti. Ruolo1 è
   indicata come futura preparata. Una debolezza è una futura pesca comune,
