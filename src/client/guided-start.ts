@@ -456,13 +456,24 @@ export function createGuidedStart(sync: () => Promise<void>) {
       if (session.scenario?.conclusion) {
         const conclusion = session.scenario.conclusion;
         heading =
-          conclusion.stage === 'camp' ? 'La compagnia riposa nel campo' : 'Concludete l’avventura';
+          conclusion.stage === 'camp-preparation'
+            ? 'Confermate le scelte per il seguito'
+            : conclusion.stage === 'camp'
+              ? 'La compagnia riposa nel campo'
+              : 'Concludete l’avventura';
         message =
-          conclusion.stage === 'camp'
-            ? 'I premi sono già salvati nei ruoli che li hanno ottenuti. Ogni proprietario può scegliere il ruolo per il seguito. La prossima destinazione è indicata nel campo e attende il proprio materiale prima della partenza.'
-            : 'La sconfitta di un eroe ha causato la perdita dell’avventura. Un partecipante conferma per il gruppo i messaggi della conclusione, poi la destinazione e il racconto prima di entrare nel campo. Gli altri leggono e attendono; i premi si applicano una sola volta.';
+          conclusion.stage === 'camp-preparation'
+            ? 'Ogni proprietario controlla ruolo, accessorio facoltativo, equipaggiamento e carte previste, poi conferma. Le scelte sono salvate; la partenza della prossima avventura non è ancora disponibile. Potete tornare al campo e rientrare.'
+            : conclusion.stage === 'camp'
+              ? 'I premi sono già salvati nei ruoli che li hanno ottenuti. Ogni proprietario può scegliere il ruolo per il seguito. La prossima destinazione è indicata nel campo e attende il proprio materiale prima della partenza.'
+              : `${conclusion.outcome === 'victory' ? 'La compagnia ha vinto l’avventura.' : 'L’avventura è terminata con una sconfitta.'} Un partecipante conferma per il gruppo i messaggi della conclusione, poi la destinazione e il racconto prima di entrare nel campo. Gli altri leggono e attendono; i premi si applicano una sola volta.`;
         target = '#campaign';
-        label = conclusion.stage === 'camp' ? 'Apri il campo' : 'Leggi la conclusione';
+        label =
+          conclusion.stage === 'camp-preparation'
+            ? 'Apri le scelte'
+            : conclusion.stage === 'camp'
+              ? 'Apri il campo'
+              : 'Leggi la conclusione';
         topic = 'camp';
       }
       if (personal && !identity && session.players.length) {

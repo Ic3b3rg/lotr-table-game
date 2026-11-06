@@ -554,6 +554,14 @@ export function scenarioReceiptProblem(
       r.kind !== c.kind ||
       r.kind === 'camp-skill' ||
       r.kind === 'camp-item' ||
+      [
+        'camp-prepare',
+        'camp-select-role',
+        'camp-accessory',
+        'camp-confirm',
+        'camp-return',
+      ].includes(r.kind) ||
+      r.preparation !== undefined ||
       r.item !== undefined ||
       r.skill !== undefined
     )
