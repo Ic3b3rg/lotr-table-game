@@ -9,7 +9,7 @@ function browser() {
   const bundle = buildSync({
     stdin: {
       contents:
-        "export {campItemInventory} from './src/client/camp-items'; export {setOnline} from './src/client/actions';",
+        "export {campItemInventory} from './src/client/camp-items'; export {setOnline} from './src/client/actions'; export {createCardReader} from './src/client/cards';",
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -45,18 +45,30 @@ function browser() {
     focus() {
       this.focused = true;
     }
+    contains(node) {
+      return this === node || this.children.some((child) => child.contains(node));
+    }
+    scrollIntoView() {}
   }
+  const ids = Object.fromEntries(
+    ['#card-reader', '#card-reader-content', '#close-card', '#journey-title'].map((id) => [
+      id,
+      new Element('div'),
+    ]),
+  );
   const module = { exports: {} };
   runInNewContext(bundle, {
     module,
     exports: module.exports,
+    requestAnimationFrame: (callback) => callback(),
     document: {
       createElement: (tag) => new Element(tag),
+      querySelector: (selector) => ids[selector],
       querySelectorAll: () =>
         nodes.filter((n) => n.tag === 'button' && n.dataset.write !== undefined),
     },
   });
-  return { ...module.exports, nodes };
+  return { ...module.exports, nodes, ids };
 }
 function fixture() {
   const catalog = campItemCatalog(),
@@ -189,7 +201,12 @@ test('unavailable camp items explain the next step without inviting an impossibl
       f.catalog,
       'hero-1',
       { id: 'owner-1' },
-      { campItem: (...args) => reads.push(args) },
+      {
+        campItem: (...args) => {
+          reads.push(args);
+          b.createCardReader().campItem(...args);
+        },
+      },
       async () => assert.fail('Reading a blocked item must not submit an intent'),
     );
     b.setOnline(true);
@@ -211,5 +228,11 @@ test('unavailable camp items explain the next step without inviting an impossibl
     }
     b.nodes.find((n) => n.className === 'physical-card').click();
     assert.equal(reads.length, 1);
+    const reading = b.ids['#card-reader-content'].children.map((n) => n.textContent).join('\n');
+    assert.doesNotMatch(reading, /Scegli l’alternativa/);
+    if (blocked === 'maximum') {
+      assert.match(reading, /Rango massimo/);
+      assert.doesNotMatch(reading, /Requisito per migliorare/);
+    }
   }
 });

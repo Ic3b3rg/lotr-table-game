@@ -112,14 +112,16 @@ export function createCardReader() {
           ),
           text(
             'p',
-            `Requisito per migliorare questa carta: ${entry.model.upgradeCost} Sapienza. Valore condiviso corrente: ${lore}. La Sapienza non si spende.`,
+            card.upgrades.length
+              ? `Requisito per migliorare questa carta: ${entry.model.upgradeCost} Sapienza. Valore condiviso corrente: ${lore}. La Sapienza non si spende.`
+              : `Rango massimo per i prodotti base: nessun miglioramento successivo disponibile. Sapienza condivisa: ${lore}, senza spesa.`,
             'company-help',
           ),
           text('p', card.traits.join(' · '), 'card-traits'),
           text('p', card.text.text, 'card-full-text'),
           text(
             'p',
-            'Leggere è gratuito. Scegli l’alternativa e conferma dal campo. Le capacità delle carte migliorate attendono le rispettive finestre del seguito.',
+            `Leggere è gratuito. ${card.upgrades.length ? 'Le alternative disponibili si scelgono e si confermano dal campo.' : 'Per questo oggetto non sono richieste altre scelte al campo.'} Le capacità delle carte migliorate attendono le rispettive finestre del seguito.`,
             'company-help',
           ),
           sourceNotes([card.name, card.text], card.notes),
