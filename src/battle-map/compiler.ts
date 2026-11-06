@@ -30,7 +30,9 @@ export function compileBattleMapSource(raw: unknown) {
       ],
     },
   };
-  return { ...body, artifactFingerprint: digest(body) };
+  const artifact = { ...body, artifactFingerprint: digest(body) };
+  bounded(artifact);
+  return artifact;
 }
 export type BattleMapArtifact = ReturnType<typeof compileBattleMapSource>;
 

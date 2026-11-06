@@ -40,6 +40,28 @@ test('artifact roundtrip verifies whole output with expected pins and independen
   );
 });
 
+test('compiler rejects complete artifacts above the shared input budget', () => {
+  const source = battleSource();
+  const meshes = source.meshes.slice(0, 12);
+  for (const mesh of meshes)
+    while (mesh.vertices.length < 499)
+      mesh.vertices.push({
+        ...structuredClone(mesh.vertices[0]),
+        index: mesh.vertices.length,
+      });
+
+  const artifact = compileBattleMapSource(source);
+  verifyBattleMapArtifact(JSON.parse(JSON.stringify(artifact)), {
+    sourceFingerprint: artifact.sourceFingerprint,
+    artifactFingerprint: artifact.artifactFingerprint,
+  });
+
+  // Unused vertices leave the geometry intact but grow the embedded evidence.
+  for (const mesh of meshes)
+    mesh.vertices.push({ ...structuredClone(mesh.vertices[0]), index: mesh.vertices.length });
+  assert.throws(() => compileBattleMapSource(source), /Limite nodi\/profondità/);
+});
+
 test('rehashing any derived section cannot defeat full recompilation', () => {
   const original = compileBattleMapSource(battleSource());
   for (const mutate of [
