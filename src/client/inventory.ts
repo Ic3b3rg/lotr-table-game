@@ -10,7 +10,8 @@ export function createInventory(reader: CardReader) {
     update(session: Session, catalog: Catalog | null) {
       root.hidden = !session.scenario?.pack.manifest.items || !catalog;
       if (root.hidden || !catalog) return;
-      const inventory = session.physical?.inventory ?? [];
+      const campaign = session.scenario?.conclusion?.campaign,
+        inventory = campaign ? (campaign.inventory ?? []) : (session.physical?.inventory ?? []);
       const signature = JSON.stringify({
         inventory,
         players: session.players,
@@ -33,16 +34,16 @@ export function createInventory(reader: CardReader) {
       }
       for (const item of inventory) {
         const card = catalog.items.find((c) => c.id === item.cardId)!;
-        const hero = catalog.heroes.find((h) => h.id === item.heroId);
+        const heroId = 'heroId' in item ? item.heroId : null;
+        const hero = catalog.heroes.find((h) => h.id === heroId);
         const player = session.players.find(
-          (p) =>
-            session.preparation?.heroes.find((h) => h.heroId === item.heroId)?.playerId === p.id,
+          (p) => session.preparation?.heroes.find((h) => h.heroId === heroId)?.playerId === p.id,
         );
         const owner = hero
           ? `${hero.name.text} · ${player?.name ?? ''}`
           : 'Inventario comune · da equipaggiare nel prossimo avvio';
         const consumption =
-          item.remaining === null
+          !('remaining' in item) || item.remaining === null
             ? 'Segnalini consumo rimossi al termine dell’avventura.'
             : `${item.remaining} / ${item.capacity} segnalini consumo disponibili`;
         const article = text('article', '', 'company-hero');
