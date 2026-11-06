@@ -103,11 +103,11 @@ file massimo8 MiB e guardia JSON condivisa (100000 nodi, profondità24).
 Pubblicazione atomica mediante file0600 e hard link esclusivo; non sovrascrive
 un file esistente, nemmeno in concorrenza. Nessun run, replay o journal.
 
-| Exit | Significato |
-| --- | --- |
-| 0 | Compile, verify o geometria verificata |
-| 1 | Input, comando, pin, lettura o pubblicazione invalidi |
-| 2 | Avvio avventura gated: output completo conservato |
+| Exit | Significato                                           |
+| ---- | ----------------------------------------------------- |
+| 0    | Compile, verify o geometria verificata                |
+| 1    | Input, comando, pin, lettura o pubblicazione invalidi |
+| 2    | Avvio avventura gated: output completo conservato     |
 
 Il gate mantiene tre quantità null/unverified e originale156 static-gated.
 Materializzazione/mescolate/trigger, consumer packet/scenario, nemici,
