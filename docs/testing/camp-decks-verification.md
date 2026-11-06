@@ -142,3 +142,29 @@ live-table access, new original game, resume, whole-game/original-victory,
 Unity/JIT or physical phone/Windows/Safari certification was performed. Root owns
 fresh Standards/Spec review and integration; no delegation or remote writes were
 performed by this implementer.
+
+## Integrazione Root
+
+L'albero della consegna `981fde9` è stato integrato senza variazioni, poi corretto
+in `2b52852` dopo review Standards e Spec indipendenti. Due P2 riprodotti:
+allocazioni dei descriptor prima del limite del contenitore e getter ereditati
+letti dallo schema. Ora i limiti precedono i descriptor e gli schemi ricevono solo
+proprietà JSON proprie, con rifiuto degli accessor inattesi prima delle letture.
+Anche un dato ereditato non può riempire un campo obbligatorio mancante.
+
+Le regressioni RED sono conservate; **36/36** test mirati passano. Una nuova review
+scoped conferma entrambi i finding risolti, senza nuovi difetti. Il Root ha
+riprodotto sei casi con il checker separato, 18 comandi CLI e i negativi risignati;
+i 29 documenti dati confrontati rimangono byte-identici alla consegna.
+
+La prima canonica Root registra **974/978**, exit npm **1**, per tre timer di
+avvio host e un HTTP 408. I tentativi e gli errori restano conservati. Gli stessi
+casi passano successivamente 1/1 e 4/4 senza modifiche a prodotto, timeout o test.
+La verifica completa finale sullo stesso `2b52852`, ALONE/concurrency 4, registra
+**978/978**, exit npm **0**, zero fail/skip/cancel/todo, 1.271,858 secondi. Non è
+stata dimostrata una causa ambientale specifica dei primi errori.
+
+Tutti gli input effettivi e i 24 vecchi dist restano identici. Build, typecheck,
+formato, diff e privacy verificati; solo i due target aggiuntivi sono registrati.
+La chiusura riguarda il modulo standalone, senza attivazione del seguito o
+accettazione di una partita originale. [Review Root](../reviews/2026-11-06-camp-decks.md).
