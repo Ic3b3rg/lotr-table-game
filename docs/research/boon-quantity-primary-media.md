@@ -26,12 +26,12 @@ dichiarate nei metadati dei formati. La decodifica dell’intero video FFG
 restituisce 121.996 fotogrammi, quella italiana 22.055: verifica tecnica
 dell’acquisizione, senza attribuirle ascolto o visione integrale.
 
-| Fonte primaria diretta | Intero video acquisito | Intero audio acquisito | Ispezione visiva effettiva, distinta dall’acquisizione |
-| --- | --- | --- | --- |
-| **V1 — [Fantasy Flight Games](https://www.youtube.com/watch?v=eb2VpRRkRpM)**, *Unboxing Journeys in Middle-earth*, 19 marzo 2019 | 00:00–67:46,533; 1920×1080, 30 fps | 00:00–67:46,580 | [58:20–62:20](https://www.youtube.com/watch?v=eb2VpRRkRpM&t=3500s): 240 campioni a 1 fps, tutti esaminati |
-| **V3 — [JustNerd](https://www.youtube.com/watch?v=Hb1VgwS_k6I)**, unboxing ITA, 17 aprile 2019 | 00:00–15:18,958; 1920×1012, 24 fps | 00:00–15:19,023 | [7:10–10:40](https://www.youtube.com/watch?v=Hb1VgwS_k6I&t=430s): 210 campioni a 1 fps, tutti esaminati; navigazione aggiuntiva 3:00–7:10 e 10:40–12:40 a un campione ogni 5 s |
-| **V2 — [Rolling Solo](https://www.youtube.com/watch?v=WhisxhOnrjU)**, unboxing della base EN | 00:00–31:57,300; 1920×1080, 30 fps | 00:00–31:57,365 | [29:10–30:10](https://www.youtube.com/watch?v=WhisxhOnrjU&t=1750s): 60 campioni a 1 fps, tutti esaminati |
-| **V4 — [The Dice Tower](https://www.youtube.com/watch?v=SLuEdjL7YiY)**, *Daily Game Unboxing*, 11 aprile 2019 | 00:00–5:45,533; 1280×720, 30 fps | 00:00–5:45,583 | [3:00–4:25](https://www.youtube.com/watch?v=SLuEdjL7YiY&t=180s) e [4:24–4:59](https://www.youtube.com/watch?v=SLuEdjL7YiY&t=264s): campioni a 1 fps; inoltre 4:22–4:28 a 10 fps, tutti esaminati |
+| Fonte primaria diretta                                                                                                           | Intero video acquisito             | Intero audio acquisito | Ispezione visiva effettiva, distinta dall’acquisizione                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **V1 — [Fantasy Flight Games](https://www.youtube.com/watch?v=eb2VpRRkRpM)**, _Unboxing Journeys in Middle-earth_, 19 marzo 2019 | 00:00–67:46,533; 1920×1080, 30 fps | 00:00–67:46,580        | [58:20–62:20](https://www.youtube.com/watch?v=eb2VpRRkRpM&t=3500s): 240 campioni a 1 fps, tutti esaminati                                                                                        |
+| **V3 — [JustNerd](https://www.youtube.com/watch?v=Hb1VgwS_k6I)**, unboxing ITA, 17 aprile 2019                                   | 00:00–15:18,958; 1920×1012, 24 fps | 00:00–15:19,023        | [7:10–10:40](https://www.youtube.com/watch?v=Hb1VgwS_k6I&t=430s): 210 campioni a 1 fps, tutti esaminati; navigazione aggiuntiva 3:00–7:10 e 10:40–12:40 a un campione ogni 5 s                   |
+| **V2 — [Rolling Solo](https://www.youtube.com/watch?v=WhisxhOnrjU)**, unboxing della base EN                                     | 00:00–31:57,300; 1920×1080, 30 fps | 00:00–31:57,365        | [29:10–30:10](https://www.youtube.com/watch?v=WhisxhOnrjU&t=1750s): 60 campioni a 1 fps, tutti esaminati                                                                                         |
+| **V4 — [The Dice Tower](https://www.youtube.com/watch?v=SLuEdjL7YiY)**, _Daily Game Unboxing_, 11 aprile 2019                    | 00:00–5:45,533; 1280×720, 30 fps   | 00:00–5:45,583         | [3:00–4:25](https://www.youtube.com/watch?v=SLuEdjL7YiY&t=180s) e [4:24–4:59](https://www.youtube.com/watch?v=SLuEdjL7YiY&t=264s): campioni a 1 fps; inoltre 4:22–4:28 a 10 fps, tutti esaminati |
 
 I campioni sono estratti dai nuovi file continui; non sono gli storyboard
 di #118. Le tavole di navigazione riducono ciascun fotogramma a 640 px di
@@ -115,16 +115,16 @@ x86_64 già disponibile, senza compilazione, installazioni o server.
 
 ## Originali conservati e riproduzione
 
-| Originale completo privato | Byte | SHA-256 |
-| --- | ---: | --- |
-| V1 video | 540548774 | `b44d901b7d3a7e12168c04f6b614c8147860003d04f829fac3cb7505466e0275` |
-| V1 audio | 65813833 | `fbd3bfecdd0d1d69120205a78f143917401406deaa228ff0cf433e927d206513` |
-| V3 video | 223806926 | `878988111d9c094a9a5a854a3165f0c5d7312f80fee902903714bfcf27d557e5` |
-| V3 audio | 14874220 | `6affa1b54967522508fa9e57e8e94ab72a61e1d73f8c356f192d665e63aa47f7` |
-| V2 video | 474305070 | `beb8836f0f514eceaccf50f0c75eebb644bf1d7bd7eda730f086c7c95aa192b2` |
-| V2 audio | 31031271 | `726f3d3cec1d4ca6f3ebf897cd1b86c5bf82e6580cff871ba80b214cac40ee70` |
-| V4 video | 89143135 | `75c82d585446af7665131c0c8df2c422f5a1972b26cbe3386b35e5405eebf3cc` |
-| V4 audio | 5593668 | `eb846c6fcfb8a8e36b1321385aeb518b610e3c134a2a06e563465939f127d890` |
+| Originale completo privato |      Byte | SHA-256                                                            |
+| -------------------------- | --------: | ------------------------------------------------------------------ |
+| V1 video                   | 540548774 | `b44d901b7d3a7e12168c04f6b614c8147860003d04f829fac3cb7505466e0275` |
+| V1 audio                   |  65813833 | `fbd3bfecdd0d1d69120205a78f143917401406deaa228ff0cf433e927d206513` |
+| V3 video                   | 223806926 | `878988111d9c094a9a5a854a3165f0c5d7312f80fee902903714bfcf27d557e5` |
+| V3 audio                   |  14874220 | `6affa1b54967522508fa9e57e8e94ab72a61e1d73f8c356f192d665e63aa47f7` |
+| V2 video                   | 474305070 | `beb8836f0f514eceaccf50f0c75eebb644bf1d7bd7eda730f086c7c95aa192b2` |
+| V2 audio                   |  31031271 | `726f3d3cec1d4ca6f3ebf897cd1b86c5bf82e6580cff871ba80b214cac40ee70` |
+| V4 video                   |  89143135 | `75c82d585446af7665131c0c8df2c422f5a1972b26cbe3386b35e5405eebf3cc` |
+| V4 audio                   |   5593668 | `eb846c6fcfb8a8e36b1321385aeb518b610e3c134a2a06e563465939f127d890` |
 
 La scratch ignorata propria `.scratch/boon57-primary-media/` contiene
 README riproducibile, mandato verificato, originali, parziali distinti,
