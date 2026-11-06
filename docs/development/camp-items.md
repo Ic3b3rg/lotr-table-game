@@ -122,8 +122,8 @@ aspettativa errata sul modello comune e tentativo di focus su testo non
 focusabile. Due import errati del helper finale hanno restituito module-not-found e sono stati corretti contro il percorso reale del binario. Un tentativo di copia forzata ha restituito ENOSYS; la successiva
 copia fisica è verificata. Non si attribuiscono altre cause ai tentativi.
 
-Il fallimento opzionale storico del minimo colori su due PNG audit-only
-di114 resta immutato, insieme ai240 PNG QA accettati. I nuovi criteri sono
+Il fallimento opzionale storico del minimo colori su un PNG audit-only
+di114 resta immutato, insieme ai due PNG aggiuntivi e ai240 PNG QA accettati. I nuovi criteri sono
 dichiarati prima delle catture:almeno120 colori RGB e frazione dominante
 massima0.97; nessuna reclassificazione dello storico. I controlli geometrici
 e l'ispezione visiva accompagnano le metriche.
@@ -142,3 +142,23 @@ autorizzato è stato copiato fisicamente/COW in sola lettura dall'origine,
 con lock coincidente e verifica di tutte le copie; resta escluso dalla capsule.
 Nessuna scrittura GitHub,push,PR o merge. Root esegue review indipendenti
 Standards/Spec e integrazione.
+
+## Integrazione del root
+
+[Review e verifiche indipendenti](../reviews/2026-11-06-camp-items.md):
+Standards0violazioni/1suggerimento facoltativo; Spec0finding statici.
+Il controllo visivo root rileva un invito impossibile al massimo rango
+in lista e lettore. La correzione ha RED/GREEN e una nuova regressione
+su massimo/Sapienza insufficiente/copie possedute, mantenendo la lettura gratuita.
+
+24/24 mirati e **907/907 canonici**, npm exit0, ALONE4,1120,538secondi,
+HEAD pulito invariato. Corpus e tutte le serie storiche/proprie passano;
+l’ultima modifica solo client/test conserva backend e validator byte-identici.
+Verificati anche164JSON/24DB prodotti dalla canonica root. Un controllo
+nativo distinto sul vero applicativo ripristinato inventato mostra lista
+e lettore corretti a quattro larghezze,8PNG, payload intero invariato e
+sole superfici proprie chiuse. Non è una nuova partita originale.
+
+Il pack116 e le quantità non cambiano.57NULL/UNVERIFIED e156statico/gated,
+A2 e futuri consumer rimangono invariati. Il rapporto distingue le prove
+consegnate prima della correzione UX da quelle finali del root.
