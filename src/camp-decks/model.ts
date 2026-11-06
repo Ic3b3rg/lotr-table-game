@@ -68,7 +68,7 @@ export const sourceSchema = z.strictObject({
           balances: z
             .array(z.strictObject({ roleId: id, availableXP: z.int().nonnegative() }))
             .max(6),
-          provenance: z.unknown(),
+          provenance: z.json(),
         }),
       )
       .min(2)
@@ -82,7 +82,7 @@ export const sourceSchema = z.strictObject({
         }),
       )
       .max(1000),
-    provenance: z.unknown(),
+    provenance: z.json(),
   }),
   oldWeaknesses: z
     .array(
@@ -117,7 +117,7 @@ export const pinsSchema = z.strictObject({
 export type CampDeckSource = z.infer<typeof sourceSchema>;
 export type CampDeckPins = z.infer<typeof pinsSchema>;
 export type CampDeckCard = z.infer<typeof cardSchema>;
-export const POLICY = 'camp-decks-sha256-fy-v1' as const;
+export { POLICY } from './random';
 export const PENDING = Object.freeze([
   'atomic-registry-activation-preserving-A1-origin-and-RNG',
   'physical-damage-fear-boon-cleanup',
