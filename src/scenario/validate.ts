@@ -364,7 +364,7 @@ export function scenarioStateProblem(state: State): string | null {
           c.revealed.length === 2 && c.converted === 0 && c.outcome === null && c.reward === 0,
           'Scoperta setup non valida.',
         );
-      else {
+      else if (!sc.pack.manifest.startupPreparation) {
         const cards = c.revealed.map(
           (copy) => findSkillCard(state.content!, copy, physicalTitleSkills(state.physical))!,
         );

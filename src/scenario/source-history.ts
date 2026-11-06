@@ -5,6 +5,7 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { sourceCursor, sourceTile } from './source-cursor';
 import { physicalHistory } from './physical';
+import { startupRuns } from './startup-preparation';
 import type { PhysicalEvidence } from '../physical-resolution/model';
 
 type Request = Omit<ScenarioRequest, 'id' | 'fingerprint'>;
@@ -86,6 +87,11 @@ export function validateSourceHistory(state: State) {
     }
     if (action.op !== 'message') continue;
     if (action.mode === 'scout' || action.mode === 'spirit') {
+      if (sc.pack.manifest.startupPreparation) {
+        for (const run of startupRuns(state, effect))
+          expected.push(...physicalHistory(state, effect, run));
+        continue;
+      }
       const kind = action.mode === 'scout' ? 'scout' : 'test';
       const heroes = state.preparation!.heroes;
       const completions = sc.completedSetup.filter((c) => c.source === effect.id);

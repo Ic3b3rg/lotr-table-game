@@ -25,7 +25,13 @@ export function validateSourceTasks(state: State) {
     invariant(effect, 'Continuazione senza entry fonte.');
     const { instance, action, completed } = sourceCursor(state, effect);
     invariant(
-      !completed && instance.entry === task.entry && action.op === task.kind,
+      !completed &&
+        instance.entry === task.entry &&
+        (action.op === task.kind ||
+          (task.kind === 'startup' &&
+            sc.pack.manifest.startupPreparation &&
+            action.op === 'message' &&
+            (action.mode === 'scout' || action.mode === 'spirit'))),
       'Continuazione fuori dall’azione fonte.',
     );
     if (task.kind === 'section') {
@@ -49,6 +55,13 @@ export function validateSourceTasks(state: State) {
           parent.status !== 'completed' &&
           parent.returnCount === 0,
         'Continuazione fisica non legata al padre sospeso.',
+      );
+    }
+    if (task.kind === 'startup') {
+      const parent = state.physical?.snapshot.parents.find((p) => p.id === task.parentId);
+      invariant(
+        parent && parent.status !== 'completed' && parent.returnCount === 0,
+        'Setup senza padre sospeso.',
       );
     }
   }

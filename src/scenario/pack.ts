@@ -29,6 +29,11 @@ import {
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   const original = pack.manifest.scope === 'original-encounter-v1';
+  if (pack.manifest.startupPreparation)
+    invariant(
+      original || pack.manifest.scope === 'synthetic-physical-p1',
+      'Preparazione iniziale senza consumer fisico fonte.',
+    );
   invariant(
     original === !!pack.manifest.playablePrefabs,
     'Manifest originale incompleto o estraneo.',

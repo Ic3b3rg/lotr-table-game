@@ -14,6 +14,7 @@ import { initializeOriginalCycle } from './physical-cycle';
 import { requiresProvocation } from '../scenario/deployment';
 import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
 import { validateCampCatalog } from '../scenario/camp-capability';
+import { validateStartupPreparationSource } from '../scenario/startup-preparation';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -126,6 +127,15 @@ export function applyScenario(
       }
     }
     requireLinkedTitle(parsed.pack, physical?.raw);
+    try {
+      validateStartupPreparationSource(parsed.pack, state.content, physical?.fronts);
+    } catch {
+      throw new ApiError(
+        409,
+        'STARTUP_PREPARATION_SOURCE_REQUIRED',
+        'Le capacità verificate di preparazione non corrispondono al catalogo e ai fronti. Nessun avvio è stato applicato.',
+      );
+    }
     try {
       validateItemStartup(state, parsed.pack, physical?.fronts);
     } catch {
