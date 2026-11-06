@@ -1,3 +1,4 @@
+import { validateCampPreparationCatalog } from '../scenario/camp-preparation-capability';
 import { validateCampItemsCatalog } from '../scenario/camp-items-capability';
 import { validateItemStartup } from '../scenario/item-capability';
 import { validateCombatParty } from '../combat/party';
@@ -30,6 +31,7 @@ export function scenarioOffer(state: State, path: string) {
     validateScenarioBinding(pack, state.mapGeneration.projection);
     validateCampCatalog(pack, state.content!);
     validateCampItemsCatalog(pack, state.content!);
+    validateCampPreparationCatalog(pack, state.content!);
     validatePreparedPolicies(pack, state.content);
     validateCombatParty(state, pack);
     validateFailureParty(state, pack);
@@ -105,6 +107,7 @@ export function applyScenario(
     const parsed = loadScenarioPack(path);
     validateCampCatalog(parsed.pack, state.content!);
     validateCampItemsCatalog(parsed.pack, state.content!);
+    validateCampPreparationCatalog(parsed.pack, state.content!);
     let physical;
     if (needsPhysical(parsed.pack)) {
       try {

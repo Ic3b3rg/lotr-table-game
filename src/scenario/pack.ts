@@ -1,3 +1,4 @@
+import { validateCampPreparationCapability } from './camp-preparation-capability';
 import { validateCampItemsCapability } from './camp-items-capability';
 import { readFileSync, statSync } from 'node:fs';
 import { ScenarioPackSchema, type ScenarioPack } from '../shared/scenario';
@@ -487,6 +488,7 @@ export function parseScenarioPack(raw: unknown) {
   }
   validateCampCapability(pack);
   validateCampItemsCapability(pack);
+  validateCampPreparationCapability(pack);
   return { pack, fingerprint: digest(pack) };
 }
 export function loadScenarioPack(path: string) {
