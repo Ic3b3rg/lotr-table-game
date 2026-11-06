@@ -77,13 +77,13 @@ function buildArtifact(context: Context, entropy: Entropy) {
       weaknessPool: { shuffled: pool.order, assignments, reserve },
       streams,
       // All resources here are archived provenance, never finalized active values.
-      lineage: {
+      lineage: structuredClone({
         episode: s.episode,
         originalRoster: s.originalRoster,
         campaign: s.campaign,
         choices: s.choices,
         oldWeaknesses: s.oldWeaknesses,
-      },
+      }),
     },
   };
   bounded(body);

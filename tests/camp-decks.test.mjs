@@ -231,3 +231,11 @@ test('rejection sampler handles full uint32 boundary without modulo bias or size
   ])
     assert.throws(() => indexForWord(word, n));
 });
+
+test('embedded authority and result lineage do not share mutable references', () => {
+  const a = realize();
+  a.source.campaign.heroes[0].provenance.inspiration = 99;
+  assert.equal(a.materialized.lineage.campaign.heroes[0].provenance.inspiration, 2);
+  a.materialized.lineage.choices[0].recipe.balances[0].availableXP = 99;
+  assert.equal(a.source.choices[0].recipe.balances[0].availableXP, 11);
+});
