@@ -72,15 +72,36 @@ test('a real common copy is optional, exclusive, owner-released and never stolen
   await ok(
     scenarioInput(
       r.host,
-      r.player,
+      actors[winner],
       itemInput({ heroId: null, copy: 'trinket:1', upgrade: 'invented-trinket-2:1' }),
     ),
   );
   s = await readSession(r.host);
-  assert.equal(choice(s, `hero-${loser + 1}`).accessory, null);
+  assert.equal(choice(s, `hero-${loser + 1}`).accessory, 'invented-trinket-2:1');
   assert.equal(choice(s, `hero-${loser + 1}`).confirmedRevision, null);
   assert.equal(s.scenario.conclusion.campaign.inventory.length, 1);
   assert.equal(s.scenario.conclusion.campaign.inventory[0].copy, 'invented-trinket-2:1');
+  await ok(scenarioInput(r.host, actors[loser], { kind: 'camp-prepare' }));
+  const retained = (await readBackup(r.host)).payload;
+  assert.equal(
+    (
+      await scenarioInput(r.host, actors[winner], {
+        kind: 'camp-accessory',
+        heroId: `hero-${loser + 1}`,
+        copy: null,
+      })
+    ).status,
+    403,
+  );
+  assert.deepEqual((await readBackup(r.host)).payload, retained);
+  await ok(
+    scenarioInput(r.host, actors[loser], {
+      kind: 'camp-accessory',
+      heroId: `hero-${loser + 1}`,
+      copy: null,
+    }),
+  );
+  assert.equal(choice(await readSession(r.host), `hero-${loser + 1}`).accessory, null);
   const after = (await readBackup(r.host)).payload;
   assert.deepEqual(after.state.physical.snapshot, archive.state.physical.snapshot);
   assert.deepEqual(after.state.physical.cycle.seed, archive.state.physical.cycle.seed);

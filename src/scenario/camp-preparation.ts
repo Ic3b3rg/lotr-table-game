@@ -65,8 +65,10 @@ export function refreshCampPreparation(state: State) {
     prep = campaign?.preparation;
   if (!prep) return;
   for (const selection of prep.heroes) {
-    if (selection.accessory && !campaign!.inventory?.some((i) => i.copy === selection.accessory))
-      selection.accessory = null;
+    invariant(
+      !selection.accessory || campaign!.inventory?.some((i) => i.copy === selection.accessory),
+      'Accessorio selezionato senza copia di campagna.',
+    );
     const recipe = campRecipe(state, selection.heroId, selection.accessory),
       hash = digest(recipe);
     if (hash !== selection.summaryHash) selection.confirmedRevision = null;

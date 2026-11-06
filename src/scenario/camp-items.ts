@@ -82,6 +82,8 @@ export function transactCampItem(
     const entries = c.campaign.inventory!;
     entries.splice(entries.indexOf(group!), 1);
     entries.push({ copy: input.upgrade, cardId: to.cardId, modelId: to.model.modelId });
+    const selection = c.campaign.preparation?.heroes.find((h) => h.accessory === input.copy);
+    if (selection) selection.accessory = input.upgrade;
   } else hero!.itemCopies[hero!.itemCopies.indexOf(input.copy)] = input.upgrade;
   const { kind: _, ...intent } = input;
   return {
