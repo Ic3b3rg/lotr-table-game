@@ -22,7 +22,13 @@ export function validateSourceRequest(state: State) {
   }
   const a = s.actions.find((a) => a.index === q.action);
   invariant(a, 'Richiesta senza azione.');
-  if (a.op === 'physical') {
+  if (
+    a.op === 'physical' ||
+    (q.kind === 'physical' &&
+      sc.pack.manifest.startupPreparation &&
+      a.op === 'message' &&
+      (a.mode === 'scout' || a.mode === 'spirit'))
+  ) {
     const active = state.physical?.snapshot.active;
     invariant(
       q.kind === 'physical' &&

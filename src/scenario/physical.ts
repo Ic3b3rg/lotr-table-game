@@ -30,9 +30,14 @@ import { validateScenarioTitle } from '../physical-resolution/scenario-title';
 import { linkedDefinition } from './linked-capability';
 import { boonEnemyPositions } from '../server/physical-spatial';
 import { sourceCursor, type SourceEffect } from './source-cursor';
+import {
+  validateStartupPreparationSource,
+  validateStartupPreparation,
+} from './startup-preparation';
 
 export function needsPhysical(pack: ScenarioPack) {
   return (
+    !!pack.manifest.startupPreparation ||
     !!pack.manifest.boons ||
     pack.manifest.scope === 'original-encounter-v1' ||
     pack.definitions.some((d) => d.states.some((s) => s.actions.some((a) => a.op === 'physical')))
@@ -113,6 +118,7 @@ export function initializeScenarioPhysical(
   }
   invariant(source && !state.physical, 'Materiale fisico assente o inizializzazione duplicata.');
   const sc = state.scenario!;
+  validateStartupPreparationSource(sc.pack, state.content, source.fronts);
   requireLinkedTitle(sc.pack, source.raw);
   if (sc.pack.manifest.boons && source.boons?.fingerprint !== sc.pack.manifest.boons.fingerprint)
     throw new ApiError(
@@ -149,8 +155,8 @@ export function beginPhysicalAction(
   const sc = state.scenario!;
   invariant(
     state.physical &&
-      state.journey &&
-      sc.completedSetup.length === state.preparation!.heroes.length * 2 &&
+      ((state.journey && sc.completedSetup.length === state.preparation!.heroes.length * 2) ||
+        (sc.phase === 'setup' && !!sc.pack.manifest.startupPreparation)) &&
       !state.scout &&
       state.skillTest?.status !== 'converting',
     'La prova fisica richiede lo startup fonte completato.',
@@ -236,7 +242,12 @@ export function physicalRequestData(
       ((action.op === 'awardTitle' || action.op === 'choice') &&
         linkedDefinition(state.scenario!.pack, instance.definition)) ||
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
-      (action.op === 'message' && (action.consequence || action.inspiration || action.recovery)),
+      (action.op === 'message' &&
+        (action.consequence ||
+          action.inspiration ||
+          action.recovery ||
+          (state.scenario!.pack.manifest.startupPreparation &&
+            (action.mode === 'scout' || action.mode === 'spirit')))),
     'Richiesta fisica senza programma fonte.',
   );
   return {
@@ -343,6 +354,7 @@ export function validateScenarioPhysical(state: State) {
     return;
   }
   validatePhysical(p);
+  validateStartupPreparation(state);
   invariant(
     p.boons?.fingerprint === sc.pack.manifest.boons?.fingerprint,
     'Benefici non legati alla capacità congelata prima dello startup.',
@@ -408,14 +420,19 @@ export function validateScenarioPhysical(state: State) {
     'Proprietà/posizione iniziale fisica cambiata.',
   );
   const effects = sc.effects.filter((e) => e.op === 'physical');
+  const sourceRuns = p.runs.filter(
+    (r) =>
+      r.source.instanceId !== 'ordinary-cycle' &&
+      !(r.program.profile === 'source-fronts-v1' && r.program.startupRules),
+  );
   invariant(
-    p.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle').length === effects.length,
+    sourceRuns.length === effects.length,
     'Padri fisici non riconciliati con le entry fonte.',
   );
   effects.forEach((effect, n) => {
     const { action, completed } = sourceCursor(state, effect),
-      run = p.runs[n]!,
-      parent = p.snapshot.parents[n]!;
+      run = sourceRuns[n]!,
+      parent = p.snapshot.parents.find((p) => p.id === run.id)!;
     invariant(
       action.op === 'physical' &&
         (p.boons && action.program.children.some((c) => c.kind === 'end-turn')
@@ -460,8 +477,12 @@ export function validateScenarioPhysical(state: State) {
   if (p.snapshot.active && !p.cycle?.pending) {
     const q = sc.pending,
       active = p.snapshot.active;
-    const effect = effects.find(
-      (e) => p.runs.find((r) => r.source.effectId === e.id)?.id === active.runId,
+    const run = p.runs.find((r) => r.id === active.runId)!;
+    const effect = sc.effects.find(
+      (e) =>
+        e.instanceId === run.source.instanceId &&
+        e.entry === run.source.entry &&
+        e.action === run.source.action,
     );
     invariant(q && effect, 'Figlio fisico senza richiesta corrente.');
     const { id, fingerprint, ...data } = q;
@@ -472,9 +493,13 @@ export function validateScenarioPhysical(state: State) {
   } else invariant(sc.pending?.kind !== 'physical', 'Richiesta fisica dopo il ritorno.');
 }
 
-export function physicalHistory(state: State, effect: SourceEffect) {
+export function physicalHistory(
+  state: State,
+  effect: SourceEffect,
+  selectedRun?: NonNullable<State['physical']>['runs'][number],
+) {
   const p = state.physical!,
-    run = p.runs.find((r) => r.source.effectId === effect.id)!;
+    run = selectedRun ?? p.runs.find((r) => r.source.effectId === effect.id)!;
   if (p.version !== 1)
     return p.snapshot
       .resolution!.history.filter((h) => h.runId === run.id)
@@ -523,9 +548,18 @@ export function validatePhysicalReceipts(
 ) {
   const sc = state.scenario!;
   for (const run of state.physical?.runs ?? []) {
-    if (run.source.instanceId === 'ordinary-cycle') continue;
-    const effect = sc.effects.find((e) => e.id === run.source.effectId)!;
-    for (const [n, history] of physicalHistory(state, effect).entries()) {
+    if (
+      run.source.instanceId === 'ordinary-cycle' ||
+      run.source.instanceId === 'startup-preparation'
+    )
+      continue;
+    const effect = sc.effects.find(
+      (e) =>
+        e.instanceId === run.source.instanceId &&
+        e.entry === run.source.entry &&
+        e.action === run.source.action,
+    )!;
+    for (const [n, history] of physicalHistory(state, effect, run).entries()) {
       const answer = run.answers[n]!,
         e = answer.evidence;
       const command = commands.find(

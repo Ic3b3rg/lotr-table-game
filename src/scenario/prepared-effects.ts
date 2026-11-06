@@ -54,6 +54,13 @@ export function preparedReward(state: State, heroId: string, copy: string, sourc
 export function validatePreparedRewards(state: State) {
   const sc = state.scenario!;
   validatePreparedPolicies(sc.pack, state.content);
+  // The attested startup uses one continuous physical resource ledger. Its
+  // origin, programs, completion projections and capped rewards are replayed
+  // by validateStartupPreparation/validatePhysical, including the initial role.
+  if (sc.pack.manifest.startupPreparation) {
+    invariant(!sc.cardEffects?.length, 'Ricompense storiche duplicate nello startup fisico.');
+    return;
+  }
   const effects = sc.cardEffects ?? [];
   const heroes = state.preparation!.heroes;
   invariant(

@@ -35,6 +35,11 @@ import {
   type ExplorationGrant,
 } from './exploration';
 import { preparedReward, requirePreparedCapability } from './prepared-effects';
+import {
+  initializeStartupPreparation,
+  beginStartupService,
+  startupCompletion,
+} from './startup-preparation';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
 import type { ScenarioCommand } from '../shared/protocol';
@@ -896,7 +901,9 @@ function execute(
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
-      messageRequest(state, i, a);
+      if (sc.pack.manifest.startupPreparation && (a.mode === 'scout' || a.mode === 'spirit'))
+        beginStartupService(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!);
+      else messageRequest(state, i, a);
       return;
     case 'explore': {
       const tile = resolveTile(state, i, a.tile),
@@ -1281,6 +1288,33 @@ function advanceTask(state: State) {
     }
     complete(owner, task.action);
     sc.tasks.pop();
+    return true;
+  }
+  if (task.kind === 'startup') {
+    const p = state.physical!,
+      parent = p.snapshot.parents.find((r) => r.id === task.parentId)!,
+      run = p.runs.find((r) => r.id === task.parentId)!,
+      effect = sc.effects.find(
+        (e) =>
+          e.instanceId === task.instanceId && e.entry === task.entry && e.action === task.action,
+      )!;
+    if (parent.status !== 'completed') {
+      invariant(p.snapshot.active?.runId === parent.id, 'Setup senza figlio attivo.');
+      request(state, physicalRequestData(state, effect, p.snapshot.active));
+      return true;
+    }
+    const completion = startupCompletion(state, effect, run);
+    sc.completedSetup.push(completion);
+    sc.tasks.pop();
+    if (
+      sc.completedSetup.filter((c) => c.source === effect.id).length <
+      state.preparation!.heroes.length
+    )
+      beginStartupService(state, effect);
+    else {
+      logMessage(sc, owner, task.action);
+      complete(owner, task.action);
+    }
     return true;
   }
   if (task.kind === 'physical') {
@@ -1726,8 +1760,9 @@ export function beginScenario(
     add(`node:${spaceId}`, 'encounter', m.fsmSource, a.prefab.source, spaceId);
   }
   sc.cardEffects = [];
-  for (const hero of state.preparation!.heroes)
-    for (const copy of hero.prepared) preparedReward(state, hero.heroId, copy, 'initial');
+  if (!initializeStartupPreparation(state))
+    for (const hero of state.preparation!.heroes)
+      for (const copy of hero.prepared) preparedReward(state, hero.heroId, copy, 'initial');
   principal.processing = 1;
   invariant(send(sc, principal, 'SCENARIO_BEGIN'), 'SCENARIO_BEGIN non compilato.');
   pump(state);

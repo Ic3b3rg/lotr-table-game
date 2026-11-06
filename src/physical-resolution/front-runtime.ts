@@ -1104,7 +1104,10 @@ class FrontReplay {
           hero,
           ['fear'],
           'up',
-          this.run.spatial ? `${path}/effect-${n}` : `${path}/prepare-flip`,
+          this.run.spatial ||
+            (this.run.program.profile === 'source-fronts-v1' && this.run.program.startupRules)
+            ? `${path}/effect-${n}`
+            : `${path}/prepare-flip`,
           1,
           false,
           true,
@@ -1561,10 +1564,10 @@ class FrontReplay {
     return cards;
   }
   private scout(hero: number, count: number, path: string, rally = false, prepare = true) {
-    this.frame(path, hero, null, 'scout', count, () => {
+    return this.frame(path, hero, null, 'scout', count, () => {
       const h = this.hero(hero),
         cards = this.reveal(hero, count, path);
-      if (!cards.length) return;
+      if (!cards.length) return [];
       this.r.revealed.push({ heroId: h.heroId, cards: [...cards] });
       const input = this.ask(hero, `${path}/arrange`, {
         ...(!prepare ? { scoutPrepareAllowed: false as const } : {}),
@@ -1612,8 +1615,14 @@ class FrontReplay {
       if (input.discard) h.discard.push(input.discard);
       h.deck = [...input.top, ...h.deck, ...input.bottom];
       this.r.revealed.pop();
-      if (input.prepare && (this.run.spatial || h.prepared.includes(input.prepare)))
+      if (
+        input.prepare &&
+        (this.run.spatial ||
+          (this.run.program.profile === 'source-fronts-v1' && this.run.program.startupRules) ||
+          h.prepared.includes(input.prepare))
+      )
         this.afterPrepare(hero, input.prepare, path);
+      return cards;
     });
   }
   private prepareDiscard(hero: number, path: string) {
@@ -1650,6 +1659,7 @@ class FrontReplay {
     lastStand = false,
     sourceTarget?: number | null,
     attack?: AttackTestChild,
+    setup?: PhysicalSnapshot['parents'][number]['results'][number]['setup'],
   ): number {
     return this.frame(path, hero, null, 'test', 0, () => {
       const visibleSource = sourceTarget !== undefined || (!!this.combat && !lastStand);
@@ -1667,6 +1677,7 @@ class FrontReplay {
           0,
         );
       const cards = this.reveal(hero, Math.max(1, definition.stats[stat] + modifier), path);
+      if (setup) setup.revealed = [...cards];
       this.r.revealed.push({ heroId: h.heroId, cards: [...cards] });
       let successes = cards.reduce((n, c) => n + this.skillSymbols(c).success, 0),
         fate = cards.reduce((n, c) => n + this.skillSymbols(c).fate, 0),
@@ -1922,6 +1933,7 @@ class FrontReplay {
           continue;
         }
         if (selected === 'inspiration') {
+          if (setup) setup.converted++;
           useFates(1, 'converted', `inspiration-fate-${n}`);
           h.inspiration--;
           fate--;
@@ -1968,6 +1980,7 @@ class FrontReplay {
             h.prepared.splice(h.prepared.indexOf(selected), 1);
             h.discard.push(selected);
             const converted = ability.effect.op === 'convert-all' ? fate : 1;
+            if (setup) setup.converted += converted;
             successes += converted;
             fate -= converted;
             updateTest();
@@ -2412,6 +2425,69 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'prepared':
+              invariant(
+                this.hero(child.hero).prepared.includes(child.copy),
+                'Trigger senza copia preparata.',
+              );
+              this.afterPrepare(child.hero, child.copy, path);
+              break;
+            case 'startup-scout': {
+              const input = this.ask(child.hero, `${path}/reveal`, {
+                mode: 'choose',
+                title: 'Scoperta iniziale 2',
+                options: [{ id: 'reveal', label: 'Rivela le carte di Scoperta' }],
+                minimum: 1,
+                maximum: 1,
+                remaining: empty(),
+              });
+              invariant(
+                input.kind === 'physical-choice' && input.option === 'reveal',
+                'Scoperta iniziale senza reveal.',
+              );
+              const revealed = this.scout(child.hero, 2, `${path}/scout`);
+              this.result.setup = { revealed, converted: 0, outcome: null, reward: 0 };
+              break;
+            }
+            case 'startup-test': {
+              const input = this.ask(child.hero, `${path}/reveal`, {
+                mode: 'choose',
+                title: 'Prova iniziale di Spirito · difficoltà 1',
+                options: [{ id: 'reveal', label: 'Rivela le carte della prova' }],
+                minimum: 1,
+                maximum: 1,
+                remaining: empty(),
+              });
+              invariant(
+                input.kind === 'physical-choice' && input.option === 'reveal',
+                'Prova iniziale senza reveal.',
+              );
+              const setup = {
+                revealed: [] as string[],
+                converted: 0,
+                outcome: null as 'pass' | 'fail' | null,
+                reward: 0,
+              };
+              this.result.setup = setup;
+              const successes = this.test(
+                child.hero,
+                'spirit',
+                `${path}/test`,
+                false,
+                false,
+                1,
+                undefined,
+                setup,
+              );
+              this.result.successes = successes;
+              setup.outcome = successes >= 1 ? 'pass' : 'fail';
+              if (setup.outcome === 'pass') {
+                const before = this.hero(child.hero).inspiration;
+                this.inspiration(child.hero);
+                setup.reward = this.hero(child.hero).inspiration - before;
+              }
+              break;
+            }
             case 'source-boon':
               invariant(
                 this.p.version === 3 && run.lastStandRules && run.spatial,

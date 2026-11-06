@@ -96,6 +96,9 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('prepared'), hero: slot, copy: z.string().max(120) }),
+  z.strictObject({ kind: z.literal('startup-scout'), hero: slot }),
+  z.strictObject({ kind: z.literal('startup-test'), hero: slot }),
   z.strictObject({ kind: z.literal('search-recovery'), hero: slot, effect: SearchRecoverySchema }),
   z.strictObject({ kind: z.literal('source-boon'), hero: slot, boon: BoonKindSchema }),
   z.strictObject({
@@ -204,6 +207,7 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 ]);
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
+  startupRules: z.literal('source-startup-preparation-v1').optional(),
   immediateSkillReset: z.literal(true).optional(),
   groupRules: z.literal('source-live-groups-v1').optional(),
   combat: CombatPhysicalContextSchema.optional(),
@@ -311,6 +315,9 @@ export const PhysicalResultSchema = z.strictObject({
   enemyOutcome: AttackOutcomeSchema.optional(),
   child: z.int().min(0).max(31),
   kind: z.enum([
+    'prepared',
+    'startup-scout',
+    'startup-test',
     'inspiration',
     'scenario-title',
     'scenario-item',
@@ -336,6 +343,14 @@ export const PhysicalResultSchema = z.strictObject({
     'group-suffer',
   ]),
   heroId: ContentIdSchema,
+  setup: z
+    .strictObject({
+      revealed: z.array(z.string().min(1).max(120)).max(30),
+      converted: z.int().nonnegative(),
+      outcome: z.enum(['pass', 'fail']).nullable(),
+      reward: z.int().min(0).max(1),
+    })
+    .optional(),
   successes: z.int().min(0).max(999).optional(),
   tests: z
     .array(

@@ -53,18 +53,22 @@ export function createPhysicalControls(
       root.replaceChildren();
       if (!view) return;
       const name = (id: string) => catalog?.heroes.find((h) => h.id === id)?.name.text ?? 'Eroe';
+      const startup =
+        session.scenario?.phase === 'setup' && !!session.scenario.pack.manifest.startupPreparation;
       root.append(
         text(
           'p',
-          !view.synthetic
-            ? session.round?.phase === 'shadow'
-              ? 'Ogni proprietario risolve le prove e le conseguenze dell’Ombra indicate qui sotto. Gli altri giocatori attendono; la fase riprende dopo tutti gli eroi.'
-              : 'Le conseguenze e le prove dell’incontro usano le carte della Compagnia. Completa l’istruzione indicata; il turno conserva azioni e movimenti residui.'
-            : view.lastStand
-              ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
-              : view.fronts
-                ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
-                : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
+          startup
+            ? `${view.synthetic ? 'Avvio sintetico · dati inventati. ' : ''}Scoperte, prove e capacità di preparazione si risolvono qui. Ogni proprietario decide per il proprio eroe; l’avvio prosegue dopo gli effetti.`
+            : !view.synthetic
+              ? session.round?.phase === 'shadow'
+                ? 'Ogni proprietario risolve le prove e le conseguenze dell’Ombra indicate qui sotto. Gli altri giocatori attendono; la fase riprende dopo tutti gli eroi.'
+                : 'Le conseguenze e le prove dell’incontro usano le carte della Compagnia. Completa l’istruzione indicata; il turno conserva azioni e movimenti residui.'
+              : view.lastStand
+                ? 'Prova sintetica P2 · fonte inventata; carte e Ultimo Sforzo seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+                : view.fronts
+                  ? 'Prova sintetica P1 · fonte inventata; i fronti seguono il contenuto verificato. Gli incontri originali non sono abilitati.'
+                  : 'Prova sintetica P0 · parametri e crediti inventati. Gli incontri originali non sono abilitati.',
           'physical-notice',
         ),
       );

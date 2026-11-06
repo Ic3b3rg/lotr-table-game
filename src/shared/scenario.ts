@@ -575,6 +575,14 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    startupPreparation: z
+      .strictObject({
+        version: z.literal('source-startup-preparation-v1'),
+        frontsFingerprint: HashSchema,
+        catalogHash: HashSchema,
+        evidenceHash: HashSchema,
+      })
+      .optional(),
     liveGroups: z
       .strictObject({
         version: z.literal('source-live-groups-v1'),
@@ -1049,6 +1057,12 @@ export const ScenarioSchema = z.strictObject({
   tasks: z
     .array(
       z.discriminatedUnion('kind', [
+        z.strictObject({
+          ...taskBase,
+          kind: z.literal('startup'),
+          parentId: z.uuid(),
+          heroId: ContentIdSchema,
+        }),
         z.strictObject({
           ...taskBase,
           kind: z.literal('spawnFixed'),

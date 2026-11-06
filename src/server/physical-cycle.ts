@@ -787,6 +787,15 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
 type Replay = { work: State; receipts: Receipt[] };
 let lastReplay: { context: string; records: string; result: Replay } | null = null;
 
+function originalStartupPrefix(state: State, scenario: NonNullable<State['scenario']>) {
+  if (!scenario.pack.manifest.startupPreparation) return [];
+  // The immutable handoff identifies only the startup parents. Later encounter,
+  // combat and ordinary parents must be rebuilt from cycle records, never trusted.
+  const count = 1 + scenario.completedSetup.length;
+  invariant(state.physical!.runs.length >= count, 'Prefisso fisico startup incompleto.');
+  return state.physical!.runs.slice(0, count);
+}
+
 function replay(state: State, cycle: CycleState): Replay {
   const original = state.physical!;
   const {
@@ -802,7 +811,7 @@ function replay(state: State, cycle: CycleState): Replay {
   const { snapshot: _snapshot, cycle: _cycle, ...origin } = original;
   const prefix =
     cycle.version === 2
-      ? []
+      ? originalStartupPrefix(state, cycle.seed.scenario!)
       : original.runs.filter((r) => r.source.instanceId !== 'ordinary-cycle');
   const context = digest({
     environment:
@@ -1036,7 +1045,7 @@ export function initializeOriginalCycle(state: State) {
     sc.pack.manifest.scope === 'original-encounter-v1' &&
       sc.phase === 'action' &&
       !p.cycle &&
-      !p.runs.length,
+      p.runs.length === originalStartupPrefix(state, sc).length,
     'Confine originale duplicato o non iniziale.',
   );
   if (sc.pack.manifest.combat) state.combat = initialCombat(state);
@@ -1114,7 +1123,7 @@ function originalSeedState(state: State): State {
   );
   delete p.cycle;
   p.version = 2;
-  p.runs = [];
+  p.runs = structuredClone(originalStartupPrefix(state, sc));
   p.snapshot = replayPhysical(p);
   return {
     ...state,

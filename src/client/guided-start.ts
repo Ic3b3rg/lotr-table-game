@@ -194,7 +194,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
         step = 6;
         const q = session.scenario.pending;
         const synthetic = session.scenario.pack.manifest.scope === 'synthetic-physical-p0';
-        topic = q?.kind === 'physical' ? 'physical' : 'startup';
+        const startup =
+          session.scenario.phase === 'setup' && !!session.scenario.pack.manifest.startupPreparation;
+        topic = startup ? 'startup' : q?.kind === 'physical' ? 'physical' : 'startup';
         heading =
           session.scenario.phase === 'action'
             ? synthetic
