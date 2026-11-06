@@ -251,3 +251,72 @@ test('JSON provenance keys survive parsing without silent schema normalization',
   assert.equal(Object.getPrototypeOf(a.source.campaign.provenance), Object.prototype);
   assert.deepEqual(verifyCampDeckArtifact(JSON.parse(JSON.stringify(a))), a);
 });
+
+test('recipe maximum200 remains complete and a201-card recipe is rejected', () => {
+  const s = source();
+  const h = s.campaign.heroes[0];
+  const template = s.catalog.cards.find((c) => c.kind === 'purchased');
+  for (let i = 0; i < 184; i++) {
+    const id = `invented-boundary-purchase-${i}`;
+    const c = {
+      ...structuredClone(template),
+      id,
+      number: 100 + i,
+      copies: [`${id}:1`],
+      definitionHash: hash({ invented: id }),
+    };
+    s.catalog.cards.push(c);
+    h.skillCopies.push(c.copies[0]);
+    s.campaign.inventory.push({ copy: c.copies[0], kind: 'purchased', ownerId: h.heroId });
+  }
+  refreshChoices(s);
+  assert.equal(s.choices[0].recipe.cards.length, 200);
+  const a = realize(s);
+  assert.equal(a.materialized.heroes[0].deck.length, 200);
+  assert.equal(a.materialized.heroes[0].prepared.length, 1);
+  assert.deepEqual(verifyCampDeckArtifact(JSON.parse(JSON.stringify(a))), a);
+  const extra = structuredClone(s.catalog.cards.filter((c) => c.kind === 'title')[5]);
+  h.titleCopies.push(extra.copies[0]);
+  s.campaign.inventory.push({ copy: extra.copies[0], kind: 'title', ownerId: h.heroId });
+  refreshChoices(s);
+  assert.equal(s.choices[0].recipe.cards.length, 201);
+  assert.throws(() => realize(s));
+});
+
+test('equipment beyond rankI, accessory choices and balances remain source provenance', () => {
+  const s = source();
+  const copy = 'invented-accessory:1';
+  s.campaign.inventory.push({ copy, kind: 'accessory', ownerId: null });
+  s.campaign.heroes[0].provenance.equipmentTier = 3;
+  const choose = (choice) => {
+    choice.accessory = choice.recipe.accessory = copy;
+    choice.summaryHash = hash(choice.recipe);
+  };
+  choose(s.choices[0]);
+  const a = realize(s);
+  assert.deepEqual(a.materialized.lineage.campaign, s.campaign);
+  assert.equal(a.materialized.lineage.choices[0].accessory, copy);
+  assert.equal(a.materialized.lineage.campaign.heroes[0].provenance.equipmentTier, 3);
+  assert.equal(a.materialized.lineage.campaign.heroes[0].balances[0].availableXP, 11);
+  choose(s.choices[1]);
+  assert.throws(() => realize(s), /equipment|duplicate/i);
+});
+
+test('a missing weakness identity gates the conserved pool before entropy access', () => {
+  const s = source();
+  s.catalog.cards.find((c) => c.kind === 'weakness').identity = 'requires-content';
+  const a = realize(
+    s,
+    new Proxy(
+      {},
+      {
+        get() {
+          throw Error('entropy read');
+        },
+      },
+    ),
+  );
+  assert.equal(a.format, 'camp-decks-gate-v1');
+  assert.equal(a.entropyDraws, 0);
+  assert.match(a.capability.blockers[0], /Weakness identity/);
+});

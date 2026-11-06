@@ -47,6 +47,8 @@ for (const [entry, outfile] of [
   ['src/combat/main.ts', 'dist/combat.mjs'],
   ['src/battle-map/index.ts', 'dist/battle-map-library.mjs'],
   ['src/battle-map/main.ts', 'dist/battle-map.mjs'],
+  ['src/camp-decks/index.ts', 'dist/camp-decks-library.mjs'],
+  ['src/camp-decks/main.ts', 'dist/camp-decks.mjs'],
 ]) {
   await build({
     entryPoints: [entry],
