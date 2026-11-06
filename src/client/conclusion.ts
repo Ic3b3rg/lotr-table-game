@@ -1,9 +1,10 @@
+import { campItemInventory } from './camp-items';
 import type { Catalog } from '../shared/catalog';
 import type { Session, Player, ScenarioCommand } from '../shared/protocol';
 import { element, text } from './dom';
 import { sourceText } from './source-text';
 import { createGameActions } from './game-actions';
-import { cardButton, type CardReader } from './cards';
+import type { CardReader } from './cards';
 import { campSkillShop } from './camp-skills';
 
 export function createConclusion(sync: () => Promise<void>, reader: CardReader) {
@@ -150,10 +151,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
             `Premi storici conservati: ${xp.map((x) => `${catalog!.roles.find((r) => r.id === x.roleId)!.name.text} ${x.amount} XP`).join(', ')}.`,
           ),
         );
-        for (const copy of h.itemCopies) {
-          const item = catalog.items.find((i) => i.id === copy.slice(0, copy.lastIndexOf(':')))!;
-          entry.append(cardButton(item, (button) => reader.card(item, button)));
-        }
+        entry.append(
+          campItemInventory(session, catalog, h.heroId, player, reader, (input) => submit(input)),
+        );
         if (
           session.preparation!.heroes.find((hero) => hero.heroId === h.heroId)!.playerId ===
           player?.id
@@ -188,6 +188,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         );
         heroes.append(entry);
       }
+      heroes.append(
+        campItemInventory(session, catalog, null, player, reader, (input) => submit(input)),
+      );
     },
   };
 }

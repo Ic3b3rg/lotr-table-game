@@ -59,7 +59,7 @@ test('resigned historical and current startup backups reject financial summaries
   const r = await readyScenario(t);
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const original = await readBackup(r.host);
-  for (let version = 10; version <= 27; version++) {
+  for (let version = 10; version <= 28; version++) {
     const historical = structuredClone(original);
     historical.payload.state.schemaVersion = version;
     if (version === 10) delete historical.payload.state.physical;

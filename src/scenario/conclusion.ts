@@ -1,3 +1,5 @@
+import { transactCampItem } from './camp-items';
+import type { CampItemReceipt } from '../shared/camp-items';
 import type { State } from '../server/state';
 import type { ScenarioAction, ScenarioRequest, ScenarioPack, Scenario } from '../shared/scenario';
 import { definitionId } from '../shared/preparation';
@@ -324,7 +326,7 @@ export function answerCampaign(
   const sc = state.scenario!,
     c = sc.conclusion!,
     q = sc.pending;
-  let skill: CampSkillReceipt | undefined;
+  const result: { skill?: CampSkillReceipt; item?: CampItemReceipt } = {};
   if (
     !q ||
     command.scenarioId !== sc.id ||
@@ -339,8 +341,10 @@ export function answerCampaign(
       'SCENARIO_REQUEST_CHANGED',
       'Il passaggio della campagna è concluso o è cambiato.',
     );
-  if (command.input.kind === 'camp-skill') {
-    skill = transactCampSkill(state, playerId, command.input);
+  if (command.input.kind === 'camp-item') {
+    result.item = transactCampItem(state, playerId, command.input);
+  } else if (command.input.kind === 'camp-skill') {
+    result.skill = transactCampSkill(state, playerId, command.input);
   } else if (command.input.kind === 'camp-role' && c.stage === 'camp') {
     const input = command.input;
     const h = state.preparation!.heroes.find((h) => h.heroId === input.heroId);
@@ -359,9 +363,9 @@ export function answerCampaign(
     throw new ApiError(
       409,
       'CAMPAIGN_CAPABILITY',
-      'Il campo è salvato. La prossima avventura e gli acquisti richiedono materiale ulteriore; nessuna spesa o partenza è stata applicata.',
+      'Il campo è salvato. La prossima avventura richiede la propria mappa e le proprie istruzioni; nessuna partenza, spesa o capacità futura è stata applicata.',
     );
   sc.pending = null;
   campaignRequest(state);
-  return skill;
+  return result;
 }

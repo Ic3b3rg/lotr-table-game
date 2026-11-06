@@ -1,3 +1,5 @@
+import { validateCampItemsCatalog } from './camp-items-capability';
+import { validateCampItemsState } from './camp-items';
 import { initialCombat } from '../combat/controller';
 import { validateCampState } from './camp-skills';
 import { validateCampCatalog } from './camp-capability';
@@ -26,7 +28,11 @@ export function scenarioStateProblem(state: State): string | null {
   try {
     const sc = state.scenario;
     if (!sc) return state.physical || state.combat ? 'Consumer fisico senza scenario fonte.' : null;
-    if (state.content) validateCampCatalog(sc.pack, state.content);
+    if (state.content) {
+      validateCampCatalog(sc.pack, state.content);
+      validateCampItemsCatalog(sc.pack, state.content);
+    }
+    validateCampItemsState(state);
     validateCampState(state);
     validateFirstCombatState(state);
     if (state.combat) {
@@ -543,6 +549,8 @@ export function scenarioReceiptProblem(
       r.source !== c.source ||
       r.kind !== c.kind ||
       r.kind === 'camp-skill' ||
+      r.kind === 'camp-item' ||
+      r.item !== undefined ||
       r.skill !== undefined
     )
       return 'Ricevuta scenario incoerente.';

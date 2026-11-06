@@ -58,7 +58,7 @@ test('migration changes only schemaVersion and preserves ordinary dictionary wor
   });
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const current = (await readBackup(r.host)).payload.state;
-  assert.equal(current.schemaVersion, 27);
+  assert.equal(current.schemaVersion, 28);
   for (let schemaVersion = 10; schemaVersion <= 26; schemaVersion++) {
     const old = { ...structuredClone(current), schemaVersion };
     if (schemaVersion === 10) delete old.physical;

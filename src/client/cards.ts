@@ -1,3 +1,4 @@
+import type { CampItemCard } from '../shared/camp-items';
 import type {
   Catalog,
   HeroDefinition,
@@ -85,6 +86,49 @@ export function createCardReader() {
     });
   }
   return {
+    campItem(
+      entry: CampItemCard,
+      card: ItemDefinition,
+      target: HTMLElement,
+      holder: string,
+      lore: number,
+    ) {
+      show(
+        card.name.text,
+        [
+          text(
+            'p',
+            `${holder} · rango ${['', 'I', 'II', 'III'][card.rank]} · ${card.quantity} ${card.quantity === 1 ? 'copia' : 'copie'}`,
+            'card-type',
+          ),
+          text(
+            'p',
+            card.slot === 'trinket'
+              ? 'Accessorio della Compagnia'
+              : card.slot === 'armor'
+                ? 'Armatura personale'
+                : `Equipaggiamento personale · ${card.hands} ${card.hands === 1 ? 'mano' : 'mani'}`,
+            'card-type',
+          ),
+          text(
+            'p',
+            card.upgrades.length
+              ? `Requisito per migliorare questa carta: ${entry.model.upgradeCost} Sapienza. Valore condiviso corrente: ${lore}. La Sapienza non si spende.`
+              : `Rango massimo per i prodotti base: nessun miglioramento successivo disponibile. Sapienza condivisa: ${lore}, senza spesa.`,
+            'company-help',
+          ),
+          text('p', card.traits.join(' · '), 'card-traits'),
+          text('p', card.text.text, 'card-full-text'),
+          text(
+            'p',
+            `Leggere è gratuito. ${card.upgrades.length ? 'Le alternative disponibili si scelgono e si confermano dal campo.' : 'Per questo oggetto non sono richieste altre scelte al campo.'} Le capacità delle carte migliorate attendono le rispettive finestre del seguito.`,
+            'company-help',
+          ),
+          sourceNotes([card.name, card.text], card.notes),
+        ],
+        target,
+      );
+    },
     campSkill(
       offer: CampSkillOffer,
       target: HTMLElement,

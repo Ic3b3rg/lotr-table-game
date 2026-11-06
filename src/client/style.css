@@ -2043,3 +2043,39 @@ body[data-scenario='setup'] #scout-discard-controls {
     width: 100%;
   }
 }
+
+.camp-items {
+  margin-block: 1rem;
+  min-width: 0;
+}
+.camp-item {
+  border-block-start: 1px solid var(--line);
+  padding-block: 1rem;
+  min-width: 0;
+}
+.camp-item > .physical-card {
+  width: 100%;
+}
+.camp-item-alternatives > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 0.75rem;
+}
+.camp-item-alternatives[open] {
+  display: grid;
+  gap: 0.75rem;
+}
+.camp-item-confirmation {
+  margin-block: 0.75rem;
+  padding: 0.75rem;
+  border: 2px solid currentColor;
+}
+.camp-item-confirmation button {
+  margin-block: 0.25rem;
+  margin-inline-end: 0.5rem;
+  max-width: 100%;
+}
+.camp-replacement {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
