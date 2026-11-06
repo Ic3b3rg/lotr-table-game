@@ -26,6 +26,7 @@ export function startupMaterial(catalog = catalogFixture()) {
   }));
   const fronts = compilePhysicalFronts(raw, input, catalog);
   return {
+    catalog,
     raw,
     input,
     fronts,

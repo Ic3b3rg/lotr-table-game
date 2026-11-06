@@ -116,11 +116,13 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           : q?.kind === 'physical'
             ? current.physical?.active?.kind === 'gate'
               ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
-              : tokenOwner
-                ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Risolvi la prova con le carte e le conversioni qui sotto; poi segui l’esito e le conseguenze del segnalino.`
-                : searchOwner
-                  ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Completa l’effetto con le carte qui sotto, poi conferma il messaggio per rimuovere il segnalino e riprendere il viaggio.`
-                  : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
+              : sc.phase === 'setup' && sc.pack.manifest.startupPreparation
+                ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Completa le carte e l’eventuale capacità di preparazione qui sotto. Gli altri eroi attendono; l’avvio riprende dallo stesso passo.`
+                : tokenOwner
+                  ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Risolvi la prova con le carte e le conversioni qui sotto; poi segui l’esito e le conseguenze del segnalino.`
+                  : searchOwner
+                    ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Completa l’effetto con le carte qui sotto, poi conferma il messaggio per rimuovere il segnalino e riprendere il viaggio.`
+                    : `${actor?.name ?? 'Il proprietario indicato'} risolve la decisione qui sotto. La fonte riprende dopo le conseguenze.`
             : q?.kind === 'sprint'
               ? current.combat?.current
                 ? 'Completa la provocazione qui sotto. Lo Scatto attende; azione e carte della prova restano salvate.'

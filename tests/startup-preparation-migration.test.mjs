@@ -43,7 +43,13 @@ test('schemas1–29 reject prospective startup forms at scenario, seed, run and 
 });
 
 test('schema30 structurally migrates a complete historical startup without enabling physical preparation', async (t) => {
-  const ready = await readyStartup(t, { legacy: true });
+  const ready = await readyStartup(t, {
+    legacy: true,
+    edit(pack) {
+      for (const name of ['startupPreparation', 'startup', 'startupRules', 'prepared'])
+        pack.globals.push({ name, type: 'string', value: name });
+    },
+  });
   await revealStartupScout(ready);
   const current = (await readBackup(ready.host)).payload.state;
   assert.equal(current.schemaVersion, 30);

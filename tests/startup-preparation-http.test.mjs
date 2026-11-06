@@ -6,6 +6,32 @@ import { readSession, readBackup } from './skill-test-helper.mjs';
 import { writeFile, rm } from 'node:fs/promises';
 import { startScenario } from './scenario-helper.mjs';
 import { command } from './preparation-helper.mjs';
+import { compilePhysicalFronts } from '../dist/physical-resolution-library.mjs';
+
+test('an attested initial role uses the same physical afterPrepare trigger with no fear', async (t) => {
+  const ready = await readyStartup(t, {
+    edit(pack, material) {
+      const policy = material.input.policies.find((p) => p.id === 'role-1-skill-1');
+      policy.effects = [{ op: 'after-prepare-flip-fear' }, { op: 'after-prepare-inspiration' }];
+      material.fronts = compilePhysicalFronts(material.raw, material.input, material.catalog);
+      pack.manifest.startupPreparation.frontsFingerprint = material.fronts.fingerprint;
+      const legacy = pack.preparedEffects.find((p) => p.skillId === policy.id);
+      delete legacy.amount;
+      legacy.effect = 'requires-capability';
+      legacy.capability = 'faceup-fear-flip';
+    },
+  });
+  const r = await startScenario(ready.host, ready.player);
+  assert.equal(r.status, 200, await r.text());
+  const backup = await readBackup(ready.host),
+    state = backup.payload.state;
+  assert.equal(state.preparation.heroes[0].inspiration, 1);
+  assert.equal(state.physical.snapshot.parents[0].returnCount, 1);
+  assert.equal(state.physical.runs[0].program.children[0].kind, 'prepared');
+  assert.deepEqual(state.scenario.cardEffects, []);
+  assert.equal(state.physical.snapshot.active, null);
+  assert.equal(state.scenario.pending.kind, 'message');
+});
 
 for (const fear of [1, 3])
   test(`startup preparation with ${fear} faceup fear uses the owner selection and resumes the same source`, async (t) => {

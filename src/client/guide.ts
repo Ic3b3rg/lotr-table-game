@@ -101,6 +101,7 @@ const TOPICS = [
     paragraphs: [
       'L’avventura usa la mappa salvata della compagnia. Leggete l’introduzione e seguite i piazzamenti: tessere, segnalini e posizioni compaiono soltanto quando richiesti dal copione.',
       'Ogni eroe effettua la propria Scoperta 2 iniziale e poi una prova di Spirito 1. Il proprietario rivela e risolve le carte dalla vista personale. Questo setup non spende azioni e non applica il bonus di Aragorn della Riorganizzazione. La ricompensa di ispirazione rispetta il limite dell’eroe.',
+      'Quando prepari una carta, la sua capacità si risolve prima di passare al prossimo eroe. Se occorre girare coperta una paura scoperta, scegli fra quelle indicate: con una sola carta il tavolo procede automaticamente, senza paure disponibili prosegue senza scelta. Il limite di quattro preparate e lo scarto restano parte della stessa Scoperta. Una ricarica conserva preparazione, disposizione e scelta ancora da completare.',
       'Ogni conferma, pesca e conversione è salvata sul PC. Ricaricare o ripristinare una copia riprende la stessa richiesta. Nel riepilogo dell’avventura puoi rileggere carte, risultati e ricompense completati.',
       'Dopo l’obiettivo scegliete il primo turno. Potete ispezionare i segnalini e annullare gratuitamente. Le esplorazioni e il passaggio a Ombra e Riorganizzazione dipendono dalle capacità incluse nell’avvio. Ulteriori incontri, combattimento e rami dell’avventura conservano i limiti indicati sul tavolo.',
     ],
