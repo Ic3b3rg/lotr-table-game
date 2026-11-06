@@ -169,3 +169,47 @@ test('ownership, insufficient lore, claimed copies and anonymous PC remain block
     false,
   );
 });
+
+test('unavailable camp items explain the next step without inviting an impossible choice', () => {
+  for (const blocked of ['maximum', 'lore', 'held']) {
+    const b = browser(),
+      f = fixture(),
+      reads = [];
+    f.session.scenario.conclusion.campaign.heroes[0].itemCopies = [
+      blocked === 'maximum' ? 'invented-final:1' : 'sword:1',
+    ];
+    if (blocked === 'lore') f.session.scenario.play.lore = 2;
+    if (blocked === 'held')
+      f.session.scenario.conclusion.campaign.heroes[1].itemCopies = [
+        'advanced:1',
+        'invented-alternative:1',
+      ];
+    b.campItemInventory(
+      f.session,
+      f.catalog,
+      'hero-1',
+      { id: 'owner-1' },
+      { campItem: (...args) => reads.push(args) },
+      async () => assert.fail('Reading a blocked item must not submit an intent'),
+    );
+    b.setOnline(true);
+    const visible = b.nodes.map((n) => n.textContent).join('\n');
+    assert.doesNotMatch(visible, /Scegli un’alternativa|Concordate l’alternativa/, blocked);
+    assert.match(
+      visible,
+      blocked === 'maximum'
+        ? /Rango massimo/
+        : blocked === 'lore'
+          ? /prima raggiungere il requisito di Sapienza/
+          : /copie delle alternative sono già possedute/,
+      blocked,
+    );
+    assert.ok(b.nodes.filter((n) => n.dataset.campUpgrade).every((n) => n.disabled));
+    if (blocked === 'maximum') {
+      assert.ok(!b.nodes.some((n) => n.className === 'camp-item-alternatives'));
+      assert.ok(!b.nodes.some((n) => n.dataset.campConfirm));
+    }
+    b.nodes.find((n) => n.className === 'physical-card').click();
+    assert.equal(reads.length, 1);
+  }
+});

@@ -75,25 +75,31 @@ export function campItemInventory(
       continue;
     }
     const sufficient = sc.play!.lore >= entry.model.upgradeCost,
+      hasAvailableCopy = successors.some((next) =>
+        Array.from({ length: next.quantity }, (_, n) => `${next.cardId}:${n + 1}`).some(
+          (candidate) => !all.includes(candidate),
+        ),
+      ),
       reason = !successors.length
         ? 'Rango massimo per i prodotti base: nessun miglioramento successivo disponibile.'
         : !sufficient
           ? `Servono ${entry.model.upgradeCost} Sapienza; la Compagnia ne ha ${sc.play!.lore}.`
           : `Requisito raggiunto: ${entry.model.upgradeCost} Sapienza, disponibili ${sc.play!.lore}.`;
-    row.append(
-      text('p', reason, 'camp-availability'),
-      text(
-        'p',
-        mine
-          ? heroId === null
-            ? 'Concordate l’alternativa per la Compagnia, poi una persona conferma.'
-            : 'Scegli un’alternativa, poi conferma la sostituzione.'
-          : heroId === null
-            ? 'Un partecipante conferma dal proprio telefono; questa vista osserva.'
-            : `${ownerName} conferma dal proprio dispositivo. Puoi leggere le alternative.`,
-        'company-help',
-      ),
-    );
+    let guidance = mine
+      ? heroId === null
+        ? 'Concordate l’alternativa per la Compagnia, poi una persona conferma.'
+        : 'Scegli un’alternativa, poi conferma la sostituzione.'
+      : heroId === null
+        ? 'Un partecipante conferma dal proprio telefono; questa vista osserva.'
+        : `${ownerName} conferma dal proprio dispositivo. Puoi leggere le alternative.`;
+    if (!successors.length)
+      guidance = 'Questo oggetto non richiede altre scelte al campo. Puoi leggere la carta.';
+    else if (!sufficient)
+      guidance =
+        'Puoi leggere le alternative; per migliorare occorre prima raggiungere il requisito di Sapienza.';
+    else if (!hasAvailableCopy)
+      guidance = 'Le copie delle alternative sono già possedute. Puoi leggere le carte.';
+    row.append(text('p', reason, 'camp-availability'), text('p', guidance, 'company-help'));
     if (entry.model.upgrades.some((source) => !cap!.cards.some((i) => i.model.source === source)))
       row.append(
         text(
@@ -102,6 +108,10 @@ export function campItemInventory(
           'company-help',
         ),
       );
+    if (!successors.length) {
+      root.append(row);
+      continue;
+    }
     const confirmation = document.createElement('div'),
       summary = text('p', '', 'camp-replacement'),
       waiting = text('p', '', 'camp-waiting'),
