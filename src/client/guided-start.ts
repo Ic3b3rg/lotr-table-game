@@ -469,6 +469,13 @@ export function createGuidedStart(sync: () => Promise<void>) {
             : 'Concordate un eroe che non ha ancora agito. Il proprietario seleziona il suo eroe, conferma l’accordo e inizia il turno: fino a due azioni.';
         }
       }
+      if (session.combat?.pending && !session.combat.current) {
+        heading = 'Scegli l’ordine prima dell’interazione';
+        message = `${session.players.find((p) => p.id === session.combat!.pending!.actorPlayerId)?.name ?? 'Il proprietario indicato'} registra il piano e l’ordine dei gruppi pronti. L’interazione resta salvata fino al ritorno.`;
+        target = '#combat';
+        label = 'Scegli il prossimo passo';
+        topic = 'encounter';
+      }
       if (session.combat?.current) {
         const combat = session.combat.current,
           actor = session.combat.pending?.actorPlayerId ?? session.physical?.active?.actorPlayerId;
@@ -477,6 +484,19 @@ export function createGuidedStart(sync: () => Promise<void>) {
         target = session.physical?.active ? '#physical-resolution' : '#combat';
         label = 'Apri il prossimo passo';
         topic = 'physical';
+      }
+      if (
+        session.physical?.active?.kind === 'decision' &&
+        ['interaction-look', 'interaction-order'].includes(session.physical.active.purpose ?? '')
+      ) {
+        const look = session.physical.active.purpose === 'interaction-look';
+        heading = look ? 'Guarda prima di interagire' : 'Concordate l’ordine degli effetti';
+        message = look
+          ? `Solo ${session.players.find((p) => p.id === session.physical!.active!.actorPlayerId)?.name ?? 'il proprietario indicato'} legge la carta sul proprio dispositivo. Chiudi la lettura e continua la stessa interazione; gli altri attendono.`
+          : 'Il gruppo concorda l’ordine. Il proprietario indicato conferma un effetto alla volta; il seguito e i costi sono salvati.';
+        target = '#physical-resolution';
+        label = look ? 'Apri la lettura e continua' : 'Scegli il prossimo effetto';
+        topic = 'encounter';
       }
       if (session.scenario?.conclusion) {
         const conclusion = session.scenario.conclusion;

@@ -11,7 +11,7 @@ test('il gruppo apre una mappa verificabile con la stessa posizione iniziale per
   assert.equal(response.status, 200);
   const plan = await response.json();
   let state = await readSession(host);
-  assert.equal(state.schemaVersion, 31);
+  assert.equal(state.schemaVersion, 32);
   assert.equal(state.journey, null);
   const intent = {
     type: 'OPEN_JOURNEY_MAP',

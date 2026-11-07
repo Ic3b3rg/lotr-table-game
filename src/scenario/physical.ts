@@ -28,6 +28,7 @@ import { invariant } from '../map-freeze/validate';
 import { ApiError } from '../server/errors';
 import { validateScenarioTitle } from '../physical-resolution/scenario-title';
 import { linkedDefinition } from './linked-capability';
+import { firstCombatDefinition } from './first-combat';
 import { boonEnemyPositions } from '../server/physical-spatial';
 import { sourceCursor, type SourceEffect } from './source-cursor';
 import {
@@ -239,8 +240,10 @@ export function physicalRequestData(
       action.op === 'sourceTest' ||
       action.op === 'challenge' ||
       action.op === 'addItem' ||
-      ((action.op === 'awardTitle' || action.op === 'choice') &&
-        linkedDefinition(state.scenario!.pack, instance.definition)) ||
+      (action.op === 'awardTitle' && linkedDefinition(state.scenario!.pack, instance.definition)) ||
+      (action.op === 'choice' &&
+        (linkedDefinition(state.scenario!.pack, instance.definition) ||
+          firstCombatDefinition(state.scenario!.pack, instance.definition))) ||
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
       (action.op === 'message' &&
         (action.consequence ||

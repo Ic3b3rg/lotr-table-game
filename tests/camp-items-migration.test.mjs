@@ -54,7 +54,7 @@ test('structural migration preserves whole gameplay and ordinary dictionaries, w
   });
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const current = (await readBackup(r.host)).payload.state;
-  assert.equal(current.schemaVersion, 31);
+  assert.equal(current.schemaVersion, 32);
   for (let schemaVersion = 10; schemaVersion <= 27; schemaVersion++) {
     const old = { ...structuredClone(current), schemaVersion };
     if (schemaVersion === 10) delete old.physical;

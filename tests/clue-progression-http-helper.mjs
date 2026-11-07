@@ -174,7 +174,7 @@ export function attachClues(pack, frozen) {
     evidenceHash: hash('invented evidence'),
   };
 }
-export function readyClues(t, edit = () => {}) {
+export function readyClues(t, edit = () => {}, frontEdit) {
   return readyOriginal(
     t,
     (pack, frozen) => {
@@ -188,7 +188,7 @@ export function readyClues(t, edit = () => {}) {
       edit(pack, frozen);
     },
     undefined,
-    undefined,
+    frontEdit,
     (raw) => {
       const input = {
         assembly: { selection: raw.template.selection },

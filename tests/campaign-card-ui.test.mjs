@@ -31,7 +31,11 @@ test('a purchased campaign copy revealed by the physical kernel has a readable c
     }
   }
   const root = new Element('section'),
-    document = { querySelector: () => root, createElement: (tag) => new Element(tag) };
+    document = {
+      body: new Element('body'),
+      querySelector: () => root,
+      createElement: (tag) => new Element(tag),
+    };
   const code = buildSync({
       stdin: {
         resolveDir: process.cwd(),

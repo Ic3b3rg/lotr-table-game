@@ -13,6 +13,7 @@ export async function readyCompany(
   const host = await setup(t, catalog, extraEnv);
   const player = await joinPlayer(host, 'Frodo');
   const other = multiplayer ? await joinPlayer(host, 'Sam') : null;
+  const third = multiplayer === 3 ? await joinPlayer(host, 'Merry') : null;
   assert.equal(
     (
       await command(host, player, {
@@ -27,11 +28,16 @@ export async function readyCompany(
       (await command(host, other, { type: 'SELECT_HEROES', heroIds: ['hero-2'] })).status,
       200,
     );
+  if (third)
+    assert.equal(
+      (await command(host, third, { type: 'SELECT_HEROES', heroIds: ['hero-3'] })).status,
+      200,
+    );
   assert.equal(
     (await command(host, player, { type: 'PREPARE_COMPANY', agreed: true })).status,
     200,
   );
-  return { host, player, other };
+  return { host, player, other, ...(third ? { third } : {}) };
 }
 
 export const readSession = async (host) => (await host.request('/api/session')).json();

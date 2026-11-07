@@ -28,6 +28,7 @@ export async function readyMission(
     shadow = false,
     edit = () => {},
     catalogEdit: customizeCatalog = () => {},
+    frontEdit = () => {},
   } = {},
 ) {
   const f = boonFixture(verified),
@@ -68,6 +69,7 @@ export async function readyMission(
     (_front, _catalog, raw, ready) => {
       raw.cards = structuredClone(f.raw.cards);
       writeFileSync(join(ready.host.dataDir, 'physical-boons.json'), JSON.stringify(boons));
+      frontEdit(_front, _catalog, raw, ready);
     },
   );
 }

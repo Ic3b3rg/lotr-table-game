@@ -6,6 +6,7 @@ import {
   answerCampaign,
 } from './conclusion';
 import { playableScenarioPrefab } from '../shared/clues';
+import { requireBeforeInteraction } from '../server/interaction-window';
 import { encounterEntry, encounterOptions } from '../shared/encounter-entry';
 import { linkedDefinition } from './linked-capability';
 import { searchDefinition, validateSearches } from './searches';
@@ -2144,6 +2145,7 @@ export function interactScenario(
   playerId: string,
   c: Extract<Command, { type: 'INTERACT_SCENARIO' }>,
   probe?: SourceProbe,
+  validateOnly = false,
 ) {
   const sc = state.scenario!,
     i = sc.instances.find((i) => i.id === c.instanceId),
@@ -2239,7 +2241,8 @@ export function interactScenario(
           0,
         )
       : 0;
-  if (hero!.inspiration < inspiration)
+  requireBeforeInteraction(state, c.heroId, prefab.nodeType === 'threat');
+  if (!state.physical!.cycle?.interactionLookRules && hero!.inspiration < inspiration)
     fail(
       'INTERACTION_RESOURCE',
       `Le carte attive richiedono ${inspiration} ispirazione prima di questa interazione.`,
@@ -2256,7 +2259,8 @@ export function interactScenario(
       );
   }
   if (
-    (sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
+    (state.physical!.cycle?.interactionLookRules ||
+      sc.pack.manifest.clues?.encounters.includes(i!.prefab!) ||
       sc.pack.manifest.lair?.prefab === i!.prefab ||
       baseProductsDefinition(sc.pack, i!.definition) ||
       itemDefinition(sc.pack, i!.definition) ||
@@ -2268,6 +2272,7 @@ export function interactScenario(
     if (linkedDefinition(sc.pack, i!.definition)) requireLinkedTitle(sc.pack, state.physical!.raw);
     preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
   }
+  if (validateOnly) return;
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
   sc.play!.attempts.push({

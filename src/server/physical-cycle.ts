@@ -34,6 +34,7 @@ import { liveGroupRules } from '../scenario/live-groups';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
+import { requireInteractionCoverage } from '../physical-resolution/interaction-look';
 import {
   interactScenario,
   exploreScenario,
@@ -296,7 +297,15 @@ function executeIntent(
     // Validate the complete original command on a disposable copy before opening any provocation.
     const work = structuredClone(state),
       ledger = work.physical!.cycle!;
-    executeEpisodeIntent(work, ledger, record, true);
+    if (c.type === 'INTERACT_SCENARIO' && cycle.interactionLookRules)
+      interactScenario(
+        work,
+        record.playerId,
+        { ...c, requestId: record.requestId, generation: state.generation },
+        undefined,
+        true,
+      );
+    else executeEpisodeIntent(work, ledger, record, true);
     const { expectedRevision: _, type: __, ...fields } = c;
     const origin = CombatOperationSchema.shape.origin.parse(
       c.type === 'SCENARIO_INPUT'
@@ -320,6 +329,9 @@ function executeIntent(
       provoked: [],
       status: 'provoking',
       reason: null,
+      ...(c.type === 'INTERACT_SCENARIO' && cycle.interactionLookRules
+        ? { interactionOrder: { version: cycle.interactionLookRules, stage: 'plan' as const } }
+        : {}),
     };
     state.combat.operation = op;
     if (op.origin.kind === 'source-sprint') state.scenario!.pending = null;
@@ -1078,6 +1090,9 @@ export function initializeOriginalCycle(state: State) {
   p.version = 3;
   p.cycle = {
     version: 2,
+    ...(p.fronts?.artifact.interactionLook
+      ? { interactionLookRules: p.fronts.artifact.interactionLook.version }
+      : {}),
     seed: {
       revision: state.revision + 1,
       round: structuredClone(state.round!),
@@ -1096,6 +1111,16 @@ function originalSeedState(state: State): State {
     cycle = p.cycle!,
     seed = cycle.seed,
     sc = seed.scenario;
+  invariant(
+    cycle.interactionLookRules === p.fronts?.artifact.interactionLook?.version,
+    'Attivazione interazione diversa dal confine fonte.',
+  );
+  if (cycle.interactionLookRules)
+    requireInteractionCoverage(
+      p.fronts!.artifact,
+      p.fronts!.catalog,
+      p.heroes.map((h) => h.heroId),
+    );
   invariant(
     cycle.version === 2 && sc && seed.preparation && seed.skillTest !== undefined,
     'Ledger originale senza confine completo.',

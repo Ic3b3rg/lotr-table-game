@@ -6,7 +6,13 @@ import { catalogFixture } from './fixtures/catalog.mjs';
 import { generatorFixture } from './fixtures/map-freeze.mjs';
 import { readyCompany, readSession } from './skill-test-helper.mjs';
 import { command } from './preparation-helper.mjs';
-export async function readyGenerator(t, edit = () => {}, extraEnv = {}, catalogInput = null) {
+export async function readyGenerator(
+  t,
+  edit = () => {},
+  extraEnv = {},
+  catalogInput = null,
+  partySize = 2,
+) {
   const catalog = catalogInput ?? catalogFixture();
   catalog.heroes.forEach((h) => (h.maxHands = 2));
   const raw = generatorFixture(catalog);
@@ -16,7 +22,10 @@ export async function readyGenerator(t, edit = () => {}, extraEnv = {}, catalogI
   await writeFile(path, JSON.stringify(raw));
   t.after(() => rm(directory, { recursive: true, force: true }));
   return {
-    ...(await readyCompany(t, catalog, true, { LOTR_GENERATOR_PACK: path, ...extraEnv })),
+    ...(await readyCompany(t, catalog, partySize === 3 ? 3 : true, {
+      LOTR_GENERATOR_PACK: path,
+      ...extraEnv,
+    })),
     packPath: path,
     raw,
     catalog,

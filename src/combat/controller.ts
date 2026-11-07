@@ -967,6 +967,38 @@ function grantOffers(state: State, attempt: CombatAttempt) {
     );
 }
 export function combatPending(state: State): CombatView['pending'] {
+  const op = state.combat?.operation;
+  if (op?.interactionOrder && !state.combat!.active && !state.physical?.snapshot.active) {
+    const groups = readyProvocations(state);
+    if (!groups.length) return null;
+    const plan = op.interactionOrder.stage === 'plan';
+    const options = plan
+      ? [
+          {
+            id: 'provocation-first',
+            label: 'Prima le provocazioni, poi scegli l’ordine di lettura e costi',
+          },
+          {
+            id: 'early-look',
+            label: 'Prima la lettura, poi le provocazioni',
+            unavailable:
+              'Questo ordine può interrompere l’interazione dopo la lettura. Manca una prosecuzione verificata: nessun costo o carta è stato applicato.',
+          },
+        ]
+      : groups.map((g) => ({ id: g.id, label: `Provoca ${name(state, g.id)}` }));
+    const sourceFingerprint = digest({ operation: op, groups: groups.map((g) => g.id), options });
+    return {
+      id: cycleUUID({ operation: op.id, sourceFingerprint }),
+      combatId: op.id,
+      sourceFingerprint,
+      actorPlayerId: op.playerId,
+      heroId: op.origin.heroId,
+      title: plan
+        ? 'Concordate l’ordine prima dell’interazione. L’ordine con lettura anticipata richiede una regola ancora non verificata.'
+        : 'Scegli il prossimo gruppo pronto da provocare. I gruppi esauriti sono esclusi.',
+      options,
+    };
+  }
   if (
     !state.combat?.active ||
     state.physical?.snapshot.active ||
@@ -1061,6 +1093,15 @@ export function answerCombat(
   const option = q!.options.find((o) => o.id === c.choice);
   if (!option || option.unavailable)
     fail('COMBAT_OPTION', option?.unavailable ?? 'La scelta non è disponibile.');
+  const operation = state.combat!.operation;
+  if (operation?.interactionOrder && !state.combat!.active) {
+    if (operation.interactionOrder.stage === 'plan') {
+      invariant(c.choice === 'provocation-first', 'Piano prima non supportato.');
+      operation.interactionOrder.stage = 'groups';
+      nextProvocation(state);
+    } else nextProvocation(state, c.choice);
+    return { id: operation.id, returned: false };
+  }
   const a = current(state);
   if (a.stage === 'activation-choice') {
     const option = activationOptions(state, a).find((o) => o.id === c.choice)!,
@@ -1124,6 +1165,7 @@ export function combatView(state: State): CombatView | undefined {
   const turnHero = grant?.recipientHeroId ?? sourceGrant?.actorHeroId ?? state.round?.activeHeroId;
   const available =
     turnHero &&
+    !state.combat.operation &&
     (!a || !!grant) &&
     !state.physical?.snapshot.active &&
     (!state.scenario?.pending || !!sourceGrant);
@@ -1247,14 +1289,11 @@ export function combatView(state: State): CombatView | undefined {
   };
 }
 
-/** Ready groups are kept in deployment order; each completed provocation has a durable return. */
-export function nextProvocation(state: State) {
-  const cs = state.combat!,
-    op = cs.operation;
-  if (!op || cs.active || !alive(state, op.origin.heroId)) return false;
+function readyProvocations(state: State) {
+  const op = state.combat!.operation!;
   const ordinary = state.journey!.heroes.find((h) => h.heroId === op.origin.heroId)!.spaceId;
   const source = state.scenario!.spaceBindings.find((b) => b.id === ordinary)!.sourceId;
-  const groups = state.scenario!.enemies!.groups.filter(
+  return state.scenario!.enemies!.groups.filter(
     (g) =>
       g.placed &&
       !g.exhausted &&
@@ -1262,6 +1301,13 @@ export function nextProvocation(state: State) {
       g.figures.some((f) => f.health > 0) &&
       !op.provoked.includes(g.id),
   );
+}
+/** Prospective interactions ask the hero; historical operations retain their published order. */
+export function nextProvocation(state: State, selectedGroup?: string) {
+  const cs = state.combat!,
+    op = cs.operation;
+  if (!op || cs.active || !alive(state, op.origin.heroId)) return false;
+  const groups = readyProvocations(state);
   for (const g of groups) {
     const missing = preflightCombatOperation(
       state,
@@ -1278,7 +1324,9 @@ export function nextProvocation(state: State) {
           : 'La provocazione richiede una conseguenza non ancora disponibile. Nessun costo o movimento è stato applicato.',
       );
   }
-  const g = groups[0];
+  if (op.interactionOrder && groups.length && selectedGroup === undefined) return true;
+  const g = selectedGroup === undefined ? groups[0] : groups.find((g) => g.id === selectedGroup);
+  invariant(selectedGroup === undefined || g, 'Gruppo non pronto per la provocazione.');
   if (!g) return false;
   op.provoked.push(g.id);
   const attempt = newAttempt(

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ContentIdSchema } from './catalog';
 import { HashSchema } from './generated-map';
+import { InteractionRulesSchema } from './interaction-look';
 import { CopyIdSchema } from './preparation';
 import { StatSchema } from './skill-tests';
 import { SourceSprintInputSchema, ScenarioRequestSchema } from './scenario';
@@ -53,6 +54,12 @@ const source = {
   sourceFingerprint: HashSchema,
 };
 export const CombatOperationSchema = z.strictObject({
+  interactionOrder: z
+    .strictObject({
+      version: InteractionRulesSchema,
+      stage: z.enum(['plan', 'groups']),
+    })
+    .optional(),
   id: z.uuid(),
   playerId: z.uuid(),
   requestId: z.string().max(80),

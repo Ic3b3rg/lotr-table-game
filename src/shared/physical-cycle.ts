@@ -9,6 +9,7 @@ import { PreparationSchema } from './preparation';
 import { AdventureLossSchema } from './last-stand';
 import { EncounterIntentSchema, ScenarioSchema } from './scenario';
 import { SkillTestSchema } from './skill-tests';
+import { InteractionRulesSchema } from './interaction-look';
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const base = { expectedRevision: z.int().nonnegative(), roundId: z.uuid() };
 const hero = { ...base, heroId: ContentIdSchema };
@@ -55,6 +56,7 @@ export const CyclePendingSchema = z.strictObject({
   heroId: ContentIdSchema,
 });
 export const CycleStateSchema = z.strictObject({
+  interactionLookRules: InteractionRulesSchema.optional(),
   version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   seed: z.strictObject({
     departure: EpisodeBoundarySchema.optional(),

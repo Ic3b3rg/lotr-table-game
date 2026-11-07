@@ -6,6 +6,7 @@ import { CatalogSchema, CampaignSkillDefinitionSchema } from '../shared/catalog'
 import { PreparationSchema } from '../shared/preparation';
 import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
+import { InteractionWindowSchema, PrivateLookResultSchema } from '../shared/interaction-look';
 export const FrontResourcesSchema = z.strictObject({
   boonCustody: BoonCustodySchema.optional(),
   itemCustody: ItemCustodySchema.optional(),
@@ -38,6 +39,8 @@ export const FrozenFrontsSchema = z.strictObject({
   catalog: CatalogSchema,
 });
 export const FrontSnapshotSchema = z.strictObject({
+  interactionWindow: InteractionWindowSchema.optional(),
+  privateLooks: z.array(PrivateLookResultSchema).max(1000).optional(),
   boonEvents: z
     .array(
       z.strictObject({

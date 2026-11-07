@@ -16,6 +16,7 @@ import { contentAsset } from './content-assets';
 import { ruleCatalog, ruleDocument } from './rules';
 import { dataDirectory } from './store';
 import { join } from 'node:path';
+import { privateLookView } from './private-look';
 
 const config = z
   .object({ port: z.coerce.number().int().min(0).max(65535), bind: z.ipv4() })
@@ -72,6 +73,22 @@ const server = createServer(async (req, res) => {
     )
       limitRecovery(req.socket.remoteAddress ?? 'unknown');
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, session);
+    if (req.method === 'GET' && url.pathname.startsWith('/api/private/looks/')) {
+      res.setHeader('cache-control', 'no-store');
+      res.setHeader('vary', 'Cookie');
+      const player = identity(req, store);
+      if (!player)
+        throw new ApiError(401, 'SEAT_REQUIRED', 'Entra o recupera il tuo posto per leggere.');
+      return json(
+        res,
+        privateLookView(
+          store.read(),
+          player.id,
+          url.pathname.slice('/api/private/looks/'.length),
+          url.searchParams.get('generation') ?? '',
+        ),
+      );
+    }
     const rulesDirectory = process.env.LOTR_RULES_DIR ?? join(dataDirectory(), 'rules');
     if (req.method === 'GET' && url.pathname === '/api/rules')
       return json(res, ruleCatalog(rulesDirectory));

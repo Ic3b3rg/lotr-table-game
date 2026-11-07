@@ -238,7 +238,23 @@ export async function readyOriginal(
             }
         : q.kind === 'test'
           ? { kind: q.stage === 'ready' ? 'test-reveal' : 'test-resolve' }
-          : { kind: 'ack' };
+          : q.kind === 'physical'
+            ? s.physical.active.mode === 'scout'
+              ? {
+                  kind: 'physical-scout',
+                  prepare: null,
+                  top: s.physical.active.options.map((o) => o.id),
+                  bottom: [],
+                  discard: null,
+                }
+              : {
+                  kind: 'physical-choice',
+                  option:
+                    ['resolve', 'close', 'reveal'].find((id) =>
+                      s.physical.active.options.some((o) => o.id === id && !o.unavailable),
+                    ) ?? s.physical.active.options.find((o) => !o.unavailable).id,
+                }
+            : { kind: 'ack' };
     const r = await scenarioInput(ready.host, actor, input);
     assert.equal(r.status, 200, `${await r.text()}\n${ready.host.diagnostics()}`);
   }

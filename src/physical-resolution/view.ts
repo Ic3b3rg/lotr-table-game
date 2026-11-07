@@ -7,6 +7,7 @@ import { travelMoves, persistentEffects } from './effects';
 import { physicalTitleSkills } from './title-skills';
 import type { PhysicalCard } from '../physical-content/catalog';
 import { boonAvailability } from './boon-stock';
+import { beforeInteractionAvailability } from './interaction-look';
 
 /** Hidden identities and random state never enter the ordinary public projection. */
 export function physicalView(
@@ -127,6 +128,14 @@ export function physicalView(
       pending: cycleRequest(p),
       heroes: p.heroes.map((h) => ({
         heroId: h.heroId,
+        ...(p.cycle?.interactionLookRules
+          ? {
+              beforeInteract: {
+                threat: beforeInteractionAvailability(p, h.heroId, true),
+                other: beforeInteractionAvailability(p, h.heroId, false),
+              },
+            }
+          : {}),
         travelMoves: travelMoves(p, h.heroId),
         ...(!view.synthetic
           ? {

@@ -37,11 +37,14 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
       const active = view.current,
         q = view.pending;
       const actor = q?.actorPlayerId ?? session.physical?.active?.actorPlayerId;
-      status.textContent = active
-        ? `${active.kind === 'activation' ? `${active.name} si attiva · ${active.activation?.recipientHeroId ? 'destinatario' : 'destinatario iniziale'} ${name(active.heroId)}` : `${name(active.heroId)} · ${active.kind === 'provocation' ? 'Provocazione' : 'Attacco'} contro ${active.name}`}. ${actor ? `Agisce ${session.players.find((p) => p.id === actor)?.name ?? 'il proprietario indicato'}.` : ''} ${active.returnLabel}`
-        : view.last
-          ? `${view.last.kind === 'activation' ? `Attivazione di ${view.last.name} completata` : `${view.last.kind === 'provocation' ? 'Provocazione' : 'Attacco'} di ${name(view.last.heroId)} completato`}${view.last.hits === null ? '' : `: ${view.last.hits} colpi`}. ${view.last.returnLabel}`
-          : 'Scegli bersaglio e armi, controlla gli slot, poi conferma. Le scelte prima della conferma sono gratuite.';
+      status.textContent =
+        q && !active
+          ? `Prima dell’interazione · agisce ${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'il proprietario indicato'}. Intento e ritorno sono salvati.`
+          : active
+            ? `${active.kind === 'activation' ? `${active.name} si attiva · ${active.activation?.recipientHeroId ? 'destinatario' : 'destinatario iniziale'} ${name(active.heroId)}` : `${name(active.heroId)} · ${active.kind === 'provocation' ? 'Provocazione' : 'Attacco'} contro ${active.name}`}. ${actor ? `Agisce ${session.players.find((p) => p.id === actor)?.name ?? 'il proprietario indicato'}.` : ''} ${active.returnLabel}`
+            : view.last
+              ? `${view.last.kind === 'activation' ? `Attivazione di ${view.last.name} completata` : `${view.last.kind === 'provocation' ? 'Provocazione' : 'Attacco'} di ${name(view.last.heroId)} completato`}${view.last.hits === null ? '' : `: ${view.last.hits} colpi`}. ${view.last.returnLabel}`
+              : 'Scegli bersaglio e armi, controlla gli slot, poi conferma. Le scelte prima della conferma sono gratuite.';
       if (active) {
         const heading = text(
           'h4',
@@ -101,6 +104,7 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
             b.dataset.write = '';
             b.dataset.combatChoice = option.id;
             if (option.unavailable) {
+              b.disabled = true;
               b.dataset.blocked = 'true';
               b.title = option.unavailable;
               fields.append(text('p', option.unavailable, 'company-help'));

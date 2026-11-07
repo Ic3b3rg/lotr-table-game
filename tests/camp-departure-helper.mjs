@@ -37,6 +37,7 @@ export async function readyDeparture(
     outcome = 'win',
     roleScout = false,
     groupItem = false,
+    frontEdit = () => {},
   } = {},
 ) {
   await mkdir(join(process.cwd(), '.scratch'), { recursive: true });
@@ -163,6 +164,7 @@ export async function readyDeparture(
       });
     }
   }
+  frontEdit(frontInput, catalog, physical);
   attachDeparture(pack, catalog, physical, frontInput, { roleScout });
   edit(pack, frozen, catalog, frontInput);
   sealLair(pack);
