@@ -582,7 +582,9 @@ function hasDepartureForms(raw: object) {
       ) ||
       list(object(f.artifact).policies).some((p) =>
         list(object(p).effects).some((e) =>
-          ['after-setup-scout', 'after-setup-inspiration'].includes(String(object(e).op)),
+          ['after-prepare-scout', 'after-setup-scout', 'after-setup-inspiration'].includes(
+            String(object(e).op),
+          ),
         ),
       )
     );

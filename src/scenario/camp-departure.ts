@@ -2,6 +2,7 @@ import type { State } from '../server/state';
 import type { CampDeckSource } from '../camp-decks/model';
 import {
   CampDepartureCapabilitySchema,
+  CampDepartureInputSchema,
   type CampDepartureCapability,
   type CampDepartureOffer,
   type CampDepartureInput,
@@ -94,7 +95,7 @@ export function validateCampDepartureSource(raw: unknown) {
             ? p.kind === 'spawn'
             : i.op === 'heroes'
               ? p.kind === 'hero'
-              : p.kind === 'threat' || p.kind === 'search',
+              : i.op === 'marker' && p.kind === i.kind,
         'Tipo di ancora diverso dall’istruzione.',
       );
     }
@@ -102,10 +103,30 @@ export function validateCampDepartureSource(raw: unknown) {
   invariant(used.length === 13, 'Ancore startup2 non interamente consumate.');
   const spawn = s.instructions.filter((i) => i.op === 'spawn');
   invariant(
+    digest(spawn.map((i) => i.filter)) ===
+      digest([
+        { MustHaveAny: 1024, MustHaveAll: 0, ExcludeIfAny: 136 },
+        { MustHaveAny: 0, MustHaveAll: 0, ExcludeIfAny: 136 },
+        { MustHaveAny: 0, MustHaveAll: 0, ExcludeIfAny: 136 },
+      ]),
+    'Filtri dei punti spawn2 non attestati.',
+  );
+  invariant(
     digest(spawn.map((i) => i.anchor)) === digest(layout.spawnOrder),
     'Ordine dei punti spawn modificato.',
   );
   const deployment = compileSourceDeployment(s.deployment);
+  invariant(
+    deployment.compiled.eliteBanners.length === 6 &&
+      deployment.compiled.normalBanners.length === 6 &&
+      s.reservedEliteBanners <= 6,
+    'Riserva stendardi non attestata.',
+  );
+  for (const m of [...deployment.compiled.models, ...deployment.compiled.bonuses])
+    invariant(
+      m.costs.every((row, n) => n === 0 || row.points >= m.costs[n - 1]!.points),
+      'Progressione costi spawn non attestata.',
+    );
   invariant(digest(deployment) === s.deploymentHash, 'Closure deployment2 modificata.');
   invariant(
     digest(
@@ -295,13 +316,25 @@ function preflight(state: State, raw: unknown) {
   );
   const selected = [
     ...new Set(
-      deckSource.choices.flatMap((h) => [
-        ...h.recipe.cards.map((c) => c.cardId),
-        ...h.recipe.itemCopies.map(definitionId),
-        ...(h.accessory ? [definitionId(h.accessory)] : []),
-      ]),
+      deckSource.choices
+        .flatMap((h) => [
+          ...h.recipe.cards.map((c) => c.cardId),
+          ...h.recipe.itemCopies.map(definitionId),
+          ...(h.accessory ? [definitionId(h.accessory)] : []),
+        ])
+        .concat(s.deckCatalog.cards.filter((c) => c.kind === 'weakness').map((c) => c.id)),
     ),
   ];
+  for (const choice of deckSource.choices.filter((h) => h.accessory)) {
+    const policy = fronts.policies.find((p) => p.id === definitionId(choice.accessory!));
+    invariant(
+      policy?.kind === 'item' &&
+        policy.effects.filter((e) => e.op === 'fear-facedown-only').length === 1,
+      'Custodia/consumo dell’accessorio non attestati prima della partenza: ' +
+        choice.accessory +
+        '.',
+    );
+  }
   for (const cardId of selected) {
     const d =
         state.content!.skills.find((c) => c.id === cardId) ??
@@ -322,6 +355,20 @@ function preflight(state: State, raw: unknown) {
         ? w.prepare === 'none' && w.setup === 'none' && !p
         : !!p && w.policyHash === digest(p),
       'Policy della carta diversa dalla finestra attestata: ' + cardId + '.',
+    );
+    invariant(
+      !p ||
+        (p.kind === ('rank' in d ? 'item' : 'skill') &&
+          (!p.effects.some((e) => e.op.startsWith('after-setup-')) || p.kind === 'item') &&
+          (!p.effects.some((e) => e.op.startsWith('after-prepare-')) || p.kind === 'skill')),
+      'Consumer della finestra non disponibile per questa carta: ' + cardId + '.',
+    );
+    invariant(
+      w.prepare ===
+        (p?.effects.some((e) => e.op.startsWith('after-prepare-')) ? 'supported' : 'none') &&
+        w.setup ===
+          (p?.effects.some((e) => e.op.startsWith('after-setup-')) ? 'supported' : 'none'),
+      'Finestre della policy diverse dalla capacità attestata: ' + cardId + '.',
     );
   }
   return { ...source, deckSource };
@@ -362,6 +409,16 @@ export function beginCampDeparture(
   source: unknown,
   entropy: () => string,
 ) {
+  input = CampDepartureInputSchema.parse(input);
+  if (!state.preparation?.heroes.some((h) => h.playerId === actor.playerId))
+    throw new ApiError(
+      403,
+      'NOT_HERO_OWNER',
+      'La partenza richiede un proprietario della compagnia.',
+    );
+  const pending = state.scenario?.pending;
+  if (!pending || pending.id !== actor.pendingId || pending.fingerprint !== actor.sourceFingerprint)
+    throw new ApiError(409, 'STALE_SCENARIO_REQUEST', 'La richiesta del campo è cambiata.');
   const offer = campDepartureOffer(state, source);
   if (!offer.available || input.offerFingerprint !== offer.fingerprint)
     throw new ApiError(409, 'CAMP_DEPARTURE_GATED', offer.reason);

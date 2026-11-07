@@ -74,6 +74,10 @@ test('battle Scout3 consumes exactly the new top-first deck and hands off to a r
   assert.equal(active.scenario.globals.battleLimit, 39);
   assert.equal(active.scenario.battle.campaign.lore, before.state.scenario.play.lore + 2);
   assert.equal(active.scenario.enemies.attempts.length, 3);
+  assert.ok(
+    active.scenario.enemies.attempts.flatMap((a) => a.draws).some((d) => d.kind === 'spawn-point'),
+    'Startup must choose among live source points, rather than run travel deployment separately at each point',
+  );
   assert.equal(active.scenario.handoffCount, 1);
   const hero = active.preparation.heroes[0],
     from = active.journey.heroes.find((h) => h.heroId === hero.heroId).spaceId;
@@ -96,8 +100,8 @@ test('battle Scout3 consumes exactly the new top-first deck and hands off to a r
     }),
   );
   s = await readSession(r.host);
-  const edge = s.journey.definition.connections.find((e) => e.includes(from)),
-    to = edge.find((id) => id !== from);
+  const to = s.scenario.spaceBindings.find((b) => b.sourceId === 'west/veranda').id;
+  assert.ok(s.journey.definition.connections.some((e) => e.includes(from) && e.includes(to)));
   await ok(
     command(r.host, r.player, {
       type: 'MOVE_HERO',
@@ -112,4 +116,30 @@ test('battle Scout3 consumes exactly the new top-first deck and hands off to a r
   s = await readSession(r.host);
   assert.equal(s.journey.heroes.find((h) => h.heroId === hero.heroId).spaceId, to);
   assert.equal(s.round.heroes[0].actionsUsed, 1);
+  const blocked = s.scenario.spaceBindings.find((b) => b.sourceId === 'east/atrium').id,
+    beforeWall = (await readBackup(r.host)).payload;
+  assert.ok(!s.journey.definition.connections.some((e) => e.includes(to) && e.includes(blocked)));
+  assert.equal(
+    (
+      await command(r.host, r.player, {
+        type: 'MOVE_HERO',
+        roundId: s.round.id,
+        turnId: s.round.turnId,
+        mapId: s.journey.id,
+        heroId: hero.heroId,
+        fromSpaceId: to,
+        destinationSpaceId: blocked,
+      })
+    ).status,
+    409,
+  );
+  assert.deepEqual((await readBackup(r.host)).payload, beforeWall);
+  const later = await command(r.host, r.player, {
+    type: 'BEGIN_SHADOW',
+    roundId: s.round.id,
+    agreed: true,
+  });
+  assert.equal(later.status, 409);
+  assert.equal((await later.json()).error.code, 'BATTLE_STARTUP_BOUNDARY');
+  assert.deepEqual((await readBackup(r.host)).payload, beforeWall);
 });

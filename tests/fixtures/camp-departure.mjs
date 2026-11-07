@@ -142,7 +142,7 @@ function titleDefinitions(raw) {
       };
     });
 }
-export function attachDeparture(pack, catalog, raw, frontInput) {
+export function attachDeparture(pack, catalog, raw, frontInput, { roleScout = false } = {}) {
   const next = pack.manifest.failure.next;
   next.id = 2;
   next.source = 'example.assets:980';
@@ -162,15 +162,21 @@ export function attachDeparture(pack, catalog, raw, frontInput) {
     titles = titleDefinitions(raw),
     campaignSkills = [...purchases, ...titles];
   const initial = new Set(catalog.roles.map((r) => r.skills[0]));
-  frontInput.policies = catalog.skills
-    .filter((c) => initial.has(c.id))
-    .map((c) => ({
-      id: c.id,
-      kind: 'skill',
-      definitionHash: hash(c),
-      source: { sourceId: 'invented-startup', locator: `invented:${c.id}` },
-      effects: [{ op: 'after-prepare-inspiration' }],
-    }));
+  frontInput.policies = [
+    ...frontInput.policies.filter((p) => !initial.has(p.id)),
+    ...catalog.skills
+      .filter((c) => initial.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        kind: 'skill',
+        definitionHash: hash(c),
+        source: { sourceId: 'invented-startup', locator: `invented:${c.id}` },
+        effects: [
+          { op: 'after-prepare-inspiration' },
+          ...(roleScout ? [{ op: 'after-prepare-scout', count: 1 }] : []),
+        ],
+      })),
+  ];
   const fronts = compilePhysicalFronts(raw, frontInput, catalog, campaignSkills);
   const cards = [
     ...catalog.skills.map((c, n) => ({
@@ -215,8 +221,8 @@ export function attachDeparture(pack, catalog, raw, frontInput) {
     { Num: 3, Cost: 26 },
   ];
   deployment.assets.find((a) => a.source === 'fixture.assets:11').data.Traits = 4;
-  deployment.mechanics.normalBanners = Array.from({ length: 12 }, (_, n) => n + 1);
-  deployment.mechanics.eliteBanners = Array.from({ length: 12 }, (_, n) => n + 13);
+  deployment.mechanics.normalBanners = Array.from({ length: 6 }, (_, n) => n + 1);
+  deployment.mechanics.eliteBanners = Array.from({ length: 6 }, (_, n) => n + 7);
   deployment.assets.find((a) => a.cls === 'AdventureModel').data.GlobalEnemyFilter = {
     MustHaveAny: 0,
     MustHaveAll: 0,
@@ -286,9 +292,18 @@ export function attachDeparture(pack, catalog, raw, frontInput) {
       policyHash: fronts.policies.some((p) => p.id === c.id)
         ? hash(fronts.policies.find((p) => p.id === c.id))
         : null,
-      prepare: initial.has(c.id) ? 'supported' : 'none',
-      setup: 'none',
+      prepare: fronts.policies
+        .find((p) => p.id === c.id)
+        ?.effects.some((e) => e.op.startsWith('after-prepare-'))
+        ? 'supported'
+        : 'none',
+      setup: fronts.policies
+        .find((p) => p.id === c.id)
+        ?.effects.some((e) => e.op.startsWith('after-setup-'))
+        ? 'supported'
+        : 'none',
     })),
+    spawnPolicy: 'source-spawn-points-v1',
     deployment,
     deploymentHash: hash(compileSourceDeployment(deployment)),
     reserved: [],
@@ -298,3 +313,16 @@ export function attachDeparture(pack, catalog, raw, frontInput) {
   };
   return pack.manifest.campDeparture;
 }
+
+export async function departureFixture() {
+  const { preparationCompilation } = await import('./camp-preparation.mjs');
+  const { campItemCatalog } = await import('./camp-items.mjs');
+  const { diagnosticRaw, inventedFrontInput } = await import('./physical-fronts.mjs');
+  const input = preparationCompilation(),
+    catalog = campItemCatalog(),
+    raw = diagnosticRaw(),
+    fronts = inventedFrontInput(raw);
+  const cap = attachDeparture(input.pack, catalog, raw, fronts);
+  return { input, catalog, raw, fronts, cap };
+}
+export { hash };

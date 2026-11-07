@@ -42,7 +42,7 @@ test('schemas1–29 reject prospective startup forms at scenario, seed, run and 
   }
 });
 
-test('schema30 structurally migrates a complete historical startup without enabling physical preparation', async (t) => {
+test('schema31 structurally migrates a complete historical startup without enabling physical preparation', async (t) => {
   const ready = await readyStartup(t, {
     legacy: true,
     edit(pack) {
@@ -52,7 +52,7 @@ test('schema30 structurally migrates a complete historical startup without enabl
   });
   await revealStartupScout(ready);
   const current = (await readBackup(ready.host)).payload.state;
-  assert.equal(current.schemaVersion, 30);
+  assert.equal(current.schemaVersion, 31);
   const old = { ...structuredClone(current), schemaVersion: 29 },
     copy = structuredClone(old);
   assert.deepEqual(parseState(old), current);

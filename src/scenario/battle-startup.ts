@@ -1,3 +1,4 @@
+import { generateBattleDeployment } from './battle-deployment';
 import type { State } from '../server/state';
 import type { CampDepartureCapability, BattleInstruction } from '../shared/camp-departure';
 import type { PhysicalProgram } from '../shared/physical';
@@ -11,7 +12,6 @@ import {
 import { JourneyDefinitionSchema } from '../shared/journey-map';
 import { verifyBattleMapArtifact } from '../battle-map';
 import { compileSourceDeployment } from '../combat/deployment-compiler';
-import { generateDeployment } from '../combat/deployment';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
@@ -97,6 +97,7 @@ export function createBattleScenario(
     NonNullable<NonNullable<State['scenario']>['conclusion']>['campaign']
   >['training'],
   archived: NonNullable<State['scenario']>,
+  lastStandsFailed: number,
 ) {
   const g = battleGeometry(cap),
     sourceFingerprint = digest(cap);
@@ -180,8 +181,21 @@ export function createBattleScenario(
         lore,
         balances: balances!.balances,
         completedAdventureIds: archived.conclusion!.completedAdventureIds,
-        lastStandsFailed: Number(archived.globals.LastStandsFailed ?? 0),
+        lastStandsFailed,
         inventoryHash: digest(campaign),
+        globals: structuredClone(archived.globals),
+        ownership: {
+          heroes: campaign.heroes.map((h) => ({
+            heroId: h.heroId,
+            roleId: h.roleId,
+            itemCopies: [...h.itemCopies],
+            titleCopies: [...h.titleCopies],
+            purchasedCopies: (h.skillCopies ?? []).filter((copy) =>
+              cap.deckCatalog.cards.some((c) => c.kind === 'purchased' && c.copies.includes(copy)),
+            ),
+          })),
+          inventory: structuredClone(campaign.inventory ?? []),
+        },
       },
     },
   });
@@ -323,63 +337,16 @@ function entered(state: State, i: BattleInstruction) {
     b.campaign.lore += i.lore;
   }
   if (i.op === 'objective') sc.objective = { id: i.id, text: text(i.text) };
-  if (i.op === 'spawn') {
-    const a = compileSourceDeployment(cap.deployment),
-      anchor = g.layout.placements.find((p) => p.id === i.anchor)!,
-      cell = anchor.cell!,
-      p = state.physical!;
-    sc.enemies!.entropy ??= digest({ stream: 'battle-spawn-v1', entropy: p.entropy });
-    // The verifier owns the full artifact. Banner reservations are represented as live occupancy below.
-    const reservedBanners = a.compiled.eliteBanners.slice(0, cap.reservedEliteBanners);
-    const result = generateDeployment(a, {
-      id: `battle-spawn:${b.cursor}`,
-      entropy: sc.enemies!.entropy,
-      cursor: sc.enemies!.cursor,
-      heroes: state.preparation!.heroes.length,
-      threat: 0,
-      limit: Number(sc.globals.battleLimit),
-      points: i.perHero * state.preparation!.heroes.length,
-      enemyPoints: 0,
-      excludeGameEnemyPoints: true,
-      filter: i.filter,
-      sections: null,
-      reserved: cap.reserved,
-      inPlay: [
-        ...sc.enemies!.groups,
-        ...reservedBanners.map((tokenId, n) => ({
-          id: `reserved-banner-${n}`,
-          source: a.compiled.models[0]!.source,
-          bonuses: [a.compiled.bonuses[0]?.source ?? a.compiled.models[0]!.source],
-          tokenId,
-          exhausted: false,
-          logic: null,
-          placed: false,
-          spaceId: cell,
-          tileSource: cap.target.model,
-          position: [0, 0, 0] as [number, number, number],
-          figures: [],
-        })),
-      ],
-      spaces: [
-        {
-          id: cell,
-          sectionId: 0,
-          tileSource: cap.target.model,
-          position: anchor.position,
-          connected: [],
-          outside: true,
-        },
-      ],
-    });
+  if (i.op === 'spawn' && !sc.enemies!.attempts.length) {
+    sc.enemies!.entropy = digest({ stream: 'battle-spawn-v1', entropy: state.physical!.entropy });
+    const result = generateBattleDeployment(
+      cap,
+      state.preparation!.heroes.length,
+      sc.enemies!.entropy,
+    );
     sc.enemies!.cursor = result.cursor;
-    sc.enemies!.groups.push(...result.groups);
-    sc.enemies!.attempts.push({
-      effectId: `battle:${b.cursor}`,
-      groups: result.groups.map((g) => g.id),
-      remaining: result.remaining,
-      reason: result.reason,
-      draws: result.draws,
-    });
+    sc.enemies!.groups = result.groups;
+    sc.enemies!.attempts = result.attempts;
   }
 }
 /** Execute source-ordered setup. Every card mutation stays in the physical kernel. */

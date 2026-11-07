@@ -59,6 +59,8 @@ export function activateEpisode(
     archived.scenario!.play!.lore,
     balances,
     archived.scenario!,
+    archived.physical!.snapshot.lastStand?.selections.filter((s) => s.outcome === 'fail').length ??
+      0,
   );
   const weakness = new Set(
     cap.deckCatalog.cards.filter((c) => c.kind === 'weakness').flatMap((c) => c.copies),

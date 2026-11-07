@@ -14,3 +14,5 @@ export {
   validateCampDepartureSource,
 } from './camp-departure';
 export { battleGeometry } from './battle-startup';
+
+export { generateBattleDeployment } from './battle-deployment';

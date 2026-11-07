@@ -2,14 +2,13 @@ import { parseScenarioPack } from '../dist/scenario-library.mjs';
 import { attachDeparture } from './fixtures/camp-departure.mjs';
 // Entirely invented source and catalog. Three owners; no conclusion/camp is seeded.
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { catalogFixture } from './fixtures/catalog.mjs';
 import { generatorFixture, hash } from './fixtures/map-freeze.mjs';
 import { fixed, addEncounter } from './fixtures/map-encounters.mjs';
-import { setup, command } from './preparation-helper.mjs';
-import { joinPlayer } from './host-helper.mjs';
+import { command } from './preparation-helper.mjs';
+import { joinPlayer, startHost } from './host-helper.mjs';
 import { generate, waitGeneration } from './map-generation-helper.mjs';
 import { scenarioFor, startScenario, scenarioInput } from './scenario-helper.mjs';
 import { sourceCatalog, attachEncounter } from './original-encounter-helper.mjs';
@@ -19,7 +18,10 @@ import { attachExploration } from './fixtures/exploration.mjs';
 import { attachClues } from './clue-progression-http-helper.mjs';
 import { attachLair, sealLair } from './fixtures/lair-victory.mjs';
 import { attachCampSkills } from './fixtures/camp-skills.mjs';
-import { attachCampItems, addCampItemCards } from './fixtures/camp-items.mjs';
+import { attachCampItems, addCampItemCards, addGroupCampCards } from './fixtures/camp-items.mjs';
+import { attachItem, sealItem, itemPolicy } from './fixtures/item-encounter.mjs';
+import { commitItem } from './item-http-helper.mjs';
+import { cycleCommand } from './physical-cycle-helper.mjs';
 import { attachCampPreparation } from './fixtures/camp-preparation.mjs';
 import { diagnosticRaw, inventedFrontInput } from './fixtures/physical-fronts.mjs';
 import { inventedLastStand } from './fixtures/last-stand.mjs';
@@ -29,16 +31,25 @@ import { reachLair, commitLair, ok } from './lair-victory-http-helper.mjs';
 
 export async function readyDeparture(
   t,
-  { edit = () => {}, catalogEdit = () => {}, outcome = 'win' } = {},
+  {
+    edit = () => {},
+    catalogEdit = () => {},
+    outcome = 'win',
+    roleScout = false,
+    groupItem = false,
+  } = {},
 ) {
-  const directory = await mkdtemp(join(tmpdir(), 'lotr-departure-test-'));
+  await mkdir(join(process.cwd(), '.scratch'), { recursive: true });
+  const directory = await mkdtemp(join(process.cwd(), '.scratch', 'lotr-departure-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const catalog = catalogFixture();
   sourceCatalog(catalog);
   addCampItemCards(catalog);
+  if (groupItem) addGroupCampCards(catalog);
   for (const h of catalog.heroes) {
     h.maxHands = 2;
     h.stats.wit = 6;
+    h.stats.wisdom = 6;
   }
   if (outcome === 'loss') {
     catalog.heroes[0].stats.wit = 0;
@@ -63,10 +74,16 @@ export async function readyDeparture(
   const generatorPath = join(directory, 'generator.json'),
     scenarioPath = join(directory, 'scenario.json');
   await writeFile(generatorPath, JSON.stringify(raw));
-  const host = await setup(t, catalog, {
+  const catalogPath = join(directory, 'catalog.json');
+  await writeFile(catalogPath, JSON.stringify(catalog));
+  const host = await startHost({
+    LOTR_DATA_DIR: join(directory, 'host'),
+    LOTR_CONTENT_PACK: catalogPath,
     LOTR_GENERATOR_PACK: generatorPath,
     LOTR_SCENARIO_PACK: scenarioPath,
+    LOTR_PHYSICAL_PACK: join(directory, 'host', 'physical-content.json'),
   });
+  t.after(() => host.stop());
   const actors = [];
   for (const name of ['Ada inventata', 'Bruno inventato', 'Carla inventata'])
     actors.push(await joinPlayer(host, name));
@@ -92,6 +109,27 @@ export async function readyDeparture(
   lair.states.find((s) => s.index === 3).actions = lair.states
     .find((s) => s.index === 3)
     .actions.filter((a) => a.op !== 'lore');
+  if (groupItem) {
+    const p = frozen.mapGeneration.projection,
+      first = p.sections.find((s) => s.id === 0).tiles[1].source;
+    const target = pack.manifest.prefabs.find((m) =>
+      p.assignments.some(
+        (a) =>
+          a.prefab.source === m.source &&
+          p.spaces.some((s) => s.id === a.spaceId && s.tileSource === first && s.index === 0),
+      ),
+    );
+    assert.ok(
+      target &&
+        target.source !== fort.source &&
+        !pack.manifest.playablePrefabs.includes(target.source),
+    );
+    attachItem(pack, catalog, target, 2);
+    pack.definitions
+      .find((d) => d.source === pack.principal)
+      .states.find((s) => s.index === 90)
+      .actions.find((a) => a.op === 'lore').amount = 30;
+  }
   attachCampSkills(pack).catalogFingerprint = hash(catalog);
   attachCampItems(pack, catalog);
   attachCampPreparation(pack, catalog);
@@ -106,9 +144,29 @@ export async function readyDeparture(
   if (outcome === 'loss')
     for (const d of frontInput.definitions.filter((d) => d.cardId.includes('fear')))
       d.body = [{ op: 'keep-faceup' }];
-  attachDeparture(pack, catalog, physical, frontInput);
+  if (groupItem) {
+    frontInput.policies.push(itemPolicy(catalog));
+    for (const id of ['advanced', 'invented-trinket-2']) {
+      const card = catalog.items.find((c) => c.id === id);
+      frontInput.policies.push({
+        id,
+        kind: 'item',
+        definitionHash: hash(card),
+        source: { sourceId: 'invented-upgrade', locator: 'Invented!chosen-item' },
+        effects:
+          id === 'advanced'
+            ? [{ op: 'after-setup-inspiration' }]
+            : [
+                { op: 'fear-facedown-only', depletion: 3 },
+                { op: 'after-setup-scout', count: 1 },
+              ],
+      });
+    }
+  }
+  attachDeparture(pack, catalog, physical, frontInput, { roleScout });
   edit(pack, frozen, catalog, frontInput);
   sealLair(pack);
+  if (groupItem) sealItem(pack);
   parseScenarioPack(pack);
   await writeFile(scenarioPath, JSON.stringify(pack));
   await writeFile(join(host.dataDir, 'physical-content.json'), JSON.stringify(physical));
@@ -123,12 +181,22 @@ export async function readyDeparture(
   const r = {
     host,
     outcome,
+    groupItem,
     actors,
     player: actors[0],
     other: actors[1],
     catalog,
     pack,
     scenarioPath,
+    sourcePaths: [
+      scenarioPath,
+      generatorPath,
+      catalogPath,
+      join(host.dataDir, 'physical-content.json'),
+      join(host.dataDir, 'physical-fronts.json'),
+      join(host.dataDir, 'physical-last-stand.json'),
+    ],
+    directory,
     frozen,
   };
   await ok(startScenario(host, r.player));
@@ -182,8 +250,10 @@ export function automaticInput(s) {
   };
 }
 export async function reachDepartureCamp(r) {
-  await reachLair(r);
-  await ok(commitLair(r));
+  if (r.groupItem) await acquireDepartureItem(r);
+  const lairActor = r.groupItem ? r.other : r.player;
+  await reachLair(r, lairActor);
+  await ok(commitLair(r, lairActor));
   for (let n = 0; n < 130; n++) {
     const s = await readSession(r.host),
       q = s.scenario.pending;
@@ -206,6 +276,41 @@ export async function reachDepartureCamp(r) {
     await ok(scenarioInput(r.host, actor, automaticInput(s)));
   }
   assert.fail('Real conclusion did not reach camp');
+}
+async function acquireDepartureItem(r) {
+  await ok(cycleCommand(r, 'START_TURN'));
+  const s = await readSession(r.host),
+    node = s.scenario.instances.find((i) => i.prefab === s.scenario.pack.manifest.items.prefab),
+    target = s.scenario.spaceBindings.find((b) => b.sourceId === node.spaceId).id,
+    start = s.journey.heroes[0].spaceId;
+  const queue = [[start]],
+    seen = new Set([start]);
+  let route;
+  while (queue.length) {
+    const path = queue.shift(),
+      here = path.at(-1);
+    if (here === target) {
+      route = path;
+      break;
+    }
+    for (const next of s.journey.definition.connections.flatMap(([a, b]) =>
+      a === here ? [b] : b === here ? [a] : [],
+    ))
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push([...path, next]);
+      }
+  }
+  assert.ok(route && route.length <= 3);
+  if (route.length > 1) await ok(cycleCommand(r, 'START_TRAVEL'));
+  for (let n = 1; n < route.length; n++)
+    await ok(
+      cycleCommand(r, 'MOVE_HERO', { fromSpaceId: route[n - 1], destinationSpaceId: route[n] }),
+    );
+  await ok(commitItem(r));
+  await finishSetup(r);
+  assert.equal((await readSession(r.host)).physical.inventory[0].copy, 'trinket:1');
+  await ok(cycleCommand(r, 'END_TURN'));
 }
 export async function confirmedCamp(r) {
   await reachDepartureCamp(r);

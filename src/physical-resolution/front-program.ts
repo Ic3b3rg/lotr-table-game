@@ -202,6 +202,7 @@ export const PolicyEffectSchema = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('convert-one-scout'), scout: z.literal(1) }),
   z.strictObject({ op: z.literal('convert-pair-alone') }),
   z.strictObject({ op: z.literal('after-prepare-inspiration') }),
+  z.strictObject({ op: z.literal('after-prepare-scout'), count: z.int().min(1).max(4) }),
   z.strictObject({ op: z.literal('after-setup-inspiration') }),
   z.strictObject({ op: z.literal('after-setup-scout'), count: z.int().min(1).max(4) }),
   z.strictObject({ op: z.literal('after-prepare-flip-fear') }),

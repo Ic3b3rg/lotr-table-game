@@ -1107,6 +1107,10 @@ class FrontReplay {
         ?.effects ?? [];
     for (const [n, e] of effects.entries()) {
       if (e.op === 'after-prepare-inspiration') this.inspiration(hero);
+      if (e.op === 'after-prepare-scout') {
+        invariant(this.p.episode, 'Scoperta di preparazione fuori dall’origine battaglia.');
+        this.scout(hero, e.count, `${path}/prepare-scout-${n}`);
+      }
       if (e.op === 'after-prepare-flip-fear')
         this.physicalSelection(
           hero,

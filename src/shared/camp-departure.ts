@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ContentIdSchema, CampaignSkillDefinitionSchema } from './catalog';
-import { HashSchema, SourceSchema } from './generated-map';
+import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { DeploymentSourceSchema } from './deployment';
 
 const id = ContentIdSchema,
@@ -109,6 +109,7 @@ export const CampDepartureCapabilitySchema = z.strictObject({
       }),
     )
     .max(512),
+  spawnPolicy: z.literal('source-spawn-points-v1'),
   deployment: DeploymentSourceSchema,
   deploymentHash: hash,
   reserved: z.array(z.strictObject({ source: SourceSchema, count: z.int().nonnegative() })).max(32),
@@ -186,6 +187,26 @@ export const BattleStartupStateSchema = z.strictObject({
       .max(30),
     lastStandsFailed: z.int().nonnegative(),
     inventoryHash: hash,
+    globals: z.record(
+      z.string(),
+      z.union([z.string().max(1000), z.boolean(), Int32Schema, VectorSchema]),
+    ),
+    ownership: z.strictObject({
+      heroes: z
+        .array(
+          z.strictObject({
+            heroId: id,
+            roleId: id.nullable(),
+            itemCopies: z.array(z.string().max(120)).max(3),
+            titleCopies: z.array(z.string().max(120)).max(21),
+            purchasedCopies: z.array(z.string().max(120)).max(200),
+          }),
+        )
+        .max(5),
+      inventory: z
+        .array(z.strictObject({ copy: z.string().max(120), cardId: id, modelId: z.int() }))
+        .max(1),
+    }),
   }),
 });
 export type CampDepartureCapability = z.infer<typeof CampDepartureCapabilitySchema>;
