@@ -76,9 +76,10 @@ class FrontReplay {
   private result!: PhysicalSnapshot['parents'][number]['results'][number];
   constructor(private readonly p: Omit<PhysicalState, 'snapshot'>) {
     invariant(p.version !== 1 && p.fronts, 'Runtime fronti senza freeze versione2.');
-    validateFrontArtifact(p.raw, p.fronts.artifact, p.fronts.catalog);
+    validateFrontArtifact(p.raw, p.fronts.artifact, p.fronts.catalog, p.fronts.campaignSkills);
     if (p.boons) validateBoonArtifact(p.raw, p.boons);
-    this.rng = new PhysicalRandom(p.entropy);
+    invariant(!p.fronts.campaignSkills || p.episode, 'Carte campagna fuori dall’origine episodio.');
+    this.rng = new PhysicalRandom(p.entropy, p.episode ? 201 : 56);
     this.s = {
       decks: { damage: [], fear: [] },
       areas: p.heroes.map((h) => ({ heroId: h.heroId, damage: [], fear: [] })),
@@ -280,10 +281,17 @@ class FrontReplay {
   private get catalog() {
     return this.p.fronts!.catalog;
   }
+  private get skills() {
+    return [...this.catalog.skills, ...(this.p.fronts!.campaignSkills ?? [])];
+  }
   private random(id: string, population: string[], n: number) {
     const indices = this.rng.permutation(population.length).slice(0, n);
     this.s.random.push({ id, population: [...population], indices });
     return indices.map((i) => population[i]!);
+  }
+  private deckRandom(id: string, population: string[], n: number) {
+    const order = this.random(id, population, n);
+    return this.p.episode ? order.reverse() : order;
   }
   private tick() {
     invariant(++this.r.operations <= 100000, 'Budget esecuzione fronti superato.');
@@ -872,7 +880,7 @@ class FrontReplay {
           const weakness = this.resources.preparation.weaknessDeck.shift();
           if (!weakness) this.gate(hero, 'weakness-deck-empty');
           const h = this.hero(hero);
-          h.deck = this.random(
+          h.deck = this.deckRandom(
             `${path}/weakness-shuffle`,
             [...h.deck, weakness],
             h.deck.length + 1,
@@ -929,7 +937,7 @@ class FrontReplay {
   }
   private skillName(copy: string) {
     return (
-      this.catalog.skills.find((s) => s.id === definitionId(copy))?.name.text ??
+      this.skills.find((s) => s.id === definitionId(copy))?.name.text ??
       this.titleCard(copy)!.name.value
     );
   }
@@ -940,7 +948,7 @@ class FrontReplay {
     return requirePhysicalFamily(this.p.raw, 'title').cards.find((c) => c.id === id);
   }
   private skillSymbols(copy: string) {
-    const skill = this.catalog.skills.find((s) => s.id === definitionId(copy));
+    const skill = this.skills.find((s) => s.id === definitionId(copy));
     if (skill) return skill;
     const title = this.titleCard(copy);
     invariant(title, 'Carta della prova senza definizione verificata.');
@@ -1099,6 +1107,10 @@ class FrontReplay {
         ?.effects ?? [];
     for (const [n, e] of effects.entries()) {
       if (e.op === 'after-prepare-inspiration') this.inspiration(hero);
+      if (e.op === 'after-prepare-scout') {
+        invariant(this.p.episode, 'Scoperta di preparazione fuori dall’origine battaglia.');
+        this.scout(hero, e.count, `${path}/prepare-scout-${n}`);
+      }
       if (e.op === 'after-prepare-flip-fear')
         this.physicalSelection(
           hero,
@@ -1432,7 +1444,7 @@ class FrontReplay {
               { id: 'close', label: `Subisci ${remaining.damage} danni e ${remaining.fear} paure` },
               ...offers.map((o) => ({
                 id: o.id,
-                label: `${this.catalog.heroes.find((h) => h.id === this.hero(o.actor).heroId)!.name.text} · ${o.copy.includes(':') ? (this.catalog.skills.find((s) => s.id === definitionId(o.copy))?.name.text ?? this.catalog.items.find((i) => i.id === definitionId(o.copy))?.name.text) : o.copy} · ${o.cost}`,
+                label: `${this.catalog.heroes.find((h) => h.id === this.hero(o.actor).heroId)!.name.text} · ${o.copy.includes(':') ? (this.skills.find((s) => s.id === definitionId(o.copy))?.name.text ?? this.catalog.items.find((i) => i.id === definitionId(o.copy))?.name.text) : o.copy} · ${o.cost}`,
               })),
             ],
           );
@@ -1550,14 +1562,14 @@ class FrontReplay {
       cards: string[] = [];
     for (let i = 0; i < count; i++) {
       if (!h.deck.length && h.discard.length) {
-        h.deck = this.random(`${path}/refill-${i}`, h.discard, h.discard.length);
+        h.deck = this.deckRandom(`${path}/refill-${i}`, h.discard, h.discard.length);
         h.discard = [];
       }
-      const copy = h.deck.shift();
+      const copy = this.p.episode ? h.deck.pop() : h.deck.shift();
       if (!copy) break;
       cards.push(copy);
       if (!h.deck.length && h.discard.length) {
-        h.deck = this.random(`${path}/post-refill-${i}`, h.discard, h.discard.length);
+        h.deck = this.deckRandom(`${path}/post-refill-${i}`, h.discard, h.discard.length);
         h.discard = [];
       }
     }
@@ -1613,7 +1625,9 @@ class FrontReplay {
       );
       h.prepared = prepared.filter((c) => c !== input.discard);
       if (input.discard) h.discard.push(input.discard);
-      h.deck = [...input.top, ...h.deck, ...input.bottom];
+      h.deck = this.p.episode
+        ? [...input.bottom].reverse().concat(h.deck, [...input.top].reverse())
+        : [...input.top, ...h.deck, ...input.bottom];
       this.r.revealed.pop();
       if (
         input.prepare &&
@@ -1999,7 +2013,7 @@ class FrontReplay {
         !h.deck.length &&
         h.discard.length
       ) {
-        h.deck = this.random(`${path}/after-test-refill`, h.discard, h.discard.length);
+        h.deck = this.deckRandom(`${path}/after-test-refill`, h.discard, h.discard.length);
         h.discard = [];
       }
       if (this.combat) this.afterTest(hero, path);
@@ -2329,8 +2343,7 @@ class FrontReplay {
         const combat = run.program.combat;
         for (const clause of combat.clauses)
           invariant(
-            digest(this.catalog.skills.find((s) => s.id === clause.cardId)) ===
-              clause.definitionHash,
+            digest(this.skills.find((s) => s.id === clause.cardId)) === clause.definitionHash,
             'Clausola senza carta fonte congelata.',
           );
         for (const hero of combat.heroes)
@@ -2340,6 +2353,10 @@ class FrontReplay {
           );
       }
       const context = FrontResourcesSchema.parse(run.context);
+      invariant(
+        !!context.preparation.episode === !!this.p.episode,
+        'Composizione campagna in un’origine storica.',
+      );
       invariant(
         this.p.boons || context.boonCustody === undefined,
         'Copie beneficio in un pack storico.',
@@ -2364,7 +2381,9 @@ class FrontReplay {
           'Risorse iniziali senza conservazione della compagnia.',
         );
         invariant(
-          !context.depletion.length && !context.boons.length && !context.itemCustody?.length,
+          !context.depletion.length &&
+            !context.boons.length &&
+            (!context.itemCustody?.length || !!this.p.episode),
           'Acquisizioni di accessori e benefici richiedono un consumer fonte dedicato.',
         );
       }
@@ -2425,6 +2444,49 @@ class FrontReplay {
             continue;
           }
           switch (child.kind) {
+            case 'battle-loss-weakness': {
+              invariant(
+                this.p.episode && this.resources.preparation.episode,
+                'Debolezza2 fuori dall’episodio.',
+              );
+              const copy = this.resources.preparation.weaknessDeck.pop();
+              invariant(copy, 'Riserva debolezze esaurita.');
+              this.hero(child.hero).deck.unshift(copy);
+              break;
+            }
+            case 'battle-equipment': {
+              invariant(
+                this.p.episode && this.resources.preparation.episode,
+                'Allestimento2 fuori dall’episodio.',
+              );
+              const h = this.hero(child.hero),
+                accessory = this.resources.preparation.episode.heroes.find(
+                  (h) => h.heroId === this.hero(child.hero).heroId,
+                )!.accessory;
+              for (const copy of [...h.itemCopies, ...(accessory ? [accessory] : [])]) {
+                const effects =
+                  this.artifact.policies.find(
+                    (p) => p.kind === 'item' && p.id === definitionId(copy),
+                  )?.effects ?? [];
+                for (const [n, e] of effects.entries()) {
+                  if (
+                    child.window === 'initialize' &&
+                    (e.op === 'fear-facedown' || e.op === 'fear-facedown-only')
+                  ) {
+                    invariant(
+                      !this.resources.depletion.some((d) => d.copy === copy),
+                      'Consumo iniziale duplicato.',
+                    );
+                    this.resources.depletion.push({ copy, remaining: e.depletion });
+                  }
+                  if (child.window === 'after-setup' && e.op === 'after-setup-inspiration')
+                    this.inspiration(child.hero);
+                  if (child.window === 'after-setup' && e.op === 'after-setup-scout')
+                    this.scout(child.hero, e.count, `${path}/equipment-${copy}-${n}`);
+                }
+              }
+              break;
+            }
             case 'prepared':
               invariant(
                 this.hero(child.hero).prepared.includes(child.copy),
@@ -2433,9 +2495,13 @@ class FrontReplay {
               this.afterPrepare(child.hero, child.copy, path);
               break;
             case 'startup-scout': {
+              invariant(
+                child.count === undefined || this.p.episode,
+                'Scoperta3 fuori dall’origine battaglia.',
+              );
               const input = this.ask(child.hero, `${path}/reveal`, {
                 mode: 'choose',
-                title: 'Scoperta iniziale 2',
+                title: `Scoperta iniziale ${child.count ?? 2}`,
                 options: [{ id: 'reveal', label: 'Rivela le carte di Scoperta' }],
                 minimum: 1,
                 maximum: 1,
@@ -2445,7 +2511,7 @@ class FrontReplay {
                 input.kind === 'physical-choice' && input.option === 'reveal',
                 'Scoperta iniziale senza reveal.',
               );
-              const revealed = this.scout(child.hero, 2, `${path}/scout`);
+              const revealed = this.scout(child.hero, child.count ?? 2, `${path}/scout`);
               this.result.setup = { revealed, converted: 0, outcome: null, reward: 0 };
               break;
             }
@@ -2781,7 +2847,7 @@ class FrontReplay {
             case 'rally-reset':
               for (const [n, h] of this.resources.preparation.heroes.entries()) {
                 if (!this.lastStand.active(n)) continue;
-                h.deck = this.random(
+                h.deck = this.deckRandom(
                   `${path}/rally-${n}`,
                   [...h.deck, ...h.discard],
                   h.deck.length + h.discard.length,
@@ -2823,7 +2889,11 @@ class FrontReplay {
               const effect = child.effect;
               const hero = this.hero(child.hero);
               if (!hero.deck.length && hero.discard.length) {
-                hero.deck = this.random(`${path}/skill-reset`, hero.discard, hero.discard.length);
+                hero.deck = this.deckRandom(
+                  `${path}/skill-reset`,
+                  hero.discard,
+                  hero.discard.length,
+                );
                 hero.discard = [];
               }
               if (effect.kind === 'discard-physical')

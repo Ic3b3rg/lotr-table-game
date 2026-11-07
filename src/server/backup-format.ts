@@ -65,6 +65,12 @@ export const BackupSchema = z
         raw.state && typeof raw.state === 'object' && 'schemaVersion' in raw.state
           ? raw.state.schemaVersion
           : 1;
+      if (typeof version === 'number' && version <= 30 && Array.isArray(raw.commands))
+        for (const command of raw.commands) {
+          const receipt = command?.receipt;
+          if (receipt && (receipt.departure !== undefined || receipt.kind === 'camp-depart'))
+            throw new Error('Ricevuta partenza non valida per uno schema storico.');
+        }
       if (typeof version === 'number' && version <= 28 && Array.isArray(raw.commands))
         for (const command of raw.commands) {
           const receipt =

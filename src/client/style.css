@@ -2079,3 +2079,19 @@ body[data-scenario='setup'] #scout-discard-controls {
   font-weight: 700;
   overflow-wrap: anywhere;
 }
+
+.map-wall {
+  stroke: #211a13;
+  stroke-width: 7;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+.map-token-terrain {
+  background: #e6dfca;
+  color: #2c3b2a;
+}
+.map-token-threat,
+.map-token-search {
+  background: #f5e7b2;
+  color: #33291d;
+}

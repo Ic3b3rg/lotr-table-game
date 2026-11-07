@@ -128,3 +128,29 @@ test('preparation presents personal ownership and occupied-role consequences; an
   );
   assert.deepEqual(s, before, 'personal ordering does not mutate the shared company');
 });
+
+test('attested ready departure requires explicit group order agreement and sends only the native offer', () => {
+  const b = browser(),
+    s = fixture(),
+    calls = [];
+  s.campDeparture = {
+    available: true,
+    reason: 'Tutti pronti',
+    fingerprint: 'b'.repeat(64),
+    drawOrder: ['hero-1', 'hero-2'],
+    target: 'Battaglia inventata',
+  };
+  b.campPreparation(s, campItemCatalog(), { id: 'p1' }, {}, (input) => calls.push(input));
+  const depart = b.nodes.find((n) => n.dataset.campDepart !== undefined),
+    agreed = b.nodes.find((n) => n.id === 'camp-departure-agreed');
+  assert.ok(depart, 'Native departure control must replace the permanent gate');
+  assert.ok(agreed, 'Group order needs a labelled agreement');
+  assert.equal(depart.disabled, true);
+  agreed.checked = true;
+  agreed.onchange();
+  assert.equal(depart.disabled, false);
+  depart.onclick();
+  assert.deepEqual(structuredClone(calls), [
+    { kind: 'camp-depart', offerFingerprint: 'b'.repeat(64), agreed: true },
+  ]);
+});

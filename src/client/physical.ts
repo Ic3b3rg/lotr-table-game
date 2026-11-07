@@ -8,7 +8,7 @@ import { element, text } from './dom';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { compileSourceText } from '../scenario/text';
 import { sourceText } from './source-text';
-import { cardButton, type CardReader } from './cards';
+import { cardButton, campaignSkillCards, type CardReader } from './cards';
 import { findSkillCard } from '../shared/skill-cards';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
@@ -54,7 +54,8 @@ export function createPhysicalControls(
       if (!view) return;
       const name = (id: string) => catalog?.heroes.find((h) => h.id === id)?.name.text ?? 'Eroe';
       const startup =
-        session.scenario?.phase === 'setup' && !!session.scenario.pack.manifest.startupPreparation;
+        session.scenario?.phase === 'setup' &&
+        !!(session.scenario.pack.manifest.startupPreparation || session.scenario.battle);
       root.append(
         text(
           'p',
@@ -375,11 +376,7 @@ export function createPhysicalControls(
           if (active.mode === 'scout' && catalog && reader) {
             const cards = text('ul', '', 'physical-scout-cards test-revealed');
             for (const option of active.options) {
-              const card = findSkillCard(
-                catalog,
-                option.id,
-                view.lastStand?.titles.map((t) => t.skill),
-              );
+              const card = findSkillCard(catalog, option.id, campaignSkillCards(session));
               if (!card) continue;
               const row = text('li', '');
               row.append(cardButton(card, (caller) => reader.card(card, caller)));

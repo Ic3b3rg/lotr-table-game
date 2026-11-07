@@ -1,7 +1,8 @@
 import type { Session } from '../shared/protocol';
 import type { PhysicalActive, PhysicalInput } from '../shared/physical';
 import type { Catalog } from '../shared/catalog';
-import { definitionId } from '../shared/preparation';
+import { findSkillCard } from '../shared/skill-cards';
+import { campaignSkillCards } from './cards';
 import { text } from './dom';
 import { refreshActions } from './actions';
 
@@ -137,9 +138,9 @@ export function decisionForm(
               ...copies.map((id) => ({
                 id,
                 label:
-                  catalog?.skills.find((s) => s.id === definitionId(id))?.name.text ??
-                  session.physical?.lastStand?.titles.find((t) => t.copy === id)?.name ??
-                  id,
+                  (catalog
+                    ? findSkillCard(catalog, id, campaignSkillCards(session))?.name.text
+                    : undefined) ?? id,
               })),
             ],
           );

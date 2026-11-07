@@ -63,12 +63,19 @@ const CompilationSchema = z.strictObject({
   baseProductsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   threatContinuationsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   liveGroupsCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
+  campDepartureCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
   startupPreparationCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
 export function compileScenarioPack(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
+  invariant(
+    pack.manifest.campDeparture
+      ? input.campDepartureCertificate?.instructionHash === digest(pack.manifest.campDeparture)
+      : !input.campDepartureCertificate,
+    'Partenza senza certificato prospettivo.',
+  );
   invariant(
     pack.manifest.startupPreparation
       ? input.startupPreparationCertificate?.instructionHash ===

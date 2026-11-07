@@ -93,7 +93,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
               ? 'Un eroe è stato sconfitto: la compagnia perde all’inizio della prossima Ombra.'
               : 'Non restano eroi attivi: la compagnia perde subito.') +
         (c.stage === 'camp-preparation'
-          ? ' Ogni proprietario controlla e conferma le proprie scelte. La partenza resta indisponibile.'
+          ? session.campDeparture?.available
+            ? ' Tutti hanno confermato. Concordate l’ordine di pesca e partite dalla preparazione.'
+            : ' Ogni proprietario controlla e conferma le proprie scelte. La preparazione indica il prossimo passo per partire.'
           : c.stage === 'camp'
             ? ' Il campo è salvato. Ogni proprietario può scegliere il ruolo del proprio eroe per il seguito.'
             : player
@@ -131,7 +133,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         text('p', destination.type === 'battle' ? 'Mappa di battaglia.' : 'Mappa di viaggio.'),
         text(
           'p',
-          'La destinazione è salvata. La prossima avventura attende la propria mappa e le proprie istruzioni prima della partenza.',
+          sc!.pack.manifest.campDeparture
+            ? 'La destinazione è salvata. Confermate le scelte di ogni eroe; la preparazione mostra quando potete partire insieme.'
+            : 'La destinazione è salvata. La prossima avventura attende la propria mappa e le proprie istruzioni prima della partenza.',
           'company-help',
         ),
       );

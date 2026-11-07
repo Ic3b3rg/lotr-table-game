@@ -5,11 +5,19 @@ import type {
   ItemDefinition,
   LocalizedText,
   SkillDefinition,
+  CampaignSkillDefinition,
 } from '../shared/catalog';
+import type { Session } from '../shared/protocol';
 import { element, text } from './dom';
 import type { TitleSkillDefinition } from '../shared/skill-cards';
 import type { CampSkillOffer } from '../shared/camp-skills';
-type Card = SkillDefinition | TitleSkillDefinition | ItemDefinition;
+type Card = SkillDefinition | TitleSkillDefinition | ItemDefinition | CampaignSkillDefinition;
+export function campaignSkillCards(session: Pick<Session, 'preparation' | 'physical'> | null) {
+  return [
+    ...(session?.preparation?.episode?.skills ?? []),
+    ...(session?.physical?.lastStand?.titles.map((t) => t.skill) ?? []),
+  ];
+}
 
 export function picture(name: string | undefined, label: string, className: string) {
   const frame = text('div', '', className);

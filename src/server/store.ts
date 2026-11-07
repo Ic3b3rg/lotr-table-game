@@ -1,3 +1,4 @@
+import { campDepartureOffer } from '../scenario/camp-departure';
 import { combatView } from '../combat/controller';
 import { playableScenarioPrefab } from '../shared/clues';
 import { scenarioView } from '../shared/scenario';
@@ -58,7 +59,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 30,
+      schemaVersion: 31,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -144,7 +145,7 @@ export class Store {
     if (this.validatedRead?.data === row.data && this.validatedRead.commands === commandData)
       return structuredClone(this.validatedRead.state);
     const state = StateSchema.parse(JSON.parse(row.data));
-    if (state.mapGeneration) {
+    if (state.mapGeneration || state.episodes) {
       const commands = rows.map((row) => {
         if (
           typeof row.player_id !== 'string' ||
@@ -338,9 +339,9 @@ export class Store {
           'È stato raggiunto il limite di prove per questa sessione.',
         );
       const result = apply(state);
-      if (state.mapGeneration) {
+      if (state.mapGeneration || state.episodes) {
         StateSchema.parse(state);
-        for (const request of state.mapGeneration.requests)
+        for (const request of state.mapGeneration?.requests ?? [])
           this.db
             .prepare('UPDATE commands SET result = ? WHERE player_id = ? AND request_id = ?')
             .run(
@@ -380,6 +381,9 @@ export function publicSession(state: State) {
   if (physical && nextShadow) physical.nextShadow = nextShadow;
   return {
     schemaVersion: state.schemaVersion,
+    ...(state.scenario?.conclusion?.stage === 'camp-preparation'
+      ? { campDeparture: campDepartureOffer(state) }
+      : {}),
     id: state.id,
     generation: state.generation,
     revision: state.revision,

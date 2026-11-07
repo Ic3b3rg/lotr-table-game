@@ -47,6 +47,10 @@ export function createJourneyMap(sync: () => Promise<void>) {
     return done;
   });
   const tokens = element('#map-nodes');
+  const visibleHeroes = (session: Session) =>
+    session.scenario?.battle && !session.scenario.battle.placements.some((p) => p.kind === 'hero')
+      ? []
+      : (session.journey?.heroes ?? []);
   const board = createMapBoard((id) => {
     select.value = id;
     commands.clear();
@@ -146,7 +150,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
               ? 'I turni sono conclusi. Le posizioni sono salvate; consulta il prossimo passo nella guida al tavolo.'
               : 'Le posizioni sono salvate. Inizia un turno nella Fase di Azione per viaggiare.';
     if (status.textContent !== message) status.textContent = message;
-    if (journey) board.update(journey.heroes, round?.activeHeroId ?? null, select.value);
+    if (journey) board.update(visibleHeroes(current), round?.activeHeroId ?? null, select.value);
     refreshActions();
   }
 
@@ -239,15 +243,17 @@ export function createJourneyMap(sync: () => Promise<void>) {
       if (!session.journey && planKey !== session.generation && !loading)
         void load(session.generation);
       const view = scenarioMapView(session);
-      element('#map-scope').textContent = session.scenario
-        ? 'La mappa mostra le tessere rivelate dall’avventura. Le tessere tratteggiate sono ancora da esplorare. Seleziona una casella adiacente per entrarvi; le posizioni e i collegamenti provengono dalla mappa salvata.'
-        : 'Tratto verificato in orientamento canonico. Generazione della mappa completa, esplorazione, nemici ed eventi dell’avventura seguiranno.';
+      element('#map-scope').textContent = session.scenario?.battle
+        ? 'Mappa di battaglia: dieci caselle. I muri segnati bloccano i passaggi; scegli una casella adiacente attraverso un collegamento libero. Piazzamenti e posizioni restano salvati.'
+        : session.scenario
+          ? 'La mappa mostra le tessere rivelate dall’avventura. Le tessere tratteggiate sono ancora da esplorare. Seleziona una casella adiacente per entrarvi; le posizioni e i collegamenti provengono dalla mappa salvata.'
+          : 'Tratto verificato in orientamento canonico. Generazione della mappa completa, esplorazione, nemici ed eventi dell’avventura seguiranno.';
       const nextMap = `${session.generation}:${session.journey?.id}:${JSON.stringify(session.scenario?.tiles)}:${session.scenario?.instances
         .filter((i) => i.visible)
         .map((i) => i.id)
         .join(
           ',',
-        )}:${JSON.stringify(session.scenario?.enemies?.groups)}:${JSON.stringify(session.scenario?.explorationMarkers)}`;
+        )}:${JSON.stringify(session.scenario?.enemies?.groups)}:${JSON.stringify(session.scenario?.explorationMarkers)}:${JSON.stringify(session.scenario?.battle?.placements)}`;
       if (mapKey !== nextMap) {
         mapKey = nextMap;
         agreed.checked = false;
@@ -256,7 +262,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
           const visibleDefinition = view?.definition ?? session.journey.definition;
           board.draw(
             visibleDefinition,
-            session.journey.heroes,
+            visibleHeroes(session),
             catalog,
             new Set(view?.unexplored ?? []),
             view?.markers ?? [],
@@ -333,7 +339,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
       const nextPositions = `${nextMap}:${JSON.stringify(session.journey?.heroes)}`;
       if (positionsKey !== nextPositions) {
         element('#map-positions').replaceChildren(
-          ...(session.journey?.heroes ?? []).map((hero) =>
+          ...visibleHeroes(session).map((hero) =>
             text(
               'li',
               `${catalog!.heroes.find((entry) => entry.id === hero.heroId)!.name.text} · ${hero.removed ? 'Sconfitto · figura rimossa' : session.journey!.definition.spaces.find((space) => space.id === hero.spaceId)!.label}`,

@@ -51,6 +51,7 @@ export function createRounds(sync: () => Promise<void>) {
     const original = current.scenario?.pack.manifest.scope === 'original-encounter-v1';
     const sourcePhases = original && !!current.scenario?.pack.manifest.rounds;
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
+    const battleBoundary = !!current.scenario?.battle && !!allEnded;
     const allScouted = round?.heroes.every((hero) => hero.rallyDone);
     const active = round?.heroes.find((hero) => hero.heroId === round.activeHeroId);
     element('#round-title').textContent = round
@@ -73,7 +74,9 @@ export function createRounds(sync: () => Promise<void>) {
             : 'Tutti i mazzi sono ricomposti. Ogni eroe effettua Scoperta 2 con l’eventuale bonus di Aragorn, una volta.';
     const nextStatus = current.physical?.lastStand?.terminal
       ? 'La Compagnia ha perso. La conseguenza finale è salvata.'
-      : message + (pending ? ' Concludi prima la conseguenza corrente.' : '');
+      : battleBoundary
+        ? 'I turni sono conclusi e salvati. La prossima Ombra richiede le proprie istruzioni prima di proseguire.'
+        : message + (pending ? ' Concludi prima la conseguenza corrente.' : '');
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
     element('#round-phase-help').textContent =
       current.combat && round?.phase === 'action'
@@ -91,6 +94,7 @@ export function createRounds(sync: () => Promise<void>) {
               : 'I mazzi sono stati mescolati tutti insieme, senza le carte preparate. Completate Scoperta nella sezione qui sotto, poi aprite il nuovo round.';
     form.hidden =
       !player ||
+      battleBoundary ||
       Boolean(round?.activeHeroId) ||
       (!!current.scenario && !!allEnded && (!cycle || (original && !sourcePhases))) ||
       (sourcePhases && round?.phase === 'shadow' && round.shadowStep !== 'threat');

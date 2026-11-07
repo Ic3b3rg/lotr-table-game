@@ -1,3 +1,4 @@
+import type { CampDepartureInput } from '../shared/camp-departure';
 import type { Catalog } from '../shared/catalog';
 import type { Session, Player } from '../shared/protocol';
 import type { CampPreparationInput } from '../shared/camp-preparation';
@@ -10,7 +11,7 @@ export function campPreparation(
   catalog: Catalog,
   player: Player | null,
   reader: CardReader,
-  submit: (input: CampPreparationInput) => unknown,
+  submit: (input: CampPreparationInput | CampDepartureInput) => unknown,
 ) {
   const root = document.createElement('section'),
     sc = session.scenario!,
@@ -27,7 +28,7 @@ export function campPreparation(
     ),
     text(
       'p',
-      `${prep.heroes.filter((h) => h.confirmedRevision !== null).length} di ${prep.heroes.length} eroi confermati. La partenza non è ancora disponibile.`,
+      `${prep.heroes.filter((h) => h.confirmedRevision !== null).length} di ${prep.heroes.length} eroi confermati. ${session.campDeparture?.available ? 'La Compagnia può partire.' : 'La partenza non è ancora disponibile.'}`,
       'test-status',
     ),
   );
@@ -213,18 +214,46 @@ export function campPreparation(
     root.append(entry);
   }
   if (player) root.append(button('Torna al campo', { kind: 'camp-return' }));
+  const offer = session.campDeparture;
   const depart = document.createElement('button');
   depart.type = 'button';
-  depart.disabled = true;
   depart.className = 'company-action';
-  depart.textContent = 'Partenza non ancora disponibile';
-  root.append(
-    depart,
-    text(
-      'p',
-      'Le scelte possono essere confermate. La prossima avventura attende la propria mappa e le proprie istruzioni prima della partenza.',
-      'company-help',
-    ),
+  depart.disabled = true;
+  depart.textContent = offer?.available
+    ? `Parti per ${offer.target}`
+    : 'Partenza non ancora disponibile';
+  if (player && offer?.available && offer.fingerprint) {
+    const agreed = document.createElement('input'),
+      label = text('label', '');
+    agreed.type = 'checkbox';
+    agreed.id = 'camp-departure-agreed';
+    label.append(
+      agreed,
+      text(
+        'span',
+        `Abbiamo concordato l’ordine di pesca: ${offer.drawOrder.map((id) => catalog.heroes.find((h) => h.id === id)!.name.text).join(' → ')}.`,
+      ),
+    );
+    depart.dataset.write = '';
+    depart.dataset.campDepart = '';
+    depart.dataset.blocked = 'true';
+    agreed.onchange = () => {
+      depart.disabled = !agreed.checked;
+      depart.dataset.blocked = String(!agreed.checked);
+    };
+    depart.onclick = () => {
+      if (agreed.checked)
+        submit({ kind: 'camp-depart', offerFingerprint: offer.fingerprint!, agreed: true });
+    };
+    root.append(label);
+  }
+  const readiness = text(
+    'p',
+    offer?.reason ??
+      'La prossima avventura richiede la propria mappa e le proprie istruzioni prima della partenza.',
+    'company-help',
   );
+  readiness.setAttribute('role', 'status');
+  root.append(depart, readiness);
   return root;
 }

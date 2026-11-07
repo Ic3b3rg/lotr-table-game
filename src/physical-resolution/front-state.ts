@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ItemCustodySchema } from '../shared/item-inventory';
 import { BoonCustodySchema } from '../shared/boons';
 import { AttackTestViewSchema } from '../shared/combat';
-import { CatalogSchema } from '../shared/catalog';
+import { CatalogSchema, CampaignSkillDefinitionSchema } from '../shared/catalog';
 import { PreparationSchema } from '../shared/preparation';
 import { PhysicalActiveSchema, SourceTestViewSchema } from '../shared/physical';
 import { FrontArtifactSchema } from './front-program';
@@ -34,6 +34,7 @@ export const FrontResourcesSchema = z.strictObject({
 });
 export const FrozenFrontsSchema = z.strictObject({
   artifact: FrontArtifactSchema,
+  campaignSkills: z.array(CampaignSkillDefinitionSchema).max(221).optional(),
   catalog: CatalogSchema,
 });
 export const FrontSnapshotSchema = z.strictObject({

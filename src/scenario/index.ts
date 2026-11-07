@@ -6,3 +6,13 @@ export { bindScenarioCards } from '../shared/scenario-cards';
 export { scenarioMapView } from '../shared/scenario-map';
 export { sectionOrder } from './section-order';
 export { deploymentText } from './deployment';
+
+export {
+  campDepartureOffer,
+  beginCampDeparture,
+  projectCampDeckSource,
+  validateCampDepartureSource,
+} from './camp-departure';
+export { battleGeometry } from './battle-startup';
+
+export { generateBattleDeployment } from './battle-deployment';

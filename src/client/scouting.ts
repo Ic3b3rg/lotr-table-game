@@ -3,7 +3,7 @@ import type { Player, Session } from '../shared/protocol';
 import { findSkillCard } from '../shared/skill-cards';
 import { rallyScoutCount } from '../shared/rally-scout';
 import { refreshActions } from './actions';
-import { cardButton, type CardReader } from './cards';
+import { campaignSkillCards, cardButton, type CardReader } from './cards';
 import { element, text } from './dom';
 import { createGameActions } from './game-actions';
 
@@ -35,12 +35,7 @@ export function createScouting(sync: () => Promise<void>, reader: CardReader) {
   let proximityKey = '';
   let choices: Choice[] = [];
   const commands = createGameActions(() => current, sync, root, status, error, controls);
-  const skill = (copy: string) =>
-    findSkillCard(
-      catalog!,
-      copy,
-      current?.physical?.lastStand?.titles.map((t) => t.skill),
-    );
+  const skill = (copy: string) => findSkillCard(catalog!, copy, campaignSkillCards(current));
   const label = (copy: string) => skill(copy)!.name.text;
   function options(select: HTMLSelectElement, copies: string[], empty: string) {
     const previous = select.value;

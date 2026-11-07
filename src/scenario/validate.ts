@@ -1,3 +1,4 @@
+import { validateEpisodeState, validateEpisodeReceipts } from '../server/episode-state';
 import { validateCampPreparationCatalog } from './camp-preparation-capability';
 import { validateCampItemsCatalog } from './camp-items-capability';
 import { validateCampPreparationState } from './camp-preparation';
@@ -28,7 +29,9 @@ import { validatePhysicalCycle, validateCycleReceipts } from '../server/physical
 
 export function scenarioStateProblem(state: State): string | null {
   try {
+    validateEpisodeState(state);
     const sc = state.scenario;
+    if (state.physical?.cycle?.version === 3) return null;
     if (!sc) return state.physical || state.combat ? 'Consumer fisico senza scenario fonte.' : null;
     if (state.content) {
       validateCampCatalog(sc.pack, state.content);
@@ -525,6 +528,14 @@ export function scenarioReceiptProblem(
   state: State,
   commands: { playerId: string; requestId: string; fingerprint?: string; receipt: Receipt }[],
 ): string | null {
+  if (state.physical?.cycle?.version === 3) {
+    try {
+      validateEpisodeReceipts(state, commands);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Ricevute episodio2 incoerenti.';
+    }
+  }
   const records = commands.filter(
       (c) => c.receipt.type === 'START_SCENARIO' || c.receipt.type === 'SCENARIO_INPUT',
     ),

@@ -1,3 +1,4 @@
+import { EpisodeBoundarySchema } from './camp-departure';
 import { z } from 'zod';
 import { CombatIntentSchema, CombatStateSchema } from './combat-controller';
 import { ContentIdSchema } from './catalog';
@@ -54,8 +55,9 @@ export const CyclePendingSchema = z.strictObject({
   heroId: ContentIdSchema,
 });
 export const CycleStateSchema = z.strictObject({
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   seed: z.strictObject({
+    departure: EpisodeBoundarySchema.optional(),
     revision: z.int().nonnegative(),
     round: RoundSchema,
     journey: JourneySchema,

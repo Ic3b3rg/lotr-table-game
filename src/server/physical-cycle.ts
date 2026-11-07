@@ -1,3 +1,9 @@
+import {
+  replayEpisode,
+  validateEpisodeState,
+  validateEpisodeReceipts,
+  applyEpisodeDomain,
+} from './episode-state';
 import { createHash, randomBytes } from 'node:crypto';
 import { CombatIntentSchema, CombatOperationSchema } from '../shared/combat-controller';
 import {
@@ -209,7 +215,7 @@ function runSource(
   state.preparation = structuredClone(p.snapshot.resolution!.resources!.preparation);
   return id;
 }
-function execute(
+export function executeEpisodeIntent(
   state: State,
   cycle: CycleState,
   record: CycleState['records'][number],
@@ -254,7 +260,7 @@ function executeIntent(
     );
   if (c.expectedRevision !== state.revision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
-  if (cycle.version === 2)
+  if (cycle.version >= 2)
     allowScenarioPlay(state, { ...c, requestId: record.requestId, generation: state.generation });
   const sprint =
     c.type === 'SCENARIO_INPUT' &&
@@ -290,7 +296,7 @@ function executeIntent(
     // Validate the complete original command on a disposable copy before opening any provocation.
     const work = structuredClone(state),
       ledger = work.physical!.cycle!;
-    execute(work, ledger, record, true);
+    executeEpisodeIntent(work, ledger, record, true);
     const { expectedRevision: _, type: __, ...fields } = c;
     const origin = CombatOperationSchema.shape.origin.parse(
       c.type === 'SCENARIO_INPUT'
@@ -417,7 +423,7 @@ function executeIntent(
     };
   }
   if (c.type === 'INTERACT_SCENARIO' || c.type === 'SCENARIO_INPUT') {
-    invariant(cycle.version === 2, 'Comando fonte in un ledger storico.');
+    invariant(cycle.version >= 2, 'Comando fonte in un ledger storico.');
     const command = { ...c, requestId: record.requestId, generation: state.generation };
     if (command.type === 'SCENARIO_INPUT') {
       const result = applyScenario(
@@ -550,13 +556,18 @@ function executeIntent(
     if (c.type === 'MOVE_HERO') {
       const sc = state.scenario!,
         source = sc.spaceBindings.find((b) => b.id === c.destinationSpaceId)?.sourceId;
-      invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza realizzazione.');
-      const space = state.mapGeneration.projection.spaces.find((s) => s.id === source);
-      if (!space || !sc.tiles.some((t) => t.source === space.tileSource && t.visible && t.explored))
-        fail(
-          'EXPLORATION_CAPABILITY',
-          'La casella richiede esplorazione fonte ancora non disponibile.',
-        );
+      if (!sc.battle) {
+        invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza realizzazione.');
+        const space = state.mapGeneration.projection.spaces.find((s) => s.id === source);
+        if (
+          !space ||
+          !sc.tiles.some((t) => t.source === space.tileSource && t.visible && t.explored)
+        )
+          fail(
+            'EXPLORATION_CAPABILITY',
+            'La casella richiede esplorazione fonte ancora non disponibile.',
+          );
+      }
     }
     return {
       ...base,
@@ -735,7 +746,7 @@ function resumeProvocation(state: State, cycle: CycleState, record: CycleState['
     if (origin.kind === 'source-sprint')
       work.scenario!.pending = structuredClone(origin.sourceRequest);
     try {
-      const receipt = execute(
+      const receipt = executeEpisodeIntent(
         work,
         work.physical!.cycle!,
         {
@@ -797,6 +808,7 @@ function originalStartupPrefix(state: State, scenario: NonNullable<State['scenar
 }
 
 function replay(state: State, cycle: CycleState): Replay {
+  if (cycle.version === 3) return replayEpisode(state, cycle);
   const original = state.physical!;
   const {
     physical: _,
@@ -882,7 +894,7 @@ function replay(state: State, cycle: CycleState): Replay {
     );
     work.revision = record.intent.expectedRevision;
     p.cycle = ledger;
-    receipts.push(execute(work, ledger, record));
+    receipts.push(executeEpisodeIntent(work, ledger, record));
     ledger.records.push(record);
     work.revision++;
   }
@@ -899,7 +911,9 @@ export function applyPhysicalCycle(
   const p = state.physical!,
     { generation: _, requestId, ...intent } = command;
   const c =
-    p.cycle?.version === 2 ? originalIntents.parse(intent) : CycleIntentSchema.parse(intent);
+    p.cycle && p.cycle.version >= 2
+      ? originalIntents.parse(intent)
+      : CycleIntentSchema.parse(intent);
   if (state.revision !== c.expectedRevision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
   if (lastStand) {
@@ -940,6 +954,10 @@ export function applyPhysicalCycle(
   });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
+  if (cycle.version === 3) {
+    applyEpisodeDomain(state, work);
+    return receipts.at(-1)!;
+  }
   for (const key of cycle.version === 2
     ? ([
         'physical',
@@ -957,6 +975,10 @@ export function applyPhysicalCycle(
 }
 export function validatePhysicalCycle(state: State) {
   const p = state.physical;
+  if (p?.cycle?.version === 3) {
+    validateEpisodeState(state);
+    return;
+  }
   if (!p?.cycle) {
     invariant(p?.version !== 3, 'Runtime ordinario senza ledger.');
     return;
@@ -968,7 +990,7 @@ export function validatePhysicalCycle(state: State) {
         (p.cycle.version === 2 ? 'original-encounter-v1' : 'synthetic-physical-p1'),
     'Ledger ordinario fuori dal consumer supportato.',
   );
-  if (p.cycle.version === 2) {
+  if (p.cycle.version >= 2) {
     const seed = originalSeedState(state);
     invariant(!scenarioStateProblem(seed), 'Origine originale non riconciliata con lo startup.');
   } else
@@ -1000,6 +1022,10 @@ export function validateCycleReceipts(
 ) {
   const cycle = state.physical?.cycle;
   if (!cycle) return;
+  if (cycle.version === 3) {
+    validateEpisodeReceipts(state, commands);
+    return;
+  }
   const { receipts } = replay(state, cycle);
   const relevant = commands.filter(
     (c) =>
@@ -1008,7 +1034,7 @@ export function validateCycleReceipts(
           ['INTERACT_SCENARIO', 'SCENARIO_INPUT', 'EXPLORE_SCENARIO'].includes(c.receipt.type))) &&
       c.receipt.appliedRevision > cycle.seed.revision,
   );
-  if (cycle.version === 2) {
+  if (cycle.version >= 2) {
     const error = scenarioReceiptProblem(
       originalSeedState(state),
       commands.filter((c) => c.receipt.appliedRevision <= cycle.seed.revision),

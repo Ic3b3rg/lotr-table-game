@@ -1,4 +1,9 @@
 import {
+  CampDepartureCapabilitySchema,
+  CampDepartureInputSchema,
+  BattleStartupStateSchema,
+} from './camp-departure';
+import {
   CampPreparationCapabilitySchema,
   CampPreparationSchema,
   CampPreparationInputs,
@@ -542,7 +547,7 @@ export const ScenarioPackSchema = z.strictObject({
   formatVersion: z.literal(1),
   algorithm: z.literal('source-startup-ir-v1'),
   identity: z.strictObject({
-    adventureId: z.literal(1),
+    adventureId: z.union([z.literal(1), z.literal(2)]),
     adventureSource: SourceSchema,
     language: z.literal('Italian'),
   }),
@@ -575,6 +580,8 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
+    campDeparture: CampDepartureCapabilitySchema.optional(),
+    battleStartup: CampDepartureCapabilitySchema.optional(),
     startupPreparation: z
       .strictObject({
         version: z.literal('source-startup-preparation-v1'),
@@ -671,6 +678,7 @@ export const ScenarioPackSchema = z.strictObject({
       .optional(),
     scope: z.enum([
       'startup-only',
+      'battle-startup-v1',
       'synthetic-physical-p0',
       'synthetic-physical-p1',
       'original-encounter-v1',
@@ -719,7 +727,7 @@ export const ScenarioPackSchema = z.strictObject({
             .optional(),
         }),
       )
-      .min(1)
+      .min(0)
       .max(500),
   }),
 });
@@ -731,6 +739,7 @@ export const SourceSprintInputSchema = z.strictObject({
   destinationSpaceId: z.string().min(1).max(100).nullable(),
 });
 export const EncounterInputSchema = z.discriminatedUnion('kind', [
+  CampDepartureInputSchema,
   CampSkillInputSchema,
   CampItemInputSchema,
   ...CampPreparationInputs,
@@ -886,6 +895,7 @@ const SprintExplorationAttemptSchema = TurnExplorationAttemptSchema.extend({
   sprintOrigin: z.strictObject({ version: z.literal('source-sprint-v1'), attemptId: z.uuid() }),
 });
 export const ScenarioSchema = z.strictObject({
+  battle: BattleStartupStateSchema.optional(),
   firstCombat: FirstCombatStateSchema.optional(),
   conclusion: z
     .strictObject({
