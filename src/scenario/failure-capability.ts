@@ -6,6 +6,8 @@ export function isConclusionReward(pack: ScenarioPack, source: string, state: nu
   const cap = pack.manifest.failure;
   if (!cap || source !== pack.principal) return false;
   const d = pack.definitions.find((d) => d.source === source)!;
+  if (pack.manifest.scope === 'battle-combat-v1')
+    return d.states.some((s) => s.index === state && s.actions.some((a) => a.op === 'awardXP'));
   return (
     d.states.find((s) => s.index === d.handlers[cap.event])?.transitions.FINISHED === state ||
     (pack.manifest.lair && d.handlers[pack.manifest.lair.event] === state)
@@ -25,7 +27,7 @@ export function validateFailureCapability(pack: ScenarioPack) {
     return;
   }
   invariant(
-    pack.manifest.scope === 'original-encounter-v1',
+    pack.manifest.scope === 'original-encounter-v1' || pack.manifest.scope === 'battle-combat-v1',
     'Conclusione fuori dal consumer originale.',
   );
   const d = pack.definitions.find((d) => d.source === pack.principal)!;
@@ -47,6 +49,32 @@ export function validateFailureCapability(pack: ScenarioPack) {
     return path;
   };
   const path = follow(cap.event);
+  if (pack.manifest.scope === 'battle-combat-v1') {
+    invariant(
+      new Set(cap.partyBonus.skills.map((s) => s.cardId)).size === cap.partyBonus.skills.length,
+      'Binding delle abilità equipaggiate duplicato.',
+    );
+    invariant(
+      path.length === 5 &&
+        path.map((s) => s.actions.map((a) => a.op).join(',')).join(';') ===
+          'message;message;message,set,lore,awardXP;nextAdventure,proceed;stop' &&
+        path.every((s, n) => Object.keys(s.transitions).join(',') === (n < 4 ? 'FINISHED' : '')),
+      'Closure terminale A2 incompleta.',
+    );
+    const flag = path[2]!.actions[1]!,
+      next = path[3]!.actions[0]!;
+    invariant(
+      flag.op === 'set' &&
+        flag.value === false &&
+        next.op === 'nextAdventure' &&
+        next.source === cap.next.source &&
+        next.id === cap.next.id &&
+        operations.length === 3 &&
+        operations.every((a) => path.some((s) => s.actions.includes(a))),
+      'Seguito terminale A2 fuori dalla fonte.',
+    );
+    return;
+  }
   invariant(
     path.length === 4 &&
       path.map((s) => s.actions.map((a) => a.op).join(',')).join(';') ===

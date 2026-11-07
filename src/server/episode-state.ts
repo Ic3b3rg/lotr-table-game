@@ -13,6 +13,7 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { executeEpisodeIntent } from './physical-cycle';
 import { scenarioReceiptProblem } from '../scenario/validate';
+import { initialCombat } from '../combat/controller';
 
 /** Game domain only: no session, authentication, recovery or receipt-table copies. */
 export function archiveDomain(state: State): EpisodeArchive {
@@ -28,7 +29,9 @@ export function archiveDomain(state: State): EpisodeArchive {
 }
 export function archivedState(state: State): State {
   invariant(state.episodes?.length === 1, 'Episodio archiviato assente.');
-  const work = { ...state, ...structuredClone(state.episodes[0]!) };
+  const work = { ...state };
+  for (const key of Object.keys(EpisodeArchiveSchema.shape)) Reflect.deleteProperty(work, key);
+  Object.assign(work, structuredClone(state.episodes[0]!));
   delete work.episodes;
   return work;
 }
@@ -197,6 +200,7 @@ export function activateEpisode(
     mapGeneration: null,
   });
   delete state.combat;
+  if (cap.combat) state.combat = initialCombat(state);
   state.scenario!.commands.push({
     playerId: actor.playerId,
     requestId: actor.requestId,

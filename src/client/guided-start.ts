@@ -292,7 +292,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : session.round?.heroes.every((h) => h.turnEnded)
                 ? 'I turni sono salvati. La prossima Ombra richiede le proprie istruzioni prima di proseguire.'
                 : session.round?.activeHeroId
-                  ? 'Il proprietario dell’eroe di turno viaggia dalla mappa o conclude il turno. Gli altri partecipanti attendono.'
+                  ? session.combat
+                    ? 'Il proprietario dell’eroe di turno può attaccare, viaggiare dalla mappa o concludere il turno. Ogni attacco costa un’azione; i movimenti residui restano salvati.'
+                    : 'Il proprietario dell’eroe di turno viaggia dalla mappa o conclude il turno. Gli altri partecipanti attendono.'
                   : 'Il proprietario del primo eroe apre il turno. Viaggiare usa una normale azione; i muri bloccano i rispettivi confini.';
           target = q ? '#scenario' : session.round?.activeHeroId ? '#journey-map' : '#rounds';
           label = q
@@ -470,8 +472,16 @@ export function createGuidedStart(sync: () => Promise<void>) {
         }
       }
       if (session.combat?.pending && !session.combat.current) {
-        heading = 'Scegli l’ordine prima dell’interazione';
-        message = `${session.players.find((p) => p.id === session.combat!.pending!.actorPlayerId)?.name ?? 'Il proprietario indicato'} registra il piano e l’ordine dei gruppi pronti. L’interazione resta salvata fino al ritorno.`;
+        const battle = session.scenario?.pack.manifest.battleStartup?.combat;
+        heading = battle
+          ? 'Scegli l’ordine delle provocazioni'
+          : 'Scegli l’ordine prima dell’interazione';
+        const owner =
+          session.players.find((p) => p.id === session.combat!.pending!.actorPlayerId)?.name ??
+          'Il proprietario indicato';
+        message = battle
+          ? `${owner} sceglie il prossimo gruppo pronto. Risolvi ogni provocazione prima del movimento: posizione e movimenti residui restano salvati.`
+          : `${owner} registra il piano e l’ordine dei gruppi pronti. L’interazione resta salvata fino al ritorno.`;
         target = '#combat';
         label = 'Scegli il prossimo passo';
         topic = 'encounter';

@@ -1,4 +1,5 @@
 import { validateCampDepartureSource } from './camp-departure';
+import { battleCombatPack } from './battle-combat';
 import { validateCampPreparationCapability } from './camp-preparation-capability';
 import { validateCampItemsCapability } from './camp-items-capability';
 import { readFileSync, statSync } from 'node:fs';
@@ -31,12 +32,25 @@ export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
   if (pack.manifest.battleStartup) {
     invariant(
-      pack.manifest.scope === 'battle-startup-v1' &&
+      pack.manifest.scope ===
+        (pack.manifest.battleStartup.combat ? 'battle-combat-v1' : 'battle-startup-v1') &&
         pack.identity.adventureId === 2 &&
         !pack.manifest.campDeparture,
       'Pack battaglia2 estraneo.',
     );
     validateCampDepartureSource(pack.manifest.battleStartup);
+    if (pack.manifest.battleStartup.combat) {
+      const expected = battleCombatPack(pack.manifest.battleStartup, pack);
+      invariant(
+        digest(expected) === digest(pack),
+        'Pack combattimento diverso dalla partenza fonte.',
+      );
+      validateFailureCapability(pack);
+    } else
+      invariant(
+        !pack.manifest.combat && !pack.manifest.failure,
+        'Vecchio startup reinterpretato come combattimento.',
+      );
     return { pack, fingerprint: digest(pack) };
   }
   invariant(

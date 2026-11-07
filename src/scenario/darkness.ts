@@ -2,6 +2,7 @@ import type { State } from '../server/state';
 import { ApiError } from '../server/errors';
 import { invariant } from '../map-freeze/validate';
 import { defeatedHeroes } from '../server/physical-defeat';
+import { battleCombat, battleDarknessHeroes } from './battle-combat';
 const fail = (message: string): never => {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
 };
@@ -33,6 +34,7 @@ export function sourceDarknessHeroes(state: State): number[] {
 
 /** Older combat packs retain their published geometric context. */
 export function combatDarknessHeroes(state: State) {
+  if (battleCombat(state)) return battleDarknessHeroes(state);
   if (state.scenario!.pack.manifest.combat?.source.shadow) return sourceDarknessHeroes(state);
   invariant(state.mapGeneration?.status === 'frozen', 'Oscurità senza mappa.');
   const spaces = state.mapGeneration.projection.spaces;

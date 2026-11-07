@@ -1980,10 +1980,14 @@ body[data-scenario='setup'] #scout-discard-controls {
   max-width: 100%;
 }
 .combat-preview {
+  color: var(--ink);
   padding: 1rem;
   background: #f4efe2;
   border-radius: 0.35rem;
   margin-block: 1rem;
+}
+.combat-preview .company-help {
+  color: inherit;
 }
 .combat-slots {
   padding-left: 1.25rem;

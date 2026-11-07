@@ -170,7 +170,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           ? `${actor?.name ?? 'Il proprietario indicato'} completa le carte di ${hero?.name.text ?? 'questo eroe'}. ${current.physical?.active?.kind === 'decision' ? current.physical.active.title : 'Segui la capacità indicata.'} Le altre viste attendono. Ricaricare conserva questa scelta.`
           : 'Avventura2 · seguite il piazzamento indicato sulla nuova mappa. Le scelte personali e ogni passaggio sono salvati.'
         : activeHero
-          ? `Avventura2 · ${activeHero.name.text} è di turno. Viaggia dalla mappa; i muri bloccano il passaggio.`
+          ? current.combat
+            ? `Avventura2 · ${activeHero.name.text} è di turno. Attacca dal pannello dei nemici oppure viaggia dalla mappa; i muri bloccano il passaggio.`
+            : `Avventura2 · ${activeHero.name.text} è di turno. Viaggia dalla mappa; i muri bloccano il passaggio.`
           : 'Avventura2 · allestimento completato. Scegliete il primo eroe di turno. Il seguito degli incontri richiede le proprie capacità.'
       : message;
     if (status.textContent !== battleMessage) status.textContent = battleMessage;
@@ -219,7 +221,11 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
         ' Nei due luoghi collegati, seguite visita, recupero e ritorno. La consegna indicata costa 1 azione; chi ha agito sceglie il destinatario del titolo, che lo prepara subito.';
     if (sc?.battle)
       element('#scenario-limit').textContent =
-        `Minaccia ${sc.globals.battleThreat ?? 0} · soglia ${sc.globals.battleThreshold ?? 0} · limite ${sc.globals.battleLimit ?? 0}. Sapienza ${sc.battle.campaign.lore}. I turni e il viaggio sulla mappa sono disponibili. Incontri, combattimento e prossima Ombra richiedono le proprie istruzioni prima di proseguire.`;
+        `Minaccia ${sc.globals.battleThreat ?? 0} · soglia ${sc.globals.battleThreshold ?? 0} · limite ${sc.globals.battleLimit ?? 0}. Sapienza ${sc.play?.lore ?? sc.battle.campaign.lore}. ${
+          current.combat
+            ? 'Attacchi e provocazioni seguono carte, risposta nemica e conseguenze fino al ritorno al turno. Il pannello indica i terreni o le riserve ancora necessari prima dei costi. Incontri e prossima Ombra attendono le proprie istruzioni.'
+            : 'I turni e il viaggio sulla mappa sono disponibili. Incontri, combattimento e prossima Ombra richiedono le proprie istruzioni prima di proseguire.'
+        }`;
     refreshActions();
   }
   agreed.oninput = () => {

@@ -21,7 +21,7 @@ test('P2 HTTP computes the test and returns the exact scenario parent with conse
   const first = await reachPhysical(ready);
   assert.equal(first.physical.active.kind, 'decision');
   assert.equal(first.physical.active.options[0].id, 'reveal');
-  assert.equal(first.schemaVersion, 32);
+  assert.equal(first.schemaVersion, 33);
   assert.equal(
     (await scenarioInput(ready.host, ready.other, { kind: 'physical-choice', option: 'reveal' }))
       .status,

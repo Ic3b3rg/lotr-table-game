@@ -679,6 +679,7 @@ export const ScenarioPackSchema = z.strictObject({
     scope: z.enum([
       'startup-only',
       'battle-startup-v1',
+      'battle-combat-v1',
       'synthetic-physical-p0',
       'synthetic-physical-p1',
       'original-encounter-v1',

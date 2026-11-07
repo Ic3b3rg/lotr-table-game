@@ -24,7 +24,7 @@ test('un eroe rivela le proprie carte e conclude una prova senza perdere copie',
   });
   assert.equal(start.status, 200);
   const state = await (await host.request('/api/session')).json();
-  assert.equal(state.schemaVersion, 32);
+  assert.equal(state.schemaVersion, 33);
   assert.deepEqual(state.skillTest.revealed, deck.slice(0, 3));
   assert.equal(state.skillTest.status, 'converting');
   assert.equal(state.skillTest.successes, 3);

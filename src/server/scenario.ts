@@ -163,7 +163,8 @@ export function applyScenario(
       }
     }
     beginScenario(state, parsed, physical);
-  } else if (state.scenario?.battle) answerBattleStartup(state, playerId, command);
+  } else if (state.scenario?.battle && state.scenario.phase === 'setup')
+    answerBattleStartup(state, playerId, command);
   else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
     summaries = answerCampaign(state, playerId, command);
   else resumeScenario(state, playerId, command, physicalPath, undefined, explorationEntropy);
@@ -208,6 +209,28 @@ export function allowScenarioPlay(state: State, command: Command) {
     sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;
   if (sc.battle) {
     if (command.type === 'SCENARIO_INPUT' && sc.pending) return;
+    if (sc.phase === 'action' && sc.pack.manifest.battleStartup?.combat) {
+      if (command.type === 'COMBAT_INPUT' && (state.combat?.active || state.combat?.operation))
+        return;
+      if (command.type === 'CYCLE_INPUT' && state.physical!.cycle!.pending) return;
+      if (
+        sc.pending ||
+        state.physical?.snapshot.active ||
+        state.combat?.active ||
+        state.combat?.operation
+      )
+        throw new ApiError(
+          409,
+          'COMBAT_PENDING',
+          'Completa il combattimento e il suo ritorno prima di proseguire.',
+        );
+      if (
+        ['START_ATTACK', 'START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(
+          command.type,
+        )
+      )
+        return;
+    }
     if (
       sc.phase === 'action' &&
       ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO', 'CYCLE_INPUT'].includes(command.type)

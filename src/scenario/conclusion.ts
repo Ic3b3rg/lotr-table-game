@@ -246,7 +246,7 @@ export function applyConclusionAction(
       : [];
     if (sc.pack.manifest.followup) reset.push(sc.pack.manifest.followup.enemyPointsBinding);
     c.campaign = {
-      ...(sc.pack.manifest.items
+      ...(sc.pack.manifest.items || sc.pack.manifest.battleStartup?.combat
         ? {
             inventory: (state.physical?.snapshot.resolution?.resources?.itemCustody ?? []).map(
               ({ copy, cardId, modelId }) => ({ copy, cardId, modelId }),
@@ -278,6 +278,36 @@ export function applyConclusionAction(
     };
     const playerCount = sc.pack.manifest.followup?.playerCountBinding;
     if (playerCount) c.campaign.sceneGlobals[playerCount] = state.preparation!.heroes.length;
+    if (sc.pack.manifest.battleStartup?.combat) {
+      const balances = structuredClone(sc.battle!.campaign.balances);
+      for (const reward of c.xp) {
+        const balance = balances.find(
+          (b) => b.heroId === reward.heroId && b.roleId === reward.roleId,
+        );
+        if (balance) balance.availableXP += reward.amount;
+        else
+          balances.push({
+            heroId: reward.heroId,
+            roleId: reward.roleId,
+            availableXP: reward.amount,
+          });
+      }
+      c.campaign.training = { version: 'source-camp-skills-v1', balances };
+      for (const hero of c.campaign.heroes) {
+        const h = state.preparation!.heroes.find((h) => h.heroId === hero.heroId)!;
+        hero.skillCopies = [
+          ...new Set([
+            ...h.deck,
+            ...h.discard,
+            ...h.prepared,
+            ...(state.physical!.snapshot.resolution!.revealed.find((r) => r.heroId === h.heroId)
+              ?.cards ?? []),
+            ...sc.battle!.campaign.ownership.heroes.find((o) => o.heroId === h.heroId)!
+              .purchasedCopies,
+          ]),
+        ];
+      }
+    }
     initializeCampSkills(state);
   }
 }

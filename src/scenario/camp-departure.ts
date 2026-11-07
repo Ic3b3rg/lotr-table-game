@@ -18,6 +18,7 @@ import { definitionId } from '../shared/preparation';
 import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { ApiError } from '../server/errors';
 import { archiveDomain, activateEpisode } from '../server/episode-state';
+import { validateBattleCombatSource } from './battle-combat';
 
 /** Never opens paths, programs or seeds supplied by a caller. */
 export function validateCampDepartureSource(raw: unknown) {
@@ -153,6 +154,7 @@ export function validateCampDepartureSource(raw: unknown) {
       );
     }
   }
+  if (s.combat) validateBattleCombatSource(s);
   invariant(digest(deployment) === s.deploymentHash, 'Closure deployment2 modificata.');
   invariant(
     digest(

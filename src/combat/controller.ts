@@ -38,6 +38,8 @@ import { explorationSource, explorationProblem } from '../shared/exploration';
 import { STAT_LABELS } from '../shared/skill-tests';
 import { combatDarknessHeroes } from '../scenario/darkness';
 import { boonEnemyPositions } from '../server/physical-spatial';
+import { battleCombat } from '../scenario/battle-combat';
+import { compileSourceDeployment } from './deployment-compiler';
 
 const fail = (code: string, message: string): never => {
   throw new ApiError(409, code, message);
@@ -99,8 +101,10 @@ function nearby(state: State, a: string, b: string) {
 }
 function name(state: State, id: string) {
   const g = group(state, id),
-    d = verifySourceDeployment(
-      state.scenario!.pack.manifest.followup!.deployment,
+    d = (
+      battleCombat(state)
+        ? compileSourceDeployment(state.scenario!.pack.manifest.battleStartup!.deployment)
+        : verifySourceDeployment(state.scenario!.pack.manifest.followup!.deployment)
     ).compiled.models.find((m) => m.source === g.source)!;
   return g.figures.filter((f) => f.health > 0).length > 1 ? d.plural : d.name;
 }
@@ -138,7 +142,11 @@ export function attackOffers(state: State, heroId: string): CombatAttackOffer[] 
                 : missing.includes('boon-quantities-57')
                   ? 'Una possibile conseguenza richiede benefici la cui riserva non è ancora verificata.'
                   : missing.length
-                    ? 'Una conseguenza necessaria non è ancora disponibile.'
+                    ? missing.some((m) => m.startsWith('battle-terrain-fire:'))
+                      ? 'L’attacco nel braciere richiede ancora la scelta delle carte prevista dal terreno.'
+                      : missing.some((m) => m.startsWith('battle-terrain-boulder:'))
+                        ? 'La negazione presso il masso richiede ancora la scelta prevista dal terreno.'
+                        : 'Una conseguenza necessaria non è ancora disponibile.'
                     : null;
             return {
               heroId,
@@ -722,18 +730,22 @@ function additionDue(state: State, a: CombatAttempt) {
   const p = addition.predicate;
   const ordinary = state.journey!.heroes.find((h) => h.heroId === a.heroId)!.spaceId;
   const source = state.scenario!.spaceBindings.find((b) => b.id === ordinary)!.sourceId;
-  invariant(state.mapGeneration?.status === 'frozen', 'Conseguenza senza contesto.');
+  invariant(
+    battleCombat(state) || state.mapGeneration?.status === 'frozen',
+    'Conseguenza senza contesto.',
+  );
   return (
     p === 'always' ||
     (p === 'damage-positive' && o.suffered.damage > 0) ||
     (p === 'fear-positive' && o.suffered.fear > 0) ||
     (p === 'zero-damage-and-fear' && !o.suffered.damage && !o.suffered.fear) ||
     (p === 'recipient-in-darkness' &&
-      (combatArtifact(state).source.shadow
+      (battleCombat(state) || combatArtifact(state).source.shadow
         ? combatDarknessHeroes(state).includes(
             state.preparation!.heroes.findIndex((h) => h.heroId === a.heroId),
           )
-        : state.mapGeneration.projection.spaces.find((s) => s.id === source)!.hasDarkness))
+        : state.mapGeneration?.status === 'frozen' &&
+          state.mapGeneration.projection.spaces.find((s) => s.id === source)!.hasDarkness))
   );
 }
 function frontierOptions(state: State, a: CombatAttempt) {
@@ -880,10 +892,16 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
     }
     const from = sc.spaceBindings.find((b) => b.sourceId === choice.from)!.id,
       destination = sc.spaceBindings.find((b) => b.sourceId === choice.destination)!.id;
-    invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza realizzazione.');
-    const space = state.mapGeneration.projection.spaces.find((s) => s.id === choice.destination)!;
-    const tile = sc.tiles.find((t) => t.source === space.tileSource)!;
-    if (!tile.explored) {
+    invariant(
+      battleCombat(state) || state.mapGeneration?.status === 'frozen',
+      'Movimento senza realizzazione.',
+    );
+    const space =
+      state.mapGeneration?.status === 'frozen'
+        ? state.mapGeneration.projection.spaces.find((s) => s.id === choice.destination)
+        : undefined;
+    const tile = space ? sc.tiles.find((t) => t.source === space.tileSource) : undefined;
+    if (!battleCombat(state) && !tile!.explored) {
       const entropy = digest({
         stream: 'combat-exploration-v1',
         entropy: state.combat!.entropy,
@@ -908,7 +926,7 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
           scenarioId: sc.id,
           packFingerprint: sc.packFingerprint,
           projectionFingerprint: sc.projectionFingerprint,
-          sourceFingerprint: digest(explorationSource(sc, space.tileSource)),
+          sourceFingerprint: digest(explorationSource(sc, space!.tileSource)),
         },
         entropy,
         a.id,
@@ -968,10 +986,15 @@ function grantOffers(state: State, attempt: CombatAttempt) {
 }
 export function combatPending(state: State): CombatView['pending'] {
   const op = state.combat?.operation;
-  if (op?.interactionOrder && !state.combat!.active && !state.physical?.snapshot.active) {
+  if (
+    op &&
+    (op.interactionOrder || battleCombat(state)) &&
+    !state.combat!.active &&
+    !state.physical?.snapshot.active
+  ) {
     const groups = readyProvocations(state);
     if (!groups.length) return null;
-    const plan = op.interactionOrder.stage === 'plan';
+    const plan = op.interactionOrder?.stage === 'plan';
     const options = plan
       ? [
           {
@@ -985,7 +1008,12 @@ export function combatPending(state: State): CombatView['pending'] {
               'Questo ordine può interrompere l’interazione dopo la lettura. Manca una prosecuzione verificata: nessun costo o carta è stato applicato.',
           },
         ]
-      : groups.map((g) => ({ id: g.id, label: `Provoca ${name(state, g.id)}` }));
+      : groups.map((g) => ({
+          id: g.id,
+          label: battleCombat(state)
+            ? `Provoca gruppo ${state.scenario!.enemies!.groups.indexOf(g) + 1} · ${name(state, g.id)}${g.tokenId >= 0 ? ` · Stendardo ${g.tokenId + 1}` : ''}`
+            : `Provoca ${name(state, g.id)}`,
+        }));
     const sourceFingerprint = digest({ operation: op, groups: groups.map((g) => g.id), options });
     return {
       id: cycleUUID({ operation: op.id, sourceFingerprint }),
@@ -1094,8 +1122,8 @@ export function answerCombat(
   if (!option || option.unavailable)
     fail('COMBAT_OPTION', option?.unavailable ?? 'La scelta non è disponibile.');
   const operation = state.combat!.operation;
-  if (operation?.interactionOrder && !state.combat!.active) {
-    if (operation.interactionOrder.stage === 'plan') {
+  if (operation && (operation.interactionOrder || battleCombat(state)) && !state.combat!.active) {
+    if (operation.interactionOrder?.stage === 'plan') {
       invariant(c.choice === 'provocation-first', 'Piano prima non supportato.');
       operation.interactionOrder.stage = 'groups';
       nextProvocation(state);
@@ -1321,10 +1349,11 @@ export function nextProvocation(state: State, selectedGroup?: string) {
         'PROVOCATION_CLOSURE',
         missing.includes('boon-quantities-57')
           ? 'La provocazione può richiedere benefici la cui riserva non è ancora verificata. Nessun costo o movimento è stato applicato.'
-          : 'La provocazione richiede una conseguenza non ancora disponibile. Nessun costo o movimento è stato applicato.',
+          : `La provocazione richiede una conseguenza non ancora disponibile: ${missing.join(', ')}. Nessun costo o movimento è stato applicato.`,
       );
   }
-  if (op.interactionOrder && groups.length && selectedGroup === undefined) return true;
+  if ((op.interactionOrder || battleCombat(state)) && groups.length && selectedGroup === undefined)
+    return true;
   const g = selectedGroup === undefined ? groups[0] : groups.find((g) => g.id === selectedGroup);
   invariant(selectedGroup === undefined || g, 'Gruppo non pronto per la provocazione.');
   if (!g) return false;
