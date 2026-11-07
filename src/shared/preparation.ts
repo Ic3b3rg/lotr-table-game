@@ -194,7 +194,14 @@ export function preparationView(
   if (!preparation) return null;
   return {
     status: preparation.status,
-    ...(preparation.episode ? { episode: structuredClone(preparation.episode) } : {}),
+    ...(preparation.episode
+      ? {
+          episode: {
+            ...structuredClone(preparation.episode),
+            heroes: preparation.episode.heroes.map((h) => ({ ...h, copies: [...h.copies].sort() })),
+          },
+        }
+      : {}),
     heroes: preparation.heroes.map(({ deck, discard, ...hero }) => ({
       ...hero,
       deckCount: deck.length,
