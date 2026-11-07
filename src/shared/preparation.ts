@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ContentIdSchema, type Catalog } from './catalog';
+import { ContentIdSchema, CampaignSkillDefinitionSchema, type Catalog } from './catalog';
 import type { SkillTest } from './skill-tests';
 import type { Scouting } from './scouting';
 
@@ -14,22 +14,39 @@ export const PreparedHeroSchema = z.strictObject({
   itemCopies: z.array(CopyIdSchema).max(3),
   inspiration: z.int().nonnegative(),
   prepared: z.array(CopyIdSchema).max(4),
-  deck: z.array(CopyIdSchema).max(30),
-  discard: z.array(CopyIdSchema).max(30),
+  deck: z.array(CopyIdSchema).max(201),
+  discard: z.array(CopyIdSchema).max(201),
+});
+export const EpisodeCompositionSchema = z.strictObject({
+  version: z.literal('camp-departure-v1'),
+  sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  heroes: z
+    .array(
+      z.strictObject({
+        heroId: ContentIdSchema,
+        copies: z.array(CopyIdSchema).min(14).max(201),
+        accessory: CopyIdSchema.nullable(),
+      }),
+    )
+    .min(2)
+    .max(5),
+  skills: z.array(CampaignSkillDefinitionSchema).max(221),
 });
 export const PreparationSchema = z.strictObject({
+  episode: EpisodeCompositionSchema.optional(),
   status: z.enum(['draft', 'prepared']),
   heroes: z.array(PreparedHeroSchema).max(5),
   weaknessDeck: z.array(CopyIdSchema).max(20),
 });
 export const PreparationViewSchema = z.strictObject({
+  episode: EpisodeCompositionSchema.optional(),
   status: z.enum(['draft', 'prepared']),
   heroes: z
     .array(
       PreparedHeroSchema.omit({ deck: true, discard: true }).extend({
         deckCount: z.int().nonnegative(),
         discardCount: z.int().nonnegative(),
-        composition: z.array(CopyIdSchema).max(30),
+        composition: z.array(CopyIdSchema).max(201),
       }),
     )
     .max(5),
@@ -81,7 +98,7 @@ export function preparationProblem(
     )
       return 'L’ispirazione supera il limite dell’eroe.';
     if (
-      items.some((item) => item.rank !== 1 || item.slot === 'trinket') ||
+      (!preparation.episode && items.some((item) => item.rank !== 1 || item.slot === 'trinket')) ||
       items.reduce((n, item) => n + item.hands, 0) >
         catalog.heroes.find((entry) => entry.id === hero.heroId)!.maxHands ||
       items.filter((item) => item.slot === 'armor').length > 1
@@ -107,7 +124,7 @@ export function preparationProblem(
         return 'Riserva delle debolezze incoerente.';
       seen.add(copy);
     }
-    if (!physical && reserve.length !== 20 - heroes.length)
+    if (!physical && !preparation.episode && reserve.length !== 20 - heroes.length)
       return 'Numero di debolezze nella riserva non valido.';
     for (const hero of heroes) {
       const definition = catalog.heroes.find((entry) => entry.id === hero.heroId)!;
@@ -123,19 +140,40 @@ export function preparationProblem(
         physical?.titles
           ?.filter((t) => t.heroId === hero.heroId && !t.removed && !t.pending)
           .map((t) => t.copy) ?? [];
-      if (!physical && actual.length !== 15)
+      if (!preparation.episode && (hero.deck.length > 30 || hero.discard.length > 30))
+        return 'Zone iniziali oltre il limite storico.';
+      if (!physical && !preparation.episode && actual.length !== 15)
         return 'L’eroe deve conservare le sue quindici carte abilità.';
       const definitions = actual.filter((c) => !titles.includes(c)).map(definitionId);
       if (
-        expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
-        definitions.filter((id) => catalog.weaknessCards.includes(id)).length < 1 ||
-        titles.some((copy) => !actual.includes(copy)) ||
-        actual.length !==
-          14 + definitions.filter((id) => catalog.weaknessCards.includes(id)).length + titles.length
+        !preparation.episode &&
+        (expected.some((id) => definitions.filter((value) => value === id).length !== 1) ||
+          definitions.filter((id) => catalog.weaknessCards.includes(id)).length < 1 ||
+          titles.some((copy) => !actual.includes(copy)) ||
+          actual.length !==
+            14 +
+              definitions.filter((id) => catalog.weaknessCards.includes(id)).length +
+              titles.length)
       )
         return 'Composizione del mazzo iniziale non valida.';
+      if (preparation.episode) {
+        const lineage = preparation.episode.heroes.find((h) => h.heroId === hero.heroId);
+        if (
+          !lineage ||
+          actual.length !==
+            lineage.copies.length +
+              definitions.filter((id) => catalog.weaknessCards.includes(id)).length ||
+          lineage.copies.some((copy) => !actual.includes(copy)) ||
+          !definitions.some((id) => catalog.weaknessCards.includes(id))
+        )
+          return 'Composizione della campagna non conservata.';
+      }
       for (const copy of actual) {
-        if (seen.has(copy) || (!titles.includes(copy) && !validCopy(copy, catalog.skills)))
+        if (
+          seen.has(copy) ||
+          (!titles.includes(copy) &&
+            !validCopy(copy, [...catalog.skills, ...(preparation.episode?.skills ?? [])]))
+        )
           return 'Copie del mazzo duplicate o inesistenti.';
         seen.add(copy);
       }
@@ -156,6 +194,7 @@ export function preparationView(
   if (!preparation) return null;
   return {
     status: preparation.status,
+    ...(preparation.episode ? { episode: structuredClone(preparation.episode) } : {}),
     heroes: preparation.heroes.map(({ deck, discard, ...hero }) => ({
       ...hero,
       deckCount: deck.length,

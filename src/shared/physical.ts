@@ -96,8 +96,14 @@ const LegacyPhysicalProgramSchema = z.strictObject({
     .max(32),
 });
 const FrontChildSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('battle-equipment'),
+    hero: slot,
+    window: z.enum(['initialize', 'after-setup']),
+  }),
+  z.strictObject({ kind: z.literal('battle-loss-weakness'), hero: slot }),
   z.strictObject({ kind: z.literal('prepared'), hero: slot, copy: z.string().max(120) }),
-  z.strictObject({ kind: z.literal('startup-scout'), hero: slot }),
+  z.strictObject({ kind: z.literal('startup-scout'), hero: slot, count: z.literal(3).optional() }),
   z.strictObject({ kind: z.literal('startup-test'), hero: slot }),
   z.strictObject({ kind: z.literal('search-recovery'), hero: slot, effect: SearchRecoverySchema }),
   z.strictObject({ kind: z.literal('source-boon'), hero: slot, boon: BoonKindSchema }),
@@ -316,6 +322,8 @@ export const PhysicalResultSchema = z.strictObject({
   child: z.int().min(0).max(31),
   kind: z.enum([
     'prepared',
+    'battle-equipment',
+    'battle-loss-weakness',
     'startup-scout',
     'startup-test',
     'inspiration',

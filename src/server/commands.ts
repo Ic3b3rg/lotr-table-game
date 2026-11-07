@@ -1,3 +1,5 @@
+import { beginCampDeparture } from '../scenario/camp-departure';
+import { randomBytes } from 'node:crypto';
 import { boundPhysicalInput } from '../physical-content/validation';
 import { CommandSchema } from '../shared/protocol';
 import { applyScenario, allowScenarioPlay } from './scenario';
@@ -39,7 +41,46 @@ export function performCommand(store: Store, playerId: string, command: Command)
       advance(state);
       return generationReceipt(state, requestId, command.type);
     }
-    if (state.physical?.cycle?.version === 2) {
+    if (command.type === 'SCENARIO_INPUT' && command.input.kind === 'camp-depart') {
+      const sc = state.scenario,
+        q = sc?.pending;
+      if (
+        !sc ||
+        !q ||
+        command.expectedRevision !== state.revision ||
+        command.scenarioId !== sc.id ||
+        command.packFingerprint !== sc.packFingerprint ||
+        command.projectionFingerprint !== sc.projectionFingerprint ||
+        command.pendingId !== q.id ||
+        command.sourceFingerprint !== q.fingerprint ||
+        command.heroId !== null
+      )
+        throw new ApiError(
+          409,
+          'SCENARIO_REQUEST_CHANGED',
+          'Il campo o la richiesta sono cambiati.',
+        );
+      const departure = beginCampDeparture(
+        state,
+        { playerId, requestId, pendingId: q.id, sourceFingerprint: q.fingerprint },
+        command.input,
+        sc.pack.manifest.campDeparture,
+        () => randomBytes(32).toString('hex'),
+      );
+      advance(state);
+      return {
+        requestId,
+        type: 'SCENARIO_INPUT',
+        appliedRevision: state.revision,
+        scenarioId: state.scenario!.id,
+        pendingId: q.id,
+        source: q.fingerprint,
+        kind: 'camp-depart',
+        phase: 'setup',
+        departure,
+      };
+    }
+    if (state.physical?.cycle && state.physical.cycle.version >= 2) {
       if (
         !isPhysicalCycle(state, command) &&
         command.type !== 'INTERACT_SCENARIO' &&

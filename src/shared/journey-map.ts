@@ -16,6 +16,11 @@ export const JourneyDefinitionSchema = z
   .strictObject({
     id: ContentIdSchema,
     label: z.string().min(1).max(120),
+    topology: z.literal('battle').optional(),
+    walls: z
+      .array(z.strictObject({ id: z.string().max(100), a: PointSchema, b: PointSchema }))
+      .max(20)
+      .optional(),
     source: z.strictObject({
       name: z.string().min(1).max(200),
       sha256: z.string().regex(/^[a-f0-9]{64}$/),
@@ -33,7 +38,7 @@ export const JourneyDefinitionSchema = z
           ...PointSchema.shape,
           hexes: z
             .array(
-              z.strictObject({ ...PointSchema.shape, polygon: z.array(PointSchema).length(6) }),
+              z.strictObject({ ...PointSchema.shape, polygon: z.array(PointSchema).min(4).max(6) }),
             )
             .min(1)
             .max(32),
@@ -56,6 +61,8 @@ export const JourneyDefinitionSchema = z
       edges.add(key);
     }
     for (const space of map.spaces) {
+      if (space.hexes.some((h) => h.polygon.length !== (map.topology === 'battle' ? 4 : 6)))
+        fail('Poligono diverso dalla topologia attestata.');
       const points = [space, ...space.hexes.flatMap((hex) => [hex, ...hex.polygon])];
       if (points.some((point) => point.x > map.width || point.y > map.height))
         fail('Geometria fuori dai limiti della mappa.');

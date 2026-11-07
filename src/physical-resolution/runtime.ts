@@ -329,9 +329,10 @@ export function freezePhysical(
   fronts?: z.infer<typeof FrozenFrontsSchema>,
   lastStand?: LastStandArtifact,
   boons?: BoonArtifact,
+  episode?: PhysicalState['episode'],
 ): PhysicalState {
   const families = physicalFamilies(raw);
-  if (fronts) validateFrontArtifact(raw, fronts.artifact, fronts.catalog);
+  if (fronts) validateFrontArtifact(raw, fronts.artifact, fronts.catalog, fronts.campaignSkills);
   if (boons) {
     invariant(fronts, 'Benefici senza consumer fronti.');
     validateBoonArtifact(raw, boons);
@@ -342,6 +343,7 @@ export function freezePhysical(
   }
   const base = {
     version: fronts ? (2 as const) : (1 as const),
+    ...(episode ? { episode: structuredClone(episode) } : {}),
     ...(fronts ? { fronts } : {}),
     ...(boons ? { boons: structuredClone(boons) } : {}),
     ...(lastStand

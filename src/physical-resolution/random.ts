@@ -3,9 +3,12 @@ import { createHash } from 'node:crypto';
 /** Independent physical stream. Rejection avoids modulo bias; no Unity parity claim. */
 export class PhysicalRandom {
   cursor = 0;
-  constructor(private readonly entropy: string) {}
+  constructor(
+    private readonly entropy: string,
+    private readonly maximum = 56,
+  ) {}
   index(size: number) {
-    if (!Number.isInteger(size) || size < 1 || size > 56)
+    if (!Number.isInteger(size) || size < 1 || size > this.maximum)
       throw new Error('Popolazione casuale fisica non valida.');
     const bound = 0x100000000 - (0x100000000 % size);
     for (let n = 0; n < 128; n++) {

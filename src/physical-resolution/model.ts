@@ -1,3 +1,4 @@
+import { TitleOwnershipSchema } from '../shared/last-stand';
 import { FrozenFrontsSchema, FrontResourcesSchema, FrontSnapshotSchema } from './front-state';
 import { z } from 'zod';
 import { BoonArtifactSchema } from '../shared/boons';
@@ -38,7 +39,7 @@ export const PhysicalEvidenceSchema = z.strictObject({
   sourceFingerprint: HashSchema,
   revision: z.int().nonnegative(),
 });
-const copies = z.array(z.string().min(1).max(120)).max(56);
+const copies = z.array(z.string().min(1).max(120)).max(201);
 // Two initial shuffles, then at most two family selections per child of 32 × 32.
 const maxRandomRecords = 2 + 32 * 32 * 2 + 100000;
 // Each 28-copy shuffle needs 27 indices, with at most 128 words per index.
@@ -58,7 +59,7 @@ export const PhysicalSnapshotSchema = z.strictObject({
       z.strictObject({
         id: z.string().max(300),
         population: copies,
-        indices: z.array(z.int().min(0).max(55)).max(56),
+        indices: z.array(z.int().min(0).max(200)).max(201),
       }),
     )
     .max(maxRandomRecords),
@@ -66,6 +67,12 @@ export const PhysicalSnapshotSchema = z.strictObject({
   active: PhysicalActiveSchema.nullable(),
 });
 export const PhysicalStateSchema = z.strictObject({
+  episode: z
+    .strictObject({
+      version: z.literal('camp-departure-v1'),
+      titles: z.array(TitleOwnershipSchema).max(21),
+    })
+    .optional(),
   version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   cycle: CycleStateSchema.optional(),
   fronts: FrozenFrontsSchema.optional(),

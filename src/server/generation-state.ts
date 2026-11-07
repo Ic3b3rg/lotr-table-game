@@ -11,6 +11,7 @@ type GenerationState = {
   preparation: Preparation | null;
   players: { id: string }[];
   scenario?: unknown;
+  episodes?: { mapGeneration: MapGeneration | null }[] | undefined;
   journey: unknown;
   round: unknown;
   scout: unknown;
@@ -110,7 +111,7 @@ export function generationReceiptProblem(
   state: GenerationState,
   commands: { playerId: string; requestId: string; receipt: Receipt }[],
 ): string | null {
-  const g = state.mapGeneration;
+  const g = state.episodes?.[0]?.mapGeneration ?? state.mapGeneration;
   const records = commands.filter(
     (c) => c.receipt.type === 'GENERATE_ADVENTURE_MAP' || c.receipt.type === 'RESUME_ADVENTURE_MAP',
   );

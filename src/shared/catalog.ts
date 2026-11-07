@@ -32,6 +32,14 @@ export const SkillDefinitionSchema = z.strictObject({
   fate: z.int().min(0).max(2),
   traits: z.array(z.string().max(80)).max(8),
 });
+/** Campaign additions retain separate authority from the fixed 74-card initial catalog. */
+export const CampaignSkillDefinitionSchema = SkillDefinitionSchema.extend({
+  kind: z.enum(['role', 'title']),
+  number: z.int().min(1).max(99).nullable(),
+  success: z.int().min(0).max(9),
+  fate: z.int().min(0).max(9),
+});
+export type CampaignSkillDefinition = z.infer<typeof CampaignSkillDefinitionSchema>;
 export const ItemDefinitionSchema = z.strictObject({
   ...IdentityFields,
   rank: z.int().min(1).max(3),

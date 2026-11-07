@@ -56,7 +56,7 @@ export class LastStandRuntime {
       version: 1,
       algorithm: 'sha256-last-stand-counter-rejection-v1',
       heroes: this.p.heroes.map((h) => ({ heroId: h.heroId, difficulty: 1, defeated: false })),
-      titles: [],
+      titles: structuredClone(this.p.episode?.titles ?? []),
       selections: [],
       random: [],
       rngCursor: 0,

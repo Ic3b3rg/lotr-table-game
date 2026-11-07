@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { ContentIdSchema, CatalogSchema, type Catalog } from '../shared/catalog';
+import {
+  ContentIdSchema,
+  CatalogSchema,
+  type Catalog,
+  CampaignSkillDefinitionSchema,
+  type CampaignSkillDefinition,
+} from '../shared/catalog';
 import { HashSchema } from '../shared/generated-map';
 import { StatSchema } from '../shared/skill-tests';
 import { requirePhysicalFamily } from '../physical-content/catalog';
@@ -196,6 +202,8 @@ export const PolicyEffectSchema = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('convert-one-scout'), scout: z.literal(1) }),
   z.strictObject({ op: z.literal('convert-pair-alone') }),
   z.strictObject({ op: z.literal('after-prepare-inspiration') }),
+  z.strictObject({ op: z.literal('after-setup-inspiration') }),
+  z.strictObject({ op: z.literal('after-setup-scout'), count: z.int().min(1).max(4) }),
   z.strictObject({ op: z.literal('after-prepare-flip-fear') }),
   z.strictObject({ op: z.literal('after-guard-inspiration') }),
   z.strictObject({ op: z.literal('after-test-spend-inspiration') }),
@@ -242,6 +250,7 @@ export function compilePhysicalFronts(
   raw: unknown,
   input: unknown,
   catalog?: Catalog,
+  campaignSkills: CampaignSkillDefinition[] = [],
 ): FrontArtifact {
   // Bound recursion before Zod's recursive schema is entered.
   let nodes = 0;
@@ -278,10 +287,16 @@ export function compilePhysicalFronts(
   invariant(new Set(ir.policies.map((p) => p.id)).size === ir.policies.length, 'Policy duplicate.');
   if (ir.policies.length) {
     const c = CatalogSchema.parse(catalog);
+    const additions = z.array(CampaignSkillDefinitionSchema).max(221).parse(campaignSkills);
+    invariant(
+      new Set([...c.skills, ...additions].map((c) => c.id)).size ===
+        c.skills.length + additions.length,
+      'Abilità campagna duplicate.',
+    );
     for (const p of ir.policies) {
-      const d = (p.kind === 'hero' ? c.heroes : p.kind === 'item' ? c.items : c.skills).find(
-        (d) => d.id === p.id,
-      );
+      const d = (
+        p.kind === 'hero' ? c.heroes : p.kind === 'item' ? c.items : [...c.skills, ...additions]
+      ).find((d) => d.id === p.id);
       invariant(
         d &&
           (!('identityStatus' in d) || d.identityStatus === 'confirmed') &&
@@ -293,10 +308,15 @@ export function compilePhysicalFronts(
   const compiled = { ...ir, rawFingerprint: digest(raw) };
   return { ...compiled, fingerprint: digest(compiled) };
 }
-export function validateFrontArtifact(raw: unknown, artifact: FrontArtifact, catalog?: Catalog) {
+export function validateFrontArtifact(
+  raw: unknown,
+  artifact: FrontArtifact,
+  catalog?: Catalog,
+  campaignSkills: CampaignSkillDefinition[] = [],
+) {
   const { rawFingerprint: _, fingerprint: __, ...input } = FrontArtifactSchema.parse(artifact);
   invariant(
-    digest(compilePhysicalFronts(raw, input, catalog)) === digest(artifact),
+    digest(compilePhysicalFronts(raw, input, catalog, campaignSkills)) === digest(artifact),
     'Artifact fronti modificato.',
   );
 }

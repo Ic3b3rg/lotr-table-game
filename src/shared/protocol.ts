@@ -1,3 +1,8 @@
+import {
+  CampDepartureInputSchema,
+  CampDepartureOfferSchema,
+  CampDepartureReceiptSchema,
+} from './camp-departure';
 import { CampPreparationInputs, CampPreparationReceiptSchema } from './camp-preparation';
 import { CampItemInputSchema, CampItemReceiptSchema } from './camp-items';
 import { ScenarioViewSchema, EncounterIntentSchema, SourceSprintInputSchema } from './scenario';
@@ -48,7 +53,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(30),
+  schemaVersion: z.literal(31),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),
@@ -64,6 +69,7 @@ export const SessionSchema = z.strictObject({
   group: GroupSchema.nullable(),
   mapGeneration: MapGenerationSchema.nullable(),
   scenario: ScenarioViewSchema.nullable().default(null),
+  campDeparture: CampDepartureOfferSchema.optional(),
   combat: CombatViewSchema.optional(),
   encounterFingerprints: z.record(z.string().max(200), HashSchema).default({}),
   explorationFingerprints: z.record(z.string().max(100), HashSchema).default({}),
@@ -75,6 +81,7 @@ export const IdentitySchema = z.object({
 });
 export const ErrorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export const ScenarioInputSchema = z.discriminatedUnion('kind', [
+  CampDepartureInputSchema,
   CampSkillInputSchema,
   CampItemInputSchema,
   ...CampPreparationInputs,
@@ -353,6 +360,7 @@ export const ReceiptSchema = z.union([
       skill: CampSkillReceiptSchema.optional(),
       item: CampItemReceiptSchema.optional(),
       preparation: CampPreparationReceiptSchema.optional(),
+      departure: CampDepartureReceiptSchema.optional(),
     })
     .refine(
       (r) =>

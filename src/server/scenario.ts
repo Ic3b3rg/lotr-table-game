@@ -1,3 +1,4 @@
+import { answerBattleStartup } from '../scenario/battle-startup';
 import { validateCampPreparationCatalog } from '../scenario/camp-preparation-capability';
 import { validateCampItemsCatalog } from '../scenario/camp-items-capability';
 import { validateItemStartup } from '../scenario/item-capability';
@@ -146,7 +147,8 @@ export function applyScenario(
       );
     }
     beginScenario(state, parsed, physical);
-  } else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
+  } else if (state.scenario?.battle) answerBattleStartup(state, playerId, command);
+  else if (state.scenario?.conclusion && state.scenario.conclusion.stage !== 'conclusion')
     summaries = answerCampaign(state, playerId, command);
   else resumeScenario(state, playerId, command, physicalPath, undefined, explorationEntropy);
   const sc = state.scenario!;
@@ -188,6 +190,19 @@ export function allowScenarioPlay(state: State, command: Command) {
   }
   const original =
     sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;
+  if (sc.battle) {
+    if (command.type === 'SCENARIO_INPUT' && sc.pending) return;
+    if (
+      sc.phase === 'action' &&
+      ['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO', 'CYCLE_INPUT'].includes(command.type)
+    )
+      return;
+    throw new ApiError(
+      409,
+      'BATTLE_STARTUP_BOUNDARY',
+      'Completa l’allestimento. Il seguito degli incontri e dei round richiede la propria capacità fonte.',
+    );
+  }
   if (original && command.type === 'SCENARIO_INPUT' && sc.pending) return;
   if (original && command.type === 'COMBAT_INPUT' && state.combat?.active) return;
   if (
