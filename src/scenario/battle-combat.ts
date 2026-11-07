@@ -136,7 +136,7 @@ export function validateBattleCombatSource(departure: CampDepartureCapability) {
 }
 
 export function battleCombat(state: State) {
-  return state.scenario?.pack.manifest.battleStartup?.combat;
+  return state.scenario?.pack?.manifest?.battleStartup?.combat;
 }
 
 export function battleSpatial(state: State) {
