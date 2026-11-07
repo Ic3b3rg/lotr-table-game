@@ -195,7 +195,8 @@ export function createGuidedStart(sync: () => Promise<void>) {
         const q = session.scenario.pending;
         const synthetic = session.scenario.pack.manifest.scope === 'synthetic-physical-p0';
         const startup =
-          session.scenario.phase === 'setup' && !!session.scenario.pack.manifest.startupPreparation;
+          session.scenario.phase === 'setup' &&
+          !!(session.scenario.pack.manifest.startupPreparation || session.scenario.battle);
         topic = startup ? 'startup' : q?.kind === 'physical' ? 'physical' : 'startup';
         heading =
           session.scenario.phase === 'action'
@@ -278,6 +279,28 @@ export function createGuidedStart(sync: () => Promise<void>) {
               topic = 'physical';
             }
           }
+        }
+        if (session.scenario.battle) {
+          heading =
+            session.scenario.phase === 'setup'
+              ? 'Allestite la seconda avventura'
+              : 'Seconda avventura · Fase di Azione';
+          message = q?.actorPlayerId
+            ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario'} completa la scelta personale. Segui le carte e la capacità indicate; gli altri attendono. La ripresa conserva lo stesso passo.`
+            : q
+              ? 'Leggete e confermate l’istruzione della nuova mappa. Muri, terreni e gruppi seguono i piazzamenti indicati.'
+              : session.round?.heroes.every((h) => h.turnEnded)
+                ? 'I turni sono salvati. La prossima Ombra richiede le proprie istruzioni prima di proseguire.'
+                : session.round?.activeHeroId
+                  ? 'Il proprietario dell’eroe di turno viaggia dalla mappa o conclude il turno. Gli altri partecipanti attendono.'
+                  : 'Il proprietario del primo eroe apre il turno. Viaggiare usa una normale azione; i muri bloccano i rispettivi confini.';
+          target = q ? '#scenario' : session.round?.activeHeroId ? '#journey-map' : '#rounds';
+          label = q
+            ? 'Completa l’allestimento'
+            : session.round?.activeHeroId
+              ? 'Apri la mappa del turno'
+              : 'Apri il turno';
+          topic = 'startup';
         }
         if (session.scenario.pack.manifest.scope === 'original-encounter-v1') {
           if (q) {
@@ -465,7 +488,9 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : 'Concludete l’avventura';
         message =
           conclusion.stage === 'camp-preparation'
-            ? 'Ogni proprietario controlla ruolo, accessorio facoltativo, equipaggiamento e carte previste, poi conferma. Le scelte sono salvate; la partenza della prossima avventura non è ancora disponibile. Potete tornare al campo e rientrare.'
+            ? session.scenario.pack.manifest.campDeparture
+              ? 'Ogni proprietario controlla e conferma ruolo, accessorio ed equipaggiamento. Quando tutti sono pronti, concordate l’ordine di pesca e partite dalla preparazione.'
+              : 'Ogni proprietario controlla ruolo, accessorio facoltativo, equipaggiamento e carte previste, poi conferma. Le scelte sono salvate; la partenza della prossima avventura non è ancora disponibile. Potete tornare al campo e rientrare.'
             : conclusion.stage === 'camp'
               ? 'I premi sono già salvati nei ruoli che li hanno ottenuti. Ogni proprietario può scegliere il ruolo per il seguito. La prossima destinazione è indicata nel campo e attende il proprio materiale prima della partenza.'
               : `${conclusion.outcome === 'victory' ? 'La compagnia ha vinto l’avventura.' : 'L’avventura è terminata con una sconfitta.'} Un partecipante conferma per il gruppo i messaggi della conclusione, poi la destinazione e il racconto prima di entrare nel campo. Gli altri leggono e attendono; i premi si applicano una sola volta.`;

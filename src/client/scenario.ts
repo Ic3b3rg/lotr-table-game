@@ -6,7 +6,7 @@ import { findSkillCard } from '../shared/skill-cards';
 import { element, text } from './dom';
 import { sourceText } from './source-text';
 import { createGameActions } from './game-actions';
-import { cardButton, type CardReader } from './cards';
+import { campaignSkillCards, cardButton, type CardReader } from './cards';
 import { refreshActions } from './actions';
 import { createPhysicalControls } from './physical';
 import { STAT_LABELS } from '../shared/skill-tests';
@@ -116,7 +116,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
           : q?.kind === 'physical'
             ? current.physical?.active?.kind === 'gate'
               ? 'La conseguenza è sospesa. Carte e costi sono salvati; consulta il motivo qui sotto.'
-              : sc.phase === 'setup' && sc.pack.manifest.startupPreparation
+              : sc.phase === 'setup' && (sc.pack.manifest.startupPreparation || sc.battle)
                 ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. Completa le carte e l’eventuale capacità di preparazione qui sotto. Gli altri eroi attendono; l’avvio riprende dallo stesso passo.`
                 : tokenOwner
                   ? `${hero?.name.text ?? 'L’eroe indicato'} · agisce ${actor?.name ?? 'il suo proprietario'}. L’azione è già pagata. Risolvi la prova con le carte e le conversioni qui sotto; poi segui l’esito e le conseguenze del segnalino.`
@@ -164,7 +164,16 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                                           : turnsEnded
                                             ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
                                             : 'Avvio completato · scegliete il prossimo eroe di turno.';
-    if (status.textContent !== message) status.textContent = message;
+    const battleMessage = sc?.battle
+      ? sc.phase === 'setup'
+        ? q?.actorPlayerId
+          ? `${actor?.name ?? 'Il proprietario indicato'} completa le carte di ${hero?.name.text ?? 'questo eroe'}. ${current.physical?.active?.kind === 'decision' ? current.physical.active.title : 'Segui la capacità indicata.'} Le altre viste attendono. Ricaricare conserva questa scelta.`
+          : 'Avventura2 · seguite il piazzamento indicato sulla nuova mappa. Le scelte personali e ogni passaggio sono salvati.'
+        : activeHero
+          ? `Avventura2 · ${activeHero.name.text} è di turno. Viaggia dalla mappa; i muri bloccano il passaggio.`
+          : 'Avventura2 · allestimento completato. Scegliete il primo eroe di turno. Il seguito degli incontri richiede le proprie capacità.'
+      : message;
+    if (status.textContent !== battleMessage) status.textContent = battleMessage;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
     element('#scenario-cards-link').hidden = !openCards;
@@ -208,6 +217,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     if (sc?.pack.manifest.linked)
       element('#scenario-limit').textContent +=
         ' Nei due luoghi collegati, seguite visita, recupero e ritorno. La consegna indicata costa 1 azione; chi ha agito sceglie il destinatario del titolo, che lo prepara subito.';
+    if (sc?.battle)
+      element('#scenario-limit').textContent =
+        `Minaccia ${sc.globals.battleThreat ?? 0} · soglia ${sc.globals.battleThreshold ?? 0} · limite ${sc.globals.battleLimit ?? 0}. Sapienza ${sc.battle.campaign.lore}. I turni e il viaggio sulla mappa sono disponibili. Incontri, combattimento e prossima Ombra richiedono le proprie istruzioni prima di proseguire.`;
     refreshActions();
   }
   agreed.oninput = () => {
@@ -408,16 +420,12 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
             hero = content?.heroes.find((h) => h.id === c.heroId);
           const details = document.createElement('details'),
             summary = document.createElement('summary');
-          summary.textContent = `${hero?.name.text ?? c.heroId} · ${c.kind === 'scout' ? 'Scoperta 2 completata' : `Spirito 1 ${c.outcome === 'pass' ? 'superata' : 'fallita'} · ${c.converted} conversioni · +${c.reward} ispirazione`}`;
+          summary.textContent = `${hero?.name.text ?? c.heroId} · ${c.kind === 'scout' ? `Scoperta ${sc?.battle ? 3 : 2} completata` : `Spirito 1 ${c.outcome === 'pass' ? 'superata' : 'fallita'} · ${c.converted} conversioni · +${c.reward} ispirazione`}`;
           details.append(summary);
           const cards = text('ul', '', 'scenario-result-cards');
           for (const copy of c.revealed) {
             const card = content
-              ? findSkillCard(
-                  content,
-                  copy,
-                  session.physical?.lastStand?.titles.map((t) => t.skill),
-                )
+              ? findSkillCard(content, copy, campaignSkillCards(session))
               : undefined;
             const li = document.createElement('li');
             if (card) li.append(cardButton(card, (caller) => reader.card(card, caller)));

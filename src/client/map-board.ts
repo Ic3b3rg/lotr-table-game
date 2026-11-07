@@ -118,7 +118,7 @@ export function createMapBoard(select: (id: string) => void) {
       unexplored = new Set<string>(),
       markers: {
         id: string;
-        kind: 'enemy' | 'exploration';
+        kind: 'enemy' | 'exploration' | 'terrain' | 'threat' | 'search';
         label: string;
         x: number;
         y: number;
@@ -175,6 +175,16 @@ export function createMapBoard(select: (id: string) => void) {
         drawing.append(image);
       }
       drawing.append(highlights);
+      for (const wall of map.walls ?? [])
+        drawing.append(
+          svg('line', {
+            x1: String(wall.a.x),
+            y1: String(wall.a.y),
+            x2: String(wall.b.x),
+            y2: String(wall.b.y),
+            class: 'map-wall',
+          }),
+        );
       plane.append(drawing);
       for (const space of spaces.values()) plane.append(space.button);
       for (const hero of heroes) {
@@ -198,7 +208,15 @@ export function createMapBoard(select: (id: string) => void) {
       for (const marker of markers) {
         const token = text(
           'span',
-          marker.kind === 'enemy' ? '⚑' : '◇',
+          marker.kind === 'enemy'
+            ? '⚑'
+            : marker.kind === 'terrain'
+              ? '▧'
+              : marker.kind === 'threat'
+                ? '!'
+                : marker.kind === 'search'
+                  ? '?'
+                  : '◇',
           `map-token map-token-${marker.kind}`,
         );
         token.dataset.tokenId = marker.id;
@@ -224,9 +242,10 @@ export function createMapBoard(select: (id: string) => void) {
         space.highlight.classList.toggle('selected', id === selected);
       }
       for (const hero of heroes) {
-        const space = map.spaces.find((entry) => entry.id === hero.spaceId)!;
+        const space = map.spaces.find((entry) => entry.id === hero.spaceId);
         const actor = actors.get(hero.heroId)!;
-        actor.hidden = !!hero.removed;
+        actor.hidden = !!hero.removed || !space;
+        if (!space) continue; // The source may still be resolving cards before revealing this board.
         const together = heroes.filter((entry) => !entry.removed && entry.spaceId === hero.spaceId);
         const offset =
           (together.findIndex((entry) => entry.heroId === hero.heroId) -

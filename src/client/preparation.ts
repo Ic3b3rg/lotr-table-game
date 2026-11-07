@@ -4,7 +4,7 @@ import { definitionId, rosterProblem } from '../shared/preparation';
 import { findSkillCard } from '../shared/skill-cards';
 import { action } from './actions';
 import { randomIntent, request, RequestError } from './api';
-import { cardButton, picture, type CardReader } from './cards';
+import { campaignSkillCards, cardButton, picture, type CardReader } from './cards';
 import { element, text } from './dom';
 
 export function createPreparation(sync: () => Promise<void>, reader: CardReader) {
@@ -150,7 +150,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'equipment-link';
-      button.textContent = `${item.name.text} · I`;
+      button.textContent = `${item.name.text} · ${['', 'I', 'II', 'III'][item.rank]}`;
       button.onclick = () => reader.card(item, button);
       gear.append(button);
     }
@@ -166,11 +166,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
         ),
       );
       for (const copy of hero.prepared) {
-        const card = findSkillCard(
-          content,
-          copy,
-          current?.physical?.lastStand?.titles.map((t) => t.skill),
-        );
+        const card = findSkillCard(content, copy, campaignSkillCards(current));
         if (card) prepared.append(cardButton(card, (button) => reader.card(card, button)));
       }
       const deck = document.createElement('details');
@@ -181,11 +177,7 @@ export function createPreparation(sync: () => Promise<void>, reader: CardReader)
       );
       const list = document.createElement('ul');
       for (const copy of hero.composition.filter((value) => !hero.prepared.includes(value))) {
-        const card = findSkillCard(
-          content,
-          copy,
-          current?.physical?.lastStand?.titles.map((t) => t.skill),
-        );
+        const card = findSkillCard(content, copy, campaignSkillCards(current));
         if (!card) continue;
         const row = document.createElement('li');
         const button = document.createElement('button');

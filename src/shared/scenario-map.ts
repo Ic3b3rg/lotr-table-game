@@ -1,6 +1,98 @@
 import type { Session } from './protocol';
 export function scenarioMapView(session: Pick<Session, 'scenario' | 'journey' | 'mapGeneration'>) {
   const { journey, scenario: sc, mapGeneration: g } = session;
+  if (journey && sc?.battle) {
+    const visible = sc.tiles[0]?.visible,
+      cap = sc.pack.manifest.battleStartup!,
+      board = cap.board as {
+        compiled: {
+          selectedAlternative: string;
+          layouts: {
+            id: string;
+            placements: { id: string; cell: string | null; position: number[] }[];
+            patches: { vertices: number[][] }[];
+          }[];
+        };
+      };
+    const layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!,
+      all = layout.patches.flatMap((p) => p.vertices),
+      minX = Math.min(...all.map((p) => p[0]!)),
+      maxX = Math.max(...all.map((p) => p[0]!)),
+      maxY = Math.max(...all.map((p) => p[1]!)),
+      minY = Math.min(...all.map((p) => p[1]!)),
+      scale = 700 / Math.max(maxX - minX, maxY - minY);
+    const point = (v: number[]) => ({
+      x: 24 + (v[0]! - minX) * scale,
+      y: 24 + (maxY - v[1]!) * scale,
+    });
+    const groups = (sc.enemies?.groups ?? [])
+      .filter((g) => g.placed)
+      .map((g) => {
+        const model = cap.deployment.assets.find((a) => a.source === g.source)!.data;
+        return {
+          ...g,
+          spaceId: sc.spaceBindings.find((b) => b.sourceId === g.spaceId)!.id,
+          name: cap.deployment.texts[
+            String(g.figures.length > 1 ? model.KeyPlural : model.KeySingular)
+          ]!,
+          bonuses: g.bonuses.map((source) => {
+            const b = cap.deployment.assets.find((a) => a.source === source)!.data;
+            return {
+              name: cap.deployment.texts[String(b.KeyName)]!,
+              description: cap.deployment.texts[String(b.KeyDescription)]!,
+            };
+          }),
+        };
+      });
+    const placements = sc.battle.placements
+      .filter((p) => p.kind !== 'hero' && p.kind !== 'wall')
+      .map((p) => {
+        const a = layout.placements.find((a) => a.id === p.anchor)!;
+        return {
+          id: p.anchor,
+          kind:
+            p.kind === 'threat'
+              ? ('threat' as const)
+              : p.kind === 'search'
+                ? ('search' as const)
+                : ('terrain' as const),
+          label: (
+            {
+              bush: 'Cespuglio',
+              fire: 'Fuoco',
+              rock: 'Roccia',
+              threat: 'Minaccia',
+              search: 'Ricerca',
+            } as Record<string, string>
+          )[p.kind]!,
+          ...point(a.position),
+        };
+      });
+    const markers = [
+      ...placements,
+      ...groups.map((g) => ({
+        id: g.id,
+        kind: 'enemy' as const,
+        label: `${g.figures.length} ${g.name}`,
+        ...point(g.position),
+      })),
+    ];
+    const unexplored: string[] = [];
+    return {
+      definition: {
+        ...journey.definition,
+        spaces: visible ? journey.definition.spaces : [],
+        connections: visible ? journey.definition.connections : [],
+        walls: sc.battle.placements.some((p) => p.kind === 'wall')
+          ? (journey.definition.walls ?? [])
+          : [],
+      },
+      unexplored,
+      nodes: [],
+      groups,
+      markers,
+    };
+  }
   if (!journey || !sc || g?.status !== 'frozen') return null;
   const visible = new Set(
     g.projection.spaces
