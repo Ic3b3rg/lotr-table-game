@@ -1,5 +1,7 @@
 # Camp departure and first battle turn (#132)
 
+This is the implementer's delivery record before independent review. The [Root review and final verification](../reviews/2026-11-07-camp-departure.md) records four corrected P2 findings, both amended UI flows and the final **1,041/1,041** canonical result; its findings supersede the initial source-message/bonus handling described below.
+
 The implementation connects a confirmed first camp to a new battle episode, including three owners' physical choices and an ordinary legal movement. The positive fixtures are entirely invented. Original156 remains **STATIC/GATED**; this report does not certify original gameplay or declare the whole original adventure playable.
 
 ## Source and numeric contract
