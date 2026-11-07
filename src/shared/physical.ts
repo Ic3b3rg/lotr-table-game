@@ -215,6 +215,7 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
   interactionLookRules: InteractionRulesSchema.optional(),
+  interactionBefore: z.enum(['once', 'already-completed']).optional(),
   startupRules: z.literal('source-startup-preparation-v1').optional(),
   immediateSkillReset: z.literal(true).optional(),
   groupRules: z.literal('source-live-groups-v1').optional(),
@@ -462,6 +463,18 @@ export const PhysicalViewSchema = z.strictObject({
             heroId: ContentIdSchema,
             travelMoves: z.int().min(0).max(2),
             interactInspiration: z.int().nonnegative().optional(),
+            beforeInteract: z
+              .strictObject({
+                threat: z.strictObject({
+                  available: z.boolean(),
+                  reason: z.string().max(2000).nullable(),
+                }),
+                other: z.strictObject({
+                  available: z.boolean(),
+                  reason: z.string().max(2000).nullable(),
+                }),
+              })
+              .optional(),
           }),
         )
         .max(5),

@@ -1881,6 +1881,9 @@ body[data-scenario='setup'] #scout-discard-controls {
 .scenario-node-dialog::backdrop {
   background: #191c22bb;
 }
+.private-look-reader .company-help {
+  color: inherit;
+}
 
 .physical-front {
   border: 1px solid var(--line);

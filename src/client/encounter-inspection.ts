@@ -59,6 +59,8 @@ export function createEncounterInspection(
         ? (session!.physical?.cycle?.heroes.find((h) => h.heroId === hero?.heroId)
             ?.interactInspiration ?? 0)
         : 0;
+    const before = session!.physical?.cycle?.heroes.find((h) => h.heroId === hero?.heroId)
+      ?.beforeInteract?.[m.nodeType === 'threat' ? 'threat' : 'other'];
     const supported =
       sc.pack.manifest.scope === 'original-encounter-v1' &&
       playableScenarioPrefab(sc.pack, i.prefab!) &&
@@ -72,7 +74,7 @@ export function createEncounterInspection(
       position?.spaceId === space &&
       !position?.removed &&
       (progress?.actionsUsed ?? 2) < 2 &&
-      (hero?.inspiration ?? 0) >= cost &&
+      (before ? before.available : (hero?.inspiration ?? 0) >= cost) &&
       !sc.pending &&
       !session!.physical?.active &&
       i.visible &&
@@ -119,9 +121,12 @@ export function createEncounterInspection(
                 ? 'Conferma dal posto del proprietario dell’eroe di turno.'
                 : position?.spaceId !== space
                   ? 'Raggiungi questa casella prima di confermare. L’ispezione è gratuita.'
-                  : hero.inspiration < cost
-                    ? `Le carte attive richiedono ${cost} ispirazione prima di interagire.`
-                    : 'Questo eroe ha concluso le azioni disponibili.';
+                  : before && !before.available
+                    ? (before.reason ??
+                      'Una capacità prima di interagire non è ancora disponibile.')
+                    : hero.inspiration < cost
+                      ? `Le carte attive richiedono ${cost} ispirazione prima di interagire.`
+                      : 'Questo eroe ha concluso le azioni disponibili.';
     if (!i.visible && dialog.open) dialog.close();
     refreshActions();
   }

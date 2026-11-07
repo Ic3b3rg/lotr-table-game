@@ -10,6 +10,7 @@ import { compileSourceText } from '../scenario/text';
 import { sourceText } from './source-text';
 import { cardButton, campaignSkillCards, type CardReader } from './cards';
 import { findSkillCard } from '../shared/skill-cards';
+import { createPrivateLook } from './private-look';
 
 const quantities = (damage: number, fear: number) => `${damage} danni e ${fear} paure`;
 const gateMessages = {
@@ -38,11 +39,13 @@ export function createPhysicalControls(
   reader?: CardReader,
 ) {
   const root = element('#physical-resolution');
+  const privateLook = createPrivateLook();
   let key = '',
     current: Session | null = null;
   return {
     update(session: Session, player: Player | null, catalog: Catalog | null) {
       current = session;
+      privateLook.update(session, player);
       const view = session.physical,
         q = session.scenario?.pending;
       root.hidden =
@@ -313,27 +316,35 @@ export function createPhysicalControls(
         root.append(
           text(
             'h4',
-            purpose === 'group-order'
-              ? 'Ordine dei superstiti'
-              : purpose === 'negation'
-                ? `Negazione per ${name(active.heroId)}`
-                : active.kind === 'prevent'
-                  ? `Prevenzione per ${name(active.heroId)}`
-                  : active.kind === 'discard'
-                    ? `Scarto per ${name(active.heroId)}`
-                    : active.kind === 'decision'
-                      ? `Decisione per ${name(active.heroId)}`
-                      : `Conseguenza sospesa per ${name(active.heroId)}`,
+            purpose === 'interaction-look'
+              ? 'Lettura privata prima dell’interazione'
+              : purpose === 'interaction-order'
+                ? 'Ordine prima dell’interazione'
+                : purpose === 'group-order'
+                  ? 'Ordine dei superstiti'
+                  : purpose === 'negation'
+                    ? `Negazione per ${name(active.heroId)}`
+                    : active.kind === 'prevent'
+                      ? `Prevenzione per ${name(active.heroId)}`
+                      : active.kind === 'discard'
+                        ? `Scarto per ${name(active.heroId)}`
+                        : active.kind === 'decision'
+                          ? `Decisione per ${name(active.heroId)}`
+                          : `Conseguenza sospesa per ${name(active.heroId)}`,
           ),
         );
         root.append(
           text(
             'p',
-            purpose === 'group-order'
-              ? `Il gruppo concorda l’ordine. ${actor?.name ?? 'Il proprietario indicato'} registra la scelta con ${name(active.actorHeroId)}; il proprietario dell’eroe scelto risolve la sua prova e le conseguenze. Dopo tutti i superstiti riprende la fonte.`
-              : purpose === 'negation'
-                ? `${actor?.name ?? 'Il proprietario indicato'} nega per ${name(active.heroId)} e risolve il residuo. Poi prosegue l’ordine dei superstiti e riprende la fonte.`
-                : `Agisce ${actor?.name ?? 'il proprietario'} con ${name(active.actorHeroId)}.`,
+            purpose === 'interaction-order'
+              ? `Il gruppo concorda l’ordine. ${actor?.name ?? 'Il proprietario indicato'} registra la scelta; i costi già pagati e gli effetti completati restano salvati.`
+              : purpose === 'interaction-look'
+                ? `Solo ${actor?.name ?? 'il proprietario indicato'} legge la carta sul proprio dispositivo. Gli altri attendono; il seguito dell’interazione è salvato.`
+                : purpose === 'group-order'
+                  ? `Il gruppo concorda l’ordine. ${actor?.name ?? 'Il proprietario indicato'} registra la scelta con ${name(active.actorHeroId)}; il proprietario dell’eroe scelto risolve la sua prova e le conseguenze. Dopo tutti i superstiti riprende la fonte.`
+                  : purpose === 'negation'
+                    ? `${actor?.name ?? 'Il proprietario indicato'} nega per ${name(active.heroId)} e risolve il residuo. Poi prosegue l’ordine dei superstiti e riprende la fonte.`
+                    : `Agisce ${actor?.name ?? 'il proprietario'} con ${name(active.actorHeroId)}.`,
             'physical-actor',
           ),
         );
@@ -388,6 +399,7 @@ export function createPhysicalControls(
             player?.id === active.actorPlayerId &&
             (q?.kind === 'physical' || view.cycle?.pending)
           ) {
+            if (purpose === 'interaction-look') root.append(privateLook.controls());
             const form = decisionForm(active, session, catalog, (input) => {
               if (current) submit(bindPhysicalDecision(current, input));
             });

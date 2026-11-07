@@ -6,6 +6,8 @@ import type { FrontResources } from './front-state';
 import { requirePhysicalFamily } from '../physical-content/catalog';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import type { PhysicalState } from './model';
+import type { Preparation } from '../shared/preparation';
 
 /** An explicit reviewed coverage table, never detection from translated prose. */
 export function requireInteractionCoverage(
@@ -120,4 +122,55 @@ export function beforeOrderFeasible(effects: BeforeEffect[], inspiration: number
     } else return false;
   }
   return true;
+}
+
+/** One known-resource gate for both the command preflight and common UI offers. */
+export function beforeInteractionProblem(
+  p: PhysicalState,
+  heroId: string,
+  threat: boolean,
+  preparation?: Preparation,
+) {
+  try {
+    const resources = p.snapshot.resolution?.resources ?? {
+      preparation: preparation ?? p.cycle!.seed.preparation!,
+      depletion: [],
+      boons: [],
+    };
+    const effects = beforeInteractionEffects(
+      p.raw,
+      p.fronts!.artifact,
+      p.fronts!.catalog,
+      resources,
+      p.snapshot.areas.find((h) => h.heroId === heroId)!,
+      p.snapshot.resolution!.faceup,
+      threat,
+    );
+    const hero = resources.preparation.heroes.find((h) => h.heroId === heroId)!;
+    const cap = p.fronts!.catalog.heroes.find((h) => h.id === heroId)!.stats.inspiration;
+    if (!beforeOrderFeasible(effects, hero.inspiration, cap))
+      return {
+        code: 'INTERACTION_HIDDEN_FUNDING',
+        message:
+          'Gli obblighi prima dell’interazione non hanno un ordine garantito senza dipendere da un premio ancora nascosto. Questa combinazione richiede una regola di prosecuzione verificata. Nessun costo o carta è stato applicato.',
+      };
+    if (effects.some((e) => e.kind === 'look') && !hero.deck.length && !hero.discard.length)
+      return {
+        code: 'INTERACTION_CARDLESS',
+        message:
+          'Non è disponibile alcuna carta nel mazzo o negli scarti per guardare. Questa combinazione richiede una regola verificata. Nessun costo o carta è stato applicato.',
+      };
+    return null;
+  } catch {
+    return {
+      code: 'INTERACTION_BEFORE_CAPABILITY',
+      message:
+        'Un effetto attivo prima di interagire richiede una capacità ancora non disponibile. Nessun costo è stato applicato.',
+    };
+  }
+}
+
+export function beforeInteractionAvailability(p: PhysicalState, heroId: string, threat: boolean) {
+  const problem = beforeInteractionProblem(p, heroId, threat);
+  return { available: !problem, reason: problem?.message ?? null };
 }

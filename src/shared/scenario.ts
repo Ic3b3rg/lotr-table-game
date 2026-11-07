@@ -1021,6 +1021,12 @@ export const ScenarioSchema = z.strictObject({
             turnId: z.uuid(),
             requestId: z.string().min(24).max(80),
             cost: z.literal(1),
+            beforeInteraction: z
+              .strictObject({
+                version: z.literal('source-interaction-look-v1'),
+                runId: z.uuid(),
+              })
+              .optional(),
             entryChoice: z
               .strictObject({
                 state: z.int().nonnegative(),

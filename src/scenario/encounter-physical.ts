@@ -100,7 +100,12 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   return {
     profile: 'source-fronts-v1',
     ...(p.cycle?.interactionLookRules && (action.op === 'confirm' || action.op === 'choice')
-      ? { interactionLookRules: p.cycle.interactionLookRules }
+      ? {
+          interactionLookRules: p.cycle.interactionLookRules,
+          interactionBefore: attempt.beforeInteraction
+            ? ('already-completed' as const)
+            : ('once' as const),
+        }
       : {}),
     ...(isSearch || (searchOwner && threatTokenDefinition(sc.pack, searchOwner.definition))
       ? { immediateSkillReset: true as const }
@@ -203,6 +208,18 @@ export function openSourcePhysical(
 export function beginEncounterPhysical(state: State, effect: SourceEffect, action: ScenarioAction) {
   invariant(state.scenario!.play?.active, 'Incontro senza padre.');
   const parentId = openSourcePhysical(state, effect, action, encounterProgram(state, action));
+  if (
+    state.physical!.cycle?.interactionLookRules &&
+    (action.op === 'confirm' || action.op === 'choice')
+  ) {
+    const attempt = state.scenario!.play!.attempts.find(
+      (a) => a.id === state.scenario!.play!.active,
+    )!;
+    attempt.beforeInteraction ??= {
+      version: state.physical!.cycle!.interactionLookRules!,
+      runId: parentId,
+    };
+  }
   state.scenario!.tasks.push({
     kind: 'physical',
     instanceId: effect.instanceId,

@@ -297,7 +297,15 @@ function executeIntent(
     // Validate the complete original command on a disposable copy before opening any provocation.
     const work = structuredClone(state),
       ledger = work.physical!.cycle!;
-    executeEpisodeIntent(work, ledger, record, true);
+    if (c.type === 'INTERACT_SCENARIO' && cycle.interactionLookRules)
+      interactScenario(
+        work,
+        record.playerId,
+        { ...c, requestId: record.requestId, generation: state.generation },
+        undefined,
+        true,
+      );
+    else executeEpisodeIntent(work, ledger, record, true);
     const { expectedRevision: _, type: __, ...fields } = c;
     const origin = CombatOperationSchema.shape.origin.parse(
       c.type === 'SCENARIO_INPUT'
@@ -321,6 +329,9 @@ function executeIntent(
       provoked: [],
       status: 'provoking',
       reason: null,
+      ...(c.type === 'INTERACT_SCENARIO' && cycle.interactionLookRules
+        ? { interactionOrder: { version: cycle.interactionLookRules, stage: 'plan' as const } }
+        : {}),
     };
     state.combat.operation = op;
     if (op.origin.kind === 'source-sprint') state.scenario!.pending = null;

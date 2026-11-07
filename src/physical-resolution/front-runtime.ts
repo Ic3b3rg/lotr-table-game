@@ -2228,7 +2228,8 @@ class FrontReplay {
       this.run.program.profile === 'source-fronts-v1' &&
       this.run.program.interactionLookRules
     ) {
-      this.beforeInteraction(hero, path, threat);
+      if (this.run.program.interactionBefore !== 'already-completed')
+        this.beforeInteraction(hero, path, threat);
       return;
     }
     const effects = this.eventEffects(hero, event, sufferedFear);

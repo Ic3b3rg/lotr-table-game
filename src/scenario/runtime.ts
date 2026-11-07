@@ -2145,6 +2145,7 @@ export function interactScenario(
   playerId: string,
   c: Extract<Command, { type: 'INTERACT_SCENARIO' }>,
   probe?: SourceProbe,
+  validateOnly = false,
 ) {
   const sc = state.scenario!,
     i = sc.instances.find((i) => i.id === c.instanceId),
@@ -2271,6 +2272,7 @@ export function interactScenario(
     if (linkedDefinition(sc.pack, i!.definition)) requireLinkedTitle(sc.pack, state.physical!.raw);
     preflightContinuation(state, (work, probe) => interactScenario(work, playerId, c, probe));
   }
+  if (validateOnly) return;
   progress.actionsUsed++;
   const id = cycleUUID({ scenario: sc.id, playerId, request: c.requestId });
   sc.play!.attempts.push({

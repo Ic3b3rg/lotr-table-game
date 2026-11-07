@@ -220,7 +220,12 @@ export function allowScenarioPlay(state: State, command: Command) {
     );
   }
   if (original && command.type === 'SCENARIO_INPUT' && sc.pending) return;
-  if (original && command.type === 'COMBAT_INPUT' && state.combat?.active) return;
+  if (
+    original &&
+    command.type === 'COMBAT_INPUT' &&
+    (state.combat?.active || state.combat?.operation?.interactionOrder)
+  )
+    return;
   if (
     original &&
     command.type === 'START_ATTACK' &&
