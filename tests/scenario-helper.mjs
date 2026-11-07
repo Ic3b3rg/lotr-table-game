@@ -192,6 +192,7 @@ export async function readyScenario(
   edit = () => {},
   catalogEdit = () => {},
   generationEdit = () => {},
+  partySize = 2,
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'lotr-scenario-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -220,6 +221,7 @@ export async function readyScenario(
     },
     { LOTR_SCENARIO_PACK: scenarioPath },
     catalog,
+    partySize,
   );
   if ((await generate(ready.host, ready.player)).status !== 200)
     throw Error('fixture generation failed');

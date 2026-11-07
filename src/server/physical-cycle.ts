@@ -34,6 +34,7 @@ import { liveGroupRules } from '../scenario/live-groups';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
+import { requireInteractionCoverage } from '../physical-resolution/interaction-look';
 import {
   interactScenario,
   exploreScenario,
@@ -1078,6 +1079,9 @@ export function initializeOriginalCycle(state: State) {
   p.version = 3;
   p.cycle = {
     version: 2,
+    ...(p.fronts?.artifact.interactionLook
+      ? { interactionLookRules: p.fronts.artifact.interactionLook.version }
+      : {}),
     seed: {
       revision: state.revision + 1,
       round: structuredClone(state.round!),
@@ -1096,6 +1100,16 @@ function originalSeedState(state: State): State {
     cycle = p.cycle!,
     seed = cycle.seed,
     sc = seed.scenario;
+  invariant(
+    cycle.interactionLookRules === p.fronts?.artifact.interactionLook?.version,
+    'Attivazione interazione diversa dal confine fonte.',
+  );
+  if (cycle.interactionLookRules)
+    requireInteractionCoverage(
+      p.fronts!.artifact,
+      p.fronts!.catalog,
+      p.heroes.map((h) => h.heroId),
+    );
   invariant(
     cycle.version === 2 && sc && seed.preparation && seed.skillTest !== undefined,
     'Ledger originale senza confine completo.',

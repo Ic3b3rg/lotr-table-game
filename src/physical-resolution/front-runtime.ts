@@ -28,6 +28,11 @@ import type { ScenarioTitleGrant } from '../shared/scenario-title';
 import { AttackModifierSchema } from '../shared/combat';
 import type { BoonKind } from '../shared/boons';
 import { BoonKindSchema } from '../shared/combat';
+import {
+  beforeInteractionEffects,
+  beforeOrderFeasible,
+  afterKnownEffect,
+} from './interaction-look';
 import type {
   AttackTestChild,
   CompanyClause,
@@ -2218,6 +2223,14 @@ class FrontReplay {
     );
   }
   private event(hero: number, event: string, path: string, threat: boolean, sufferedFear: number) {
+    if (
+      event === 'before-interact' &&
+      this.run.program.profile === 'source-fronts-v1' &&
+      this.run.program.interactionLookRules
+    ) {
+      this.beforeInteraction(hero, path, threat);
+      return;
+    }
     const effects = this.eventEffects(hero, event, sufferedFear);
     const left = effects.map((_, n) => n);
     while (left.length) {
@@ -2233,6 +2246,98 @@ class FrontReplay {
       this.eventEffect(hero, effects[n]!, `${path}/trigger-${n}`, threat, `${path}/optional-${n}`);
     }
     if (event === 'rally-scout') this.scout(hero, 2, `${path}/rally`, true);
+  }
+  private beforeInteraction(hero: number, path: string, threat: boolean) {
+    const h = this.hero(hero),
+      cap = this.catalog.heroes.find((d) => d.id === h.heroId)!.stats.inspiration;
+    const left = beforeInteractionEffects(
+      this.p.raw,
+      this.artifact,
+      this.catalog,
+      this.resources,
+      this.s.areas[hero]!,
+      [...this.faceup],
+      threat,
+    );
+    invariant(beforeOrderFeasible(left, h.inspiration, cap), 'Obblighi prima non garantiti.');
+    invariant(
+      !left.some((e) => e.kind === 'look') || h.deck.length + h.discard.length > 0,
+      'Nessuna carta disponibile per guardare.',
+    );
+    const window = (this.r.interactionWindow = {
+      runId: this.run.id,
+      child: this.child,
+      heroId: h.heroId,
+      remaining: left,
+      completed: [] as string[],
+      activeEffect: null as string | null,
+    });
+    while (left.length) {
+      const choice = this.choose(
+        hero,
+        `${path}/before-order-${left.length}`,
+        'Il gruppo concorda l’ordine degli effetti prima dell’interazione.',
+        left.map((e) => ({
+          id: e.id,
+          label: e.label,
+          ...(!beforeOrderFeasible(
+            left.filter((x) => x !== e),
+            afterKnownEffect(e, h.inspiration, cap),
+            cap,
+          )
+            ? { unavailable: 'Questo ordine non garantisce il pagamento degli obblighi.' }
+            : {}),
+        })),
+        hero,
+        'interaction-order',
+      );
+      const effect = left.find((e) => e.id === choice)!;
+      window.activeEffect = effect.id;
+      if (effect.kind === 'look') {
+        this.frame(`${path}/look`, hero, null, 'private-look', 1, () => {
+          if (!h.deck.length) {
+            h.deck = this.deckRandom(`${path}/look-reset`, h.discard, h.discard.length);
+            h.discard = [];
+          }
+          const copy = this.p.episode ? h.deck.at(-1)! : h.deck[0]!;
+          invariant(copy, 'Nessuna carta disponibile per guardare.');
+          const card = this.skills.find((s) => s.id === definitionId(copy))!;
+          invariant(card, 'Carta guardata senza definizione congelata.');
+          const before = h.inspiration;
+          if (card.fate > 0) this.inspiration(hero);
+          (this.r.privateLooks ??= []).push({
+            runId: this.run.id,
+            child: this.child,
+            heroId: h.heroId,
+            copy,
+            skillId: card.id,
+            fate: card.fate,
+            reward: h.inspiration - before,
+          });
+          const input = this.ask(hero, `${path}/look-continue`, {
+            purpose: 'interaction-look',
+            mode: 'choose',
+            title:
+              'Guarda la carta superiore sul tuo dispositivo. La carta resta al suo posto; il premio è già calcolato.',
+            options: [{ id: 'continue', label: 'Continua l’interazione' }],
+            minimum: 1,
+            maximum: 1,
+            remaining: empty(),
+          });
+          invariant(
+            input.kind === 'physical-choice' && input.option === 'continue',
+            'Il look richiede la continuazione della stessa interazione.',
+          );
+        });
+      } else if (effect.kind === 'spend') {
+        invariant(h.inspiration > 0, 'Costo prima non pagabile.');
+        h.inspiration--;
+      } else this.inspiration(hero);
+      left.splice(left.indexOf(effect), 1);
+      window.completed.push(effect.id);
+      window.activeEffect = null;
+    }
+    delete this.r.interactionWindow;
   }
   private eventEffect(
     hero: number,

@@ -15,6 +15,7 @@ import { StatSchema } from './skill-tests';
 import { ScenarioTitleGrantSchema } from './scenario-title';
 import { ItemGrantSchema } from './item-inventory';
 import { SearchRecoverySchema } from './search-recovery';
+import { InteractionRulesSchema } from './interaction-look';
 
 export const SourceTestViewSchema = z.strictObject({
   heroId: ContentIdSchema,
@@ -213,6 +214,7 @@ const FrontChildSchema = z.discriminatedUnion('kind', [
 ]);
 export const FrontPhysicalProgramSchema = LegacyPhysicalProgramSchema.extend({
   profile: z.literal('source-fronts-v1'),
+  interactionLookRules: InteractionRulesSchema.optional(),
   startupRules: z.literal('source-startup-preparation-v1').optional(),
   immediateSkillReset: z.literal(true).optional(),
   groupRules: z.literal('source-live-groups-v1').optional(),
@@ -258,7 +260,7 @@ const activeBase = {
   actorPlayerId: z.uuid(),
 };
 export const PhysicalDecisionSchema = z.strictObject({
-  purpose: z.enum(['group-order', 'negation']).optional(),
+  purpose: z.enum(['group-order', 'negation', 'interaction-order', 'interaction-look']).optional(),
   scoutTopAllowed: z.boolean().optional(),
   scoutPrepareAllowed: z.literal(false).optional(),
   ...activeBase,

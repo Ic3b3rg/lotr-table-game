@@ -16,6 +16,7 @@ import { requiresProvocation } from '../scenario/deployment';
 import { validateFailureParty, answerCampaign } from '../scenario/conclusion';
 import { validateCampCatalog } from '../scenario/camp-capability';
 import { validateStartupPreparationSource } from '../scenario/startup-preparation';
+import { requireInteractionCoverage } from '../physical-resolution/interaction-look';
 
 export function scenarioOffer(state: State, path: string) {
   const base = {
@@ -145,6 +146,21 @@ export function applyScenario(
         'ITEM_SOURCE_REQUIRED',
         'L’oggetto richiede carta, quantità, inventario e capacità verificati prima dell’avvio. Nessuna modifica è stata applicata.',
       );
+    }
+    if (physical?.fronts?.interactionLook) {
+      try {
+        requireInteractionCoverage(
+          physical.fronts,
+          state.content!,
+          state.preparation.heroes.map((h) => h.heroId),
+        );
+      } catch {
+        throw new ApiError(
+          409,
+          'INTERACTION_BEFORE_CAPABILITY',
+          'La copertura delle capacità prima di interagire è incompleta o non corrisponde al catalogo. Nessun avvio è stato applicato.',
+        );
+      }
     }
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.battle) answerBattleStartup(state, playerId, command);

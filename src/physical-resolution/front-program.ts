@@ -11,6 +11,8 @@ import { StatSchema } from '../shared/skill-tests';
 import { requirePhysicalFamily } from '../physical-content/catalog';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { InteractionCoverageSchema } from '../shared/interaction-look';
+import { requireInteractionCoverage } from './interaction-look';
 
 const family = z.enum(['damage', 'fear']);
 const scope = z.enum([
@@ -178,6 +180,8 @@ export const PersistentOpSchema = z.union([
   }),
 ]);
 export const PolicyEffectSchema = z.discriminatedUnion('op', [
+  z.strictObject({ op: z.literal('before-interact-look'), reward: z.literal(1) }),
+  z.strictObject({ op: z.literal('before-interact-inspiration'), amount: z.literal(1) }),
   z.strictObject({ op: z.literal('rest'), n: z.int().min(1).max(5) }),
   z.strictObject({ op: z.literal('guard'), n: z.int().min(1).max(5) }),
   z.strictObject({ op: z.literal('paid-prevent'), n: z.literal(1) }),
@@ -214,6 +218,7 @@ export const PolicyEffectSchema = z.discriminatedUnion('op', [
 ]);
 export const FrontInputSchema = z.strictObject({
   version: z.literal(1),
+  interactionLook: InteractionCoverageSchema.optional(),
   definitions: z
     .array(
       z.strictObject({
@@ -305,6 +310,29 @@ export function compilePhysicalFronts(
         'Policy senza definizione confermata corrispondente.',
       );
     }
+  }
+  const beforePolicies = ir.policies.filter((p) =>
+    p.effects.some(
+      (e) => e.op === 'before-interact-look' || e.op === 'before-interact-inspiration',
+    ),
+  );
+  invariant(
+    !beforePolicies.length || ir.interactionLook,
+    'Policy interazione senza attivazione prospettiva.',
+  );
+  if (ir.interactionLook) {
+    const c = CatalogSchema.parse(catalog);
+    requireInteractionCoverage(
+      { ...ir, rawFingerprint: digest(raw), fingerprint: digest(ir) },
+      c,
+      ir.interactionLook.heroes.map((h) => h.heroId),
+    );
+    invariant(
+      beforePolicies.every(
+        (p) => p.kind === 'hero' && ir.interactionLook!.heroes.some((h) => h.heroId === p.id),
+      ),
+      'Policy prima non coperta.',
+    );
   }
   const compiled = { ...ir, rawFingerprint: digest(raw) };
   return { ...compiled, fingerprint: digest(compiled) };

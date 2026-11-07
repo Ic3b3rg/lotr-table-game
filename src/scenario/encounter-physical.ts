@@ -99,6 +99,9 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
   });
   return {
     profile: 'source-fronts-v1',
+    ...(p.cycle?.interactionLookRules && (action.op === 'confirm' || action.op === 'choice')
+      ? { interactionLookRules: p.cycle.interactionLookRules }
+      : {}),
     ...(isSearch || (searchOwner && threatTokenDefinition(sc.pack, searchOwner.definition))
       ? { immediateSkillReset: true as const }
       : {}),
