@@ -566,6 +566,10 @@ function hasDepartureForms(raw: object) {
         ['battle-equipment', 'battle-loss-weakness'].includes(String(object(c).kind)) ||
         (object(c).kind === 'startup-scout' && object(c).count !== undefined),
     );
+  const journeyForms = (v: unknown) => {
+    const definition = object(object(v).definition);
+    return definition.topology === 'battle' || definition.walls !== undefined;
+  };
   const physicalForms = (v: unknown) => {
     const p = object(v),
       f = object(p.fronts);
@@ -580,6 +584,11 @@ function hasDepartureForms(raw: object) {
           program(object(r).program) ||
           object(object(object(r).context).preparation).episode !== undefined,
       ) ||
+      list(object(p.snapshot).parents).some((parent) =>
+        list(object(parent).results).some((result) =>
+          ['battle-equipment', 'battle-loss-weakness'].includes(String(object(result).kind)),
+        ),
+      ) ||
       list(object(f.artifact).policies).some((p) =>
         list(object(p).effects).some((e) =>
           ['after-prepare-scout', 'after-setup-scout', 'after-setup-inspiration'].includes(
@@ -591,6 +600,8 @@ function hasDepartureForms(raw: object) {
   };
   return (
     state.episodes !== undefined ||
+    journeyForms(state.journey) ||
+    journeyForms(seed.journey) ||
     physicalForms(physical) ||
     object(seed.preparation).episode !== undefined ||
     object(state.preparation).episode !== undefined ||
@@ -602,6 +613,7 @@ function hasDepartureForms(raw: object) {
       return (
         m.campDeparture !== undefined ||
         m.battleStartup !== undefined ||
+        m.scope === 'battle-startup-v1' ||
         sc.battle !== undefined ||
         list(sc.commands).some((c) => object(c).kind === 'camp-depart')
       );

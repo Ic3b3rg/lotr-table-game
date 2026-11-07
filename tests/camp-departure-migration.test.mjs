@@ -19,12 +19,19 @@ test('schemas1–30 reject departure forms at their exact authoritative location
       physical: { runs: [{ program: { children: [{ kind }] } }] },
     })),
     { physical: { runs: [{ program: { children: [{ kind: 'startup-scout', count: 3 }] } }] } },
+    { physical: { snapshot: { parents: [{ results: [{ kind: 'battle-equipment' }] }] } } },
+    { physical: { snapshot: { parents: [{ results: [{ kind: 'battle-loss-weakness' }] }] } } },
+    { journey: { definition: { topology: 'battle' } } },
+    { journey: { definition: { walls: [] } } },
+    { physical: { cycle: { seed: { journey: { definition: { topology: 'battle' } } } } } },
+    { physical: { cycle: { seed: { journey: { definition: { walls: [] } } } } } },
     ...['after-prepare-scout', 'after-setup-scout', 'after-setup-inspiration'].map((op) => ({
       physical: { fronts: { artifact: { policies: [{ effects: [{ op }] }] } } },
     })),
     { physical: { cycle: { records: [{ intent: { input: { kind: 'camp-depart' } } }] } } },
   ];
   for (const scenario of [
+    { pack: { manifest: { scope: 'battle-startup-v1' } } },
     { pack: { manifest: { campDeparture: {} } } },
     { pack: { manifest: { battleStartup: {} } } },
     { battle: {} },
