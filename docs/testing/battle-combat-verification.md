@@ -24,7 +24,7 @@ Recovery tests SIGKILL immediately before/after SQLite COMMIT at production Stor
 | TypeScript, full formatting, build, diff check                | Passed                                                                                |
 | Static original A1, #126 and #128 checks                      | Unchanged serialized outputs; no original State/gameplay                              |
 | Native three owners plus shared PC                            | Passed; actual attack/reply/return, UI restore, reload and multiple ready-group order |
-| Final changed-product canonical                               | Passed alone using the existing concurrency4 npm test command                         |
+| Worker changed-product canonical                              | Passed alone using the existing concurrency4 npm test command                         |
 
 ```text
 ℹ tests 1111
@@ -51,4 +51,37 @@ The implementation is described in [the specification](../planning/battle-combat
 
 Missing mandatory physical/terminal context, unsupported carried definitions/card windows, missing party source identity, unknown boon stock or callback closure gate before costs/information/entropy. Attack in a fire-pit cell and possible negation in a boulder cell—including reachable forced-movement spaces—remain gated until their test-window consumers exist. Optional bush/terrain interactions, further A2 encounters/token behavior, A2 Shadow and A3 startup retain their boundaries. Pools are preserved when an operation is gated.
 
-Original quantities remain NULL/UNVERIFIED/BLOCKED (#57); original156 stays STATIC/GATED. No original State/party/save was constructed or executed, no provisional stock/seed/outcome bypass was used, and this slice does not certify issue#33, the whole original campaign, other issue acceptance, hardware or Unity/JIT. Parent owns fresh Standards/Spec review, integration and actual137 closure.
+Original quantities remain NULL/UNVERIFIED/BLOCKED (#57); original156 stays STATIC/GATED. No original State/party/save was constructed or executed, no provisional stock/seed/outcome bypass was used, and this slice does not certify issue#33, the whole original campaign, other issue acceptance, hardware or Unity/JIT. Root review and final verification are recorded below; this slice does not close the separate original-game acceptance.
+
+## Root review and final verification
+
+Reviewed worker HEAD `82f2edd8df09a2ad6522f47e0ac1caca18788203` against main `73be92d54b4152708f0ca1834fcd33bca6cbe474`. Root audited the worker's complete 4,411-file private manifest and final raw output, then corrected the independently reproduced findings in `777de33eee87d87784e194c6d2da9b57ccc56878`.
+
+### Standards
+
+One required P2 was fixed: the battle command gate now admits an offered card-granted child attack while the existing controller still validates recipient, owner, active parent/stage, prepared source copy and grant cost. Ordinary attacks remain blocked during pending combat. A fresh scoped re-review found the issue addressed and no new required or optional findings. Its independent in-memory probe verified child/parent return, one source-copy discard and no extra action, and killed a mutation of the new grant gate.
+
+### Spec
+
+Three required findings were fixed. Public campaign skill inventories are sorted copies and the public conclusion omits the private episode hash; private carry order and saved replay authority remain intact. A selected forced hero step now asks its owner for ready-group order before opening each prospective A2 provocation child; historical journey ordering remains unchanged. Boulder negation gates now apply only when an enemy response can execute, while fire and mandatory physical/terminal gates remain before costs. A fresh scoped Spec re-review found all three addressed and no new finding or scope creep.
+
+Four focused technical regressions cover these fixes; the real terminal HTTP test also checks public hash omission and sorted inventory. The complete focused integration set passed **31/31**, exit0, zero failures/skips/cancellations/todos, including source/migration, performed defeat, movement return, before/after-COMMIT SIGKILL, packless recovery and historical paid-child return. Build, types, format and diff checks passed. Initial fixture-setup and incorrect-expectation failures were preserved accurately rather than described as product RED. Positive technical fixtures remain distinct from the worker's native UI acceptance.
+
+Exactly one final canonical ran alone on frozen product HEAD `777de33eee87d87784e194c6d2da9b57ccc56878`, with owned temporary directory/cache and updater disabled from its first npm subprocess:
+
+```text
+ℹ tests 1115
+ℹ suites 0
+ℹ pass 1115
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1638169.134542
+```
+
+Actual npm and driver exits were0; stderr was empty. Root verified the raw footer, all ten final evidence-manifest entries and all **657** before/after/current source, dist, tests, scripts and configuration pins. The freeze manifest is108898 bytes, SHA256 `30545a95c9a962878bcd122f7cb4bb02269fb8cf783f721aab9bdc8aea0cf1a7`. Final evidence manifest:2311 bytes, SHA256 `87d01439f00c73b741ed104ee588497bb156b0212434239355d4fcf4640b8b84`. Root/owned final reports are byte-identical,6432 bytes, SHA256 `41e0c037ea5b08929b54e489d345f0f04fb22403394c4c22b1bba45f89187a9f`. The subsequent verification-document update changes no product/test/configuration bytes and does not require repeating the unchanged green suite.
+
+Ruling: retain the explicitly irrecoverable early private-parser/tool diagnostic logging gap as a historical evidence limitation. Raw outputs/exits were not fabricated and those early checks are not called fully audited. Cost if wrong: missing diagnostics could obscure a source-preparation assumption; the pinned current inputs, derived proof, selected primaries and complete final worker/canonical logs remain reviewable. The successful final canonical does not repair that history or certify original gameplay.
+
+The original #57 quantity block, original156 STATIC/GATED, unsupported terrain windows, future A2 encounters/Shadow/A3 and physical-device/Unity limits above remain in force. No Root build or deployment to the running table was performed.
