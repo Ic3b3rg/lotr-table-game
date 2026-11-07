@@ -17,16 +17,22 @@ sono riportati nell'ordine Determinato / Infervorato / Nascosto.
 | Spagnola | [Asmodee, Aprende a jugar](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Reglas_Viaje_Tierra_Media.pdf), p3–4 |15 cartas de Ventaja; Determinación / Valentía / Ocultación. Nessuna ripartizione quantitativa in queste pagine. |
 | Tedesca | [Asmodee, Spielregel](https://asmodee-resources.azureedge.net/media/germanyprod/Produkte/HdR%3A%20Reise%20durch%20Mittelerde/Downloads/HdR_ReiseDurchMittelerde-Spielregel.pdf), p3–4 |15 Gunstkarten; Entschlossen / Ermutigt / Versteckt. Il termine pertinente è Gunstkarten; i tre tipi vengono separati, senza conteggio individuale. |
 | Polacca | [Rebel, Instrukcja](https://files.rebel.pl/files/instrukcje/Instrukcja_Wladca-Pierscieni-Podroze-przez-Srodziemie.pdf), p3–4 |15 kart atutów; Determinacja / Śmiałość / Ukrycie. Distingue tre tipi, senza distribuzione delle copie. |
-| Russa | [Scheda dell'editore Hobby World](https://hobbyworld.ru/vlastelin-kolec-stranstvija-v-sredizeme), sezione Комплектация |15 carte vantaggio complessive. La lista non le suddivide per nome. Il tentativo di download del manuale introduttivo ha restituito un file parziale: non viene usato per attestare un inventario completo. |
-| Ceca | [Scheda Asmodee](https://www.asmodee.cz/product/pan-prstenu-putovani-po-stredozemi/) e [manuale su Playnaut](https://www.playnaut.cz/user/documents/upload/pdf%20pravidla%20a%20tak/pan-prstenu-putovani-po-stredozemi-pravidla-hry-cz%20%281%29.pdf), p3–4 |Il PDF reperito sul sito commerciale indica15 karet výhod e tre tipi. Il download non è attestato come proveniente dall'editore; rimane una pista con provenienza distinta. |
+| Russa | [Scheda dell'editore Hobby World](https://hobbyworld.ru/vlastelin-kolec-stranstvija-v-sredizeme), sezione Комплектация; [Справочник](https://hobbyworld.ru/download//rules/Vlastelin_Kolets_Spravochnik.pdf), p12, §35.1 |15 carte complessive nella scheda; Решительность / Смелость / Скрытность nel riferimento ufficiale completo di32 pagine. Il manuale introduttivo scaricato parzialmente è distinto da questo riferimento e non attesta un inventario completo. |
+| Ceca | [Scheda Asmodee](https://www.asmodee.cz/product/pan-prstenu-putovani-po-stredozemi/) e [manuale su Playnaut](https://www.playnaut.cz/user/documents/upload/pdf%20pravidla%20a%20tak/pan-prstenu-putovani-po-stredozemi-pravidla-hry-cz%20%281%29.pdf), p3–4 e14, paragrafo Karty výhod |Il PDF commerciale indica15 karet výhod e tre tipi. P14 distingue le forme nel testo odhodlaní / povzbuzení / ukrytí, corrispondenti ai tre benefici. Il download non è attestato come proveniente dall'editore; la provenienza resta distinta. |
 
 Sono stati acquisiti anche i riferimenti ufficiali [francese](https://cdn.svc.asmodee.net/asmodee-experts/uploads/2021/10/SdA_Voyage-en-Terre-du-Milieu-Guide-de-Reference_LR.pdf),
 [spagnolo](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Referencia_Viaje_Tierra_Media.pdf),
 [tedesco](https://asmodee-resources.azureedge.net/media/germanyprod/Produkte/HdR%3A%20Reise%20durch%20Mittelerde/Downloads/HdR_ReiseDurchMittelerde-Referenzhandbuch.pdf)
 e [polacco](https://files.rebel.pl/files/instrukcje/Kompendium-zasad_Wladca-Pierscieni-Podroze-przez-Srodziemie.pdf),
-con FAQ/errata tedesche e polacche. Le ricerche testuali mirate sui benefici
-non hanno prodotto una dichiarazione esplicita delle tre quantità. Questa
-verifica non è una lettura visiva integrale di ogni pagina dei documenti.
+con [FAQ tedesche2.1](https://asmodee-resources.azureedge.net/media/germanyprod/Produkte/HdR%3A%20Reise%20durch%20Mittelerde/Downloads/HdR_Reise%20durch%20Mittelerde%20FAQ%20v2.1_DE.pdf)
+ed [errata polacche](https://files.rebel.pl/files/instrukcje/Errata_Wladca-Pierscieni-Podroze-przez-Srodziemie.pdf).
+Il controllo testuale mirato riguarda l'intera estrazione delle pagine1–32
+di ciascuno dei cinque riferimenti FR/ES/DE/PL/RU, le due pagine delle FAQ
+tedesche e l'unica pagina delle errata polacche. La selezione dei passaggi
+usa i termini dei benefici nelle rispettive lingue; per le FAQ il passaggio
+pertinente è a p2, per le errata polacche a p1. Non è emersa una dichiarazione
+esplicita delle tre quantità in questo controllo. È una ricerca nel testo
+estratto, non una lettura visiva integrale dei documenti.
 
 ## Metodo, inferenze e limiti
 
@@ -38,7 +44,8 @@ forniscono autorità sui conteggi.
 
 Root ha completato la ricerca interrotta riutilizzando i download esistenti,
 ricontrollato le pagine3–4 dei cinque PDF introduttivi selezionati e visto
-le immagini di componenti FR/p3 e preparazione DE/p4. Le immagini mostrano
+le immagini di componenti FR/p3, preparazione DE/p4, riferimento RU/p12 e
+benefici CS/p14. Le illustrazioni dei tipi mostrano
 esempi dei tipi, non 15 fronti identificabili da cui ricavare un inventario.
 I tentativi parziali e gli errori di acquisizione restano nelle prove private.
 
