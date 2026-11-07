@@ -50,7 +50,10 @@ try {
     initial.payload.state.scenario.conclusion.outcome,
     outcome === 'win' ? 'victory' : 'failure',
   );
-  log('DECLARED_INVENTED_CAMP_BOOTSTRAP', { outcome, bytes: JSON.stringify(initial).length });
+  log('DECLARED_INVENTED_CAMP_BOOTSTRAP', {
+    outcome,
+    bytes: Buffer.byteLength(JSON.stringify(initial)),
+  });
   browser = await ownBrowser(directory);
   report.browser = await browser.send('Browser.getVersion');
   const shared = await browser.page(r.host.url + '/', 1440);
@@ -256,7 +259,7 @@ try {
             await recover(pages[i + 1], a);
           }
           restored = true;
-          log('UI_PACKLESS_FILE_RESTORE', { bytes: JSON.stringify(backup).length });
+          log('UI_PACKLESS_FILE_RESTORE', { bytes: Buffer.byteLength(JSON.stringify(backup)) });
           continue;
         }
         // An explicit native destination choice; every other card keeps its labelled bottom/order default.
