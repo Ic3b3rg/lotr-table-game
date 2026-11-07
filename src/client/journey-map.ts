@@ -63,6 +63,7 @@ export function createJourneyMap(sync: () => Promise<void>) {
     const round = current.round;
     const pending = Boolean(
       current.combat?.current ||
+        current.combat?.pending ||
         current.scenario?.pending ||
         current.physical?.active ||
         current.physical?.lastStand?.terminal ||
