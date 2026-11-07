@@ -43,6 +43,7 @@ export const BattleInstructionSchema = z.discriminatedUnion('op', [
       .min(2)
       .max(3),
   }),
+  z.strictObject({ ...step, op: z.literal('message') }),
   z.strictObject({
     ...step,
     op: z.literal('spawn'),
@@ -57,7 +58,12 @@ export const BattleInstructionSchema = z.discriminatedUnion('op', [
     kind: z.enum(['threat', 'search']),
     lore: z.union([z.literal(0), z.literal(2)]),
   }),
-  z.strictObject({ ...step, op: z.literal('objective'), id: z.literal(0) }),
+  z.strictObject({
+    ...step,
+    op: z.literal('objective'),
+    id: z.literal(0),
+    objectiveText: z.string().min(1).max(20000),
+  }),
   z.strictObject({ ...step, op: z.literal('handoff') }),
 ]);
 const evidence = z
@@ -114,7 +120,7 @@ export const CampDepartureCapabilitySchema = z.strictObject({
   deploymentHash: hash,
   reserved: z.array(z.strictObject({ source: SourceSchema, count: z.int().nonnegative() })).max(32),
   reservedEliteBanners: z.int().nonnegative().max(32),
-  instructions: z.array(BattleInstructionSchema).min(15).max(20),
+  instructions: z.array(BattleInstructionSchema).min(16).max(20),
   quantities: z.strictObject({
     status: z.enum(['invented', 'unverified']),
     values: z.tuple([

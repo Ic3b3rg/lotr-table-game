@@ -46,6 +46,7 @@ export function validateCampDepartureSource(raw: unknown) {
         'terrain',
         'terrain',
         'terrain',
+        'message',
         'spawn',
         'spawn',
         'spawn',
@@ -117,6 +118,16 @@ export function validateCampDepartureSource(raw: unknown) {
   );
   const deployment = compileSourceDeployment(s.deployment);
   invariant(
+    deployment.source.adventure === s.target.model,
+    'Modello deployment diverso dall’avventura2.',
+  );
+  const adventure = deployment.source.assets.find((a) => a.source === deployment.source.adventure)!;
+  invariant(
+    digest(adventure.data.GlobalEnemyFilter) ===
+      digest({ MustHaveAny: 0, MustHaveAll: 0, ExcludeIfAny: 0 }),
+    'Filtro globale dell’avventura2 diverso dalla fonte.',
+  );
+  invariant(
     deployment.compiled.eliteBanners.length === 6 &&
       deployment.compiled.normalBanners.length === 6 &&
       s.reservedEliteBanners <= 6,
@@ -127,6 +138,21 @@ export function validateCampDepartureSource(raw: unknown) {
       m.costs.every((row, n) => n === 0 || row.points >= m.costs[n - 1]!.points),
       'Progressione costi spawn non attestata.',
     );
+  for (const model of deployment.compiled.models) {
+    invariant(
+      model.costs.every((row, n) => row.size === n + 1),
+      'Costi modello spawn incompleti.',
+    );
+    for (const source of model.bonuses) {
+      const bonus = deployment.compiled.bonuses.find((b) => b.source === source)!;
+      if (bonus.unsupported) continue; // The source excludes these for the selected language.
+      invariant(
+        new Set(bonus.costs.map((row) => row.size)).size === bonus.costs.length &&
+          model.costs.every((row) => bonus.costs.some((cost) => cost.size === row.size)),
+        'Costi bonus spawn incompleti o duplicati.',
+      );
+    }
+  }
   invariant(digest(deployment) === s.deploymentHash, 'Closure deployment2 modificata.');
   invariant(
     digest(

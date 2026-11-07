@@ -211,6 +211,9 @@ export function attachDeparture(pack, catalog, raw, frontInput, { roleScout = fa
     })),
   ];
   const deployment = deploymentSource();
+  deployment.assets.find((a) => a.source === deployment.adventure).source = next.source;
+  deployment.adventure = next.source;
+  deployment.files.push({ file: 'example.assets', sha256: hash('invented next model file') });
   deployment.texts.EXAMPLE_11 = 'Custode inventato';
   deployment.texts.EXAMPLES_11 = 'Custodi inventati';
   const ranged = deployment.assets.find((a) => a.source === 'fixture.assets:10').data;
@@ -251,6 +254,7 @@ export function attachDeparture(pack, catalog, raw, frontInput, { roleScout = fa
       kinds: ['wall', 'wall', 'wall'],
     }),
     instruction('terrain', { anchors: ['flame', 'stone'], kinds: ['fire', 'rock'] }),
+    instruction('message', { text: 'Introduzione inventata prima dei nemici.' }),
     ...['ranged', 'middle', 'last'].map((anchor, n) =>
       instruction('spawn', {
         anchor,
@@ -260,7 +264,11 @@ export function attachDeparture(pack, catalog, raw, frontInput, { roleScout = fa
     ),
     instruction('marker', { anchor: 'danger', kind: 'threat', lore: 0 }),
     instruction('marker', { anchor: 'clue', kind: 'search', lore: 2 }),
-    instruction('objective', { id: 0 }),
+    instruction('objective', {
+      id: 0,
+      text: 'Racconto inventato: difendete la torre mentre arrivano i nemici.',
+      objectiveText: 'Difendete la torre inventata.',
+    }),
     instruction('handoff'),
   ].map((i, n) => ({ ...i, origin: { ...i.origin, state: n + 1 } }));
   pack.manifest.campDeparture = {

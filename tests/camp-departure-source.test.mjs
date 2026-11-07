@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { readyDeparture, confirmedCamp, readBackup } from './camp-departure-helper.mjs';
 import { runtime } from './camp-departure-runtime.mjs';
 import { hash } from './fixtures/map-freeze.mjs';
+import { compileSourceDeployment } from '../dist/combat-library.mjs';
 
 export const actorAt = (s) => ({
   playerId: s.players[0].id,
@@ -20,24 +21,31 @@ test('departure preflight rejects every stale or unattested prerequisite before 
     edit(state);
     const before = structuredClone(state),
       actor = { ...actorAt(state), ...overrides.actor },
+      offer = runtime.campDepartureOffer(state),
       input = {
         kind: 'camp-depart',
-        offerFingerprint: runtime.campDepartureOffer(state).fingerprint ?? '0'.repeat(64),
+        offerFingerprint: offer.fingerprint ?? '0'.repeat(64),
         agreed: true,
         ...overrides.input,
       };
+    if (overrides.reason) {
+      assert.equal(offer.available, false);
+      assert.match(offer.reason, overrides.reason);
+    }
     let calls = 0;
-    assert.throws(() =>
-      runtime.beginCampDeparture(
-        state,
-        actor,
-        input,
-        overrides.source ?? state.scenario.pack.manifest.campDeparture,
-        () => {
-          calls++;
-          return 'd'.repeat(64);
-        },
-      ),
+    assert.throws(
+      () =>
+        runtime.beginCampDeparture(
+          state,
+          actor,
+          input,
+          overrides.source ?? state.scenario.pack.manifest.campDeparture,
+          () => {
+            calls++;
+            return 'd'.repeat(64);
+          },
+        ),
+      overrides.reason,
     );
     assert.equal(calls, 0, 'Rejected preflight must never ask the host for entropy');
     assert.deepEqual(state, before, 'Rejected preflight must preserve the whole game');
@@ -105,6 +113,44 @@ test('departure preflight rejects every stale or unattested prerequisite before 
     ],
   ])
     await t.test(name, () => rejected(edit));
+  for (const [name, edit, reason] of [
+    [
+      'foreign deployment model',
+      (c) => {
+        const a = c.deployment.assets.find((a) => a.cls === 'AdventureModel');
+        a.source = 'fixture.assets:99';
+        c.deployment.adventure = a.source;
+      },
+      /[Mm]odello/,
+    ],
+    [
+      'narrowed global pool',
+      (c) => {
+        c.deployment.assets.find(
+          (a) => a.cls === 'AdventureModel',
+        ).data.GlobalEnemyFilter.MustHaveAny = 1024;
+      },
+      /[Ff]iltro/,
+    ],
+    [
+      'missing reachable bonus costs',
+      (c) => {
+        c.deployment.assets.find((a) => a.cls === 'EnemyBonusModel').data.Costs = [];
+      },
+      /[Cc]osti/,
+    ],
+  ])
+    await t.test(name, () =>
+      rejected(
+        (s) => {
+          const c = s.scenario.pack.manifest.campDeparture;
+          edit(c);
+          for (const a of c.deployment.assets) a.dataHash = hash(a.data);
+          c.deploymentHash = hash(compileSourceDeployment(c.deployment));
+        },
+        { reason },
+      ),
+    );
   await t.test('actor outside the live company', () =>
     rejected(() => {}, { actor: { playerId: randomUUID() } }),
   );

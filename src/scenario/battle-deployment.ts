@@ -106,6 +106,7 @@ export function generateBattleDeployment(
         .bonuses.map(bonus)
         .filter(
           (b) =>
+            !b.unsupported &&
             !g.bonuses.includes(b.source) &&
             cost(b.costs, g.figures.length) >= 0 &&
             cost(b.costs, g.figures.length) <= budgets[point]! &&

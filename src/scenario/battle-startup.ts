@@ -336,7 +336,7 @@ function entered(state: State, i: BattleInstruction) {
     b.placements.push({ anchor: i.anchor, kind: i.kind });
     b.campaign.lore += i.lore;
   }
-  if (i.op === 'objective') sc.objective = { id: i.id, text: text(i.text) };
+  if (i.op === 'objective') sc.objective = { id: i.id, text: text(i.objectiveText) };
   if (i.op === 'spawn' && !sc.enemies!.attempts.length) {
     sc.enemies!.entropy = digest({ stream: 'battle-spawn-v1', entropy: state.physical!.entropy });
     const result = generateBattleDeployment(
@@ -441,11 +441,7 @@ export function pumpBattleStartup(state: State) {
     }
     if (i.op === 'spawn') {
       const groups = sc.enemies!.attempts.find((a) => a.effectId === `battle:${b.cursor}`)!.groups;
-      if (b.presentation === 0) {
-        request(state, 'deployment-intro', i.text);
-        return;
-      }
-      const group = sc.enemies!.groups.find((g) => g.id === groups[b.presentation - 1]);
+      const group = sc.enemies!.groups.find((g) => g.id === groups[b.presentation]);
       if (group) {
         const d = compileSourceDeployment(cap.deployment),
           model = d.compiled.models.find((m) => m.source === group.source)!;
@@ -517,17 +513,15 @@ export function answerBattleStartup(
       b.cursor++;
       return;
     }
-    if (q.kind === 'deployment-intro' || q.kind === 'deployment') {
-      if (q.kind === 'deployment') {
-        const group = sc.enemies!.groups.find(
-          (g) =>
-            g.id ===
-            sc.enemies!.attempts.find((a) => a.effectId === `battle:${b.cursor}`)!.groups[
-              b.presentation - 1
-            ],
-        )!;
-        group.placed = true;
-      }
+    if (q.kind === 'deployment') {
+      const group = sc.enemies!.groups.find(
+        (g) =>
+          g.id ===
+          sc.enemies!.attempts.find((a) => a.effectId === `battle:${b.cursor}`)!.groups[
+            b.presentation
+          ],
+      )!;
+      group.placed = true;
       b.presentation++;
     } else b.cursor++;
     sc.messageLog.push({ id: `battle-message:${q.id}`, text: structuredClone(q.text) });

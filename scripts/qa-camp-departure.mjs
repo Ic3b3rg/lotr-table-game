@@ -14,7 +14,10 @@ import { startHost } from '../tests/host-helper.mjs';
 import { ownBrowser, until, pause } from './qa-camp-browser.mjs';
 const outcome = process.argv[2] ?? 'win';
 assert.ok(['win', 'loss'].includes(outcome));
-const directory = resolve('.scratch/a2-departure/browser', `${outcome}-${Date.now()}`);
+const directory = resolve(
+  process.env.LOTR_QA_OUTPUT_DIR ?? '.scratch/a2-departure/browser',
+  `${outcome}-${Date.now()}`,
+);
 await mkdir(directory, { recursive: true });
 const cleanups = [],
   t = { after: (fn) => cleanups.push(fn) },
@@ -147,7 +150,9 @@ try {
   log('UI_DEPARTED');
   let restored = false,
     scoutOwners = new Set(),
-    roleOwners = new Set();
+    roleOwners = new Set(),
+    introductions = 0,
+    objectiveShown = false;
   for (let n = 0; n < 120; n++) {
     s = await readSession(r.host);
     const q = s.scenario.pending;
@@ -162,6 +167,42 @@ try {
       'current request rendered',
       25000,
     );
+    const instruction = full.scenario.pack.manifest.battleStartup.instructions[b.cursor];
+    assert.notEqual(q.kind, 'deployment-intro', 'No invented introduction per spawn point');
+    if (instruction.op === 'message') {
+      assert.equal(introductions++, 0);
+      assert.equal(full.scenario.enemies.entropy, null);
+      assert.deepEqual(full.scenario.enemies.groups, []);
+      assert.ok(
+        await page.read(
+          `document.querySelector('#scenario').innerText.includes(${JSON.stringify(instruction.text)})`,
+        ),
+      );
+      await page.call('DOM.scrollIntoViewIfNeeded', {
+        nodeId: await page.node('#scenario-message'),
+      });
+      await page.shot(join(directory, 'source-introduction.png'));
+      log('UI_SOURCE_INTRO_BEFORE_SPAWN');
+    }
+    if (q.kind === 'objective') {
+      assert.deepEqual(full.scenario.objective.text, [
+        { kind: 'text', style: 'plain', text: instruction.objectiveText },
+      ]);
+      assert.deepEqual(q.text, [{ kind: 'text', style: 'plain', text: instruction.text }]);
+      assert.notDeepEqual(q.text, full.scenario.objective.text);
+      for (const value of [instruction.text, instruction.objectiveText])
+        assert.ok(
+          await page.read(
+            `document.querySelector('#scenario').innerText.includes(${JSON.stringify(value)})`,
+          ),
+        );
+      await page.call('DOM.scrollIntoViewIfNeeded', {
+        nodeId: await page.node('#scenario-message'),
+      });
+      await page.shot(join(directory, 'source-objective.png'));
+      objectiveShown = true;
+      log('UI_OBJECTIVE_MESSAGE_AND_SUMMARY_DISTINCT');
+    }
     if (q.kind === 'physical') {
       const p = s.physical.active;
       if (b.runKey === 'initial') roleOwners.add(p.actorPlayerId);
@@ -284,6 +325,8 @@ try {
   assert.equal(s.round.number, 1);
   assert.equal(scoutOwners.size, 3);
   assert.equal(roleOwners.size, 3);
+  assert.equal(introductions, 1);
+  assert.ok(objectiveShown);
   assert.ok(restored);
   const pc = shared;
   await until(() => pc.visible('#journey-map'), 'new shared battle map');
