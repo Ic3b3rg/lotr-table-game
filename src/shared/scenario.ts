@@ -679,6 +679,7 @@ export const ScenarioPackSchema = z.strictObject({
     scope: z.enum([
       'startup-only',
       'battle-startup-v1',
+      'battle-combat-v1',
       'synthetic-physical-p0',
       'synthetic-physical-p1',
       'original-encounter-v1',
@@ -1201,6 +1202,7 @@ export const ScenarioSchema = z.strictObject({
 export type Scenario = z.infer<typeof ScenarioSchema>;
 const publicExplorations = ScenarioSchema.shape.explorations.unwrap();
 export const ScenarioViewSchema = ScenarioSchema.extend({
+  conclusion: ScenarioSchema.shape.conclusion.unwrap().omit({ episodeHash: true }).optional(),
   enemies: DeploymentStateSchema.omit({ entropy: true }).optional(),
   explorations: publicExplorations
     .extend({
@@ -1219,10 +1221,26 @@ export const ScenarioViewSchema = ScenarioSchema.extend({
 export type ScenarioView = z.infer<typeof ScenarioViewSchema>;
 export function scenarioView(sc: Scenario | null): ScenarioView | null {
   if (!sc) return null;
-  const { enemies, explorations, ...visible } = sc;
+  const { enemies, explorations, conclusion, ...visible } = sc;
   const publicEnemies = enemies ? (({ entropy: _entropy, ...rest }) => rest)(enemies) : null;
+  let publicConclusion: ScenarioView['conclusion'];
+  if (conclusion) {
+    const { episodeHash: _episodeHash, ...rest } = conclusion;
+    publicConclusion = {
+      ...rest,
+      campaign: rest.campaign
+        ? {
+            ...rest.campaign,
+            heroes: rest.campaign.heroes.map((hero) =>
+              hero.skillCopies ? { ...hero, skillCopies: [...hero.skillCopies].sort() } : hero,
+            ),
+          }
+        : null,
+    };
+  }
   return {
     ...visible,
+    ...(publicConclusion ? { conclusion: publicConclusion } : {}),
     ...(publicEnemies ? { enemies: publicEnemies } : {}),
     ...(explorations
       ? {

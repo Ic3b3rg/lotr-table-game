@@ -17,6 +17,8 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { openPhysical, answerPhysical } from '../physical-resolution/runtime';
 import { ApiError } from '../server/errors';
+import { battleCombatPack } from './battle-combat';
+import { compileScenarioPack } from './compiler';
 
 const text = (value: string): SourceText => [{ kind: 'text', style: 'plain', text: value }];
 export function battleGeometry(cap: CampDepartureCapability) {
@@ -101,7 +103,7 @@ export function createBattleScenario(
 ) {
   const g = battleGeometry(cap),
     sourceFingerprint = digest(cap);
-  const pack = ScenarioPackSchema.parse({
+  let pack = ScenarioPackSchema.parse({
     formatVersion: 1,
     algorithm: 'source-startup-ir-v1',
     identity: { adventureId: 2, adventureSource: cap.target.model, language: 'Italian' },
@@ -126,6 +128,14 @@ export function createBattleScenario(
       battleStartup: cap,
     },
   });
+  if (cap.combat) {
+    const prospective = battleCombatPack(cap, pack);
+    pack = compileScenarioPack({
+      pack: prospective,
+      certificates: [cap.combat.terminal.certificate],
+      failureCertificate: { instructionHash: digest(prospective.manifest.failure) },
+    }).pack;
+  }
   const campaign = archived.conclusion!.campaign!;
   const scenario = ScenarioSchema.parse({
     id,
@@ -151,7 +161,12 @@ export function createBattleScenario(
         processing: 0,
       },
     ],
-    globals: structuredClone(campaign.sceneGlobals),
+    globals: cap.combat
+      ? {
+          ...Object.fromEntries(pack.globals.map((v) => [v.name, structuredClone(v.value)])),
+          ...structuredClone(campaign.sceneGlobals),
+        }
+      : structuredClone(campaign.sceneGlobals),
     tiles: [{ source: cap.target.model, visible: false, explored: false }],
     spaceBindings: g.bindings,
     tasks: [],
@@ -165,6 +180,11 @@ export function createBattleScenario(
     initialInspiration: campaign.heroes.map((h) => ({ heroId: h.heroId, value: 0 })),
     messageLog: [],
     handoffCount: 0,
+    ...(cap.combat
+      ? {
+          play: { lore, active: null, attempts: [], tests: [] },
+        }
+      : {}),
     enemies: { entropy: null, cursor: 0, groups: [], attempts: [] },
     battle: {
       version: 'source-battle-startup-v1',
@@ -335,6 +355,7 @@ function entered(state: State, i: BattleInstruction) {
   if (i.op === 'marker') {
     b.placements.push({ anchor: i.anchor, kind: i.kind });
     b.campaign.lore += i.lore;
+    if (sc.play) sc.play.lore += i.lore;
   }
   if (i.op === 'objective') sc.objective = { id: i.id, text: text(i.objectiveText) };
   if (i.op === 'spawn' && !sc.enemies!.attempts.length) {

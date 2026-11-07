@@ -207,7 +207,7 @@ test('sessioni e backup precedenti migrano conservando posti e codice personale'
     await first.dispose();
   });
   const migrated = await (await host.request('/api/session')).json();
-  assert.equal(migrated.schemaVersion, 32);
+  assert.equal(migrated.schemaVersion, 33);
   assert.deepEqual(migrated.players, [{ id: ada.body.player.id, name: 'Ada' }]);
   assert.equal(migrated.catalog, null);
   assert.equal(migrated.preparation, null);

@@ -4,6 +4,7 @@ import { ScenarioPackSchema } from '../shared/scenario';
 import { parseScenarioPack } from './pack';
 import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
+import { validateFailureCapability } from './failure-capability';
 const index = z.int().nonnegative().max(10000),
   event = z.string().min(1).max(100);
 const certificate = z.strictObject({
@@ -67,7 +68,7 @@ const CompilationSchema = z.strictObject({
   startupPreparationCertificate: z.strictObject({ instructionHash: HashSchema }).optional(),
 });
 /** Compiles an audited source subset. Uncompiled edges are explicit capability boundaries. */
-export function compileScenarioPack(raw: unknown) {
+function compileEvidence(raw: unknown) {
   const input = CompilationSchema.parse(raw),
     { pack, certificates } = input;
   invariant(
@@ -382,7 +383,7 @@ export function compileScenarioPack(raw: unknown) {
           ),
         'Azioni omesse/alterate rispetto alla fonte.',
       );
-      if (pack.manifest.scope === 'original-encounter-v1')
+      if (['original-encounter-v1', 'battle-combat-v1'].includes(pack.manifest.scope))
         invariant(
           s.actions.every(
             (a) => source.actions.find((x) => x.index === a.index)?.instructionHash === digest(a),
@@ -439,7 +440,8 @@ export function compileScenarioPack(raw: unknown) {
         );
   const compiled = { ...pack, manifest: { ...pack.manifest, evidenceHash: digest(certificates) } };
   return {
-    ...parseScenarioPack(compiled),
+    pack: compiled,
+    fingerprint: digest(compiled),
     coverage: {
       definitions: pack.definitions.length,
       states: pack.definitions.reduce((n, d) => n + d.states.length, 0),
@@ -450,4 +452,36 @@ export function compileScenarioPack(raw: unknown) {
       deferredEdges: certificates.reduce((n, c) => n + c.deferredEdges.length, 0),
     },
   };
+}
+
+export function compileScenarioPack(raw: unknown) {
+  const result = compileEvidence(raw);
+  return { ...parseScenarioPack(result.pack), coverage: result.coverage };
+}
+
+/** The same certificates, scoped to the mandatory A2 receiver before departure entropy. */
+export function validateBattleTerminalSource(raw: unknown) {
+  const result = compileEvidence(raw),
+    pack = result.pack;
+  invariant(
+    pack.manifest.scope === 'battle-combat-v1' &&
+      pack.identity.adventureId === 2 &&
+      pack.definitions.length === 1 &&
+      pack.definitions[0]!.states.length === 6 &&
+      Object.keys(pack.manifest).every((k) =>
+        ['scope', 'prefabs', 'evidenceHash', 'failure'].includes(k),
+      ),
+    'Fonte terminale A2 fuori dal confine attestato.',
+  );
+  const initial = pack.definitions[0]!.states.find(
+    (s) => s.index === pack.definitions[0]!.initial,
+  )!;
+  invariant(
+    initial.actions.length === 1 &&
+      initial.actions[0]!.op === 'release' &&
+      !Object.keys(initial.transitions).length,
+    'Initialization terminale A2 non attestata.',
+  );
+  validateFailureCapability(pack);
+  return result;
 }

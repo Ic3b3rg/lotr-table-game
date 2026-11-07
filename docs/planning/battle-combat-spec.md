@@ -1,0 +1,31 @@
+# Attacks and movement provocations on the second battle map (#137)
+
+This prospective slice connects the battle produced by camp departure to the existing combat controller, physical kernel and version3 episode ledger. A hero chooses equipped weapons, a live target and the existing card decisions. The source supplies the attack, reply, additions, physical consequences and return. An attack consumes one action; interruption of travel preserves its remaining movements. Movement can provoke ready groups, chosen in the hero's order, before the original movement is revalidated and performed once.
+
+## Source boundary established before product changes
+
+The authorized static capsule has 85 ordinary relative files, 209,113,554 bytes. Its 16,777-byte manifest has SHA256 `05a5e7a44c564c56bf647598d12ba34a1c77bcced9bb3e03e17af01455dd2a03`. The manifest and every row passed path, ancestor, ordinary-file, byte-count and hash checks before interpretation. Historical paths inside files are data. Private extraction uses standard-library readers in the assigned checkout.
+
+Selected Steam1.6.6#1128 authority is A2 model `sharedassets0.assets:806`, prefab `resources.assets:4285`, Adventure `20188`, principal `27344`, spawn points `25524/27187/26617`, and threat/search GameNodes `21806/23697`. The principal was decoded through all 118,596 bytes. Its initial spawn predicates exclude traits136; the first point also requires1024. Independent inspection of the entire owned[0] product's 21 model references, uniqueness flags and predicates establishes the four reachable initial types1618/1629/1640/1651. Their complete ordinary instruction arrays, special reference, 13 bonus definitions and 20 addition policies remain intact. All 66 existing combat asset blobs and decoded fields, and all 36 deployment blobs/fields, match the selected primaries. Reuse of these bytes follows that check; the old A1 compiled output alone is not authority for A2.
+
+The actual principal's failure handler is `ADVENTURE_END_FAILURE`: states18→11→14→12→13. It displays three messages, writes the B1 failure flag, awards Lore1 and XP3, selects model807/adventure3 and proceeds. `GameController.SignalEndGame` (`06000c96`) targets the current Adventure and checks the party's equipped skill232 bonus. `EnemyGroup.CoroutineDefeatGroup` (`060038d3`) calls TRY_DEFEAT/DEFEATED only for a group with Logic; initial generated groups have none. Defeating all these ordinary groups supplies no invented victory or principal callback. The existing inspiration choice after defeating a group remains in the controller.
+
+Battle adjacency and range use the verified ten-cell, sixteen-walkable-edge board, including three walls, without constructing journey mapGeneration. The live revealed threat placement is the destination for the marauder addition. The Adventure starts with no darkness tokens; source model DisableDarkness and the typed global IsDarkness/DarknessMessageOverride bindings supply the supported darkness context. Future token interactions and Shadow remain gated.
+
+Rules Reference §§6/14/111 govern walls and range, §16 the boulder negation benefit, §17 the optional bush test at turn end, and §40 the fire-pit attack-card window. Norms, source app data and workbook policies retain distinct provenance. This slice will gate attacks in a fire-pit space and potential negation in a boulder space before action, card reveal or entropy until those optional test consumers are implemented. Terrain is not cosmetic. Bush end-turn use and optional terrain interactions are outside this slice. No pool is reduced to avoid an unsupported consequence.
+
+Original boon quantities remain NULL/UNVERIFIED/BLOCKED (#57), and original156 remains STATIC/GATED. Original source cost arrays, the source's Italian-language bonus predicate, #126/#128 numeric/array semantics and historical outputs remain unchanged. No original State is created or played. Positive acceptance uses declared invented, finite sources, cards and quantities.
+
+## Contract
+
+An optional, explicit `source-battle-combat-v1` capability is frozen in the departure authority. It binds the board, complete reachable initial combat closure, deployment, source context, terrain policies and certified A2 terminal receiver. Startup-only capabilities keep their published boundary. Schema33 rejects prospective forms disguised as historical schemas1–32 at their actual structural locations; unrelated dictionary keys remain data.
+
+The server validates current source, actor/owner, hero/copy/group/model, positions, range/walls, turn, generation/revision and every mandatory reachable consequence before costs or information. Unsupported carried definitions, physical policies, unknown benefit stock or callbacks produce an exact gate. Clients never choose a program, random seed, fate, reward amount or truth value.
+
+There is one Store.once transaction and one cycle3 journal. Replay derives A2 from the verified archived A1 departure and reconciles complete domains and receipts, including physical copy orientation, suspended movement, costs, figures and random cursors. Retry and concurrent identical requests apply once. A child that defeats the hero or invalidates the movement keeps performed consequences and cancels the return without inventing a refund.
+
+## Acceptance
+
+An actual three-owner invented camp→battle START_ATTACK first produces meaningful RED at the existing consumer boundary, then resolves the real attack, enemy reply/physical child and ordinary return. Movement provoking multiple ready groups offers hero-selected order and resumes exactly once. Negative HTTP cases compare the entire payload and receipt set. Recovery covers SIGKILL around COMMIT, pending attack/physical/return, restart and empty-host restore without external packs, plus coherently re-signed source/history attacks.
+
+Native UI acceptance uses three separate owners and the shared PC at320/768/1024/1440 after an explicitly declared invented bootstrap. Subsequent gameplay uses native controls; diagnostics are read-only. Viewed captures are recorded separately from driver assertions. Own hosts/profiles close before the final changed-product canonical test, run alone with the repository's concurrency4 command. No physical-device, original-gameplay, Unity/JIT or whole-campaign claim follows from this slice.

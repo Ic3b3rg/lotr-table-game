@@ -39,7 +39,7 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
       const actor = q?.actorPlayerId ?? session.physical?.active?.actorPlayerId;
       status.textContent =
         q && !active
-          ? `Prima dell’interazione · agisce ${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'il proprietario indicato'}. Intento e ritorno sono salvati.`
+          ? `${session.scenario?.pack.manifest.battleStartup?.combat ? 'Ordine delle provocazioni' : 'Prima dell’interazione'} · agisce ${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'il proprietario indicato'}. Intento e ritorno sono salvati.`
           : active
             ? `${active.kind === 'activation' ? `${active.name} si attiva · ${active.activation?.recipientHeroId ? 'destinatario' : 'destinatario iniziale'} ${name(active.heroId)}` : `${name(active.heroId)} · ${active.kind === 'provocation' ? 'Provocazione' : 'Attacco'} contro ${active.name}`}. ${actor ? `Agisce ${session.players.find((p) => p.id === actor)?.name ?? 'il proprietario indicato'}.` : ''} ${active.returnLabel}`
             : view.last
@@ -177,9 +177,15 @@ export function createCombat(sync: () => Promise<void>, reader: CardReader) {
       const ids = [...new Set(offers.map((o) => o.groupId))];
       for (const id of ids) {
         const o = offers.find((o) => o.groupId === id)!;
+        const groups = session.scenario?.enemies?.groups ?? [],
+          group = groups.find((g) => g.id === id),
+          battleLabel =
+            session.scenario?.pack.manifest.battleStartup?.combat && group
+              ? `Gruppo ${groups.indexOf(group) + 1} · ${group.spaceId}${group.tokenId >= 0 ? ` · Stendardo ${group.tokenId + 1}` : ''} · `
+              : '';
         const option = text(
           'option',
-          `${o.name} · ${o.figures} ${o.figures === 1 ? 'figura' : 'figure'}`,
+          `${battleLabel}${o.name} · ${o.figures} ${o.figures === 1 ? 'figura' : 'figure'}`,
         ) as HTMLOptionElement;
         option.value = id;
         target.append(option);

@@ -5,10 +5,27 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { f, plus } from '../map-assembly/physical';
 import { defeatedHeroes } from '../server/physical-defeat';
+import { battleCombat, battleSpatial } from '../scenario/battle-combat';
 
 export function groupInRange(state: State, heroId: string, group: DeployedGroup, ranged: boolean) {
   const ordinary = state.journey!.heroes.find((h) => h.heroId === heroId)!.spaceId;
   const from = state.scenario!.spaceBindings.find((b) => b.id === ordinary)?.sourceId;
+  if (battleCombat(state)) {
+    const { layout } = battleSpatial(state);
+    invariant(
+      from &&
+        layout.cells.some((c) => c.id === from) &&
+        layout.cells.some((c) => c.id === group.spaceId),
+      'Posizione battaglia fuori dalla fonte.',
+    );
+    return (
+      from === group.spaceId ||
+      (ranged &&
+        layout.walkableEdges.some(
+          ([a, b]) => (a === from && b === group.spaceId) || (b === from && a === group.spaceId),
+        ))
+    );
+  }
   invariant(
     from && state.mapGeneration?.status === 'frozen',
     'Posizione di combattimento non riconciliata.',
@@ -24,6 +41,11 @@ export function groupInRange(state: State, heroId: string, group: DeployedGroup,
 
 /** Visible movement edges, never the authoring ConnectedSpaces collection. */
 function activationGraph(state: State) {
+  if (battleCombat(state)) {
+    const { layout } = battleSpatial(state);
+    return (from: string) =>
+      layout.walkableEdges.flatMap(([a, b]) => (a === from ? [b] : b === from ? [a] : []));
+  }
   invariant(state.mapGeneration?.status === 'frozen', 'Attivazione senza grafo congelato.');
   const p = state.mapGeneration.projection;
   const visible = new Set(
@@ -102,9 +124,44 @@ export function activationSteps(state: State, from: string, heroId: string) {
 }
 
 export function nearestThreatSteps(state: State, from: string) {
+  const sc = state.scenario!;
+  if (battleCombat(state)) {
+    const { layout } = battleSpatial(state),
+      cap = battleCombat(state)!;
+    const threats = cap.threats.filter((t) =>
+      sc.battle!.placements.some((p) => p.kind === 'threat' && p.anchor === t.anchor),
+    );
+    const candidates = threats.flatMap((t) => {
+      const cell = layout.placements.find((p) => p.id === t.anchor)!.cell!,
+        distances = activationDistances(state, cell),
+        distance = distances.get(from);
+      return distance === undefined
+        ? []
+        : [
+            {
+              targetId: t.source,
+              distance,
+              spaces:
+                distance === 0
+                  ? []
+                  : activationGraph(state)(from).filter((s) => distances.get(s) === distance - 1),
+            },
+          ];
+    });
+    const nearest = Math.min(...candidates.map((c) => c.distance));
+    return candidates
+      .filter((c) => c.distance === nearest)
+      .flatMap((c) =>
+        c.spaces.map((destination) => ({
+          from,
+          destination,
+          targetId: c.targetId,
+          distance: c.distance,
+        })),
+      );
+  }
   invariant(state.mapGeneration?.status === 'frozen', 'Movimento senza grafo congelato.');
-  const sc = state.scenario!,
-    p = state.mapGeneration.projection;
+  const p = state.mapGeneration.projection;
   const visible = new Set(
     p.spaces
       .filter((s) => sc.tiles.some((t) => t.source === s.tileSource && t.visible))
@@ -190,6 +247,19 @@ export function moveEnemyOneSpace(state: State, attempt: CombatAttempt, destinat
   );
 }
 export function placeEnemyInSpace(state: State, g: DeployedGroup, destination: string) {
+  if (battleCombat(state)) {
+    const { layout, departure } = battleSpatial(state),
+      vertices = layout.patches.filter((p) => p.cell === destination).flatMap((p) => p.vertices);
+    invariant(vertices.length, 'Destinazione battaglia fuori dalla fonte.');
+    g.spaceId = destination;
+    g.tileSource = departure.target.model;
+    g.position = [
+      f(vertices.reduce((n, p) => n + p[0], 0) / vertices.length),
+      f(vertices.reduce((n, p) => n + p[1], 0) / vertices.length),
+      0,
+    ];
+    return;
+  }
   invariant(state.mapGeneration?.status === 'frozen', 'Posa senza realizzazione.');
   const p = state.mapGeneration.projection,
     s = p.spaces.find((s) => s.id === destination)!;

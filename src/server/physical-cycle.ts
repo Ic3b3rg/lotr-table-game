@@ -31,6 +31,7 @@ import { beginHeroFailure, advanceConclusion } from '../scenario/conclusion';
 import type { LastStandArtifact } from '../physical-resolution/last-stand-program';
 import { syncPhysicalDefeat, defeatedHeroes } from './physical-defeat';
 import { liveGroupRules } from '../scenario/live-groups';
+import { battleCombat, battleDarknessHeroes } from '../scenario/battle-combat';
 import { requiresProvocation } from '../scenario/deployment';
 import { EncounterIntentSchema } from '../shared/scenario';
 import { z } from 'zod';
@@ -86,6 +87,7 @@ function owned(state: State, heroId: string, playerId: string) {
   return hero;
 }
 function darknessHeroes(state: State) {
+  if (battleCombat(state)) return battleDarknessHeroes(state);
   if (state.scenario?.pack.manifest.rounds) return sourceDarknessHeroes(state);
   invariant(state.mapGeneration?.status === 'frozen', 'Contesto fisico senza mappa congelata.');
   const sc = state.scenario!,

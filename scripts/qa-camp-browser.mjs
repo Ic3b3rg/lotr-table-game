@@ -158,15 +158,25 @@ export async function ownBrowser(directory) {
         async syncRevision(revision) {
           await until(
             async () => {
-              const event = [...events]
-                .reverse()
-                .find(
+              const eventIndex = events.findLastIndex(
                   (e) =>
                     e.sessionId === sessionId &&
                     e.method === 'Network.responseReceived' &&
                     e.params.response.url.endsWith('/api/session'),
-                );
-              if (!event) return false;
+                ),
+                event = events[eventIndex];
+              if (
+                !event ||
+                !events
+                  .slice(eventIndex + 1)
+                  .some(
+                    (e) =>
+                      e.sessionId === sessionId &&
+                      e.method === 'Network.responseReceived' &&
+                      e.params.response.url.endsWith('/api/scenario-plan'),
+                  )
+              )
+                return false;
               try {
                 const { body } = await call('Network.getResponseBody', {
                   requestId: event.params.requestId,
@@ -241,6 +251,9 @@ export async function ownBrowser(directory) {
           )
             length++;
           await call('Page.bringToFront');
+          // Chromium retains typeahead across repeated use of a native select.
+          // Let that input buffer expire before sending the next labelled choice.
+          await pause(1200);
           await call('DOM.focus', { nodeId: await node(selector) });
           for (const char of target.label.slice(0, length)) {
             const upper = char.toUpperCase(),
@@ -295,6 +308,12 @@ export async function ownBrowser(directory) {
         if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
       }
       await writeFile(join(directory, 'chrome.stderr'), stderr);
+      return {
+        contextsDisposed: contexts.length,
+        exited: child.exitCode !== null || child.signalCode !== null,
+        exitCode: child.exitCode,
+        signal: child.signalCode,
+      };
     },
   };
 }

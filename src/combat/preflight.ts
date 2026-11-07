@@ -7,6 +7,7 @@ import { explorationProblem } from '../shared/exploration';
 import { invariant } from '../map-freeze/validate';
 import { firstCombatGroup, firstCombatCallbackProblems } from '../scenario/first-combat';
 import { preflightBoonRequests } from '../physical-resolution/boon-stock';
+import { battleCombat, battleCombatProblems } from '../scenario/battle-combat';
 
 /** Finite mandatory closure, including ready groups reachable through forced moves. No pool is filtered. */
 export function preflightCombatOperation(
@@ -16,10 +17,15 @@ export function preflightCombatOperation(
   heroId: string,
   cause: 'counterattack' | 'provocation' | 'activation',
 ) {
+  const battleProblems = battleCombatProblems(state, heroId, {
+    attack: cause === 'counterattack',
+    negation: false,
+  });
+  if (battleProblems.includes('battle-mandatory-physical-terminal')) return battleProblems;
   if (cause === 'counterattack') {
     const effect = effectiveGroup(a, first);
     if ((!effect.elite && first.exhausted) || !groupInRange(state, heroId, first, effect.ranged))
-      return [];
+      return battleProblems;
   }
   const sc = state.scenario!,
     groups = sc.enemies!.groups.filter((g) => g.placed && g.figures.some((f) => f.health > 0));
@@ -31,7 +37,7 @@ export function preflightCombatOperation(
   const triggered = new Set([first.id]),
     heroSpaces = new Set([heroSpace]);
   const positions = new Map(groups.map((g) => [g.id, new Set([g.spaceId])]));
-  const missing = new Set<string>();
+  const missing = new Set<string>(battleProblems);
   let changed = true,
     iterations = 0;
   while (changed) {
@@ -76,13 +82,17 @@ export function preflightCombatOperation(
             heroSpaces.add(to.destination);
             changed = true;
           }
-          invariant(state.mapGeneration?.status === 'frozen', 'Chiusura senza mappa.');
-          const space = state.mapGeneration.projection.spaces.find((s) => s.id === to.destination)!;
-          if (
-            !sc.tiles.find((t) => t.source === space.tileSource)!.explored &&
-            explorationProblem(sc, state.mapGeneration.projection, space.tileSource)
-          )
-            missing.add('forced-exploration');
+          if (!battleCombat(state)) {
+            invariant(state.mapGeneration?.status === 'frozen', 'Chiusura senza mappa.');
+            const space = state.mapGeneration.projection.spaces.find(
+              (s) => s.id === to.destination,
+            )!;
+            if (
+              !sc.tiles.find((t) => t.source === space.tileSource)!.explored &&
+              explorationProblem(sc, state.mapGeneration.projection, space.tileSource)
+            )
+              missing.add('forced-exploration');
+          }
         }
     for (const g of groups) {
       if (
@@ -120,6 +130,12 @@ export function preflightCombatOperation(
       }
     }
   }
+  for (const problem of battleCombatProblems(state, heroId, {
+    attack: false,
+    negation: true,
+    spaces: heroSpaces,
+  }))
+    missing.add(problem);
   if (state.physical?.boons) {
     const requests = groups
       .filter((g) => triggered.has(g.id))

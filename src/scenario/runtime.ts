@@ -409,7 +409,7 @@ function execute(
   requestId?: string,
 ) {
   const sc = state.scenario!,
-    p = projection(state);
+    p = () => projection(state);
   if (
     probe &&
     ((a.op === 'confirm' && i.kind !== 'exploration') ||
@@ -678,7 +678,7 @@ function execute(
       beginPhysicalAction(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
       return;
     case 'getStart':
-      setValue(sc, i, a.target, p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId);
+      setValue(sc, i, a.target, p().sections.find((s) => s.id === 0)!.tiles[0]!.hashId);
       break;
     case 'set':
       setValue(sc, i, a.target, structuredClone(a.value));
@@ -773,9 +773,11 @@ function execute(
     }
     case 'getTile':
     case 'getPosition': {
-      const space = p.spaces.find((s) => s.id === i.spaceId);
+      const space = p().spaces.find((s) => s.id === i.spaceId);
       invariant(space, 'Space non assegnata prima di initialization.');
-      const tile = p.sections.flatMap((s) => s.tiles).find((t) => t.source === space.tileSource)!;
+      const tile = p()
+        .sections.flatMap((s) => s.tiles)
+        .find((t) => t.source === space.tileSource)!;
       setValue(
         sc,
         i,
@@ -863,7 +865,7 @@ function execute(
       const tile = resolveTile(state, i, a.tile),
         space = cells(state, tile.source).find((s) => s.index === a.spaceIndex);
       invariant(space, 'Indice Spaces fonte assente.');
-      const { definition } = projectionToJourney(p, space.id, sc.pack.name);
+      const { definition } = projectionToJourney(p(), space.id, sc.pack.name);
       invariant(!state.journey, 'Piazzamento eroi ripetuto.');
       state.journey = {
         id: sc.id,
@@ -923,7 +925,7 @@ function execute(
       if (presented && !a.skipAdjacentSectionEvent)
         for (const s of cells(state, tile.source))
           for (const id of s.connected) {
-            const section = p.spaces.find((s) => s.id === id)!.sectionId;
+            const section = p().spaces.find((s) => s.id === id)!.sectionId;
             if (section !== s.sectionId && !adjacent.includes(section)) adjacent.push(section);
           }
       sc.tasks.push({
@@ -949,8 +951,8 @@ function execute(
         tileIndex: 0,
         ...(sc.pack.manifest.followup
           ? {
-              remaining: p.sections
-                .find((s) => s.id === a.sectionId)!
+              remaining: p()
+                .sections.find((s) => s.id === a.sectionId)!
                 .tiles.filter((t) => !sc.tiles.find((v) => v.source === t.source)!.visible)
                 .map((t) => t.source),
               order: [],
@@ -1785,7 +1787,8 @@ export function resumeScenario(
     q = sc?.pending;
   if (
     !sc ||
-    (sc.phase !== 'setup' && sc.pack.manifest.scope !== 'original-encounter-v1') ||
+    (sc.phase !== 'setup' &&
+      !['original-encounter-v1', 'battle-combat-v1'].includes(sc.pack.manifest.scope)) ||
     sc.id !== command.scenarioId ||
     sc.packFingerprint !== command.packFingerprint ||
     sc.projectionFingerprint !== command.projectionFingerprint ||
