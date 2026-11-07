@@ -30,7 +30,7 @@ test('signed archive, boundary, cleanup, entropy, composition and paired histori
   );
   const stable = await readBackup(r.host),
     at = await readSession(r.host);
-  const reject = async (backup) => {
+  const reject = async (backup, label) => {
     signBackup(backup);
     const result = await r.host.request('/api/restores', {
       backup,
@@ -38,36 +38,63 @@ test('signed archive, boundary, cleanup, entropy, composition and paired histori
       expectedRevision: at.revision,
       confirmed: true,
     });
-    assert.equal(result.status, 422, await result.text());
+    assert.equal(result.status, 422, `${label}: ${(await result.text()).slice(0, 300)}`);
     assert.deepEqual((await readBackup(r.host)).payload, stable.payload);
   };
-  for (const edit of [
-    (b) => b.payload.state.episodes[0].scenario.globals.inventedCumulative++,
-    (b) => (b.payload.state.physical.cycle.seed.departure.entropy = 'f'.repeat(64)),
-    (b) =>
-      (b.payload.state.physical.cycle.seed.departure.receipt.realizationFingerprint = '0'.repeat(
-        64,
-      )),
-    (b) => b.payload.state.preparation.heroes[0].deck.reverse(),
-    (b) => b.payload.state.preparation.heroes[0].inspiration++,
-    (b) =>
-      b.payload.state.physical.snapshot.resolution.resources.preparation.heroes[0].inspiration++,
-    (b) => b.payload.state.scenario.commands.pop(),
-    (b) => b.payload.commands.pop(),
-    (b) => (b.payload.state.physical.cycle.seed.round.number = 999),
-    (b) =>
-      b.payload.state.physical.episode.titles.push({
-        heroId: 'hero-1',
-        cardId: 'invented',
-        copy: 'invented:1',
-        removed: false,
-        pending: false,
-        source: 'invented',
-      }),
+  const dropReceipt = (backup, predicate) => {
+    const index = backup.payload.commands.findIndex(predicate);
+    assert.ok(index >= 0, 'The targeted mandatory source receipt must exist');
+    backup.payload.commands.splice(index, 1);
+  };
+  for (const [label, edit] of [
+    ['archive global', (b) => b.payload.state.episodes[0].scenario.globals.inventedCumulative++],
+    [
+      'boundary entropy',
+      (b) => (b.payload.state.physical.cycle.seed.departure.entropy = 'f'.repeat(64)),
+    ],
+    [
+      'realization pin',
+      (b) =>
+        (b.payload.state.physical.cycle.seed.departure.receipt.realizationFingerprint = '0'.repeat(
+          64,
+        )),
+    ],
+    ['active deck order', (b) => b.payload.state.preparation.heroes[0].deck.reverse()],
+    ['personal reset', (b) => b.payload.state.preparation.heroes[0].inspiration++],
+    [
+      'kernel reset',
+      (b) =>
+        b.payload.state.physical.snapshot.resolution.resources.preparation.heroes[0].inspiration++,
+    ],
+    ['active command', (b) => b.payload.state.scenario.commands.pop()],
+    ['A1 start receipt', (b) => dropReceipt(b, (c) => c.receipt.type === 'START_SCENARIO')],
+    [
+      'departure receipt',
+      (b) => {
+        const boundary = b.payload.state.physical.cycle.seed.departure;
+        dropReceipt(
+          b,
+          (c) => c.playerId === boundary.playerId && c.requestId === boundary.requestId,
+        );
+      },
+    ],
+    ['round origin', (b) => (b.payload.state.physical.cycle.seed.round.number = 999)],
+    [
+      'unowned title',
+      (b) =>
+        b.payload.state.physical.episode.titles.push({
+          heroId: 'hero-1',
+          cardId: 'invented',
+          copy: 'invented:1',
+          removed: false,
+          pending: false,
+          source: 'invented',
+        }),
+    ],
   ]) {
     const bad = structuredClone(stable);
     edit(bad);
-    await reject(bad);
+    await reject(bad, label);
   }
   // Rebuild every A2 origin, deck, resource, hash and boundary receipt from each
   // coherently edited A1 output/ledger. A hash-only boundary would accept these.
@@ -144,6 +171,6 @@ test('signed archive, boundary, cleanup, entropy, composition and paired histori
       () => runtime.validateEpisodeState(s),
       'Coherent outputs must still derive from the unchanged A1 source',
     );
-    await reject(bad);
+    await reject(bad, 'coherently rebuilt paired histories');
   }
 });
