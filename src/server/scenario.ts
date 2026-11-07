@@ -214,6 +214,14 @@ export function allowScenarioPlay(state: State, command: Command) {
         return;
       if (command.type === 'CYCLE_INPUT' && state.physical!.cycle!.pending) return;
       if (
+        command.type === 'START_ATTACK' &&
+        !sc.pending &&
+        !state.physical?.snapshot.active &&
+        !state.combat?.operation &&
+        state.combat?.grants.some((g) => g.id === command.grantId && g.status === 'offered')
+      )
+        return;
+      if (
         sc.pending ||
         state.physical?.snapshot.active ||
         state.combat?.active ||

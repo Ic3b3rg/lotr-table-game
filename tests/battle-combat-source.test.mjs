@@ -98,9 +98,10 @@ test('absent mandatory physical or terminal context returns an exact pre-cost ga
     physical: null,
   };
   const before = structuredClone(state);
-  assert.deepEqual(battleRuntime.battleCombatProblems(state, heroId, true), [
-    'battle-mandatory-physical-terminal',
-  ]);
+  assert.deepEqual(
+    battleRuntime.battleCombatProblems(state, heroId, { attack: true, negation: false }),
+    ['battle-mandatory-physical-terminal'],
+  );
   assert.deepEqual(
     battleRuntime.preflightCombatOperation(
       state,

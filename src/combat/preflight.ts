@@ -17,7 +17,10 @@ export function preflightCombatOperation(
   heroId: string,
   cause: 'counterattack' | 'provocation' | 'activation',
 ) {
-  const battleProblems = battleCombatProblems(state, heroId, cause === 'counterattack');
+  const battleProblems = battleCombatProblems(state, heroId, {
+    attack: cause === 'counterattack',
+    negation: false,
+  });
   if (battleProblems.includes('battle-mandatory-physical-terminal')) return battleProblems;
   if (cause === 'counterattack') {
     const effect = effectiveGroup(a, first);
@@ -127,7 +130,11 @@ export function preflightCombatOperation(
       }
     }
   }
-  for (const problem of battleCombatProblems(state, heroId, false, heroSpaces))
+  for (const problem of battleCombatProblems(state, heroId, {
+    attack: false,
+    negation: true,
+    spaces: heroSpaces,
+  }))
     missing.add(problem);
   if (state.physical?.boons) {
     const requests = groups

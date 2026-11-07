@@ -828,6 +828,51 @@ function movementOptions(state: State, a: CombatAttempt) {
     };
   });
 }
+function movementProvocations(state: State, a: CombatAttempt) {
+  const move = a.movement!;
+  return move.selected?.actor === 'hero'
+    ? state.scenario!.enemies!.groups.filter(
+        (g) =>
+          g.placed &&
+          !g.exhausted &&
+          g.spaceId === move.selected!.from &&
+          g.figures.some((f) => f.health > 0) &&
+          !move.provoked.includes(g.id),
+      )
+    : [];
+}
+function beginMovementProvocation(state: State, a: CombatAttempt, groupId: string) {
+  const g = movementProvocations(state, a).find((g) => g.id === groupId);
+  invariant(g, 'Gruppo estraneo alla provocazione del movimento selezionato.');
+  const missing = preflightCombatGroup(combatArtifact(state), g, {
+    boons: state.physical!.snapshot.resolution!.resources!.boons,
+    quantities: null,
+    artifact: state.physical?.boons,
+    custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
+    heroIds: [a.heroId],
+  });
+  invariant(
+    !missing.length && (!g.logic || firstCombatGroup(state, g)),
+    'Closure della provocazione figlia non preflightata.',
+  );
+  a.movement!.provoked.push(g.id);
+  const child = newAttempt(
+    state,
+    `${a.id}:forced-move:${a.movement!.provoked.length}`,
+    a.heroId,
+    a.playerId,
+    g.id,
+    'provocation',
+    a.id,
+  );
+  enemyAttack(state, child);
+}
+function provocationLabel(state: State, groupId: string) {
+  const g = group(state, groupId);
+  return battleCombat(state)
+    ? `Provoca gruppo ${state.scenario!.enemies!.groups.indexOf(g) + 1} · ${name(state, g.id)}${g.tokenId >= 0 ? ` · Stendardo ${g.tokenId + 1}` : ''}`
+    : `Provoca ${name(state, g.id)}`;
+}
 function advanceMovement(state: State, a: CombatAttempt): boolean {
   const move = a.movement!;
   if (move.exploring) {
@@ -857,37 +902,11 @@ function advanceMovement(state: State, a: CombatAttempt): boolean {
       return true;
     }
     const sc = state.scenario!,
-      g = sc.enemies!.groups.find(
-        (g) =>
-          g.placed &&
-          !g.exhausted &&
-          g.spaceId === choice.from &&
-          g.figures.some((f) => f.health > 0) &&
-          !move.provoked.includes(g.id),
-      );
+      g = movementProvocations(state, a)[0];
     if (g) {
-      const missing = preflightCombatGroup(combatArtifact(state), g, {
-        boons: state.physical!.snapshot.resolution!.resources!.boons,
-        quantities: null,
-        artifact: state.physical?.boons,
-        custody: state.physical?.snapshot.resolution?.resources?.boonCustody,
-        heroIds: [a.heroId],
-      });
-      invariant(
-        !missing.length && (!g.logic || firstCombatGroup(state, g)),
-        'Closure della provocazione figlia non preflightata.',
-      );
-      move.provoked.push(g.id);
-      const child = newAttempt(
-        state,
-        `${a.id}:forced-move:${move.provoked.length}`,
-        a.heroId,
-        a.playerId,
-        g.id,
-        'provocation',
-        a.id,
-      );
-      enemyAttack(state, child);
+      // Historical journey episodes keep their saved automatic order.
+      if (battleCombat(state)) return false;
+      beginMovementProvocation(state, a, g.id);
       return true;
     }
     const from = sc.spaceBindings.find((b) => b.sourceId === choice.from)!.id,
@@ -1010,9 +1029,7 @@ export function combatPending(state: State): CombatView['pending'] {
         ]
       : groups.map((g) => ({
           id: g.id,
-          label: battleCombat(state)
-            ? `Provoca gruppo ${state.scenario!.enemies!.groups.indexOf(g) + 1} · ${name(state, g.id)}${g.tokenId >= 0 ? ` · Stendardo ${g.tokenId + 1}` : ''}`
-            : `Provoca ${name(state, g.id)}`,
+          label: provocationLabel(state, g.id),
         }));
     const sourceFingerprint = digest({ operation: op, groups: groups.map((g) => g.id), options });
     return {
@@ -1049,9 +1066,13 @@ export function combatPending(state: State): CombatView['pending'] {
     title = 'La fonte è conclusa. Scegli l’ordine di Ultimo Sforzo e delle conseguenze simultanee.';
     options = frontierOptions(state, a);
   } else if (a.stage === 'movement') {
-    title =
-      'Muovete entrambi verso il segnalino minaccia più vicino, se possibile. Scegli ordine e percorso fra quelli legali.';
-    options = movementOptions(state, a).map(({ id, label }) => ({ id, label }));
+    const groups = battleCombat(state) ? movementProvocations(state, a) : [];
+    title = groups.length
+      ? 'Prima del movimento scelto, scegli il prossimo gruppo pronto da provocare. I gruppi esauriti sono esclusi.'
+      : 'Muovete entrambi verso il segnalino minaccia più vicino, se possibile. Scegli ordine e percorso fra quelli legali.';
+    options = groups.length
+      ? groups.map((g) => ({ id: `provoke:${g.id}`, label: provocationLabel(state, g.id) }))
+      : movementOptions(state, a).map(({ id, label }) => ({ id, label }));
   } else if (a.stage === 'reward') {
     const actor = state.preparation!.heroes.find((h) => alive(state, h.heroId));
     if (!actor) return null;
@@ -1148,13 +1169,17 @@ export function answerCombat(
     }
   } else if (a.stage === 'enemy-frontier') beginFrontier(state, a, c.choice);
   else if (a.stage === 'movement') {
-    const move = movementOptions(state, a).find((m) => m.id === c.choice)!;
-    a.movement!.selected = {
-      actor: move.actor,
-      from: move.from,
-      destination: move.destination,
-      targetId: move.targetId,
-    };
+    if (battleCombat(state) && c.choice.startsWith('provoke:'))
+      beginMovementProvocation(state, a, c.choice.slice('provoke:'.length));
+    else {
+      const move = movementOptions(state, a).find((m) => m.id === c.choice)!;
+      a.movement!.selected = {
+        actor: move.actor,
+        from: move.from,
+        destination: move.destination,
+        targetId: move.targetId,
+      };
+    }
   } else if (c.choice === 'close') complete(state, a);
   else if (c.choice === 'decline-grant') {
     state.combat!.grants.find((g) => g.parentId === a.id && g.status === 'offered')!.status =

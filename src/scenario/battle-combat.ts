@@ -192,8 +192,7 @@ export function battleCombatPack(departure: CampDepartureCapability, base: Scena
 export function battleCombatProblems(
   state: State,
   heroId: string,
-  attack: boolean,
-  spaces?: Set<string>,
+  window: { attack: boolean; negation: boolean; spaces?: ReadonlySet<string> },
 ) {
   const cap = battleCombat(state);
   if (!cap) return [];
@@ -246,13 +245,15 @@ export function battleCombatProblems(
   const source = sc.spaceBindings.find(
     (b) => b.id === state.journey!.heroes.find((h) => h.heroId === heroId)!.spaceId,
   )!.sourceId;
-  const at = spaces ?? new Set([source]);
+  const at = window.spaces ?? new Set([source]);
   const { layout } = battleSpatial(state);
   for (const t of cap.terrain) {
     const cell = layout.placements.find((p) => p.id === t.anchor)!.cell;
     if (cell && at.has(cell) && sc.battle!.placements.some((p) => p.anchor === t.anchor)) {
-      if (attack && t.window === 'attack-gated') problems.push(`battle-terrain-fire:${t.anchor}`);
-      if (t.window === 'negate-gated') problems.push(`battle-terrain-boulder:${t.anchor}`);
+      if (window.attack && t.window === 'attack-gated')
+        problems.push(`battle-terrain-fire:${t.anchor}`);
+      if (window.negation && t.window === 'negate-gated')
+        problems.push(`battle-terrain-boulder:${t.anchor}`);
     }
   }
   if (

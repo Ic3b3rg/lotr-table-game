@@ -105,6 +105,8 @@ test('performed provocations defeat real owners, cancel suspended movement and d
   assert.ok(full.physical.snapshot.lastStand.terminal);
   assert.equal(full.scenario.conclusion.outcome, 'failure');
   assert.equal(full.scenario.conclusion.timing, 'no-active-heroes');
+  assert.ok(Object.hasOwn(full.scenario.conclusion, 'episodeHash'));
+  assert.equal(Object.hasOwn(s.scenario.conclusion, 'episodeHash'), false);
   assert.equal(
     full.scenario.pending.state,
     18,
@@ -117,6 +119,11 @@ test('performed provocations defeat real owners, cancel suspended movement and d
   }
   full = (await readBackup(r.host)).payload.state;
   const c = full.scenario.conclusion;
+  assert.equal(Object.hasOwn(s.scenario.conclusion, 'episodeHash'), false);
+  assert.deepEqual(
+    s.scenario.conclusion.campaign.heroes.map((h) => h.skillCopies),
+    c.campaign.heroes.map((h) => [...h.skillCopies].sort()),
+  );
   assert.equal(c.stage, 'camp');
   assert.equal(c.transitionCount, 1);
   assert.equal(c.campEntryCount, 1);
