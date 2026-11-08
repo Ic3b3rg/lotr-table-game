@@ -14,11 +14,13 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { validateBattleTerminalSource } from './compiler';
 import { validateFailureParty } from './conclusion';
+import { BattleTestTerrainPolicySchema } from '../shared/battle-test-terrain';
 
 /** Validate the complete initial population; never shrink a random pool to supported cases. */
 export function validateBattleCombatSource(departure: CampDepartureCapability) {
   const cap = departure.combat;
   invariant(cap, 'Capacità fonte combattimento battaglia assente.');
+  if (cap.testTerrain) BattleTestTerrainPolicySchema.parse(cap.testTerrain);
   const deployment = compileSourceDeployment(departure.deployment),
     combat = verifyCombatClosure(cap.combat),
     board = verifyBattleMapArtifact(departure.board),
@@ -247,12 +249,26 @@ export function battleCombatProblems(
   )!.sourceId;
   const at = window.spaces ?? new Set([source]);
   const { layout } = battleSpatial(state);
+  const supported = BattleTestTerrainPolicySchema.safeParse(cap.testTerrain).success;
+  if (supported) {
+    const placed = sc.battle!.placements;
+    for (const p of placed) {
+      if (p.kind !== 'fire' && p.kind !== 'rock') continue;
+      const t = cap.terrain.find((t) => t.anchor === p.anchor && t.kind === p.kind);
+      if (
+        !t ||
+        !layout.placements.find((a) => a.id === p.anchor)?.cell ||
+        placed.filter((other) => other.anchor === p.anchor).length !== 1
+      )
+        problems.push(`battle-terrain-context:${p.anchor}`);
+    }
+  }
   for (const t of cap.terrain) {
     const cell = layout.placements.find((p) => p.id === t.anchor)!.cell;
     if (cell && at.has(cell) && sc.battle!.placements.some((p) => p.anchor === t.anchor)) {
-      if (window.attack && t.window === 'attack-gated')
+      if (window.attack && t.window === 'attack-gated' && !supported)
         problems.push(`battle-terrain-fire:${t.anchor}`);
-      if (window.negation && t.window === 'negate-gated')
+      if (window.negation && t.window === 'negate-gated' && !supported)
         problems.push(`battle-terrain-boulder:${t.anchor}`);
     }
   }

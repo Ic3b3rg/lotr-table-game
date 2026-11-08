@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { HashSchema, SourceSchema } from './generated-map';
 import { CombatClosureArtifactSchema } from './combat';
+import { BattleTestTerrainPolicySchema } from './battle-test-terrain';
 
 const source = z.strictObject({ source: SourceSchema, objectHash: HashSchema });
 const anchor = z.string().min(1).max(100);
 /** Prospective source artifacts, recompiled against the live departure before activation. */
 export const BattleCombatCapabilitySchema = z.strictObject({
+  testTerrain: BattleTestTerrainPolicySchema.optional(),
   version: z.literal('source-battle-combat-v1'),
   evidenceHash: HashSchema,
   boardFingerprint: HashSchema,

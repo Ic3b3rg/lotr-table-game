@@ -640,6 +640,7 @@ export function advanceCombat(state: State) {
         group(state, attempt.groupId),
         result.hits,
         result.modifiers,
+        !!battleCombat(state)?.testTerrain,
       );
       const { applied: _health, ...hitResult } = applied;
       attempt.applied = { hits: result.hits, ...hitResult };

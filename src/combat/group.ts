@@ -26,15 +26,21 @@ export function applyGroupHits(
   group: DeployedGroup,
   hits: number,
   modifiers: AttackModifier[],
+  testTerrain = false,
 ) {
   integer(hits, 'Colpi', 0, 10000);
   const effective = effectiveGroup(a, group);
   const allowed = modifiers.filter((m) => !effective.blocked.includes(m));
   check(
-    allowed.every((m) => m === 'pierce' || m === 'stun'),
+    allowed.every((m) => m === 'pierce' || m === 'stun' || (testTerrain && m === 'smite')),
     'Modificatore offensivo fuori closure.',
   );
-  const result = resolveFigureHits(group.figures, hits, allowed.includes('pierce'));
+  const result = resolveFigureHits(
+    group.figures,
+    hits,
+    allowed.includes('pierce'),
+    testTerrain && allowed.includes('smite'),
+  );
   if (allowed.includes('stun')) group.exhausted = true;
   return {
     ...result,

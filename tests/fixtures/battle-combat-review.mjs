@@ -136,7 +136,7 @@ export async function reviewBattle({ grant = false, movement = false } = {}) {
   physical.version = 3;
   physical.cycle = { version: 3, seed: {}, records: [], pending: null };
   const state = {
-    schemaVersion: 33,
+    schemaVersion: 34,
     id: randomUUID(),
     generation: randomUUID(),
     revision: 7,

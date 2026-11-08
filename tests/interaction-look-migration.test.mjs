@@ -113,7 +113,7 @@ test('historical 1–31 empty sessions migrate structurally without executing ne
   const host = await startHost();
   t.after(() => host.dispose());
   const current = (await readBackup(host)).payload.state;
-  assert.equal(current.schemaVersion, 33);
+  assert.equal(current.schemaVersion, 34);
   for (let version = 1; version <= 31; version++) {
     const old = { ...structuredClone(current), schemaVersion: version };
     if (version <= 10) delete old.physical;
