@@ -34,7 +34,7 @@ const TileSchema = z.strictObject({
 const reserved = z.strictObject({ isStandard: z.boolean(), modelSource: source });
 const PackSchema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('source-selection-v1'),
+  algorithm: z.enum(['source-selection-v1', 'source-selection-A3-v1']),
   provenance: z.strictObject({
     sourceVersion: z.string().min(1).max(200),
     files: z
@@ -152,8 +152,9 @@ const PackSchema = z.strictObject({
         fixedEncounterSources: z.array(source).max(1000),
       }),
     )
-    .length(4),
-  requiredConnections: z.array(z.tuple([z.int().min(0).max(3), z.int().min(0).max(3)])).max(100),
+    .min(4)
+    .max(7),
+  requiredConnections: z.array(z.tuple([z.int().min(0).max(6), z.int().min(0).max(6)])).max(100),
   adventureEncounterSources: z.array(source).max(1000),
   encounterTraitsFilter: z.strictObject({
     mustHaveAny: mask,
@@ -185,6 +186,11 @@ export function parseSelectionInput(value: unknown): SelectionInput {
   const ordered = (values: { index: number }[], label: string) => {
     if (values.some((v, i) => v.index !== i)) fail(`${label}: indice originale non contiguo.`);
   };
+  const a3 = p.algorithm === 'source-selection-A3-v1';
+  if (p.sections.length !== (a3 ? 7 : 4) || (a3 && p.context.adventureId !== 3))
+    fail('Formato e numero di sezioni non corrispondenti.');
+  if (p.requiredConnections.some((pair) => pair.some((id) => id >= p.sections.length)))
+    fail('Connessione fuori dal numero di sezioni della fonte.');
   const files = new Set(p.provenance.files.map((f) => f.file));
   unique(
     p.provenance.files.map((f) => f.file),

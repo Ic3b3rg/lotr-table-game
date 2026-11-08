@@ -1,7 +1,10 @@
 import {
   CampDepartureCapabilitySchema,
+  DepartureCapabilitySchema,
   CampDepartureInputSchema,
   BattleStartupStateSchema,
+  JourneyStartupCapabilitySchema,
+  JourneyStartupStateSchema,
 } from './camp-departure';
 import {
   CampPreparationCapabilitySchema,
@@ -409,6 +412,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     mode: z.enum(['ordinary', 'tile', 'scout', 'spirit', 'objective']),
     text: SourceTextSchema,
     ignoreLog: z.boolean(),
+    scoutCount: z.literal(3).optional(),
     inspiration: z.literal(1).optional(),
     recovery: SearchRecoverySchema.optional(),
     boon: BoonKindSchema.optional(),
@@ -432,7 +436,12 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   }),
   action('getStart', { target: VariableRefSchema }),
   action('revealTile', { tile }),
-  action('highlight', { tile, spaceIndex: z.int().min(0).max(31) }),
+  action('highlight', {
+    tile,
+    spaceIndex: z.int().min(0).max(31),
+    randomSpace: z.literal('unity-range-port-v1').optional(),
+  }),
+  action('delay', { seconds: z.literal(0.5) }),
   action('explore', {
     tile,
     noInspiration: z.boolean(),
@@ -441,7 +450,7 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     skipAdjacentSectionEvent: z.boolean().optional(),
     intro: SourceTextSchema.optional(),
   }),
-  action('section', { sectionId: z.int().min(0).max(3), text: SourceTextSchema }),
+  action('section', { sectionId: z.int().min(0).max(6), text: SourceTextSchema }),
   action('objective', {
     id: z.int().nonnegative(),
     text: SourceTextSchema,
@@ -585,7 +594,7 @@ export const ScenarioPackSchema = z.strictObject({
   formatVersion: z.literal(1),
   algorithm: z.literal('source-startup-ir-v1'),
   identity: z.strictObject({
-    adventureId: z.union([z.literal(1), z.literal(2)]),
+    adventureId: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     adventureSource: SourceSchema,
     language: z.literal('Italian'),
   }),
@@ -618,7 +627,8 @@ export const ScenarioPackSchema = z.strictObject({
     .max(100)
     .optional(),
   manifest: z.strictObject({
-    campDeparture: CampDepartureCapabilitySchema.optional(),
+    journeyStartup: JourneyStartupCapabilitySchema.optional(),
+    campDeparture: DepartureCapabilitySchema.optional(),
     battleStartup: CampDepartureCapabilitySchema.optional(),
     startupPreparation: z
       .strictObject({
@@ -734,7 +744,7 @@ export const ScenarioPackSchema = z.strictObject({
       'synthetic-physical-p1',
       'original-encounter-v1',
     ]),
-    playablePrefabs: z.array(SourceSchema).length(1).optional(),
+    playablePrefabs: z.array(SourceSchema).max(1).optional(),
     exploration: z
       .strictObject({
         version: z.literal('source-exploration-v1'),
@@ -946,6 +956,7 @@ const SprintExplorationAttemptSchema = TurnExplorationAttemptSchema.extend({
   sprintOrigin: z.strictObject({ version: z.literal('source-sprint-v1'), attemptId: z.uuid() }),
 });
 export const ScenarioSchema = z.strictObject({
+  journeyStartup: JourneyStartupStateSchema.optional(),
   battle: BattleStartupStateSchema.optional(),
   firstCombat: FirstCombatStateSchema.optional(),
   conclusion: z
@@ -1256,6 +1267,8 @@ export const ScenarioSchema = z.strictObject({
 export type Scenario = z.infer<typeof ScenarioSchema>;
 const publicExplorations = ScenarioSchema.shape.explorations.unwrap();
 export const ScenarioViewSchema = ScenarioSchema.extend({
+  campContinuation: z.boolean().optional(),
+  journeyStartup: JourneyStartupStateSchema.pick({ version: true, stage: true }).optional(),
   battleRound: z
     .strictObject({
       enabled: z.literal(true),
@@ -1322,7 +1335,11 @@ export function scenarioView(sc: Scenario | null): ScenarioView | null {
   const authority = sc.pack.manifest.battleStartup?.battleRounds,
     phaseRounds = sc.rounds;
   if (authority && phaseRounds?.version === 'source-battle-rounds-v1') {
-    const { battleRounds: _authority, ...departure } = sc.pack.manifest.battleStartup!,
+    const {
+        battleRounds: _authority,
+        continuation: _continuation,
+        ...departure
+      } = sc.pack.manifest.battleStartup!,
       base = departure.combat!,
       phaseSource = BattleRoundSourceSchema.parse(authority.rounds),
       frame = phaseRounds.frames.find((f) => f.id === phaseRounds.active),
@@ -1340,6 +1357,11 @@ export function scenarioView(sc: Scenario | null): ScenarioView | null {
           battleStartup: departure,
           combat: base.combat,
           failure: base.terminal.failure,
+          ...(sc.pack.manifest.campSkills ? { campSkills: sc.pack.manifest.campSkills } : {}),
+          ...(sc.pack.manifest.campItems ? { campItems: sc.pack.manifest.campItems } : {}),
+          ...(sc.pack.manifest.campPreparation
+            ? { campPreparation: sc.pack.manifest.campPreparation }
+            : {}),
         },
       });
     const { rounds: _rounds, ...withoutRounds } = sc;
@@ -1417,6 +1439,7 @@ export function scenarioView(sc: Scenario | null): ScenarioView | null {
     const placementSpace = sc.spaceBindings.find((b) => b.sourceId === placementGroup?.spaceId);
     return {
       ...scenarioView(clean)!,
+      campContinuation: !!sc.pack.manifest.campDeparture,
       battleRound: {
         enabled: true,
         groups: visibleGroups,
@@ -1452,7 +1475,12 @@ export function scenarioView(sc: Scenario | null): ScenarioView | null {
       },
     };
   }
-  const { enemies, explorations, conclusion, ...visible } = sc;
+  const { enemies, explorations, conclusion, journeyStartup, ...visible } = sc;
+  const publicPack = structuredClone(sc.pack);
+  if (publicPack.manifest.campDeparture?.version === 'source-camp-departure-A3-v1')
+    delete publicPack.manifest.campDeparture;
+  else if (publicPack.manifest.campDeparture) delete publicPack.manifest.campDeparture.continuation;
+  if (publicPack.manifest.battleStartup) delete publicPack.manifest.battleStartup.continuation;
   const publicEnemies = enemies ? (({ entropy: _entropy, ...rest }) => rest)(enemies) : null;
   let publicConclusion: ScenarioView['conclusion'];
   if (conclusion) {
@@ -1471,6 +1499,11 @@ export function scenarioView(sc: Scenario | null): ScenarioView | null {
   }
   return {
     ...visible,
+    pack: publicPack,
+    campContinuation: !!sc.pack.manifest.campDeparture,
+    ...(journeyStartup
+      ? { journeyStartup: { version: journeyStartup.version, stage: journeyStartup.stage } }
+      : {}),
     ...(publicConclusion ? { conclusion: publicConclusion } : {}),
     ...(publicEnemies ? { enemies: publicEnemies } : {}),
     ...(explorations

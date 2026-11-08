@@ -1,3 +1,4 @@
+import { secondCampPack } from './journey-startup-source';
 import type { CampDepartureCapability } from '../shared/camp-departure';
 import type { ScenarioPack } from '../shared/scenario';
 import {
@@ -623,9 +624,20 @@ export function battleRoundsPack(departure: CampDepartureCapability, base?: Scen
       },
     },
   });
+  const continued = secondCampPack(departure, pack);
   return validateBattleRoundCertificates({
-    pack,
+    pack: continued,
     certificates: cap.certificates,
+    ...(continued.manifest.campDeparture
+      ? {
+          campDepartureCertificate: { instructionHash: digest(continued.manifest.campDeparture) },
+          campSkillsCertificate: { instructionHash: digest(continued.manifest.campSkills) },
+          campItemsCertificate: { instructionHash: digest(continued.manifest.campItems) },
+          campPreparationCertificate: {
+            instructionHash: digest(continued.manifest.campPreparation),
+          },
+        }
+      : {}),
     roundsCertificate: { instructionHash: digest(rounds) },
     followupCertificate: { instructionHash: digest(pack.manifest.followup) },
     shadowCertificate: { instructionHash: digest(combat.source.shadow) },

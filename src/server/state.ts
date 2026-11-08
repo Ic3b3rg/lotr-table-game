@@ -1,3 +1,4 @@
+import { hasAdventure3Forms, assertLinearArchiveShape } from './adventure3-migration';
 import { scenarioStateProblem } from '../scenario/validate';
 import { ScenarioSchema } from '../shared/scenario';
 import { PhysicalStateSchema } from '../physical-resolution/model';
@@ -60,8 +61,10 @@ export const EpisodeArchiveSchema = BaseStateSchema.pick({
 });
 export type EpisodeArchive = z.infer<typeof EpisodeArchiveSchema>;
 export const StateSchema = BaseStateSchema.extend({
-  episodes: z.array(EpisodeArchiveSchema).length(1).optional(),
+  episodes: z.array(EpisodeArchiveSchema).min(1).max(2).optional(),
 }).superRefine((state, ctx) => {
+  if (state.schemaVersion === 35 && hasAdventure3Forms(state))
+    ctx.addIssue({ code: 'custom', message: 'Forme prospettiche viaggio3 in uno schema storico.' });
   const scenarioError = scenarioStateProblem(state);
   if (scenarioError) ctx.addIssue({ code: 'custom', message: scenarioError });
   const generationError = generationStateProblem(
@@ -628,6 +631,12 @@ function hasDepartureForms(raw: object) {
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (typeof version === 'number' && version <= 35 && hasAdventure3Forms(raw))
+      throw new Error('Forme prospettiche viaggio3 non valide per uno schema storico.');
+    if (version === 36) {
+      assertLinearArchiveShape(raw);
+      return StateSchema.parse(raw);
+    }
     if (typeof version === 'number' && version <= 34 && hasBattleRoundForms(raw))
       throw new Error('Fasi della battaglia non valide per uno schema storico.');
     if (version === 34) {

@@ -3,7 +3,12 @@ import { StateSchema, EpisodeArchiveSchema, type State, type EpisodeArchive } fr
 import type { CycleState } from '../shared/physical-cycle';
 import type { Receipt } from '../shared/protocol';
 import { CommandSchema } from '../shared/protocol';
-import type { CampDepartureInput, EpisodeBoundary } from '../shared/camp-departure';
+import {
+  EpisodeBoundarySchema,
+  type CampDepartureInput,
+  type EpisodeBoundary,
+} from '../shared/camp-departure';
+import { activateJourneyEpisode } from './journey-episode';
 import type { CampDeckArtifact } from '../camp-decks/decks';
 import { beginCampDeparture, validateCampDepartureSource } from '../scenario/camp-departure';
 import { createBattleScenario, pumpBattleStartup } from '../scenario/battle-startup';
@@ -28,11 +33,15 @@ export function archiveDomain(state: State): EpisodeArchive {
   );
 }
 export function archivedState(state: State): State {
-  invariant(state.episodes?.length === 1, 'Episodio archiviato assente.');
+  invariant(
+    state.episodes && state.episodes.length >= 1 && state.episodes.length <= 2,
+    'Episodio archiviato assente.',
+  );
   const work = { ...state };
   for (const key of Object.keys(EpisodeArchiveSchema.shape)) Reflect.deleteProperty(work, key);
-  Object.assign(work, structuredClone(state.episodes[0]!));
-  delete work.episodes;
+  Object.assign(work, structuredClone(state.episodes.at(-1)!));
+  if (state.episodes.length > 1) work.episodes = structuredClone(state.episodes.slice(0, -1));
+  else delete work.episodes;
   return work;
 }
 export function activateEpisode(
@@ -45,6 +54,18 @@ export function activateEpisode(
   seed: string,
   decks: CampDeckArtifact,
 ) {
+  if (source.s.version === 'source-camp-departure-A3-v1')
+    return activateJourneyEpisode(
+      state,
+      actor,
+      input,
+      source.s,
+      source.fronts,
+      seed,
+      decks,
+      source.deckSource,
+    );
+  const prospective = source.s.continuation !== undefined;
   const archived = archiveDomain(state),
     cap = source.s,
     c = archived.scenario!.conclusion!,
@@ -115,7 +136,7 @@ export function activateEpisode(
       rallyDone: false,
     })),
   };
-  const receipt = {
+  const legacyReceipt = {
     version: 'camp-departure-v1' as const,
     archivedEpisodeId: archived.scenario!.id,
     episodeId: id,
@@ -123,19 +144,28 @@ export function activateEpisode(
     sourceFingerprint,
     deckSourceFingerprint: decks.sourceFingerprint,
     deckArtifactFingerprint: decks.artifactFingerprint,
-    boardArtifactFingerprint: source.board.artifactFingerprint,
+    boardArtifactFingerprint: source.board!.artifactFingerprint,
     realizationFingerprint: decks.realizationFingerprint,
     drawOrder: [...source.deckSource.drawOrder],
   };
-  const boundary: EpisodeBoundary = {
-    version: 'camp-departure-v1',
+  const receipt = prospective
+    ? {
+        ...legacyReceipt,
+        version: 'camp-departure-v2' as const,
+        episodeNumber: 2 as const,
+        chainFingerprint: digest([archived]),
+      }
+    : legacyReceipt;
+  const boundary: EpisodeBoundary = EpisodeBoundarySchema.parse({
+    version: prospective ? 'camp-departure-v2' : 'camp-departure-v1',
+    ...(prospective ? { generation: state.generation, chainFingerprint: digest([archived]) } : {}),
     ...actor,
     expectedRevision: state.revision,
     input: structuredClone(input),
     entropy: seed,
     archiveFingerprint,
     receipt,
-  };
+  });
   const old = archived.physical!;
   const physical = freezePhysical(
     old.raw,
@@ -177,7 +207,7 @@ export function activateEpisode(
     })),
   };
   physical.cycle = {
-    version: 3,
+    version: prospective ? 4 : 3,
     seed: {
       departure: boundary,
       revision: state.revision + 1,
@@ -226,25 +256,38 @@ function boundaryReceipt(state: State, b: EpisodeBoundary): Receipt {
   };
 }
 type Proof = { work: State; receipts: Receipt[] };
-let proof: { context: string; records: string; value: Proof } | null = null;
+const proofs = new Map<string, { records: string; value: Proof }>();
 /** Both epochs are replayed from frozen sources, never from mutually agreeing output hashes. */
 export function replayEpisode(state: State, cycle: CycleState): Proof {
   invariant(
-    cycle.version === 3 && cycle.seed.departure && state.episodes?.length === 1,
+    (cycle.version === 3 || cycle.version === 4) &&
+      cycle.seed.departure &&
+      state.episodes &&
+      (cycle.version === 3
+        ? state.episodes.length === 1 && cycle.seed.departure.version === 'camp-departure-v1'
+        : cycle.seed.departure.version === 'camp-departure-v2' &&
+          state.episodes.length === cycle.seed.departure.receipt.episodeNumber - 1 &&
+          digest(state.episodes) === cycle.seed.departure.chainFingerprint),
     'Origine episodio2 mancante.',
   );
   const b = cycle.seed.departure,
-    archive = state.episodes[0]!,
-    context = digest({ archive, boundary: b, players: state.players.map((p) => p.id) });
+    archive = state.episodes!.at(-1)!,
+    context = digest({
+      archives: state.episodes,
+      boundary: b,
+      players: state.players.map((p) => p.id),
+    }),
+    proof = proofs.get(context);
   let result: Proof;
   if (
-    proof?.context === context &&
+    proof &&
     proof.value.receipts.length <= cycle.records.length &&
     proof.records === digest(cycle.records.slice(0, proof.value.receipts.length))
   )
     result = structuredClone(proof.value);
   else {
     const work = archivedState(state);
+    if (b.version === 'camp-departure-v2') work.generation = b.generation;
     StateSchema.parse(work);
     invariant(
       b.expectedRevision === work.revision && digest(archive) === b.archiveFingerprint,
@@ -283,6 +326,17 @@ export function replayEpisode(state: State, cycle: CycleState): Proof {
   }
   for (const record of cycle.records.slice(result.receipts.length)) {
     invariant(
+      cycle.version === 4 ? !!record.generation : record.generation === undefined,
+      'Generation del comando fuori dalla propria versione.',
+    );
+    if (record.generation && record.generation !== result.work.generation) {
+      invariant(
+        record.intent.expectedRevision > result.work.revision,
+        'Generation modificata senza un confine amministrativo.',
+      );
+      result.work.generation = record.generation;
+    }
+    invariant(
       record.intent.expectedRevision >= result.work.revision,
       'Ordine episodio2 modificato.',
     );
@@ -293,7 +347,9 @@ export function replayEpisode(state: State, cycle: CycleState): Proof {
     result.work.physical!.cycle = ledger;
     result.work.revision++;
   }
-  proof = { context, records: digest(cycle.records), value: structuredClone(result) };
+  proofs.delete(context);
+  proofs.set(context, { records: digest(cycle.records), value: structuredClone(result) });
+  if (proofs.size > 3) proofs.delete(proofs.keys().next().value!);
   return result;
 }
 const keys = [
@@ -318,7 +374,7 @@ export function applyEpisodeDomain(state: State, work: State) {
 }
 export function validateEpisodeState(state: State) {
   const cycle = state.physical?.cycle;
-  if (cycle?.version !== 3) {
+  if (cycle?.version !== 3 && cycle?.version !== 4) {
     invariant(
       !state.episodes &&
         !state.preparation?.episode &&

@@ -1,3 +1,4 @@
+import { journeyBoundaryRequest, startJourneyEquipment } from './journey-startup';
 import { HANDOFF_TEXT } from '../shared/scenario';
 import {
   applyConclusionAction,
@@ -208,7 +209,7 @@ function broadcast(sc: Scenario, event: string) {
   for (const i of receivers) send(sc, i, event);
 }
 function eventId(sc: Scenario, event: string) {
-  return sc.phase === 'action'
+  return sc.phase === 'action' || sc.journeyStartup
     ? cycleUUID({ scenario: sc.id, ordinal: sc.events.length, event })
     : randomUUID();
 }
@@ -218,7 +219,7 @@ function request(state: State, data: Omit<ScenarioRequest, 'id' | 'fingerprint'>
   const q = {
     ...data,
     id:
-      sc.phase === 'action'
+      sc.phase === 'action' || sc.journeyStartup
         ? cycleUUID({
             scenario: sc.id,
             data,
@@ -979,6 +980,9 @@ function execute(
     case 'release':
       i.processing = 0;
       break;
+    case 'delay':
+      // The named portable policy collapses the source's presentation delay; no Unity clock parity.
+      break;
     case 'stop':
       i.stopped = true;
       i.settled = true;
@@ -1001,7 +1005,9 @@ function execute(
       break;
     case 'highlight': {
       const tile = resolveTile(state, i, a.tile),
-        space = cells(state, tile.source).find((s) => s.index === a.spaceIndex);
+        space = cells(state, tile.source).find(
+          (s) => s.index === (a.randomSpace ? sc.journeyStartup!.startSpaceIndex : a.spaceIndex),
+        );
       invariant(space, 'Indice Spaces fonte assente.');
       const { definition } = projectionToJourney(p(), space.id, sc.pack.name);
       invariant(!state.journey, 'Piazzamento eroi ripetuto.');
@@ -1744,6 +1750,13 @@ function advanceTask(state: State) {
 }
 function pump(state: State, probe?: SourceProbe, requestId?: string) {
   const sc = state.scenario!;
+  if (sc.journeyStartup?.stage === 'initial') {
+    if (journeyBoundaryRequest(state, (data) => request(state, data))) return;
+    sc.journeyStartup.stage = 'principal';
+    const principal = sc.instances.find((i) => i.kind === 'principal')!;
+    principal.processing = 1;
+    invariant(send(sc, principal, 'SCENARIO_BEGIN'), 'Ingresso viaggio3 senza seguito fonte.');
+  }
   for (let n = 0; n < 2000; n++) {
     let progress = false;
     for (const i of sc.instances.filter((i) => !sc.conclusion || i.kind === 'principal'))
@@ -1791,6 +1804,14 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     const principal = sc.instances.find((i) => i.kind === 'principal')!;
     if (!sc.tasks.length && principal.processing === 0) {
       invariant(sc.objective?.id === 0, 'Setup rilasciato senza obiettivo0.');
+      if (sc.journeyStartup) {
+        if (sc.journeyStartup.stage === 'principal') startJourneyEquipment(state);
+        if (journeyBoundaryRequest(state, (data) => request(state, data))) return;
+        if (sc.journeyStartup.stage === 'after-setup') {
+          processRoundEvent(state, sc.pack.manifest.journeyStartup!.roundStartEvent, false);
+          sc.journeyStartup.stage = 'handoff';
+        }
+      }
       request(state, {
         instanceId: principal.id,
         state: principal.state,
@@ -1847,11 +1868,18 @@ export function beginScenario(
   state: State,
   parsed: ReturnType<typeof parseScenarioPack>,
   physical?: ReturnType<typeof loadPhysicalSource>,
+  continuation?: {
+    id: string;
+    state: NonNullable<Scenario['journeyStartup']>;
+    physical: NonNullable<Parameters<typeof initializeScenarioPhysical>[3]>;
+  },
 ) {
   const p = projection(state);
   validateScenarioBinding(parsed.pack, p);
   const start = p.sections.find((s) => s.id === 0)!.tiles[0]!,
-    space = cells(state, start.source).find((s) => s.index === 1);
+    space = cells(state, start.source).find(
+      (s) => s.index === (continuation?.state.startSpaceIndex ?? 1),
+    );
   invariant(space, 'Start Spaces[1] assente.');
   const { bindings, definition: journeyDefinition } = projectionToJourney(
     p,
@@ -1859,12 +1887,24 @@ export function beginScenario(
     parsed.pack.name,
   );
   const sc: Scenario = {
-    id: randomUUID(),
+    id: continuation?.id ?? randomUUID(),
+    ...(continuation ? { journeyStartup: structuredClone(continuation.state) } : {}),
     pack: structuredClone(parsed.pack),
     packFingerprint: parsed.fingerprint,
     projectionFingerprint: p.fingerprint,
     phase: 'setup',
-    globals: Object.fromEntries(parsed.pack.globals.map((v) => [v.name, structuredClone(v.value)])),
+    globals: {
+      ...Object.fromEntries(parsed.pack.globals.map((v) => [v.name, structuredClone(v.value)])),
+      ...(continuation
+        ? Object.fromEntries(
+            Object.entries(continuation.state.campaign.globals).filter(
+              ([name]) =>
+                parsed.pack.globals.some((v) => v.name === name) &&
+                !parsed.pack.manifest.journeyStartup!.resetBindings.includes(name),
+            ),
+          )
+        : {}),
+    },
     instances: [],
     tiles: p.sections
       .flatMap((s) => s.tiles)
@@ -1900,7 +1940,19 @@ export function beginScenario(
       visible: false,
     }));
   }
-  initializeScenarioPhysical(state, journeyDefinition.startSpaceId, physical);
+  initializeScenarioPhysical(
+    state,
+    journeyDefinition.startSpaceId,
+    physical,
+    continuation?.physical,
+  );
+  if (continuation) {
+    sc.play = { lore: continuation.state.campaign.lore, active: null, attempts: [], tests: [] };
+    sc.enemies!.entropy = digest({
+      stream: 'journey3-deployment-v1',
+      entropy: continuation.physical.entropy,
+    });
+  }
   const add = (
     id: string,
     kind: ScenarioInstance['kind'],
@@ -1939,15 +1991,19 @@ export function beginScenario(
     add(`static:${row.gameObject}`, row.kind, row.definition);
   for (const spaceId of p.spawnOrder) {
     const a = p.assignments.find((a) => a.spaceId === spaceId)!,
-      m = sc.pack.manifest.prefabs.find((m) => m.source === a.prefab.source)!;
+      m = sc.pack.manifest.prefabs.find(
+        (m) => m.source === a.prefab.source && m.modelSource === a.modelSource,
+      )!;
     add(`node:${spaceId}`, 'encounter', m.fsmSource, a.prefab.source, spaceId);
   }
   sc.cardEffects = [];
   if (!initializeStartupPreparation(state))
     for (const hero of state.preparation!.heroes)
       for (const copy of hero.prepared) preparedReward(state, hero.heroId, copy, 'initial');
-  principal.processing = 1;
-  invariant(send(sc, principal, 'SCENARIO_BEGIN'), 'SCENARIO_BEGIN non compilato.');
+  if (!continuation) {
+    principal.processing = 1;
+    invariant(send(sc, principal, 'SCENARIO_BEGIN'), 'SCENARIO_BEGIN non compilato.');
+  }
   pump(state);
 }
 function renewed(state: State, q: ScenarioRequest, stage: 'ready' | 'revealed') {
@@ -1992,6 +2048,11 @@ export function resumeScenario(
     preflightContinuation(state, (work, probe) =>
       resumeScenario(work, playerId, command, physicalPath, probe, explorationEntropy),
     );
+  if (sc.journeyStartup && q.kind === 'physical' && q.action === -1) {
+    answerScenarioPhysical(state, playerId, command, physicalPath);
+    pump(state);
+    return;
+  }
   const i = sc.instances.find((i) => i.id === q.instanceId)!;
   const input = command.input,
     base = {
@@ -2292,9 +2353,13 @@ export function resumeScenario(
         'Handoff duplicato o mappa assente.',
       );
       state.round = newRound(state, 1);
+      if (sc.journeyStartup) {
+        state.round.id = cycleUUID({ scenario: sc.id, round: 1 });
+        sc.journeyStartup.stage = 'action';
+      }
       sc.phase = 'action';
       sc.handoffCount = 1;
-      if (sc.pack.manifest.scope === 'original-encounter-v1')
+      if (sc.pack.manifest.scope === 'original-encounter-v1' && !sc.play)
         sc.play = { active: null, lore: 0, attempts: [], tests: [] };
       if (sc.pack.manifest.exploration)
         sc.explorations = { version: 'source-exploration-v1', active: null, attempts: [] };

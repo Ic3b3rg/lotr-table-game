@@ -5,6 +5,7 @@ import type { PhysicalProgram } from '../shared/physical';
 import type { PhysicalState } from '../physical-resolution/model';
 import type { Preparation } from '../shared/preparation';
 import { definitionId } from '../shared/preparation';
+import { cycleUUID } from '../physical-resolution/cycle-request';
 import { openPhysical } from '../physical-resolution/runtime';
 import { syncPhysicalDefeat } from '../server/physical-defeat';
 import { sourceCursor, type SourceEffect } from './source-cursor';
@@ -17,12 +18,22 @@ export function validateStartupPreparationSource(
   catalog: State['content'],
   artifact?: FrontArtifact,
 ) {
+  if (!pack.manifest.startupPreparation) return;
+  validateStartupPreparationMaterials(pack, catalog ? digest(catalog) : undefined, artifact);
+}
+
+/** Bind the same preparation policy before a future episode has a live State. */
+export function validateStartupPreparationMaterials(
+  pack: ScenarioPack,
+  catalogHash: string | undefined,
+  artifact?: FrontArtifact,
+) {
   const cap = pack.manifest.startupPreparation;
   if (!cap) return;
   invariant(
-    catalog &&
+    catalogHash &&
       artifact &&
-      cap.catalogHash === digest(catalog) &&
+      cap.catalogHash === catalogHash &&
       cap.frontsFingerprint === artifact.fingerprint,
     'Preparazione iniziale senza catalogo e artifact corrispondenti.',
   );
@@ -66,9 +77,12 @@ function program(state: State, children: Children): PhysicalProgram {
 function initialProgram(state: State, preparation: Preparation) {
   return program(
     state,
-    preparation.heroes.flatMap((h, hero) =>
-      h.prepared.map((copy) => ({ kind: 'prepared' as const, hero, copy })),
-    ),
+    preparation.heroes.flatMap((h, hero) => [
+      ...(state.scenario!.journeyStartup
+        ? [{ kind: 'battle-equipment' as const, hero, window: 'initialize' as const }]
+        : []),
+      ...h.prepared.map((copy) => ({ kind: 'prepared' as const, hero, copy })),
+    ]),
   );
 }
 function sync(state: State) {
@@ -80,14 +94,38 @@ export function initializeStartupPreparation(state: State) {
     p = state.physical;
   if (!sc.pack.manifest.startupPreparation) return false;
   invariant(p?.fronts && !p.runs.length, 'Preparazione iniziale senza origine fisica.');
-  openPhysical(p, initialSource(sc.pack), initialProgram(state, state.preparation!), {
-    preparation: structuredClone(state.preparation!),
-    depletion: [],
-    boons: [],
-  });
+  openPhysical(
+    p,
+    initialSource(sc.pack),
+    initialProgram(state, state.preparation!),
+    {
+      preparation: structuredClone(state.preparation!),
+      depletion: [],
+      boons: [],
+      ...(sc.journeyStartup
+        ? {
+            itemCustody: state.preparation!.episode!.heroes.flatMap((h) =>
+              h.accessory
+                ? [
+                    {
+                      ...sc.journeyStartup!.campaign.ownership.inventory.find(
+                        (i) => i.copy === h.accessory,
+                      )!,
+                      heroId: h.heroId,
+                      source: 'camp-departure' as const,
+                    },
+                  ]
+                : [],
+            ),
+          }
+        : {}),
+    },
+    undefined,
+    sc.journeyStartup ? cycleUUID({ scenario: sc.id, initial: true }) : undefined,
+  );
   // A fresh company has no physical fear to select. This never acknowledges an effect.
   invariant(
-    !p.snapshot.active && p.snapshot.parents[0]!.returnCount === 1,
+    sc.journeyStartup || (!p.snapshot.active && p.snapshot.parents[0]!.returnCount === 1),
     'Preparazione iniziale non conclusa.',
   );
   sync(state);
@@ -118,7 +156,13 @@ export function startupService(state: State, effect: SourceEffect, heroId: strin
       }),
     },
     program: program(state, [
-      { kind: action.mode === 'scout' ? 'startup-scout' : 'startup-test', hero },
+      action.mode === 'scout'
+        ? {
+            kind: 'startup-scout',
+            hero,
+            ...(action.scoutCount ? { count: action.scoutCount } : {}),
+          }
+        : { kind: 'startup-test', hero },
     ]),
   };
 }
@@ -144,7 +188,14 @@ export function beginStartupService(state: State, effect: SourceEffect) {
     digest(context.preparation) === digest(state.preparation),
     'Risorse startup discontinue.',
   );
-  const parentId = openPhysical(p, service.source, service.program, structuredClone(context));
+  const parentId = openPhysical(
+    p,
+    service.source,
+    service.program,
+    structuredClone(context),
+    undefined,
+    sc.journeyStartup ? cycleUUID({ scenario: sc.id, source: service.source }) : undefined,
+  );
   sync(state);
   sc.tasks.push({
     kind: 'startup',

@@ -55,7 +55,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(35),
+  schemaVersion: z.union([z.literal(35), z.literal(36)]),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),

@@ -35,7 +35,7 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         projectionFingerprint: sc.projectionFingerprint,
         pendingId: q.id,
         sourceFingerprint: q.fingerprint,
-        heroId: null,
+        heroId: q.heroId,
         input,
       },
       true,
@@ -47,7 +47,12 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
   function controls() {
     const c = session?.scenario?.conclusion;
     root.hidden = !c;
-    next.hidden = !c || ['camp', 'camp-preparation'].includes(c.stage) || !player;
+    next.hidden =
+      !c ||
+      ['camp', 'camp-preparation'].includes(c.stage) ||
+      !player ||
+      (!!session?.scenario?.pending?.actorPlayerId &&
+        session.scenario.pending.actorPlayerId !== player.id);
     next.textContent =
       c?.stage === 'conclusion'
         ? 'Continua per il gruppo'
@@ -78,7 +83,9 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         c.stage === 'camp-preparation'
           ? 'Prepara la prossima avventura'
           : c.stage === 'camp'
-            ? 'Il primo campo'
+            ? sc!.pack.identity.adventureId === 2
+              ? 'Il secondo campo'
+              : 'Il primo campo'
             : c.stage === 'conclusion'
               ? c.outcome === 'victory'
                 ? 'L’avventura è vinta'
@@ -86,7 +93,7 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
               : 'Il cammino della compagnia';
       status.textContent =
         (c.outcome === 'victory'
-          ? 'La ricerca del passaggio è riuscita: la compagnia ha vinto. I risultati e i premi sono salvati.'
+          ? 'La compagnia ha vinto l’avventura. I risultati e i premi sono salvati.'
           : 'kind' in c.cause && c.cause.kind === 'threat'
             ? `La minaccia ${c.cause.before} → ${c.cause.after} ha raggiunto il limite ${c.cause.limit}: la compagnia perde ${c.timing === 'threat-start' ? 'prima degli effetti della prossima Ombra' : 'dopo aver completato le soglie raggiunte'}.`
             : c.timing === 'shadow-start'
@@ -133,7 +140,7 @@ export function createConclusion(sync: () => Promise<void>, reader: CardReader) 
         text('p', destination.type === 'battle' ? 'Mappa di battaglia.' : 'Mappa di viaggio.'),
         text(
           'p',
-          sc!.pack.manifest.campDeparture
+          sc!.campContinuation
             ? 'La destinazione è salvata. Confermate le scelte di ogni eroe; la preparazione mostra quando potete partire insieme.'
             : 'La destinazione è salvata. La prossima avventura attende la propria mappa e le proprie istruzioni prima della partenza.',
           'company-help',

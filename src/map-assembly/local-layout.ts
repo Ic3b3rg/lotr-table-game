@@ -249,7 +249,7 @@ function attachNext(
   return tile.shape.hashId;
 }
 export function layoutTiles(w: World, rng: SourceRandom, search: LocalSearch, o: Observe): void {
-  for (let id = 0; id < 4; id++) {
+  for (let id = 0; id < w.sections.length; id++) {
     search.sectionCursor = id;
     const activeSection = w.sections[id]!;
     search.activeSectionId = activeSection.id;

@@ -51,9 +51,14 @@ export function createRounds(sync: () => Promise<void>) {
     const cycle = !!current.physical?.cycle;
     const original = current.scenario?.pack.manifest.scope === 'original-encounter-v1';
     const battlePhase = current.scenario?.battleRound;
-    const sourcePhases = (original && !!current.scenario?.pack.manifest.rounds) || !!battlePhase;
+    const sourcePhases =
+      (original && !!current.scenario?.pack.manifest.rounds && !current.scenario.journeyStartup) ||
+      !!battlePhase;
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
-    const battleBoundary = !!current.scenario?.battle && !!allEnded && !battlePhase;
+    const battleBoundary =
+      (!!current.scenario?.battle || !!current.scenario?.journeyStartup) &&
+      !!allEnded &&
+      !battlePhase;
     const allScouted = round?.heroes.every((hero) => hero.rallyDone);
     const active = round?.heroes.find((hero) => hero.heroId === round.activeHeroId);
     element('#round-title').textContent = round

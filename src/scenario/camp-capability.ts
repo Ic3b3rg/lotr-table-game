@@ -7,7 +7,11 @@ export function validateCampCapability(pack: ScenarioPack) {
   const cap = pack.manifest.campSkills;
   if (!cap) return;
   invariant(
-    pack.manifest.scope === 'original-encounter-v1' &&
+    (pack.manifest.scope === 'original-encounter-v1' ||
+      (pack.manifest.scope === 'battle-combat-v1' &&
+        pack.manifest.battleStartup?.continuation !== undefined &&
+        digest(pack.manifest.campDeparture) ===
+          digest(pack.manifest.battleStartup.continuation))) &&
       pack.manifest.failure &&
       cap.failureFingerprint === digest(pack.manifest.failure),
     'Campo senza conclusione fonte corrispondente.',

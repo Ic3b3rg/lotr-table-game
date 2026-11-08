@@ -65,6 +65,10 @@ export const BackupSchema = z
         raw.state && typeof raw.state === 'object' && 'schemaVersion' in raw.state
           ? raw.state.schemaVersion
           : 1;
+      if (typeof version === 'number' && version <= 35 && Array.isArray(raw.commands))
+        for (const command of raw.commands)
+          if (command?.receipt?.departure?.version === 'camp-departure-v2')
+            throw new Error('Ricevuta prospettica viaggio3 sotto uno schema storico.');
       if (typeof version === 'number' && version <= 30 && Array.isArray(raw.commands))
         for (const command of raw.commands) {
           const receipt = command?.receipt;

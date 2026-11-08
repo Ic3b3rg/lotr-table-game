@@ -238,6 +238,10 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     if (sc?.battleRound)
       element('#scenario-limit').textContent =
         `Minaccia ${sc.battleRound.threat} · limite ${sc.battleRound.limit}. Sapienza ${sc.play?.lore ?? 0}. Le attivazioni, gli eventi e le Scoperte seguono l’ordine dell’avventura. Le interazioni dei segnalini restano in attesa delle proprie istruzioni.`;
+    if (sc?.journeyStartup)
+      element('#scenario-limit').textContent = sc.pack.manifest.journeyStartup?.provocationPolicy
+        ? 'Il primo turno, il viaggio e le provocazioni sono disponibili. Il seguito degli incontri, gli attacchi e la prossima Ombra attendono le proprie istruzioni.'
+        : 'Il primo turno e il viaggio sono disponibili. Il seguito degli incontri, le provocazioni e la prossima Ombra attendono le proprie istruzioni.';
     refreshActions();
   }
   agreed.oninput = () => {

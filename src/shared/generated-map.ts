@@ -23,8 +23,8 @@ const mappedItem = z.strictObject({
   source: SourceSchema,
 });
 export const GenerationContextSchema = HistorySchema.extend({
-  policy: z.literal('new-base-A1-v1'),
-  adventureId: z.literal(1),
+  policy: z.enum(['new-base-A1-v1', 'camp-A3-v1']),
+  adventureId: z.union([z.literal(1), z.literal(3)]),
   adventureSource: SourceSchema,
   builderSource: SourceSchema,
   catalogId: ContentIdSchema,
@@ -61,7 +61,7 @@ export const VectorSchema = z.tuple([
 const coordinate = z.int().min(-2048).max(2048);
 const cube = z.tuple([coordinate, coordinate, coordinate]).refine((v) => v[0] + v[1] + v[2] === 0);
 const rotation = z.int().min(0).max(5);
-const sectionId = z.int().min(0).max(3);
+const sectionId = z.int().min(0).max(6);
 const index = z.int().min(0).max(10000);
 const spaceId = z
   .string()
@@ -158,8 +158,8 @@ const selectedModel = z.strictObject({
 });
 export const ProjectionDataSchema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('frozen-A1-v1'),
-  validationVersion: z.literal('A1-semantic-v1'),
+  algorithm: z.enum(['frozen-A1-v1', 'frozen-A3-v1']),
+  validationVersion: z.enum(['A1-semantic-v1', 'A3-semantic-v1']),
   sourceParity: z.literal('not-certified'),
   provenance,
   packFingerprint: HashSchema,
@@ -190,8 +190,8 @@ export const ProjectionDataSchema = z.strictObject({
     geometry: SourceRandomStateSchema,
     final: SourceRandomStateSchema,
   }),
-  builderOrder: z.tuple([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
-  mapOrder: z.array(sectionId).length(4),
+  builderOrder: z.array(sectionId).min(4).max(7),
+  mapOrder: z.array(sectionId).min(4).max(7),
   geometrySettings: GeometryPackSchema.pick({
     mapPosition: true,
     cornerCos: true,
@@ -247,7 +247,8 @@ export const ProjectionDataSchema = z.strictObject({
           .max(120),
       }),
     )
-    .length(4),
+    .min(4)
+    .max(7),
   spaces: z
     .array(
       z.strictObject({
@@ -337,6 +338,8 @@ export const ProjectionDataSchema = z.strictObject({
           'initial-nodes',
           'objective-0',
           'scout-2-each-hero',
+          'scout-3-each-hero',
+          'source-startup-children',
           'spirit-1',
         ]),
       )
@@ -389,12 +392,20 @@ export const MapGenerationSchema = z.discriminatedUnion('status', [
       'worker-failed',
     ]),
   }),
-  z.strictObject({
-    status: z.literal('frozen'),
-    id: z.uuid(),
-    projection: ProjectionSchema,
-    requests: z.array(requestKey).min(1).max(65),
-  }),
+  z
+    .strictObject({
+      status: z.literal('frozen'),
+      id: z.uuid(),
+      projection: ProjectionSchema,
+      requests: z.array(requestKey).max(65),
+    })
+    .superRefine((g, ctx) => {
+      if (g.projection.algorithm === 'frozen-A1-v1' ? !g.requests.length : !!g.requests.length)
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Ricevute della realizzazione fuori dal proprio formato.',
+        });
+    }),
 ]);
 export type MapGeneration = z.infer<typeof MapGenerationSchema>;
 export const GenerationOfferSchema = z.strictObject({

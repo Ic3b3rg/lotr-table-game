@@ -31,7 +31,7 @@ export function scenarioStateProblem(state: State): string | null {
   try {
     validateEpisodeState(state);
     const sc = state.scenario;
-    if (state.physical?.cycle?.version === 3) return null;
+    if (state.physical?.cycle && state.physical.cycle.version >= 3) return null;
     if (!sc) return state.physical || state.combat ? 'Consumer fisico senza scenario fonte.' : null;
     if (state.content) {
       validateCampCatalog(sc.pack, state.content);
@@ -528,7 +528,7 @@ export function scenarioReceiptProblem(
   state: State,
   commands: { playerId: string; requestId: string; fingerprint?: string; receipt: Receipt }[],
 ): string | null {
-  if (state.physical?.cycle?.version === 3) {
+  if (state.physical?.cycle && state.physical.cycle.version >= 3) {
     try {
       validateEpisodeReceipts(state, commands);
       return null;

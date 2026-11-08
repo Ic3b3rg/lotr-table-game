@@ -162,6 +162,11 @@ export function applyScenario(
         );
       }
     }
+    if (
+      parsed.pack.manifest.campDeparture?.version === 'source-camp-departure-v1' &&
+      parsed.pack.manifest.campDeparture.continuation !== undefined
+    )
+      state.schemaVersion = 36;
     beginScenario(state, parsed, physical);
   } else if (state.scenario?.battle && state.scenario.phase === 'setup')
     answerBattleStartup(state, playerId, command);
@@ -204,6 +209,19 @@ export function allowScenarioPlay(state: State, command: Command) {
       'ADVENTURE_ENDED',
       'L’avventura è conclusa. Proseguite insieme verso il campo; turni, esplorazioni e attacchi sono terminati.',
     );
+  }
+  if (sc.journeyStartup) {
+    if (command.type === 'SCENARIO_INPUT' && sc.pending) return;
+    if (command.type === 'CYCLE_INPUT' && state.physical?.cycle?.pending) return;
+    if (command.type === 'COMBAT_INPUT' && state.combat?.operation) return;
+    if (!['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type))
+      throw new ApiError(
+        409,
+        'ADVENTURE3_CONTINUATION_GATED',
+        'Il seguito degli incontri e delle fasi richiede la propria capacità fonte. Nessun costo è stato applicato.',
+      );
+    if (sc.journeyStartup.stage !== 'action')
+      throw new ApiError(409, 'SCENARIO_PENDING', 'Completa l’allestimento prima del turno.');
   }
   const original =
     sc.pack.manifest.scope === 'original-encounter-v1' && state.physical?.cycle?.version === 2;

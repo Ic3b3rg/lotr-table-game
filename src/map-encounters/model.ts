@@ -14,11 +14,14 @@ const f32 = z
 const timeout = z.number().min(1).max(86400000);
 const schema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('source-map-encounters-v1'),
+  algorithm: z.enum(['source-map-encounters-v1', 'source-map-encounters-A3-v1']),
   assembly: z.unknown(),
   placement: z.strictObject({
     formatVersion: z.literal(1),
-    algorithm: z.literal('source-encounter-placement-pack-v1'),
+    algorithm: z.enum([
+      'source-encounter-placement-pack-v1',
+      'source-encounter-placement-pack-A3-v1',
+    ]),
     provenance: z.strictObject({
       sourceVersion: z.string().min(1).max(200),
       files: z
@@ -57,7 +60,7 @@ const schema = z.strictObject({
     sections: z
       .array(
         z.strictObject({
-          index: z.int().min(0).max(3),
+          index: z.int().min(0).max(6),
           source,
           tileEncounters: z
             .array(
@@ -74,7 +77,8 @@ const schema = z.strictObject({
           randomFillPercent: f32,
         }),
       )
-      .length(4),
+      .min(4)
+      .max(7),
     adventureEncounterSources: sources.nullable(),
     specifiedGroupSource: source.nullable(),
   }),
@@ -119,6 +123,13 @@ export function parseEncounterInput(value: unknown) {
   const checkRef = (r: string) => {
     if (!files.has(r.slice(0, r.lastIndexOf(':')))) fail(`File placement non dichiarato: ${r}.`);
   };
+  const a3 = selection.algorithm === 'source-selection-A3-v1';
+  if (
+    p.sections.length !== (a3 ? 7 : 4) ||
+    (raw.algorithm === 'source-map-encounters-A3-v1') !== a3 ||
+    (p.algorithm === 'source-encounter-placement-pack-A3-v1') !== a3
+  )
+    fail('Placement di un’altra ricetta.');
   const models = new Set(selection.encounters.map((e) => e.source));
   const tileModels = new Set(
     [...selection.standard, ...selection.custom].map((t) => t.modelSource),

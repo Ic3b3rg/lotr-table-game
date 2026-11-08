@@ -209,7 +209,10 @@ function beginConclusion(
     bonusLore: bonus,
     nextAdventureId: null,
     alternatives: [],
-    completedAdventureIds: [],
+    completedAdventureIds:
+      sc.pack.manifest.battleStartup?.continuation !== undefined
+        ? [...sc.battle!.campaign.completedAdventureIds]
+        : [],
     transitionCount: 0,
     campEntryCount: 0,
     campaign: null,
@@ -275,9 +278,18 @@ export function applyConclusionAction(
     c.campaign = {
       ...(sc.pack.manifest.items || sc.pack.manifest.battleStartup?.combat
         ? {
-            inventory: (state.physical?.snapshot.resolution?.resources?.itemCustody ?? []).map(
-              ({ copy, cardId, modelId }) => ({ copy, cardId, modelId }),
-            ),
+            inventory: [
+              ...new Map(
+                [
+                  ...(sc.pack.manifest.battleStartup?.continuation !== undefined
+                    ? sc.battle!.campaign.ownership.inventory
+                    : []),
+                  ...(state.physical?.snapshot.resolution?.resources?.itemCustody ?? []).map(
+                    ({ copy, cardId, modelId }) => ({ copy, cardId, modelId }),
+                  ),
+                ].map((i) => [i.copy, i]),
+              ).values(),
+            ],
           }
         : {}),
       heroes: state.preparation!.heroes.map((h) => ({
@@ -335,7 +347,7 @@ export function applyConclusionAction(
         ];
       }
     }
-    initializeCampSkills(state);
+    if (!c.campaign.training) initializeCampSkills(state);
   }
 }
 function campaignRequest(state: State) {

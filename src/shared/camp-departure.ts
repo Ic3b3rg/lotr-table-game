@@ -4,6 +4,9 @@ import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated
 import { DeploymentSourceSchema } from './deployment';
 import { BattleCombatCapabilitySchema } from './battle-combat';
 import { BattleRoundsCapabilitySchema } from './battle-rounds';
+import { CampSkillsCapabilitySchema } from './camp-skills';
+import { CampItemsCapabilitySchema } from './camp-items';
+import { CampPreparationCapabilitySchema } from './camp-preparation';
 
 const id = ContentIdSchema,
   hash = HashSchema;
@@ -84,6 +87,8 @@ const card = z.strictObject({
 });
 /** Prospective authority. Embedded artifacts are fully recompiled by the server before use. */
 export const CampDepartureCapabilitySchema = z.strictObject({
+  // Parsed against JourneyDepartureCapabilitySchema by the source compiler.
+  continuation: z.unknown().optional(),
   battleRounds: BattleRoundsCapabilitySchema.optional(),
   combat: BattleCombatCapabilitySchema.optional(),
   version: z.literal('source-camp-departure-v1'),
@@ -134,6 +139,41 @@ export const CampDepartureCapabilitySchema = z.strictObject({
     ]),
   }),
 });
+/** A3 is a separate prospective recipe; it never widens the historical A2 target. */
+export const JourneyDepartureCapabilitySchema = CampDepartureCapabilitySchema.pick({
+  catalogHash: true,
+  preparationHash: true,
+  evidenceHash: true,
+  ownedProductIds: true,
+  deckCatalog: true,
+  campaignSkills: true,
+  fronts: true,
+  frontsFingerprint: true,
+  windows: true,
+  quantities: true,
+}).extend({
+  version: z.literal('source-camp-departure-A3-v1'),
+  target: z.strictObject({
+    id: z.literal(3),
+    model: SourceSchema,
+    principal: SourceSchema,
+    name: z.string().min(1).max(120),
+  }),
+  heroIds: z.array(id).min(2).max(5),
+  camp: z.strictObject({
+    skills: CampSkillsCapabilitySchema,
+    items: CampItemsCapabilitySchema,
+    preparation: CampPreparationCapabilitySchema,
+  }),
+  generator: z.record(z.string(), z.unknown()),
+  generatorHash: hash,
+  startup: z.record(z.string(), z.unknown()),
+  startupHash: hash,
+});
+export const DepartureCapabilitySchema = z.discriminatedUnion('version', [
+  CampDepartureCapabilitySchema,
+  JourneyDepartureCapabilitySchema,
+]);
 export const CampDepartureInputSchema = z.strictObject({
   kind: z.literal('camp-depart'),
   offerFingerprint: hash,
@@ -146,7 +186,7 @@ export const CampDepartureOfferSchema = z.strictObject({
   drawOrder: z.array(id).max(5),
   target: z.string().max(120).nullable(),
 });
-export const CampDepartureReceiptSchema = z.strictObject({
+const LegacyDepartureReceiptSchema = z.strictObject({
   version: z.literal('camp-departure-v1'),
   archivedEpisodeId: z.uuid(),
   episodeId: z.uuid(),
@@ -158,8 +198,16 @@ export const CampDepartureReceiptSchema = z.strictObject({
   realizationFingerprint: hash,
   drawOrder: z.array(id).min(2).max(5),
 });
+export const CampDepartureReceiptSchema = z.discriminatedUnion('version', [
+  LegacyDepartureReceiptSchema,
+  LegacyDepartureReceiptSchema.extend({
+    version: z.literal('camp-departure-v2'),
+    episodeNumber: z.union([z.literal(2), z.literal(3)]),
+    chainFingerprint: hash,
+  }),
+]);
 /** Stored in the existing ordinary ledger seed, never in a second command journal. */
-export const EpisodeBoundarySchema = z.strictObject({
+const LegacyEpisodeBoundarySchema = z.strictObject({
   version: z.literal('camp-departure-v1'),
   playerId: z.uuid(),
   requestId: z.string().min(24).max(80),
@@ -169,8 +217,17 @@ export const EpisodeBoundarySchema = z.strictObject({
   sourceFingerprint: hash,
   entropy: hash,
   archiveFingerprint: hash,
-  receipt: CampDepartureReceiptSchema,
+  receipt: LegacyDepartureReceiptSchema,
 });
+export const EpisodeBoundarySchema = z.discriminatedUnion('version', [
+  LegacyEpisodeBoundarySchema,
+  LegacyEpisodeBoundarySchema.extend({
+    version: z.literal('camp-departure-v2'),
+    generation: z.uuid(),
+    chainFingerprint: hash,
+    receipt: CampDepartureReceiptSchema.options[1],
+  }),
+]);
 export const BattleStartupStateSchema = z.strictObject({
   version: z.literal('source-battle-startup-v1'),
   cursor: z.int().nonnegative().max(20),
@@ -219,7 +276,43 @@ export const BattleStartupStateSchema = z.strictObject({
     }),
   }),
 });
+export const JourneyStartupCapabilitySchema = z.strictObject({
+  version: z.literal('source-journey-startup-A3-v1'),
+  generatorHash: hash,
+  heroIds: z.array(id).min(2).max(5),
+  explorationNodes: z
+    .array(
+      z.strictObject({ tileSource: SourceSchema, source: SourceSchema, position: VectorSchema }),
+    )
+    .min(1)
+    .max(120),
+  startSpacePolicy: z.literal('unity-range-port-v1'),
+  provocationPolicy: z.literal('source-provocation-A3-v1'),
+  rangerPrefab: SourceSchema,
+  rangerTileBinding: z.string().min(1).max(150),
+  previousOutcomeBinding: z.string().min(1).max(150),
+  roundStartEvent: z.string().min(1).max(100),
+  resetBindings: z.array(z.string().min(1).max(150)).min(4).max(20),
+  reserved: z.array(z.strictObject({ source: SourceSchema, count: z.int().nonnegative() })).max(32),
+  reservedEliteBanners: z.literal(0),
+});
+export const JourneyStartupStateSchema = z.strictObject({
+  version: z.literal('source-journey-startup-A3-v1'),
+  sourceFingerprint: hash,
+  stage: z.enum(['initial', 'principal', 'after-setup', 'handoff', 'action']),
+  runId: z.uuid().nullable(),
+  startSpaceIndex: z.int().min(0).max(31),
+  startSpaceDraw: z.strictObject({
+    policy: z.literal('unity-range-port-v1'),
+    seed: Int32Schema,
+    maximum: z.int().min(1).max(32),
+    value: z.int().min(0).max(31),
+  }),
+  campaign: BattleStartupStateSchema.shape.campaign,
+});
 export type CampDepartureCapability = z.infer<typeof CampDepartureCapabilitySchema>;
+export type JourneyDepartureCapability = z.infer<typeof JourneyDepartureCapabilitySchema>;
+export type DepartureCapability = z.infer<typeof DepartureCapabilitySchema>;
 export type CampDepartureInput = z.infer<typeof CampDepartureInputSchema>;
 export type CampDepartureOffer = z.infer<typeof CampDepartureOfferSchema>;
 export type CampDepartureReceipt = z.infer<typeof CampDepartureReceiptSchema>;

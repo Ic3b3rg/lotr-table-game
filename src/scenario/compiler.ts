@@ -409,6 +409,7 @@ function compileEvidence(raw: unknown) {
       invariant(
         s.actions.every((a) =>
           [
+            ...(pack.manifest.journeyStartup ? ['delay'] : []),
             'getStart',
             'getTile',
             'getPosition',

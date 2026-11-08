@@ -282,7 +282,7 @@ class Assembly {
       selectionInputFingerprint: this.selection.inputFingerprint,
       input: this.input,
       selection: this.selection,
-      builderOrder: [0, 1, 2, 3],
+      builderOrder: this.input.geometry.sections.map((s) => s.id),
       firstSortOrder: this.firstOrder,
       sortedBuilderOrder: this.sortedOrder,
       mapOrder: this.map.map((s) => s.id),

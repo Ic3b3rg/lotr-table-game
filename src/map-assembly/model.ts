@@ -37,10 +37,10 @@ const frame = z.strictObject({
 const frames = z.array(frame).min(1).max(32);
 export type Frame = z.infer<typeof frame>;
 export type Vector = [number, number, number];
-const pair = z.tuple([z.int().min(0).max(3), z.int().min(0).max(3)]);
+const pair = z.tuple([z.int().min(0).max(6), z.int().min(0).max(6)]);
 const geometrySchema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('source-map-geometry-pack-v1'),
+  algorithm: z.enum(['source-map-geometry-pack-v1', 'source-map-geometry-pack-A3-v1']),
   provenance: z.strictObject({
     sourceVersion: z.string().min(1).max(200),
     files: z
@@ -62,7 +62,7 @@ const geometrySchema = z.strictObject({
   sections: z
     .array(
       z.strictObject({
-        id: z.int().min(0).max(3),
+        id: z.int().min(0).max(6),
         source: ref,
         position: vector,
         tileClumpFactor: f32.min(0).max(1),
@@ -70,7 +70,8 @@ const geometrySchema = z.strictObject({
         authoring: frames,
       }),
     )
-    .length(4),
+    .min(4)
+    .max(7),
   invalidConnections: z.array(pair).max(100),
   tiles: z
     .array(
@@ -150,7 +151,7 @@ const contextSchema = z.strictObject({
   site: z.string().min(1).max(80),
   operation: z.int().min(0).max(10000000),
   samples: z.int().min(0),
-  depth: z.int().min(0).max(4),
+  depth: z.int().min(0).max(7),
 });
 export const ClockObservationSchema = contextSchema.extend({
   ordinal: z.int().min(0).max(200000),
@@ -175,7 +176,7 @@ const clock = z.discriminatedUnion('policy', [
 ]);
 const inputSchema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('source-map-assembly-v1'),
+  algorithm: z.enum(['source-map-assembly-v1', 'source-map-assembly-A3-v1']),
   selection: z.unknown(),
   geometry: geometrySchema,
   execution: z.strictObject({
@@ -231,6 +232,20 @@ export function parseAssemblyInput(value: unknown) {
     ] satisfies Vector[])
       boundedPoint(transform(p, fs));
   };
+  const a3 = selection.algorithm === 'source-selection-A3-v1';
+  if (
+    !a3 &&
+    p.execution.clock.policy === 'replay-clock-v1' &&
+    p.execution.clock.observations.some((o) => o.depth > 4)
+  )
+    fail('Clock di una fonte con un diverso numero di sezioni.');
+  if (
+    g.sections.length !== (a3 ? 7 : 4) ||
+    (p.algorithm === 'source-map-assembly-A3-v1') !== a3 ||
+    (g.algorithm === 'source-map-geometry-pack-A3-v1') !== a3 ||
+    g.invalidConnections.some((pair) => pair.some((id) => id >= g.sections.length))
+  )
+    fail('Geometria o formato di un’altra ricetta.');
   const models = new Map([...selection.standard, ...selection.custom].map((t) => [t.source, t]));
   const owned = new Set(
     selection.products

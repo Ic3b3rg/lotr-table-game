@@ -31,12 +31,20 @@ import {
 } from './first-combat';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
+  invariant(
+    pack.manifest.combat?.source.format !== 'combat-closure-A3-v1' ||
+      !!pack.manifest.journeyStartup,
+    'Provocazioni viaggio3 in un’autorità storica.',
+  );
   if (pack.manifest.battleStartup) {
     invariant(
       pack.manifest.scope ===
         (pack.manifest.battleStartup.combat ? 'battle-combat-v1' : 'battle-startup-v1') &&
         pack.identity.adventureId === 2 &&
-        !pack.manifest.campDeparture,
+        (!pack.manifest.campDeparture ||
+          (pack.manifest.battleStartup.continuation !== undefined &&
+            digest(pack.manifest.campDeparture) ===
+              digest(pack.manifest.battleStartup.continuation))),
       'Pack battaglia2 estraneo.',
     );
     validateCampDepartureSource(pack.manifest.battleStartup);
@@ -65,12 +73,17 @@ export function parseScenarioPack(raw: unknown) {
     'Fasi battaglia fuori dal proprio episodio fonte.',
   );
   invariant(
-    pack.identity.adventureId === 1 &&
+    (pack.identity.adventureId === 1 ||
+      (pack.identity.adventureId === 3 && !!pack.manifest.journeyStartup)) &&
       pack.manifest.prefabs.length > 0 &&
       pack.manifest.scope !== 'battle-startup-v1',
     'Pack storico reinterpretato come battaglia.',
   );
   if (pack.manifest.campDeparture) validateCampDepartureSource(pack.manifest.campDeparture);
+  invariant(
+    !pack.manifest.journeyStartup || pack.identity.adventureId === 3,
+    'Startup viaggio3 su identità storica.',
+  );
   const original = pack.manifest.scope === 'original-encounter-v1';
   if (pack.manifest.startupPreparation)
     invariant(
@@ -78,7 +91,8 @@ export function parseScenarioPack(raw: unknown) {
       'Preparazione iniziale senza consumer fisico fonte.',
     );
   invariant(
-    original === !!pack.manifest.playablePrefabs,
+    original === !!pack.manifest.playablePrefabs &&
+      (pack.manifest.journeyStartup || !original || pack.manifest.playablePrefabs!.length === 1),
     'Manifest originale incompleto o estraneo.',
   );
   const definitions = new Map(pack.definitions.map((d) => [d.source, d]));
@@ -279,6 +293,7 @@ export function parseScenarioPack(raw: unknown) {
       invariant(
         Object.keys(s.deferredTransitions ?? {}).every((e) => s.transitions[e] === undefined) &&
           (!Object.keys(s.deferredTransitions ?? {}).length ||
+            !!pack.manifest.journeyStartup ||
             !!rounds ||
             baseProductsDefinition(pack, d.source) ||
             threatTokenDefinition(pack, d.source)),
@@ -298,6 +313,22 @@ export function parseScenarioPack(raw: unknown) {
       );
       for (const a of s.actions) {
         validateSourceHandler(a);
+        invariant(
+          pack.manifest.journeyStartup ||
+            !(
+              a.op === 'delay' ||
+              (a.op === 'highlight' && a.randomSpace) ||
+              (a.op === 'message' && a.scoutCount) ||
+              (a.op === 'section' && a.sectionId > 3)
+            ),
+          'Istruzione viaggio3 su un’autorità storica.',
+        );
+        invariant(
+          a.op !== 'physical' ||
+            a.origin.type === 'Synthetic.PhysicalProgram' ||
+            (pack.manifest.journeyStartup && a.origin.type === 'FFG.JIME.Actions.DisplayMessage'),
+          'Messaggio fisico senza capacità viaggio3.',
+        );
         const typeOf = (ref: { scope: 'local' | 'global'; name: string }) =>
           (ref.scope === 'local' ? locals : globals).get(ref.name)?.type;
         const integerRefs = [
@@ -343,7 +374,8 @@ export function parseScenarioPack(raw: unknown) {
           (a.op === 'explore' && a.intro)
         )
           invariant(
-            pack.manifest.clues ||
+            pack.manifest.journeyStartup ||
+              pack.manifest.clues ||
               linkedDefinition(pack, d.source) ||
               searchDefinition(pack, d.source) ||
               threatTokenDefinition(pack, d.source) ||
@@ -443,7 +475,29 @@ export function parseScenarioPack(raw: unknown) {
           events.every((e) => s.transitions[e] !== undefined),
           'Ramo incontro senza transizione fonte.',
         );
-        if (a.op === 'physical')
+        if (a.op === 'physical' && pack.manifest.journeyStartup)
+          invariant(
+            original &&
+              d.source === pack.principal &&
+              s.actions.length === 1 &&
+              a.origin.type === 'FFG.JIME.Actions.DisplayMessage' &&
+              a.program.profile === 'source-fronts-v1' &&
+              !a.program.groupRules &&
+              !a.program.startupRules &&
+              a.program.children.length === pack.manifest.journeyStartup.heroIds.length &&
+              a.program.children.every(
+                (c, n) =>
+                  c.kind === 'suffer' &&
+                  c.hero === n &&
+                  c.face === 'facedown' &&
+                  !c.prevention.length &&
+                  c.cards.length === 1 &&
+                  c.cards[0]!.family === 'fear' &&
+                  c.cards[0]!.amount === 1,
+              ),
+            'Conseguenza di viaggio3 non attestata.',
+          );
+        else if (a.op === 'physical')
           invariant(
             (a.program.profile !== 'source-fronts-v1' ||
               (!a.program.groupRules &&
@@ -493,11 +547,23 @@ export function parseScenarioPack(raw: unknown) {
     }
   }
   invariant(
-    new Set(pack.manifest.prefabs.map((p) => p.source)).size === pack.manifest.prefabs.length,
+    new Set(
+      pack.manifest.prefabs.map((p) =>
+        pack.manifest.journeyStartup ? `${p.source}/${p.modelSource}` : p.source,
+      ),
+    ).size === pack.manifest.prefabs.length,
     'Prefab duplicati.',
   );
   for (const p of pack.manifest.prefabs)
     invariant(definitions.has(p.fsmSource), 'Closure prefab mancante.');
+  if (pack.manifest.journeyStartup)
+    for (const prefab of pack.manifest.prefabs) {
+      const { modelSource: _model, encounterId: _id, ...shared } = prefab;
+      for (const sibling of pack.manifest.prefabs.filter((p) => p.source === prefab.source)) {
+        const { modelSource: _siblingModel, encounterId: _siblingId, ...other } = sibling;
+        invariant(digest(shared) === digest(other), 'Prefab condiviso con lifecycle differente.');
+      }
+    }
   for (const p of pack.manifest.prefabs.filter((p) => p.progress)) {
     const d = definitions.get(p.fsmSource)!;
     invariant(
@@ -678,11 +744,26 @@ export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
           const hash =
             target.kind === 'start' || startVariable
               ? p.sections.find((s) => s.id === 0)!.tiles[0]!.hashId
-              : target.kind === 'hash'
-                ? target.value
-                : (target.ref.scope === 'local' ? principal.variables : pack.globals).find(
-                    (v) => v.name === target.ref.name,
-                  )?.value;
+              : pack.manifest.journeyStartup &&
+                  target.kind === 'variable' &&
+                  target.ref.scope === 'global' &&
+                  target.ref.name === pack.manifest.journeyStartup.rangerTileBinding
+                ? p.sections
+                    .flatMap((s) => s.tiles)
+                    .find((tile) =>
+                      p.assignments.some(
+                        (a) =>
+                          a.prefab.source === pack.manifest.journeyStartup!.rangerPrefab &&
+                          p.spaces.some(
+                            (space) => space.id === a.spaceId && space.tileSource === tile.source,
+                          ),
+                      ),
+                    )?.hashId
+                : target.kind === 'hash'
+                  ? target.value
+                  : (target.ref.scope === 'local' ? principal.variables : pack.globals).find(
+                      (v) => v.name === target.ref.name,
+                    )?.value;
           const tile = p.sections.flatMap((s) => s.tiles).find((t) => t.hashId === hash);
           invariant(tile, 'Tessera startup non disponibile.');
           return [tile.source];
@@ -703,7 +784,9 @@ export function validateScenarioBinding(pack: ScenarioPack, p: Projection) {
       'Binding di esplorazione incompleto per le tessere successive della missione.',
     );
   for (const a of p.assignments) {
-    const m = pack.manifest.prefabs.find((m) => m.source === a.prefab.source);
+    const m = pack.manifest.prefabs.find(
+      (m) => m.source === a.prefab.source && m.modelSource === a.modelSource,
+    );
     if (m && startupSources.has(p.spaces.find((s) => s.id === a.spaceId)!.tileSource)) {
       const d = pack.definitions.find((d) => d.source === m.fsmSource)!;
       invariant(

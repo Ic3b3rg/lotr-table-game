@@ -548,7 +548,7 @@ function executeIntent(
   if (cycle.pending || p.snapshot.active)
     fail('PHYSICAL_PENDING', 'Concludi la conseguenza corrente prima di proseguire nel round.');
   if (
-    cycle.version === 2 &&
+    (cycle.version === 2 || !!state.scenario!.journeyStartup) &&
     (state.scenario!.pending ||
       state.scenario!.play!.active ||
       state.scenario!.explorations?.active)
@@ -822,7 +822,7 @@ function originalStartupPrefix(state: State, scenario: NonNullable<State['scenar
 }
 
 function replay(state: State, cycle: CycleState): Replay {
-  if (cycle.version === 3) return replayEpisode(state, cycle);
+  if (cycle.version >= 3) return replayEpisode(state, cycle);
   const original = state.physical!;
   const {
     physical: _,
@@ -930,6 +930,7 @@ export function applyPhysicalCycle(
       : CycleIntentSchema.parse(intent);
   if (state.revision !== c.expectedRevision)
     fail('TABLE_CHANGED', 'Il tavolo è cambiato. Controlla la richiesta e riprova.');
+  if (state.scenario?.journeyStartup) allowScenarioPlay(state, command);
   if (lastStand) {
     invariant(
       c.type === 'CYCLE_INPUT' && c.input.kind === 'physical-continue-last-stand',
@@ -955,6 +956,7 @@ export function applyPhysicalCycle(
     playerId,
     requestId,
     intent: c,
+    ...(cycle.version === 4 ? { generation: state.generation } : {}),
     ...(p.lastStand ? { lastStandRules: p.lastStand.rules } : {}),
     ...(c.type === 'EXPLORE_SCENARIO' ||
     (c.type === 'SCENARIO_INPUT' &&
@@ -968,7 +970,7 @@ export function applyPhysicalCycle(
   });
   p.version = 3;
   const { work, receipts } = replay(state, cycle);
-  if (cycle.version === 3) {
+  if (cycle.version >= 3) {
     applyEpisodeDomain(state, work);
     return receipts.at(-1)!;
   }
@@ -989,7 +991,7 @@ export function applyPhysicalCycle(
 }
 export function validatePhysicalCycle(state: State) {
   const p = state.physical;
-  if (p?.cycle?.version === 3) {
+  if (p?.cycle && p.cycle.version >= 3) {
     validateEpisodeState(state);
     return;
   }
@@ -1036,7 +1038,7 @@ export function validateCycleReceipts(
 ) {
   const cycle = state.physical?.cycle;
   if (!cycle) return;
-  if (cycle.version === 3) {
+  if (cycle.version >= 3) {
     validateEpisodeReceipts(state, commands);
     return;
   }

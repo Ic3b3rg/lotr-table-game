@@ -6,9 +6,12 @@ import {
   type CampDepartureCapability,
   type CampDepartureOffer,
   type CampDepartureInput,
+  type DepartureCapability,
 } from '../shared/camp-departure';
+import { validateJourneyDepartureSource } from './journey-startup-source';
 import { campDeckCapability, materializeCampDecks, verifyCampDeckArtifact } from '../camp-decks';
 import { verifyBattleMapArtifact } from '../battle-map';
+import { verifyCombatClosure } from '../combat/compiler';
 import { compileSourceDeployment } from '../combat/deployment-compiler';
 import { FrontArtifactSchema, validateFrontArtifact } from '../physical-resolution/front-program';
 import { digest } from '../map-freeze/hash';
@@ -17,7 +20,7 @@ import { boundPhysicalInput } from '../physical-content/validation';
 import { definitionId } from '../shared/preparation';
 import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { ApiError } from '../server/errors';
-import { archiveDomain, activateEpisode } from '../server/episode-state';
+import { archiveDomain, activateEpisode, validateEpisodeState } from '../server/episode-state';
 import { validateBattleCombatSource } from './battle-combat';
 import { validateBattleRoundsSource, battleRoundsPack } from './battle-rounds';
 
@@ -30,7 +33,21 @@ export function validateCampDepartureSource(raw: unknown) {
   return structuredClone(sourceCache.result);
 }
 function compileDepartureSource(raw: unknown) {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    'version' in raw &&
+    raw.version === 'source-camp-departure-A3-v1'
+  )
+    return validateJourneyDepartureSource(raw);
   const s = CampDepartureCapabilitySchema.parse(raw);
+  if (s.continuation !== undefined) {
+    const next = validateJourneyDepartureSource(s.continuation).s;
+    invariant(
+      s.battleRounds && s.combat && next.catalogHash === s.catalogHash,
+      'Continuazione senza origine A2 completa e prospettica.',
+    );
+  }
   const board = verifyBattleMapArtifact(s.board, { artifactFingerprint: s.boardFingerprint });
   const layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!;
   invariant(
@@ -188,7 +205,7 @@ function compileDepartureSource(raw: unknown) {
   return { s, board, layout, deployment, fronts: FrontArtifactSchema.parse(s.fronts) };
 }
 
-export function projectCampDeckSource(state: State, cap: CampDepartureCapability): CampDeckSource {
+export function projectCampDeckSource(state: State, cap: DepartureCapability): CampDeckSource {
   const sc = state.scenario!,
     c = sc.conclusion!,
     campaign = c.campaign!,
@@ -283,9 +300,15 @@ function preflight(state: State, raw: unknown) {
     'Confermate le scelte dalla preparazione del campo.',
   );
   invariant(
-    !state.episodes && state.physical?.cycle?.version === 2,
-    'Partenza fuori dal primo campo verificato.',
+    raw &&
+      typeof raw === 'object' &&
+      'version' in raw &&
+      raw.version === 'source-camp-departure-A3-v1'
+      ? state.episodes?.length === 1 && state.physical?.cycle?.version === 4
+      : !state.episodes && state.physical?.cycle?.version === 2,
+    'Partenza fuori dalla catena prospettica verificata.',
   );
+  if (state.episodes) validateEpisodeState(state);
   const source = validateCampDepartureSource(raw),
     { s, fronts } = source,
     sc = state.scenario!;
@@ -313,13 +336,22 @@ function preflight(state: State, raw: unknown) {
     ),
     'Ogni proprietario deve confermare il riepilogo corrente.',
   );
-  if (c.outcome === 'failure')
+  if (c.outcome === 'failure' && s.version === 'source-camp-departure-v1')
     invariant(
       new Set(state.preparation!.heroes.map((h) => h.playerId)).size ===
         state.preparation!.heroes.length,
       'Il messaggio EN dopo sconfitta richiede un proprietario per eroe; contesto multihero non attestato.',
     );
   validateFrontArtifact(state.physical!.raw, fronts, state.content!, s.campaignSkills);
+  if (s.version === 'source-camp-departure-A3-v1') {
+    const checked = validateJourneyDepartureSource(s),
+      cap = checked.startup.pack.manifest.journeyStartup!;
+    invariant(
+      digest(s.heroIds) === digest(state.preparation!.heroes.map((h) => h.heroId)) &&
+        typeof sc.battle?.campaign.globals[cap.previousOutcomeBinding] === 'boolean',
+      'Compagnia o esito precedente senza binding fonte prima della partenza.',
+    );
+  }
   invariant(fronts.fingerprint === s.frontsFingerprint, 'Fronti partenza non corrispondenti.');
   const purchases = sc.pack.manifest
       .campSkills!.roles.flatMap((r) => r.upgrades)
@@ -364,6 +396,47 @@ function preflight(state: State, raw: unknown) {
         .concat(s.deckCatalog.cards.filter((c) => c.kind === 'weakness').map((c) => c.id)),
     ),
   ];
+  if (s.version === 'source-camp-departure-A3-v1') {
+    const checked = validateJourneyDepartureSource(s),
+      combat = checked.startup.pack.manifest.combat
+        ? verifyCombatClosure(checked.startup.pack.manifest.combat)
+        : undefined;
+    if (combat) {
+      for (const cardId of selected) {
+        const skill =
+            state.content!.skills.find((c) => c.id === cardId) ??
+            s.campaignSkills.find((c) => c.id === cardId),
+          item = state.content!.items.find((c) => c.id === cardId);
+        invariant(
+          skill
+            ? combat.source.definitions.some(
+                (d) => d.id === cardId && d.definitionHash === digest(skill),
+              )
+            : !!item &&
+                combat.compiled.items.some(
+                  (i) =>
+                    i.id === cardId &&
+                    i.definitionHash === digest(item) &&
+                    i.model ===
+                      checked.generator.mapping.items.find((m) => m.catalogId === cardId)?.source,
+                ),
+          'Materiali di una possibile provocazione viaggio3 non congelati prima della partenza: ' +
+            cardId +
+            '.',
+        );
+      }
+      invariant(
+        state.preparation!.heroes.every((h) =>
+          combat.compiled.heroes.some(
+            (c) =>
+              c.heroId === h.heroId &&
+              c.definitionHash === digest(state.content!.heroes.find((c) => c.id === h.heroId)),
+          ),
+        ),
+        'Eroi della provocazione viaggio3 diversi dal catalogo.',
+      );
+    }
+  }
   for (const choice of deckSource.choices.filter((h) => h.accessory)) {
     const policy = fronts.policies.find((p) => p.id === definitionId(choice.accessory!));
     invariant(

@@ -1232,6 +1232,7 @@ export function combatView(state: State): CombatView | undefined {
   const turnHero = grant?.recipientHeroId ?? sourceGrant?.actorHeroId ?? state.round?.activeHeroId;
   const available =
     turnHero &&
+    !state.scenario?.journeyStartup &&
     !state.combat.operation &&
     (!a || !!grant) &&
     !state.physical?.snapshot.active &&

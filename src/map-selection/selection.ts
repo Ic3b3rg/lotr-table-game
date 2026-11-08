@@ -86,10 +86,11 @@ class Selection {
   private sequence: number[] = [];
   private history: { sectionId: number; tileId: number }[] = [];
   private invalid = new PrefixTree();
-  private scalingOrder = [0, 1, 2, 3];
+  private scalingOrder: number[];
   private pools: ReturnType<typeof createPools>;
 
   constructor(private input: SelectionInput) {
+    this.scalingOrder = input.sections.map((s) => s.index);
     this.pools = createPools(input);
     this.standard = [...input.standard];
     this.standardFlags = new Map(
@@ -320,14 +321,14 @@ class Selection {
       this.tick();
       const section = this.sections[id]!;
       if (met(section)) {
-        id = (id + 1) % 4;
+        id = (id + 1) % this.sections.length;
         continue;
       }
       const tileId = this.trySeed(section, phase === 'traits');
       if (tileId !== null) {
         this.sequence.push(tileId);
         this.history.push({ sectionId: id, tileId });
-        id = (id + 1) % 4;
+        id = (id + 1) % this.sections.length;
       } else {
         if (this.sequence.length === 0)
           this.fail(`Requisito ${phase} esaurito nella sezione ${id}.`);
@@ -447,7 +448,7 @@ class Selection {
           this.emit('size-draw', { sectionId: id, draw, isSeeded: section.isSeeded });
           if (!section.isSeeded && this.trySeed(section, false) === null) section.isSeeded = true;
         }
-        id = (id + 1) % 4;
+        id = (id + 1) % this.sections.length;
       }
       for (const section of this.sections) this.matching(section);
       this.checkpoint('selection-boundary');
