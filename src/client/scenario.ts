@@ -76,7 +76,7 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
     const turnsEnded =
       sc?.pack.manifest.scope === 'original-encounter-v1' &&
       current.round?.heroes.every((h) => h.turnEnded);
-    const sourcePhases = !!sc?.pack.manifest.rounds;
+    const sourcePhases = !!sc?.pack.manifest.rounds || !!sc?.battleRound;
     const explorer = sc?.explorations?.attempts.find((a) => a.id === sc.explorations?.active);
     const searchOwner =
       q &&
@@ -164,17 +164,26 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
                                           : turnsEnded
                                             ? 'I turni sono conclusi. I progressi sono salvati; la Fase di Ombra originale non è ancora disponibile.'
                                             : 'Avvio completato · scegliete il prossimo eroe di turno.';
-    const battleMessage = sc?.battle
-      ? sc.phase === 'setup'
-        ? q?.actorPlayerId
-          ? `${actor?.name ?? 'Il proprietario indicato'} completa le carte di ${hero?.name.text ?? 'questo eroe'}. ${current.physical?.active?.kind === 'decision' ? current.physical.active.title : 'Segui la capacità indicata.'} Le altre viste attendono. Ricaricare conserva questa scelta.`
-          : 'Avventura2 · seguite il piazzamento indicato sulla nuova mappa. Le scelte personali e ogni passaggio sono salvati.'
-        : activeHero
-          ? current.combat
-            ? `Avventura2 · ${activeHero.name.text} è di turno. Attacca dal pannello dei nemici oppure viaggia dalla mappa; i muri bloccano il passaggio.`
-            : `Avventura2 · ${activeHero.name.text} è di turno. Viaggia dalla mappa; i muri bloccano il passaggio.`
-          : 'Avventura2 · allestimento completato. Scegliete il primo eroe di turno. Il seguito degli incontri richiede le proprie capacità.'
-      : message;
+    const battleMessage =
+      sc?.battleRound && sc.phase === 'action'
+        ? q
+          ? `${actor?.name ?? 'La compagnia'} completa l’istruzione indicata. La fase riprende dopo tutte le conseguenze.`
+          : current.round?.phase === 'shadow'
+            ? 'Ombra · seguite attivazioni, oscurità, eventi e aumento della minaccia nel pannello del round.'
+            : current.round?.phase === 'rally'
+              ? 'Riorganizzazione · ogni proprietario completa la propria Scoperta.'
+              : message
+        : sc?.battle
+          ? sc.phase === 'setup'
+            ? q?.actorPlayerId
+              ? `${actor?.name ?? 'Il proprietario indicato'} completa le carte di ${hero?.name.text ?? 'questo eroe'}. ${current.physical?.active?.kind === 'decision' ? current.physical.active.title : 'Segui la capacità indicata.'} Le altre viste attendono. Ricaricare conserva questa scelta.`
+              : 'Avventura2 · seguite il piazzamento indicato sulla nuova mappa. Le scelte personali e ogni passaggio sono salvati.'
+            : activeHero
+              ? current.combat
+                ? `Avventura2 · ${activeHero.name.text} è di turno. Attacca dal pannello dei nemici oppure viaggia dalla mappa; i muri bloccano il passaggio.`
+                : `Avventura2 · ${activeHero.name.text} è di turno. Viaggia dalla mappa; i muri bloccano il passaggio.`
+              : 'Avventura2 · allestimento completato. Scegliete il primo eroe di turno. Il seguito degli incontri richiede le proprie capacità.'
+          : message;
     if (status.textContent !== battleMessage) status.textContent = battleMessage;
     root.dataset.request = q?.id ?? '';
     root.dataset.kind = q?.kind ?? '';
@@ -226,6 +235,9 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
             ? 'Attacchi e provocazioni seguono carte, risposta nemica e conseguenze fino al ritorno al turno. Il pannello indica i terreni o le riserve ancora necessari prima dei costi. Incontri e prossima Ombra attendono le proprie istruzioni.'
             : 'I turni e il viaggio sulla mappa sono disponibili. Incontri, combattimento e prossima Ombra richiedono le proprie istruzioni prima di proseguire.'
         }`;
+    if (sc?.battleRound)
+      element('#scenario-limit').textContent =
+        `Minaccia ${sc.battleRound.threat} · limite ${sc.battleRound.limit}. Sapienza ${sc.play?.lore ?? 0}. Le attivazioni, gli eventi e le Scoperte seguono l’ordine dell’avventura. Le interazioni dei segnalini restano in attesa delle proprie istruzioni.`;
     refreshActions();
   }
   agreed.oninput = () => {
@@ -322,7 +334,10 @@ export function createScenario(sync: () => Promise<void>, reader: CardReader) {
               ? sc!.enemies!.groups.find((g) => g.id === attempt?.groups[task.groupIndex])
               : null;
           const space = session.journey?.definition.spaces.find(
-            (s) => s.id === sc!.spaceBindings.find((b) => b.sourceId === group?.spaceId)?.id,
+            (s) =>
+              s.id ===
+              (sc!.battleRound?.placement?.spaceId ??
+                sc!.spaceBindings.find((b) => b.sourceId === group?.spaceId)?.id),
           );
           if (space)
             body.append(

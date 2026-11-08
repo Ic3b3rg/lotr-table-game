@@ -22,6 +22,8 @@ Source spawn points `25524/27187/26617/26982/25224` retain their actual filters 
 
 The named enemy's source defeat continuations preserve readiness, run the actual Agility test and its facedown damage branch, associate the replacement group with the tested hero's position, and retain the later source handoff. A source victory is attached to that real callback, never to clearing ordinary groups. Failure retains the existing A2 receiver, cause, awards and next-model selection. Terminal children interrupt continuation; performed costs and consequences are not refunded. Neither outcome starts A3.
 
+The expanded static combat artifact was compiled and independently verified with five models, 74 primary combat objects and 52 ordinary policies. The three owned[0] tracker actions are distinct origins; three other tracker actions are behind the unowned product1 guard. Source figure counts include symmetric linked models. Banner allocation consumes the queue head, reserves from the end, and returns defeated or released banners at the front before DEFEATED dispatch.
+
 The named model adds four ordinary activations to the 48 initial ordinary activations; the initial special reference remains separately preserved. Its alternative movement targets a hero with the highest Might, rather than substituting a nearest-hero policy. Its mandatory additions include discarding all benefits and the source's damage-dependent inspiration loss. These dependencies must remain in the certified closure.
 
 Rules Reference §§22–24,30,73,83 govern suffering and darkness, defeated figures, enemy activation, Rally and Shadow. Existing walls/range and the fire-pit/boulder test windows remain effective during phase-created tests. The #139 fire copy lifetime and per-test boulder allowance are preserved. #135 special timing windows remain gated.
@@ -32,7 +34,7 @@ Only a new explicit frozen battle-round capability may enable the phase. It bind
 
 Unsupported mandatory closure gates before effects, costs, reveals, ticks or entropy. Unknown benefit stock remains unknown and gates the operation; consumer94 can use only declared, finite invented stock in invented fixtures. Original #57 quantities remain NULL/UNVERIFIED/BLOCKED and original156 remains STATIC/GATED.
 
-Pending actors, tasks, groups, tests, physical children, readiness, positions, exact card copies and random cursors belong to the existing episode journal. Replay compares complete domains and receipt payloads. A prospective schema guard rejects new forms at real historical structural locations while preserving unrelated dictionary keys. Schemas1–34 retain their semantics and gates. The #140 limitation for coherent forged pre-scenario administrative appliedRevision headers remains explicit; this work does not authenticate arbitrary administrative history.
+Pending actors, tasks, groups, tests, physical children, readiness, positions, exact card copies and random cursors belong to the existing episode journal. Replay compares complete domains and receipt payloads. Schema35 and a prospective structural guard reject new forms at real historical structural locations while preserving unrelated dictionary keys. Schemas1–34 retain their semantics and gates. The #140 limitation for coherent forged pre-scenario administrative appliedRevision headers remains explicit; this work does not authenticate arbitrary administrative history.
 
 ## Acceptance and limits
 
@@ -41,3 +43,9 @@ All positive play is finite invented, through real HTTP/SQLite and owner UI. Acc
 Recovery exercises identical-request concurrency/retry, stale and cross-owner/source/board/group inputs, real SIGKILL before/after COMMIT, pending phase/physical/event/Scout returns, restart and empty-host restore without external packs, and coherently re-signed source/history changes. Native browser QA uses three independent owners and the shared PC at320/768/1024/1440 after a declared invented bootstrap. Inspected captures are distinct from generated images and DOM assertions. Public unordered inventory/history remains permitted at its existing locations; new private order, copy, entropy, recovery and archive associations must not escape projections or DOM.
 
 One final changed-product canonical suite runs alone at concurrency4 after owned QA cleanup, with exact raw exits/footer and before/after/current file pins. No unchanged baseline or automatic full-suite retry is part of acceptance. Physical devices, Unity gameplay, original play, optional token/terrain quests and whole-campaign #33/#89/#65 completion remain outside this claim.
+
+## Delivery details
+
+Spawned group names and bonus descriptions are projected as public display data for the currently visible groups. The current placement identifies its public map space. The frozen phase authority, recipes, private callback associations and future population stay private.
+
+The complete phase journal can exceed the former4MiB restore transport limit. Backup files have a16MiB bound and the restore envelope has a small allowance; ordinary commands retain4MiB. Existing schemas and phase command envelopes are preserved.
