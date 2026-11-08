@@ -76,16 +76,29 @@ test('two colocated tokens convert distinct icons on one actual revealed copy', 
     inspiration: 0,
   });
   f.open([enemyChild()]);
-  let first;
   for (let n = 0; n < 2; n++) {
+    const before = f.p.snapshot.resolution.sourceTest.fateRemaining;
     physicalAnswer(
       f,
       f.p.snapshot.active.options.find((o) => o.id.startsWith('terrain:boulder:')).id,
     );
-    const icon = f.p.snapshot.active.options[0].id;
-    if (n) assert.notEqual(icon, first);
-    else first = icon;
+    if (f.p.snapshot.active.mode === 'select') {
+      const copy = f.p.snapshot.resolution.sourceTest.cards[0].copy,
+        options = f.p.snapshot.active.options;
+      assert.ok(
+        options.every((o) => o.label.includes(copy.slice(0, 8))),
+        'Each fate choice must identify its exact revealed copy',
+      );
+      assert.equal(
+        new Set(options.map((o) => o.label)).size,
+        options.length,
+        'Two fate icons on one copy need distinct labels',
+      );
+      assert.equal(new Set(options.map((o) => o.id)).size, options.length);
+    }
     settleSelection(f);
+    assert.equal(f.p.snapshot.resolution.sourceTest.fateRemaining, before - 1);
+    assert.equal(f.p.snapshot.resolution.sourceTest.successes, n + 1);
   }
   assert.equal(f.p.snapshot.resolution.sourceTest.successes, 2);
   assert.equal(f.p.snapshot.resolution.sourceTest.fateRemaining, 0);

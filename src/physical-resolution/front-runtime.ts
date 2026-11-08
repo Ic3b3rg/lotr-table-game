@@ -1763,7 +1763,10 @@ class FrontReplay {
           hero,
           `${path}/${suffix}`,
           'Scegli le icone fato da usare: le altre restano disponibili.',
-          free.map((i) => ({ id: i.id, label: `${this.skillName(i.copy)} · fato` })),
+          free.map((i) => ({
+            id: i.id,
+            label: `${this.skillName(i.copy)}${terrain ? ` · copia ${terrain.token(i.copy).slice(0, 8)} · fato ${Number(i.id.split(':')[1]) + 1}` : ' · fato'}`,
+          })),
           count,
         );
         for (const id of chosen) icons.find((i) => i.id === id)!.state = state;
