@@ -553,6 +553,21 @@ export function createGuidedStart(sync: () => Promise<void>) {
         label = look ? 'Apri la lettura e continua' : 'Scegli il prossimo effetto';
         topic = 'encounter';
       }
+      if (session.scenario?.journeyStartup) {
+        const startup = session.scenario.phase === 'setup',
+          q = session.scenario.pending;
+        heading = startup ? 'Allestite la terza avventura' : 'Terza avventura · Fase di Azione';
+        message = q?.actorPlayerId
+          ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario indicato'} completa la scelta personale. Gli altri attendono; la ripresa conserva carte e richiesta.`
+          : q
+            ? 'Seguite le istruzioni e i piazzamenti della mappa di viaggio, poi confermate per proseguire.'
+            : session.round?.activeHeroId
+              ? 'Il proprietario dell’eroe di turno viaggia dalla mappa o conclude il turno.'
+              : 'Scegliete il primo eroe di turno. Il proprietario apre il turno e compie la propria azione.';
+        target = q ? '#scenario' : session.round?.activeHeroId ? '#journey-map' : '#rounds';
+        label = q ? 'Completa l’allestimento' : 'Apri il turno';
+        topic = startup ? 'startup' : 'turn';
+      }
       if (session.scenario?.conclusion) {
         const conclusion = session.scenario.conclusion;
         heading =
@@ -563,7 +578,7 @@ export function createGuidedStart(sync: () => Promise<void>) {
               : 'Concludete l’avventura';
         message =
           conclusion.stage === 'camp-preparation'
-            ? session.scenario.pack.manifest.campDeparture
+            ? session.scenario.campContinuation
               ? 'Ogni proprietario controlla e conferma ruolo, accessorio ed equipaggiamento. Quando tutti sono pronti, concordate l’ordine di pesca e partite dalla preparazione.'
               : 'Ogni proprietario controlla ruolo, accessorio facoltativo, equipaggiamento e carte previste, poi conferma. Le scelte sono salvate; la partenza della prossima avventura non è ancora disponibile. Potete tornare al campo e rientrare.'
             : conclusion.stage === 'camp'
