@@ -16,6 +16,7 @@ import { generationStateProblem } from './generation-state';
 import { hasInteractionLookForms } from './interaction-migration';
 import { hasBattleCombatForms } from './battle-combat-migration';
 import { hasBattleTestTerrainForms } from './battle-test-terrain-migration';
+import { hasBattleRoundForms } from './battle-rounds-migration';
 
 const PrivatePlayerSchema = PlayerSchema.extend({
   recoveryHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -627,6 +628,15 @@ function hasDepartureForms(raw: object) {
 export function parseState(raw: unknown): State {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const version = 'schemaVersion' in raw ? raw.schemaVersion : 1;
+    if (typeof version === 'number' && version <= 34 && hasBattleRoundForms(raw))
+      throw new Error('Fasi della battaglia non valide per uno schema storico.');
+    if (version === 34) {
+      const previous = BaseStateSchema.extend({
+        schemaVersion: z.literal(34),
+        episodes: z.array(EpisodeArchiveSchema).length(1).optional(),
+      }).parse(raw);
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
+    }
     if (typeof version === 'number' && version <= 33 && hasBattleTestTerrainForms(raw))
       throw new Error('Terreno delle prove battaglia non valido per uno schema storico.');
     if (version === 33) {
@@ -634,7 +644,7 @@ export function parseState(raw: unknown): State {
         schemaVersion: z.literal(33),
         episodes: z.array(EpisodeArchiveSchema).length(1).optional(),
       }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 32 && hasBattleCombatForms(raw))
       throw new Error('Combattimento battaglia non valido per uno schema storico.');
@@ -643,7 +653,7 @@ export function parseState(raw: unknown): State {
         schemaVersion: z.literal(32),
         episodes: z.array(EpisodeArchiveSchema).length(1).optional(),
       }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 31 && hasInteractionLookForms(raw))
       throw new Error('Interazione privata non valida per uno schema storico.');
@@ -652,68 +662,68 @@ export function parseState(raw: unknown): State {
         schemaVersion: z.literal(31),
         episodes: z.array(EpisodeArchiveSchema).length(1).optional(),
       }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 30 && hasDepartureForms(raw))
       throw new Error('Partenza o episodio non valido per uno schema storico.');
     if (version === 30)
       return StateSchema.parse({
         ...BaseStateSchema.extend({ schemaVersion: z.literal(30) }).parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
       });
     if (typeof version === 'number' && version <= 29 && hasStartupPreparationForms(raw))
       throw new Error('Startup fisico non valido per uno schema storico.');
     if (version === 29) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(29) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 28 && hasCampPreparationForms(raw))
       throw new Error('Preparazione non valida per uno schema storico.');
     if (version === 28) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(28) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 27 && hasCampItemForms(raw))
       throw new Error('Miglioramenti oggetti non validi per uno schema storico.');
     if (version === 27) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(27) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 26 && hasCampForms(raw))
       throw new Error('Abilità del campo non valide per uno schema storico.');
     if (version === 26) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(26) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 25 && hasThreatTokenForms(raw))
       throw new Error('Segnalini minaccia non validi per uno schema storico.');
     if (version === 25) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(25) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 24 && hasSearchForms(raw))
       throw new Error('Forme di ricerca non valide per uno schema storico.');
     if (version === 24) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(24) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 23 && hasFirstCombatForms(raw))
       throw new Error('Forme del primo scontro non valide per uno schema storico.');
     if (version === 23) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(23) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 22 && hasItemForms(raw))
       throw new Error('Oggetti e inventario non validi per uno schema storico.');
     if (version === 22) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(22) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 21 && hasBaseProductForms(raw))
       throw new Error('Prodotti base e Scatto non validi per uno schema storico.');
     if (version === 21) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(21) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 20) {
       type OldScenario = {
@@ -790,7 +800,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 20) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(20) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 19) {
       type OldScenario = {
@@ -824,7 +834,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 19) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(19) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 18) {
       type OldScenario = { pack?: { manifest?: { liveGroups?: unknown } } };
@@ -844,7 +854,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 18) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(18) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
 
     if (typeof version === 'number' && version <= 17) {
@@ -868,7 +878,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 17) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(17) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 16) {
       const old = raw as {
@@ -880,7 +890,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 16) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(16) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 13) {
       const physical = 'physical' in raw ? raw.physical : null;
@@ -904,7 +914,7 @@ export function parseState(raw: unknown): State {
     }
     if (version === 15) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(15) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (typeof version === 'number' && version <= 14) {
       const old = raw as Record<string, unknown>;
@@ -922,13 +932,13 @@ export function parseState(raw: unknown): State {
     }
     if (version === 14) {
       const previous = BaseStateSchema.extend({ schemaVersion: z.literal(14) }).parse(raw);
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (version === 13) {
       const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(13) }).parse(
         raw,
       );
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (version === 12) {
       const previous = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(12) }).parse(
@@ -936,44 +946,44 @@ export function parseState(raw: unknown): State {
       );
       if (previous.physical?.version === 3 || previous.physical?.cycle)
         throw new Error('Ledger ordinario non valido per schema12.');
-      return StateSchema.parse({ ...previous, schemaVersion: 34 });
+      return StateSchema.parse({ ...previous, schemaVersion: 35 });
     }
     if (version === 11) {
       const legacy = HistoricalBaseStateSchema.extend({ schemaVersion: z.literal(11) }).parse(raw);
       if (legacy.physical && legacy.physical.version !== 1)
         throw new Error('Runtime fronti non valido per schema11.');
-      return StateSchema.parse({ ...legacy, schemaVersion: 34 });
+      return StateSchema.parse({ ...legacy, schemaVersion: 35 });
     }
     if (version === 10)
       return StateSchema.parse({
         ...VersionTenStateSchema.parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
         physical: null,
       });
     if (version === 9)
       return StateSchema.parse({
         ...VersionNineStateSchema.parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
       });
     if (version === 8)
       return StateSchema.parse({
         ...VersionEightStateSchema.parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 7)
       return StateSchema.parse({
         ...VersionSevenStateSchema.parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
       });
     if (version === 6) {
       return StateSchema.parse({
         ...VersionSixStateSchema.parse(raw),
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -983,7 +993,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFiveStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -994,7 +1004,7 @@ export function parseState(raw: unknown): State {
       const previous = LegacyStateSchema.parse({ ...raw, schemaVersion: 1 });
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -1009,7 +1019,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionTwoStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -1029,7 +1039,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionThreeStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,
@@ -1043,7 +1053,7 @@ export function parseState(raw: unknown): State {
       const previous = VersionFourStateSchema.parse(raw);
       return StateSchema.parse({
         ...previous,
-        schemaVersion: 34,
+        schemaVersion: 35,
         scenario: null,
         mapGeneration: null,
         group: null,

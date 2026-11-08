@@ -50,9 +50,10 @@ export function createRounds(sync: () => Promise<void>) {
     );
     const cycle = !!current.physical?.cycle;
     const original = current.scenario?.pack.manifest.scope === 'original-encounter-v1';
-    const sourcePhases = original && !!current.scenario?.pack.manifest.rounds;
+    const battlePhase = current.scenario?.battleRound;
+    const sourcePhases = (original && !!current.scenario?.pack.manifest.rounds) || !!battlePhase;
     const allEnded = round?.heroes.every((hero) => hero.turnEnded);
-    const battleBoundary = !!current.scenario?.battle && !!allEnded;
+    const battleBoundary = !!current.scenario?.battle && !!allEnded && !battlePhase;
     const allScouted = round?.heroes.every((hero) => hero.rallyDone);
     const active = round?.heroes.find((hero) => hero.heroId === round.activeHeroId);
     element('#round-title').textContent = round
@@ -184,9 +185,10 @@ export function createRounds(sync: () => Promise<void>) {
         if (current.scenario?.pending)
           status.textContent +=
             ' L’Ombra continua nel pannello dell’avventura. Leggete le istruzioni, completate le prove e confermate i piazzamenti; il prossimo passaggio attende il seguito.';
-        confirm.textContent = current.scenario?.pack.manifest.followup
-          ? 'Applica la minaccia e risolvi gli eventi'
-          : 'Applica la minaccia e riorganizza';
+        confirm.textContent =
+          current.scenario?.pack.manifest.followup || battlePhase
+            ? 'Applica la minaccia e risolvi gli eventi'
+            : 'Applica la minaccia e riorganizza';
         element('#round-agreement').textContent =
           'Il gruppo ha letto l’aumento della minaccia ed è pronto a proseguire.';
         if (frame?.threshold) {
@@ -210,6 +212,18 @@ export function createRounds(sync: () => Promise<void>) {
       } else if (allEnded)
         status.textContent =
           'Tutti i turni sono conclusi. Il gruppo può iniziare la Fase di Ombra.';
+    }
+    if (battlePhase && round?.phase === 'shadow') {
+      const change = battlePhase.change;
+      status.textContent = change
+        ? `Minaccia ${battlePhase.stage === 'threat' ? 'da applicare' : 'applicata'}: ${change.before} → ${change.after}. Aumento ${change.delta}: ${change.heroes} dagli eroi e ${change.tokens} dai segnalini. Limite ${battlePhase.limit}.`
+        : current.combat?.current
+          ? 'Il gruppo nemico si attiva. Il proprietario indicato completa movimento, carte e conseguenze nel Combattimento; gli altri attendono.'
+          : 'Completate l’oscurità e gli eventi nel pannello dell’avventura.';
+      if (battlePhase.threshold !== null)
+        status.textContent += ` Soglia ${battlePhase.threshold} in corso: completate le istruzioni e i piazzamenti.`;
+      if (current.scenario?.pending || current.physical?.active)
+        status.textContent += ' La fase attende il ritorno della conseguenza corrente.';
     }
     const shadowBlock = current.physical?.nextShadow;
     if (round?.phase === 'action' && allEnded && shadowBlock && !shadowBlock.enabled) {

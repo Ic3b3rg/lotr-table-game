@@ -8,9 +8,24 @@ import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
 export function effectiveGroup(a: CombatClosure, group: DeployedGroup) {
   const model = a.compiled.models.find((m) => m.source === group.source);
   check(model, 'Modello non congelato per il combattimento.');
+  const recipe = group.battleRecipe
+    ? a.source.scriptedGroups?.find((r) => r.key === group.battleRecipe)
+    : undefined;
+  check(
+    !group.battleRecipe ||
+      (recipe?.model === group.source &&
+        recipe.logic === group.logic &&
+        JSON.stringify(recipe.bonuses) === JSON.stringify(group.bonuses)),
+    'Ricetta gruppo diversa dalla fonte.',
+  );
   const bonuses = group.bonuses.map((ref) => {
     const b = a.compiled.bonuses.find((b) => b.source === ref);
-    check(b && model.bonuses.includes(ref) && b.languageEligible, 'Bonus non congelato/legale.');
+    check(
+      b &&
+        (recipe ? recipe.bonuses.includes(ref) : model.bonuses.includes(ref)) &&
+        b.languageEligible,
+      'Bonus non congelato/legale.',
+    );
     return b;
   });
   return {

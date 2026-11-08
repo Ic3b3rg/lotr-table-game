@@ -1,3 +1,4 @@
+import { battleLogicGroup, returnBattleBanner } from '../scenario/battle-phase-runtime';
 import type { State } from '../server/state';
 import type { Receipt } from '../shared/protocol';
 import type {
@@ -105,8 +106,19 @@ function name(state: State, id: string) {
       battleCombat(state)
         ? compileSourceDeployment(state.scenario!.pack.manifest.battleStartup!.deployment)
         : verifySourceDeployment(state.scenario!.pack.manifest.followup!.deployment)
-    ).compiled.models.find((m) => m.source === g.source)!;
-  return g.figures.filter((f) => f.health > 0).length > 1 ? d.plural : d.name;
+    ).compiled.models.find((m) => m.source === g.source);
+  if (d) return g.figures.filter((f) => f.health > 0).length > 1 ? d.plural : d.name;
+  const phase = state.scenario!.pack.manifest.battleStartup?.battleRounds,
+    model = phase?.combat.source.assets.find(
+      (a) => a.source === g.source && a.cls === 'EnemyModel',
+    ),
+    key =
+      model?.data[g.figures.filter((f) => f.health > 0).length > 1 ? 'KeyPlural' : 'KeySingular'],
+    value =
+      phase?.deployment.texts[String(key)] ??
+      phase?.combat.source.texts.find((t) => t.key === key)?.value;
+  invariant(value, 'Nome del gruppo nominato non congelato.');
+  return value;
 }
 function inRange(state: State, heroId: string, groupId: string, ranged: boolean) {
   return groupInRange(state, heroId, group(state, groupId), ranged);
@@ -137,7 +149,7 @@ export function attackOffers(state: State, heroId: string): CombatAttackOffer[] 
           .map((items) => {
             const missing = preflightCombatOperation(state, a, g, heroId, 'counterattack');
             const reason =
-              g.logic && !firstCombatGroup(state, g)
+              g.logic && !(firstCombatGroup(state, g) || battleLogicGroup(state, g))
                 ? 'Il seguito di questo gruppo non è disponibile.'
                 : missing.includes('boon-quantities-57')
                   ? 'Una possibile conseguenza richiede benefici la cui riserva non è ancora verificata.'
@@ -646,6 +658,7 @@ export function advanceCombat(state: State) {
       attempt.applied = { hits: result.hits, ...hitResult };
       attempt.runId = null;
       if (applied.defeated) {
+        returnBattleBanner(state, group(state, attempt.groupId));
         group(state, attempt.groupId).placed = false;
         attempt.stage = 'reward';
         return;
@@ -853,7 +866,7 @@ function beginMovementProvocation(state: State, a: CombatAttempt, groupId: strin
     heroIds: [a.heroId],
   });
   invariant(
-    !missing.length && (!g.logic || firstCombatGroup(state, g)),
+    !missing.length && (!g.logic || firstCombatGroup(state, g) || battleLogicGroup(state, g)),
     'Closure della provocazione figlia non preflightata.',
   );
   a.movement!.provoked.push(g.id);
@@ -1370,7 +1383,7 @@ export function nextProvocation(state: State, selectedGroup?: string) {
       op.origin.heroId,
       'provocation',
     );
-    if ((g.logic && !firstCombatGroup(state, g)) || missing.length)
+    if ((g.logic && !(firstCombatGroup(state, g) || battleLogicGroup(state, g))) || missing.length)
       fail(
         'PROVOCATION_CLOSURE',
         missing.includes('boon-quantities-57')

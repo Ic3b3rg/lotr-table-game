@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { HashSchema, SourceSchema } from './generated-map';
 import { ContentIdSchema } from './catalog';
 import { StatSchema } from './skill-tests';
+import { BattleRoundRuntimeSchema } from './battle-rounds';
 
 const binding = z.string().min(1).max(150);
-export const RoundSourceSchema = z.strictObject({
+export const JourneyRoundSourceSchema = z.strictObject({
   version: z.literal('source-rounds-v1'),
   projectionFingerprint: HashSchema,
   evidenceHash: HashSchema,
@@ -49,8 +50,18 @@ export const RoundSourceSchema = z.strictObject({
       .max(1000),
   }),
 });
+export const BattleRoundSourceSchema = JourneyRoundSourceSchema.extend({
+  version: z.literal('source-battle-rounds-v1'),
+  configuration: JourneyRoundSourceSchema.shape.configuration.extend({
+    mapType: z.literal('battle'),
+  }),
+});
+export const RoundSourceSchema = z.discriminatedUnion('version', [
+  JourneyRoundSourceSchema,
+  BattleRoundSourceSchema,
+]);
 export type RoundSource = z.infer<typeof RoundSourceSchema>;
-export const SourceRoundStateSchema = z.strictObject({
+export const JourneyRoundStateSchema = z.strictObject({
   version: z.literal('source-rounds-v1'),
   active: z.uuid().nullable(),
   frames: z
@@ -99,3 +110,11 @@ export const SourceRoundStateSchema = z.strictObject({
     )
     .max(1000),
 });
+export const BattleRoundStateSchema = JourneyRoundStateSchema.extend({
+  version: z.literal('source-battle-rounds-v1'),
+  battle: BattleRoundRuntimeSchema,
+});
+export const SourceRoundStateSchema = z.discriminatedUnion('version', [
+  JourneyRoundStateSchema,
+  BattleRoundStateSchema,
+]);

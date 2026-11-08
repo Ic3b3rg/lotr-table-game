@@ -134,6 +134,20 @@ export function compileSourceDeployment(raw: unknown) {
   return { version: source.version, source, compiled, fingerprint: digest({ source, compiled }) };
 }
 export type DeploymentArtifact = ReturnType<typeof compileSourceDeployment>;
+/** Native EnemyModel.AreLinked is symmetric; the named variant shares the ordinary figures. */
+export function linkedEnemySources(
+  source: DeploymentArtifact['source'],
+  left: string,
+  right: string,
+) {
+  const a = source.assets.find((a) => a.source === left && a.cls === 'EnemyModel')?.data,
+    b = source.assets.find((a) => a.source === right && a.cls === 'EnemyModel')?.data;
+  check(
+    a && b && [a._id, a.LinkedEnemyId, b._id, b.LinkedEnemyId].every(Number.isSafeInteger),
+    'Identità o disponibilità collegata assente.',
+  );
+  return left === right || a._id === b.LinkedEnemyId || b._id === a.LinkedEnemyId;
+}
 export function verifySourceDeployment(raw: unknown): DeploymentArtifact {
   bounded(raw);
   const a = object(raw),

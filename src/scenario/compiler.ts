@@ -459,6 +459,11 @@ export function compileScenarioPack(raw: unknown) {
   return { ...parseScenarioPack(result.pack), coverage: result.coverage };
 }
 
+/** Compile certificates without recursively rebuilding the enclosing departure authority. */
+export function validateBattleRoundCertificates(raw: unknown) {
+  return compileEvidence(raw);
+}
+
 /** The same certificates, scoped to the mandatory A2 receiver before departure entropy. */
 export function validateBattleTerminalSource(raw: unknown) {
   const result = compileEvidence(raw),

@@ -1,4 +1,4 @@
-import { BackupPreviewSchema, type Session } from '../shared/protocol';
+import { MAX_BACKUP_BYTES, BackupPreviewSchema, type Session } from '../shared/protocol';
 import { request, RequestError } from './api';
 import { action } from './actions';
 import { element } from './dom';
@@ -50,10 +50,10 @@ export function backupView(sync: () => Promise<void>) {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      if (file.size > 4_000_000)
+      if (file.size > MAX_BACKUP_BYTES)
         throw new RequestError(
           'TOO_LARGE',
-          'La copia supera il limite di 4 MB di questa versione.',
+          'La copia supera il limite di 16 MiB di questa versione.',
         );
       const data: unknown = JSON.parse(await file.text());
       const parsed = BackupPreviewSchema.safeParse(data);

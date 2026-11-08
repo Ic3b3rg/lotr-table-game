@@ -43,6 +43,16 @@ import {
 } from './startup-preparation';
 import { randomUUID } from 'node:crypto';
 import type { State } from '../server/state';
+import {
+  battlePhase,
+  battleCallback,
+  sourceActor,
+  beginBattleCallback,
+  finishBattleCallbacks,
+  materializeBattleSpawn,
+  battleGroupText,
+  releaseBattleBanner,
+} from './battle-phase-runtime';
 import type { ScenarioCommand } from '../shared/protocol';
 import type {
   Scenario,
@@ -225,8 +235,9 @@ function messageRequest(
   a: Extract<ScenarioAction, { op: 'message' }>,
 ) {
   const sc = state.scenario!,
-    kind =
-      a.mode === 'scout'
+    kind = a.battlePlacement
+      ? 'deployment'
+      : a.mode === 'scout'
         ? 'scout'
         : a.mode === 'spirit'
           ? 'test'
@@ -253,6 +264,7 @@ function messageRequest(
     searchDefinition(sc.pack, i.definition) || threatTokenDefinition(sc.pack, i.definition)
       ? sc.play?.attempts.find((a) => a.id === sc.play!.active)
       : undefined;
+  const battleActor = battleCallback(state);
   request(state, {
     instanceId: i.id,
     state: i.state,
@@ -260,8 +272,13 @@ function messageRequest(
     action: a.index,
     kind,
     text: a.text,
-    heroId: hero?.heroId ?? explorer?.heroId ?? searchActor?.heroId ?? null,
-    actorPlayerId: hero?.playerId ?? explorer?.playerId ?? searchActor?.playerId ?? null,
+    heroId: hero?.heroId ?? explorer?.heroId ?? searchActor?.heroId ?? battleActor?.heroId ?? null,
+    actorPlayerId:
+      hero?.playerId ??
+      explorer?.playerId ??
+      searchActor?.playerId ??
+      battleActor?.playerId ??
+      null,
     stage: 'ready',
     tileSource: a.mode === 'tile' ? visible.at(-1)!.source : null,
   });
@@ -484,6 +501,117 @@ function execute(
     return;
   }
   switch (a.op) {
+    case 'sourceInt': {
+      invariant(battlePhase(state), 'Binding FSM fuori dalle fasi certificate.');
+      const owner = sc.instances.find((r) => r.definition === a.definition),
+        value = owner?.variables[a.name];
+      invariant(
+        typeof value === 'number' && Number.isInteger(value),
+        'GetFsmInt senza owner o variabile intera.',
+      );
+      setValue(sc, i, a.target, value);
+      break;
+    }
+    case 'sumInt':
+      invariant(battlePhase(state), 'Somma fuori dalle fasi certificate.');
+      setValue(sc, i, a.target, (integerValue(sc, i, a.left) + integerValue(sc, i, a.right)) | 0);
+      break;
+    case 'divideInt': {
+      invariant(battlePhase(state), 'Divisione fuori dalle fasi certificate.');
+      const left = integerValue(sc, i, a.left),
+        right = integerValue(sc, i, a.right);
+      invariant(
+        right !== 0 && !(left === -2147483648 && right === -1),
+        'Divisione intera non eseguibile.',
+      );
+      setValue(sc, i, a.target, Math.trunc(left / right));
+      break;
+    }
+    case 'battleThreat': {
+      const phase = battlePhase(state),
+        value = integerValue(sc, i, a.value);
+      invariant(
+        phase?.cap.thresholds.some(
+          (t) => t.source === a.source && value === t.perHero * phase.cap.heroIds.length,
+        ) && !sc.threats.some((t) => t.source === a.source),
+        'Registrazione della soglia diversa dalla fonte.',
+      );
+      sc.threats.push({ source: a.source, threshold: value });
+      break;
+    }
+    case 'whenTrue': {
+      invariant(battlePhase(state), 'Prontezza fuori dalle fasi certificate.');
+      const v = variable(sc, i, a.ref)[a.ref.name];
+      invariant(typeof v === 'boolean', 'BoolAllTrue senza bool.');
+      if (v) {
+        invariant(send(sc, i, a.event), 'Prontezza senza ramo fonte.');
+        return;
+      }
+      break;
+    }
+    case 'battleReady': {
+      const cb = battleCallback(state);
+      invariant(cb?.logicInstanceId === i.id, 'Prontezza senza il proprio callback.');
+      setValue(sc, i, a.target, !cb.exhausted);
+      break;
+    }
+    case 'battleExhaust': {
+      const phase = battlePhase(state),
+        cb = battleCallback(state),
+        recipe = phase?.cap.combat.source.scriptedGroups?.find((r) => r.sourceGroup === a.group),
+        g = sc.enemies!.groups.find((g) => g.id === cb?.nextGroupId);
+      invariant(
+        cb?.logicInstanceId === i.id && g && recipe && g.battleRecipe === recipe.key,
+        'Esaurimento senza gruppo del callback.',
+      );
+      g.exhausted = true;
+      break;
+    }
+    case 'battleVisible':
+      invariant(
+        battlePhase(state)?.cap.nodes.some((n) => n.anchor === a.anchor),
+        'Nodo fuori dalla fase.',
+      );
+      invariant(
+        send(
+          sc,
+          i,
+          sc.battle!.placements.some((p) => p.anchor === a.anchor) ? a.trueEvent : a.falseEvent,
+        ),
+        'Visibilità senza ramo fonte.',
+      );
+      return;
+    case 'battleNode':
+      invariant(
+        battlePhase(state)?.cap.nodes.some((n) => n.anchor === a.anchor) && !a.visible,
+        'Nodo non certificato.',
+      );
+      sc.battle!.placements = sc.battle!.placements.filter((p) => p.anchor !== a.anchor);
+      break;
+    case 'battleReserve': {
+      const phase = battlePhase(state);
+      invariant(phase, 'Riserva senza fasi certificate.');
+      if (a.enemy) {
+        const r = phase.data.reserved.find((r) => r.source === a.enemy);
+        invariant(r && r.count >= a.amount, 'Riserva nemici insufficiente.');
+        r.count -= a.amount;
+      } else releaseBattleBanner(state, a.amount);
+      break;
+    }
+    case 'battleSpawn':
+      invariant(battlePhase(state) && sc.enemies, 'Spawn senza fasi certificate.');
+      materializeBattleSpawn(state, i, a, actionKey(i, a.index));
+      if (battlePhase(state)!.cap.spawns[a.plan]!.kind === 'tracker') break;
+      sc.tasks.push({
+        kind: 'spawnRandom',
+        instanceId: i.id,
+        entry: i.entry,
+        action: a.index,
+        stage: 'placements',
+        groupIndex: 0,
+        effectId: actionKey(i, a.index),
+      });
+      return;
     case 'spawnFixed': {
       const receipt = spawnFirstCombat(state, a, actionKey(i, a.index));
       const g = sc.enemies!.groups.find((g) => g.id === receipt.groupId);
@@ -587,7 +715,7 @@ function execute(
       break;
     case 'endGame':
       invariant(requestId, 'Segnale del covo senza comando fonte.');
-      beginSourceVictory(state, i.id, actionKey(i, a.index), requestId);
+      beginSourceVictory(state, i.id, actionKey(i, a.index), requestId, !!probe);
       break;
     case 'confirm':
       if (i.kind === 'exploration') {
@@ -633,6 +761,16 @@ function execute(
       invariant(send(sc, i, a.falseEvent), 'Guardia nulla senza ramo fonte.');
       return;
     case 'ownsProducts': {
+      const phase = battlePhase(state);
+      if (phase) {
+        const own = a.products.every((source) => {
+          const model = phase.cap.productModels.find((p) => p.source === source);
+          invariant(model, 'Prodotto della fase privo di identità fonte.');
+          return sc.pack.manifest.battleStartup!.ownedProductIds.some((id) => id === model.id);
+        });
+        invariant(send(sc, i, own ? a.ownEvent : a.missingEvent), 'Prodotto senza ramo fonte.');
+        return;
+      }
       if (threatTokenDefinition(sc.pack, i.definition)) {
         const cap = sc.pack.manifest.threatTokens!;
         invariant(
@@ -900,7 +1038,11 @@ function execute(
         });
         return;
       }
-      if (a.consequence || a.inspiration || a.boon || a.recovery) {
+      if (a.consequence || a.inspiration || a.boon || a.recovery || a.battleSuffering) {
+        if (a.battleSuffering && encounterProgram(state, a).children.length === 0) {
+          messageRequest(state, i, a);
+          return;
+        }
         beginEncounterPhysical(state, sc.effects.find((e) => e.id === actionKey(i, a.index))!, a);
         return;
       }
@@ -1123,6 +1265,14 @@ export function pumpPhaseEvent(state: State) {
   pump(state);
 }
 export function deliverFirstCombatDefeat(state: State, attackId: string, groupId: string) {
+  const battle = beginBattleCallback(state, attackId, groupId);
+  if (battle) {
+    const sc = state.scenario!;
+    sc.events.push({ id: eventId(sc, 'DEFEATED'), event: 'DEFEATED', receivers: [battle.id] });
+    invariant(send(sc, battle, 'DEFEATED'), 'Gruppo senza handler DEFEATED.');
+    pump(state, undefined, attackId);
+    return;
+  }
   if (!state.scenario?.pack.manifest.firstCombat) return;
   const sc = state.scenario!,
     group = sc.enemies!.groups.find((g) => g.id === groupId)!;
@@ -1256,8 +1406,8 @@ function advanceTask(state: State) {
   }
   if (task.kind === 'spawnRandom') {
     const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
-    invariant(a.op === 'spawnRandom', 'Spawn senza istruzione fonte.');
-    if (task.stage === 'intro' && (a.trial || a.suffering)) {
+    invariant(a.op === 'spawnRandom' || a.op === 'battleSpawn', 'Spawn senza istruzione fonte.');
+    if (task.stage === 'intro' && a.op === 'spawnRandom' && (a.trial || a.suffering)) {
       const effect = sc.effects.find((e) => e.id === task.effectId)!;
       task.parentId ??= openSourcePhysical(state, effect, a, spawnPhysicalProgram(state, a));
       const parent = state.physical!.snapshot.parents.find((p) => p.id === task.parentId)!;
@@ -1281,9 +1431,14 @@ function advanceTask(state: State) {
         entry: owner.entry,
         action: a.index,
         kind: task.stage === 'intro' ? 'deployment-intro' : 'deployment',
-        text: task.stage === 'intro' ? a.text : deploymentText(state, group!),
-        heroId: null,
-        actorPlayerId: null,
+        text:
+          task.stage === 'intro'
+            ? a.text
+            : a.op === 'battleSpawn'
+              ? battleGroupText(state, group!)
+              : deploymentText(state, group!),
+        heroId: a.op === 'battleSpawn' ? (battleCallback(state)?.heroId ?? null) : null,
+        actorPlayerId: a.op === 'battleSpawn' ? (battleCallback(state)?.playerId ?? null) : null,
         stage: 'ready',
         tileSource: group ? sc.enemies!.groups.find((g) => g.id === group)!.tileSource : null,
       });
@@ -1291,6 +1446,14 @@ function advanceTask(state: State) {
     }
     complete(owner, task.action);
     sc.tasks.pop();
+    if (a.op === 'battleSpawn') {
+      const plan = battlePhase(state)!.cap.spawns[a.plan]!;
+      if (plan.kind !== 'points')
+        invariant(
+          send(sc, owner, attempt?.groups.length ? plan.successEvent : plan.failureEvent),
+          'Spawn senza ramo fonte.',
+        );
+    }
     return true;
   }
   if (task.kind === 'startup') {
@@ -1326,9 +1489,25 @@ function advanceTask(state: State) {
     if (parent.status === 'completed') {
       const a = current(sc, owner).actions.find((a) => a.index === task.action)!;
       sc.tasks.pop();
+      const cb = battleCallback(state);
+      if (cb?.logicInstanceId === owner.id && defeatedHeroes(state).includes(cb.heroId)) {
+        const placed = sc.enemies!.groups.find((g) => g.id === cb.nextGroupId);
+        if (placed) placed.placed = true;
+        if (a.op === 'message') logMessage(sc, owner, a.index);
+        complete(owner, task.action);
+        cb.interrupted = 'hero-defeated';
+        cb.returned = true;
+        owner.stopped = owner.settled = true;
+        owner.processing = 0;
+        return true;
+      }
       // A resource child can complete without presenting a physical decision.
       // Its source DisplayMessage still owns an acknowledgement before FINISHED.
       if (a.op === 'message' && (a.inspiration || a.boon || a.recovery)) {
+        messageRequest(state, owner, a);
+        return true;
+      }
+      if (a.op === 'message' && a.battlePlacement) {
         messageRequest(state, owner, a);
         return true;
       }
@@ -1352,7 +1531,7 @@ function advanceTask(state: State) {
           total = result.total;
           challengeEvent = result.event;
         }
-        const attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
+        const attempt = sourceActor(state)!;
         sc.play!.tests.push({
           attemptId: attempt.id,
           source: parent.source,
@@ -1572,6 +1751,7 @@ function pump(state: State, probe?: SourceProbe, requestId?: string) {
     for (const cb of sc.firstCombat?.callbacks ?? [])
       if (!cb.returned && sc.instances.find((i) => i.id === cb.logicInstanceId)!.stopped)
         cb.returned = true;
+    finishBattleCallbacks(state);
     if (sc.pending) return;
     if (sc.conclusion) {
       if (sc.conclusion.outcome === 'victory') {
@@ -1909,6 +2089,20 @@ export function resumeScenario(
     if (input.kind !== 'ack') throw wrong();
     const task = sc.tasks.at(-1),
       a = current(sc, i).actions.find((a) => a.index === q.action)!;
+    if (a.op === 'message' && a.battlePlacement) {
+      const cb = battleCallback(state),
+        g = sc.enemies!.groups.find((g) => g.id === cb?.nextGroupId);
+      invariant(
+        cb?.logicInstanceId === i.id && g?.battleRecipe === a.battlePlacement,
+        'Piazzamento fuori dal proprio callback.',
+      );
+      g.placed = true;
+      logMessage(sc, i, a.index);
+      complete(i, a.index);
+      sc.pending = null;
+      pump(state, probe, command.requestId);
+      return;
+    }
     if (task?.kind === 'spawnFixed') {
       invariant(
         a.op === 'spawnFixed' &&
@@ -1931,7 +2125,7 @@ export function resumeScenario(
         task.instanceId === i.id &&
         task.entry === q.entry &&
         task.action === q.action &&
-        a.op === 'spawnRandom',
+        (a.op === 'spawnRandom' || a.op === 'battleSpawn'),
       'Callback spawn scaduto.',
     );
     sc.messageLog.push({
@@ -1939,7 +2133,8 @@ export function resumeScenario(
       text: structuredClone(q.text),
     });
     if (q.kind === 'deployment-intro') {
-      materializeDeployment(state, i, a, task.effectId);
+      if (a.op === 'battleSpawn') materializeBattleSpawn(state, i, a, task.effectId);
+      else materializeDeployment(state, i, a, task.effectId);
       task.stage = 'placements';
     } else task.groupIndex++;
     sc.pending = null;

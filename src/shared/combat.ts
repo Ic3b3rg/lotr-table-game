@@ -28,6 +28,7 @@ export const CombatAdditionSchema = z.strictObject({
   effect: z.discriminatedUnion('op', [
     z.strictObject({ op: z.literal('discard-prepared'), amount }),
     z.strictObject({ op: z.literal('discard-inspiration'), amount }),
+    z.strictObject({ op: z.literal('discard-boons') }),
     z.strictObject({ op: z.literal('gain-inspiration'), amount }),
     z.strictObject({ op: z.literal('gain-weakness'), amount }),
     z.strictObject({ op: z.literal('flip-random'), family: z.enum(['damage', 'fear']), amount }),
@@ -87,6 +88,83 @@ const asset = z.strictObject({
   dataHash: HashSchema,
   data: z.record(z.string().max(200), z.json()),
 });
+const shadowFields = {
+  companyFingerprint: HashSchema,
+  activationOverride: z.literal(-1),
+  controller: z.strictObject({
+    assemblyHash: HashSchema,
+    method: z.string().regex(/^06[0-9a-f]{6}$/),
+    bodyHash: HashSchema,
+    normalDifficulty: z.literal(0),
+    enemyPointsPerHero: z.literal(0),
+    difficultyEvidenceHash: HashSchema,
+  }),
+  beforeUnexhaust: id,
+  terrain: z.strictObject({
+    tiles: z.array(z.strictObject({ source: SourceSchema, evidenceHash: HashSchema })).max(200),
+    forbiddenPrefabs: z.array(SourceSchema).max(100),
+    evidenceHash: HashSchema,
+  }),
+  instructions: z
+    .array(
+      z.strictObject({
+        source: SourceSchema,
+        movement: z.int().min(0).max(8),
+        alternativeMovement: z.int().min(0).max(8),
+        alternativeDestination: z.enum(['hero', 'adjacent-to-hero']),
+        alternativeTarget: z.enum(['nearest', 'highest-might']).optional(),
+        evidenceHash: HashSchema,
+      }),
+    )
+    .min(1)
+    .max(300),
+  thresholds: z
+    .array(
+      z.strictObject({
+        source: SourceSchema,
+        owner: SourceSchema,
+        definition: SourceSchema,
+        threshold: z.int().positive().max(999),
+        multiplier: z.int().positive().max(100),
+        nextSource: SourceSchema,
+        nextOwner: SourceSchema,
+        nextThreshold: z.int().positive().max(999),
+        evidenceHash: HashSchema,
+      }),
+    )
+    .max(10),
+};
+export const ScriptedCombatGroupSchema = z.strictObject({
+  key: id,
+  model: SourceSchema,
+  bonuses: z.array(SourceSchema).max(3),
+  logic: SourceSchema,
+  sourceGroup: SourceSchema.nullable(),
+  objectHash: HashSchema,
+  baseStats: z
+    .array(
+      z.strictObject({
+        health: z.int().min(1).max(1000),
+        armor: z.int().nonnegative().max(1000),
+        sorcery: z.int().nonnegative().max(1000),
+      }),
+    )
+    .min(1)
+    .max(3),
+});
+const ShadowSourceSchema = z.discriminatedUnion('version', [
+  z.strictObject({ version: z.literal('source-shadow-activations-v1'), ...shadowFields }),
+  z.strictObject({
+    version: z.literal('source-battle-shadow-v1'),
+    ...shadowFields,
+    battle: z.strictObject({
+      boardFingerprint: HashSchema,
+      model: SourceSchema,
+      principal: SourceSchema,
+      evidenceHash: HashSchema,
+    }),
+  }),
+]);
 export const CombatClosureSourceSchema = z.strictObject({
   format: z.literal('combat-closure-v1'),
   evidenceHash: HashSchema,
@@ -152,54 +230,8 @@ export const CombatClosureSourceSchema = z.strictObject({
       }),
     )
     .max(100),
-  shadow: z
-    .strictObject({
-      version: z.literal('source-shadow-activations-v1'),
-      companyFingerprint: HashSchema,
-      activationOverride: z.literal(-1),
-      controller: z.strictObject({
-        assemblyHash: HashSchema,
-        method: z.string().regex(/^06[0-9a-f]{6}$/),
-        bodyHash: HashSchema,
-        normalDifficulty: z.literal(0),
-        enemyPointsPerHero: z.literal(0),
-        difficultyEvidenceHash: HashSchema,
-      }),
-      beforeUnexhaust: id,
-      terrain: z.strictObject({
-        tiles: z.array(z.strictObject({ source: SourceSchema, evidenceHash: HashSchema })).max(200),
-        forbiddenPrefabs: z.array(SourceSchema).max(100),
-        evidenceHash: HashSchema,
-      }),
-      instructions: z
-        .array(
-          z.strictObject({
-            source: SourceSchema,
-            movement: z.int().min(0).max(8),
-            alternativeMovement: z.int().min(0).max(8),
-            alternativeDestination: z.enum(['hero', 'adjacent-to-hero']),
-            evidenceHash: HashSchema,
-          }),
-        )
-        .min(1)
-        .max(300),
-      thresholds: z
-        .array(
-          z.strictObject({
-            source: SourceSchema,
-            owner: SourceSchema,
-            definition: SourceSchema,
-            threshold: z.int().positive().max(999),
-            multiplier: z.int().positive().max(100),
-            nextSource: SourceSchema,
-            nextOwner: SourceSchema,
-            nextThreshold: z.int().positive().max(999),
-            evidenceHash: HashSchema,
-          }),
-        )
-        .max(10),
-    })
-    .optional(),
+  shadow: ShadowSourceSchema.optional(),
+  scriptedGroups: z.array(ScriptedCombatGroupSchema).max(16).optional(),
 });
 export type CombatClosureSource = z.infer<typeof CombatClosureSourceSchema>;
 export const CombatClosureArtifactSchema = z.strictObject({

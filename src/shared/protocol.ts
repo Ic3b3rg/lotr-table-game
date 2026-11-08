@@ -1,3 +1,5 @@
+// Restore transport is bounded separately from ordinary command bodies.
+export const MAX_BACKUP_BYTES = 16 * 1024 * 1024;
 import {
   CampDepartureInputSchema,
   CampDepartureOfferSchema,
@@ -53,7 +55,7 @@ export const DemoSchema = z.strictObject({
   resolvedBy: z.uuid().nullable(),
 });
 export const SessionSchema = z.strictObject({
-  schemaVersion: z.literal(34),
+  schemaVersion: z.literal(35),
   id: z.uuid(),
   generation: z.uuid(),
   revision: z.int().nonnegative(),

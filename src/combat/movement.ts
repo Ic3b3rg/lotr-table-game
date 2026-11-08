@@ -88,7 +88,12 @@ export function activeCompany(state: State) {
 export function activationTargets(
   state: State,
   from: string,
-  policy: { movement: number; alternativeMovement: number; alternativeDestination: string },
+  policy: {
+    movement: number;
+    alternativeMovement: number;
+    alternativeDestination: string;
+    alternativeTarget?: 'nearest' | 'highest-might' | undefined;
+  },
   initialHeroId: string | null,
   range: number,
 ) {
@@ -108,7 +113,12 @@ export function activationTargets(
       stop: range,
     }));
   const stop = policy.alternativeDestination === 'adjacent-to-hero' ? 1 : 0;
-  return nearest(heroes).map((h) => ({
+  const might = (id: string) => state.content!.heroes.find((h) => h.id === id)!.stats.might;
+  const alternatives =
+    policy.alternativeTarget === 'highest-might'
+      ? heroes.filter((h) => might(h.heroId) === Math.max(...heroes.map((h) => might(h.heroId))))
+      : nearest(heroes);
+  return alternatives.map((h) => ({
     ...h,
     branch: 'alternative' as const,
     moves: Math.min(policy.alternativeMovement, Math.max(0, h.distance - stop)),

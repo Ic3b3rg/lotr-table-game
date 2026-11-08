@@ -17,12 +17,13 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { openPhysical, answerPhysical } from '../physical-resolution/runtime';
 import { ApiError } from '../server/errors';
-import { battleCombatPack } from './battle-combat';
+import { battleCombatPack, verifiedBattleBoard } from './battle-combat';
+import { battleRoundsPack } from './battle-rounds';
 import { compileScenarioPack } from './compiler';
 
 const text = (value: string): SourceText => [{ kind: 'text', style: 'plain', text: value }];
 export function battleGeometry(cap: CampDepartureCapability) {
-  const board = verifyBattleMapArtifact(cap.board, { artifactFingerprint: cap.boardFingerprint });
+  const board = verifiedBattleBoard(cap);
   const layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!;
   const all = layout.patches.flatMap((p) => p.vertices),
     minX = Math.min(...all.map((p) => p[0])),
@@ -128,7 +129,8 @@ export function createBattleScenario(
       battleStartup: cap,
     },
   });
-  if (cap.combat) {
+  if (cap.battleRounds) pack = battleRoundsPack(cap, pack);
+  else if (cap.combat) {
     const prospective = battleCombatPack(cap, pack);
     pack = compileScenarioPack({
       pack: prospective,
@@ -150,8 +152,12 @@ export function createBattleScenario(
         definition: cap.target.principal,
         prefab: null,
         spaceId: null,
-        variables: {},
-        state: 0,
+        variables: Object.fromEntries(
+          pack.definitions
+            .find((d) => d.source === cap.target.principal)!
+            .variables.map((v) => [v.name, structuredClone(v.value)]),
+        ),
+        state: pack.definitions.find((d) => d.source === cap.target.principal)!.initial,
         entry: 0,
         started: [],
         completed: [],
@@ -160,6 +166,25 @@ export function createBattleScenario(
         settled: true,
         processing: 0,
       },
+      ...(pack.manifest.followup?.instances ?? []).map((row) => {
+        const d = pack.definitions.find((d) => d.source === row.definition)!;
+        return {
+          id: `static:${row.gameObject}`,
+          kind: row.kind,
+          definition: row.definition,
+          prefab: null,
+          spaceId: null,
+          variables: Object.fromEntries(d.variables.map((v) => [v.name, structuredClone(v.value)])),
+          state: d.initial,
+          entry: 0,
+          started: [],
+          completed: [],
+          visible: false,
+          stopped: false,
+          settled: true,
+          processing: 0,
+        };
+      }),
     ],
     globals: cap.combat
       ? {
@@ -186,6 +211,29 @@ export function createBattleScenario(
         }
       : {}),
     enemies: { entropy: null, cursor: 0, groups: [], attempts: [] },
+    ...(cap.battleRounds
+      ? {
+          rounds: {
+            version: 'source-battle-rounds-v1',
+            active: null,
+            frames: [],
+            battle: {
+              groups: [],
+              callbacks: [],
+              reserved: structuredClone(cap.reserved),
+              reservedEliteBanners: cap.reservedEliteBanners,
+              bannerPools: {
+                normal: [...cap.deployment.mechanics.normalBanners],
+                elite: cap.deployment.mechanics.eliteBanners.slice(0, 6 - cap.reservedEliteBanners),
+                reservedElite: cap.deployment.mechanics.eliteBanners
+                  .slice(6 - cap.reservedEliteBanners)
+                  .reverse(),
+                returnedGroups: [],
+              },
+            },
+          },
+        }
+      : {}),
     battle: {
       version: 'source-battle-startup-v1',
       cursor: 0,
@@ -347,6 +395,14 @@ function entered(state: State, i: BattleInstruction) {
     sc.globals.battleThreat = 0;
     sc.globals.battleThreshold = i.perHero * state.preparation!.heroes.length;
     sc.globals.battleLimit = i.limitPerHero * state.preparation!.heroes.length;
+    if (cap.battleRounds) {
+      const source = cap.battleRounds;
+      sc.instances[0]!.variables[source.principalThresholdBinding] = sc.globals.battleThreshold;
+      sc.threats.push({
+        source: source.thresholds[0]!.source,
+        threshold: sc.globals.battleThreshold,
+      });
+    }
   }
   if (i.op === 'board') sc.tiles[0]!.visible = sc.tiles[0]!.explored = true;
   if (i.op === 'heroes') b.placements.push({ anchor: i.anchor, kind: 'hero' });
@@ -368,6 +424,15 @@ function entered(state: State, i: BattleInstruction) {
     sc.enemies!.cursor = result.cursor;
     sc.enemies!.groups = result.groups;
     sc.enemies!.attempts = result.attempts;
+    if (sc.rounds?.version === 'source-battle-rounds-v1') {
+      const pools = sc.rounds.battle.bannerPools;
+      pools.normal = pools.normal.filter(
+        (id) => !result.groups.some((g) => !g.bonuses.length && g.tokenId === id),
+      );
+      pools.elite = pools.elite.filter(
+        (id) => !result.groups.some((g) => g.bonuses.length && g.tokenId === id),
+      );
+    }
   }
 }
 /** Execute source-ordered setup. Every card mutation stays in the physical kernel. */

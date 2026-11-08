@@ -18,11 +18,11 @@ export function inventedFrontInput(raw) {
     policies: [],
   };
 }
-export function frontFixture() {
+export function frontFixture(heroCount = 3) {
   const raw = diagnosticRaw(),
     ir = inventedFrontInput(raw),
     catalog = catalogFixture();
-  const heroes = catalog.heroes.slice(0, 3).map((h, i) => ({
+  const heroes = catalog.heroes.slice(0, heroCount).map((h, i) => ({
     heroId: h.id,
     playerId: `00000000-0000-4000-8000-00000000001${i}`,
     spaceId: 'invented-space',
@@ -52,7 +52,7 @@ export function frontFixture() {
           discard: [],
         }))
         .map(({ spaceId, ...h }) => h),
-      weaknessDeck: catalog.weaknessCards.slice(3).map((id) => `${id}:1`),
+      weaknessDeck: catalog.weaknessCards.slice(heroCount).map((id) => `${id}:1`),
     },
     depletion: [],
     boons: [],

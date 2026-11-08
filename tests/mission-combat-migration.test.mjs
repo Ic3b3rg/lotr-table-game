@@ -26,7 +26,7 @@ const { parseState } = await import(
 test('schemas through23 reject every new mission shape at contract paths including the immutable seed', async (t) => {
   const r = await readyMission(t),
     raw = (await readBackup(r.host)).payload.state;
-  assert.equal(raw.schemaVersion, 34);
+  assert.equal(raw.schemaVersion, 35);
   assert.throws(
     () => parseState({ ...structuredClone(raw), schemaVersion: 23 }),
     /primo|scontro|storico/i,
@@ -102,7 +102,7 @@ test('migration is structural and normal dictionary names remain data through23'
     const old = { ...structuredClone(raw), schemaVersion };
     if (schemaVersion === 10) delete old.physical;
     const before = structuredClone(old);
-    assert.deepEqual(parseState(old), { ...raw, schemaVersion: 34 });
+    assert.deepEqual(parseState(old), { ...raw, schemaVersion: 35 });
     assert.deepEqual(old, before);
   }
 });

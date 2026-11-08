@@ -1,3 +1,4 @@
+import { MAX_BACKUP_BYTES } from '../shared/protocol';
 import { scenarioOffer } from './scenario';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -196,7 +197,7 @@ const server = createServer(async (req, res) => {
           'SEAT_REQUIRED',
           'Entra o recupera il tuo posto per ripristinare una copia.',
         );
-      const body = await input(req, RestoreSchema);
+      const body = await input(req, RestoreSchema, MAX_BACKUP_BYTES + 4096);
       store.restore(body);
       store.generator.cancel();
       res.setHeader('set-cookie', 'lotr-seat=; Path=/api; Max-Age=0; HttpOnly; SameSite=Strict');

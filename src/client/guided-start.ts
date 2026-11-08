@@ -303,6 +303,40 @@ export function createGuidedStart(sync: () => Promise<void>) {
               ? 'Apri la mappa del turno'
               : 'Apri il turno';
           topic = 'startup';
+          if (
+            session.scenario.battleRound &&
+            session.round &&
+            session.scenario.phase === 'action'
+          ) {
+            const round = session.round;
+            heading = `Round ${round.number} · ${round.phase === 'shadow' ? 'Ombra' : round.phase === 'rally' ? 'Riorganizzazione' : 'Fase di Azione'}`;
+            topic =
+              round.phase === 'rally' ? 'scout' : round.phase === 'shadow' ? 'shadow' : 'turn';
+            if (q) {
+              message = q.actorPlayerId
+                ? `${session.players.find((p) => p.id === q.actorPlayerId)?.name ?? 'Il proprietario indicato'} completa l’istruzione. Gli altri partecipanti attendono; carte ed effetti già risolti restano salvati.`
+                : 'Completate il messaggio e i piazzamenti indicati. La fase riprende dopo il ritorno di tutte le conseguenze.';
+              target = '#scenario';
+              label = 'Completa l’istruzione';
+            } else if (round.phase === 'rally') {
+              const done = round.heroes.every((h) => h.rallyDone);
+              message = done
+                ? 'Ogni Scoperta è conclusa. Il gruppo può iniziare il nuovo round.'
+                : 'I mazzi sono ricomposti. Ogni proprietario completa la propria Scoperta e l’ordine delle carte.';
+              target = done ? '#rounds' : '#scouting';
+              label = done ? 'Inizia il nuovo round' : 'Apri Scoperta';
+            } else if (round.phase === 'shadow') {
+              message =
+                'Completate nemici, oscurità ed eventi. Leggete poi l’aumento della minaccia e proseguite insieme.';
+              target = '#rounds';
+              label = 'Continua l’Ombra';
+            } else if (round.heroes.every((h) => h.turnEnded)) {
+              message =
+                'Tutti i turni sono conclusi. Il gruppo può iniziare l’Ombra e seguirne le conseguenze.';
+              target = '#rounds';
+              label = 'Inizia l’Ombra';
+            }
+          }
         }
         if (session.scenario.pack.manifest.scope === 'original-encounter-v1') {
           if (q) {

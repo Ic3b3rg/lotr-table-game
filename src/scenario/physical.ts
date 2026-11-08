@@ -247,6 +247,7 @@ export function physicalRequestData(
       (action.op === 'spawnRandom' && (action.trial || action.suffering)) ||
       (action.op === 'message' &&
         (action.consequence ||
+          action.battleSuffering ||
           action.inspiration ||
           action.recovery ||
           (state.scenario!.pack.manifest.startupPreparation &&

@@ -59,7 +59,7 @@ export class Store {
       'CREATE TABLE IF NOT EXISTS commands (player_id TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT, PRIMARY KEY (player_id, request_id)) STRICT;',
     );
     const initial: State = {
-      schemaVersion: 34,
+      schemaVersion: 35,
       physical: null,
       scenario: null,
       mapGeneration: null,
@@ -374,8 +374,10 @@ export function publicSession(state: State) {
     state.mapGeneration?.status === 'frozen' ? state.mapGeneration.projection : null;
   const physical = physicalView(
     state.physical,
-    state.scenario?.pack.manifest.scope === 'original-encounter-v1',
+    state.scenario?.pack.manifest.scope === 'original-encounter-v1' ||
+      !!state.scenario?.pack.manifest.battleStartup?.battleRounds,
     !!state.scenario?.conclusion?.campaign,
+    !!state.scenario?.pack.manifest.battleStartup?.battleRounds,
   );
   const nextShadow = sourceShadowAvailability(state);
   if (physical && nextShadow) physical.nextShadow = nextShadow;

@@ -21,12 +21,12 @@ export function json(res: ServerResponse, body: unknown, status = 200) {
 export async function input<S extends z.ZodType>(
   req: IncomingMessage,
   schema: S,
+  limit = 4_194_304,
 ): Promise<z.output<S>> {
   if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
     throw new ApiError(415, 'CONTENT_TYPE', 'Invia dati in formato JSON.');
   }
   let bytes = 0;
-  const limit = 4_194_304;
   if (Number(req.headers['content-length']) > limit) {
     req.resume();
     throw new ApiError(413, 'TOO_LARGE', 'Il file o la richiesta sono troppo grandi.');
