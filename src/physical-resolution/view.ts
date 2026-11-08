@@ -14,6 +14,7 @@ export function physicalView(
   p: PhysicalState | null,
   original = false,
   ended = false,
+  battlePhases = false,
 ): PhysicalView | null {
   if (!p) return null;
   const up = new Set(p.snapshot.resolution?.faceup ?? []);
@@ -28,7 +29,10 @@ export function physicalView(
       },
     })),
     active: structuredClone(p.snapshot.active),
-    parents: structuredClone(p.snapshot.parents),
+    parents: p.snapshot.parents.map((parent) => ({
+      ...structuredClone(parent),
+      ...(battlePhases ? { source: parent.id } : {}),
+    })),
   };
   const resources = p.snapshot.resolution?.resources;
   if (resources?.itemCustody)

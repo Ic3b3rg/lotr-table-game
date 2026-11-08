@@ -15,6 +15,19 @@ import { invariant } from '../map-freeze/validate';
 import { validateBattleTerminalSource } from './compiler';
 import { validateFailureParty } from './conclusion';
 import { BattleTestTerrainPolicySchema } from '../shared/battle-test-terrain';
+import { defeatedHeroes } from '../server/physical-defeat';
+
+let boardCache: { key: string; artifact: ReturnType<typeof verifyBattleMapArtifact> } | undefined;
+/** Complete content key: replay may reuse a verified board, while same-object edits still revalidate. */
+export function verifiedBattleBoard(cap: CampDepartureCapability) {
+  const key = digest({ board: cap.board, fingerprint: cap.boardFingerprint });
+  if (boardCache?.key !== key)
+    boardCache = {
+      key,
+      artifact: verifyBattleMapArtifact(cap.board, { artifactFingerprint: cap.boardFingerprint }),
+    };
+  return boardCache.artifact;
+}
 
 /** Validate the complete initial population; never shrink a random pool to supported cases. */
 export function validateBattleCombatSource(departure: CampDepartureCapability) {
@@ -23,7 +36,7 @@ export function validateBattleCombatSource(departure: CampDepartureCapability) {
   if (cap.testTerrain) BattleTestTerrainPolicySchema.parse(cap.testTerrain);
   const deployment = compileSourceDeployment(departure.deployment),
     combat = verifyCombatClosure(cap.combat),
-    board = verifyBattleMapArtifact(departure.board),
+    board = verifiedBattleBoard(departure),
     model = departure.deployment.assets.find((a) => a.source === departure.target.model)!;
   invariant(
     cap.boardFingerprint === departure.boardFingerprint &&
@@ -144,9 +157,7 @@ export function battleCombat(state: State) {
 export function battleSpatial(state: State) {
   const departure = state.scenario?.pack.manifest.battleStartup;
   invariant(departure?.combat && state.scenario?.battle, 'Contesto fonte battaglia assente.');
-  const board = verifyBattleMapArtifact(departure.board, {
-      artifactFingerprint: departure.boardFingerprint,
-    }),
+  const board = verifiedBattleBoard(departure),
     layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!;
   return { departure, layout };
 }
@@ -160,7 +171,12 @@ export function battleDarknessHeroes(state: State) {
   );
   return cap.darkness.disabled || !state.scenario!.globals[cap.darkness.global]
     ? []
-    : state.preparation!.heroes.map((_, n) => n);
+    : state.preparation!.heroes.flatMap((h, n) =>
+        state.scenario!.rounds?.version === 'source-battle-rounds-v1' &&
+        defeatedHeroes(state).includes(h.heroId)
+          ? []
+          : [n],
+      );
 }
 
 /** Exact prospective pack, built from the archived departure authority on every replay. */

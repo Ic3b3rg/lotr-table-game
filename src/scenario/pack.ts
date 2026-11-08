@@ -1,5 +1,6 @@
 import { validateCampDepartureSource } from './camp-departure';
 import { battleCombatPack } from './battle-combat';
+import { battleRoundsPack, hasBattleInstructions } from './battle-rounds';
 import { validateCampPreparationCapability } from './camp-preparation-capability';
 import { validateCampItemsCapability } from './camp-items-capability';
 import { readFileSync, statSync } from 'node:fs';
@@ -40,7 +41,9 @@ export function parseScenarioPack(raw: unknown) {
     );
     validateCampDepartureSource(pack.manifest.battleStartup);
     if (pack.manifest.battleStartup.combat) {
-      const expected = battleCombatPack(pack.manifest.battleStartup, pack);
+      const expected = pack.manifest.battleStartup.battleRounds
+        ? battleRoundsPack(pack.manifest.battleStartup, pack)
+        : battleCombatPack(pack.manifest.battleStartup, pack);
       invariant(
         digest(expected) === digest(pack),
         'Pack combattimento diverso dalla partenza fonte.',
@@ -53,6 +56,14 @@ export function parseScenarioPack(raw: unknown) {
       );
     return { pack, fingerprint: digest(pack) };
   }
+  invariant(
+    !hasBattleInstructions(pack) &&
+      pack.manifest.rounds?.version !== 'source-battle-rounds-v1' &&
+      pack.manifest.followup?.version !== 'source-battle-followup-v1' &&
+      pack.manifest.combat?.source.shadow?.version !== 'source-battle-shadow-v1' &&
+      !pack.manifest.combat?.source.scriptedGroups,
+    'Fasi battaglia fuori dal proprio episodio fonte.',
+  );
   invariant(
     pack.identity.adventureId === 1 &&
       pack.manifest.prefabs.length > 0 &&

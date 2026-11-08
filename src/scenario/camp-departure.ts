@@ -19,10 +19,17 @@ import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { ApiError } from '../server/errors';
 import { archiveDomain, activateEpisode } from '../server/episode-state';
 import { validateBattleCombatSource } from './battle-combat';
+import { validateBattleRoundsSource, battleRoundsPack } from './battle-rounds';
 
-/** Never opens paths, programs or seeds supplied by a caller. */
+let sourceCache: { key: string; result: ReturnType<typeof compileDepartureSource> } | undefined;
+/** Never opens paths, programs or seeds supplied by a caller. Cache only complete content, not headers. */
 export function validateCampDepartureSource(raw: unknown) {
   boundPhysicalInput(raw);
+  const key = digest(raw);
+  if (sourceCache?.key !== key) sourceCache = { key, result: compileDepartureSource(raw) };
+  return structuredClone(sourceCache.result);
+}
+function compileDepartureSource(raw: unknown) {
   const s = CampDepartureCapabilitySchema.parse(raw);
   const board = verifyBattleMapArtifact(s.board, { artifactFingerprint: s.boardFingerprint });
   const layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!;
@@ -155,6 +162,10 @@ export function validateCampDepartureSource(raw: unknown) {
     }
   }
   if (s.combat) validateBattleCombatSource(s);
+  if (s.battleRounds) {
+    validateBattleRoundsSource(s);
+    battleRoundsPack(s);
+  }
   invariant(digest(deployment) === s.deploymentHash, 'Closure deployment2 modificata.');
   invariant(
     digest(

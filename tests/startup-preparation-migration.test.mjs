@@ -52,7 +52,7 @@ test('schema31 structurally migrates a complete historical startup without enabl
   });
   await revealStartupScout(ready);
   const current = (await readBackup(ready.host)).payload.state;
-  assert.equal(current.schemaVersion, 34);
+  assert.equal(current.schemaVersion, 35);
   const old = { ...structuredClone(current), schemaVersion: 29 },
     copy = structuredClone(old);
   assert.deepEqual(parseState(old), current);

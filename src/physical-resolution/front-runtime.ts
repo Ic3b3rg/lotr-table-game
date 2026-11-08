@@ -1,3 +1,4 @@
+import { boundPhysicalInput } from '../physical-content/validation';
 import { validatePhysicalProgram } from './program';
 import { TerrainAccounting, type FateIcon } from './terrain-accounting';
 import { preparationProblem } from '../shared/preparation';
@@ -42,6 +43,33 @@ import type {
   CombatPhysicalContext,
 } from '../shared/combat';
 
+// A long phase replays many decisions against the same frozen content. Cache only
+// this static proof; every physical run, copy, resource and answer is still replayed.
+let contentProof:
+  | {
+      key: string;
+      families: {
+        damage: ReturnType<typeof requirePhysicalFamily>;
+        fear: ReturnType<typeof requirePhysicalFamily>;
+      };
+    }
+  | undefined;
+function verifiedFrontContent(p: Omit<PhysicalState, 'snapshot'>) {
+  const inputs = [p.raw, p.fronts, p.boons ?? null, p.lastStand ?? null];
+  for (const input of inputs) boundPhysicalInput(input);
+  const key = digest(inputs);
+  if (contentProof?.key === key) return contentProof.families;
+  validateFrontArtifact(p.raw, p.fronts!.artifact, p.fronts!.catalog, p.fronts!.campaignSkills);
+  if (p.boons) validateBoonArtifact(p.raw, p.boons);
+  if (p.lastStand) validateLastStandArtifact(p.raw, p.lastStand);
+  const families = {
+    damage: requirePhysicalFamily(p.raw, 'damage'),
+    fear: requirePhysicalFamily(p.raw, 'fear'),
+  };
+  contentProof = { key, families };
+  return families;
+}
+
 type Family = 'damage' | 'fear';
 type Decision = Extract<PhysicalActive, { kind: 'decision' }>;
 type Offer = {
@@ -82,8 +110,7 @@ class FrontReplay {
   private result!: PhysicalSnapshot['parents'][number]['results'][number];
   constructor(private readonly p: Omit<PhysicalState, 'snapshot'>) {
     invariant(p.version !== 1 && p.fronts, 'Runtime fronti senza freeze versione2.');
-    validateFrontArtifact(p.raw, p.fronts.artifact, p.fronts.catalog, p.fronts.campaignSkills);
-    if (p.boons) validateBoonArtifact(p.raw, p.boons);
+    const families = verifiedFrontContent(p);
     invariant(!p.fronts.campaignSkills || p.episode, 'Carte campagna fuori dall’origine episodio.');
     this.rng = new PhysicalRandom(p.entropy, p.episode ? 201 : 56);
     this.s = {
@@ -104,10 +131,6 @@ class FrontReplay {
         operations: 0,
       },
     };
-    const families = {
-      damage: requirePhysicalFamily(p.raw, 'damage'),
-      fear: requirePhysicalFamily(p.raw, 'fear'),
-    };
     invariant(digest(families) === p.contentFingerprint, 'Famiglie fisiche cambiate.');
     for (const family of ['damage', 'fear'] as const) {
       for (const card of families[family].cards)
@@ -119,7 +142,6 @@ class FrontReplay {
       !!p.lastStand === !!p.lastStandActivation,
       'Attivazione Ultimo Sforzo senza freeze o viceversa.',
     );
-    if (p.lastStand) validateLastStandArtifact(p.raw, p.lastStand);
     this.lastStand = new LastStandRuntime(p, this.s, {
       choose: (...args) => this.choose(...args),
       ask: (hero, path, title, options) =>
@@ -2238,6 +2260,9 @@ class FrontReplay {
         break;
       case 'discard-inspiration':
         this.operation(hero, dummy, { op: 'discard-inspiration', hero: 'self', n: e.amount }, path);
+        break;
+      case 'discard-boons':
+        this.operation(hero, dummy, { op: 'discard-boons', hero: 'self', n: 'all' }, path);
         break;
       case 'gain-inspiration':
         for (let n = 0; n < e.amount; n++) this.inspiration(hero);

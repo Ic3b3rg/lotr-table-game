@@ -39,17 +39,35 @@ export function validateFailureCapability(pack: ScenarioPack) {
       invariant(!seen.has(index), 'Seguito della conclusione ciclico.');
       seen.add(index);
       const s = d.states.find((s) => s.index === index);
-      invariant(
-        s && !Object.keys(s.deferredTransitions ?? {}).length,
-        'Seguito terminale incompleto.',
-      );
+      invariant(s, 'Stato terminale assente.');
       path.push(s);
-      index = s.transitions.FINISHED;
+      const product = s.actions.find((a) => a.op === 'ownsProducts'),
+        battle = pack.manifest.battleStartup?.battleRounds;
+      if (product?.op === 'ownsProducts' && battle) {
+        const own = product.products.every((source) => {
+          const p = battle.productModels.find((p) => p.source === source);
+          invariant(p, 'Prodotto della conclusione non attestato.');
+          return pack.manifest.battleStartup!.ownedProductIds.some((id) => id === p.id);
+        });
+        invariant(
+          !s.deferredTransitions?.[own ? product.ownEvent : product.missingEvent],
+          'Seguito terminale incompleto.',
+        );
+        index = s.transitions[own ? product.ownEvent : product.missingEvent];
+      } else {
+        invariant(
+          !Object.keys(s.deferredTransitions ?? {}).length,
+          'Seguito terminale incompleto.',
+        );
+        index = s.transitions.FINISHED;
+      }
     }
     return path;
   };
   const path = follow(cap.event);
   if (pack.manifest.scope === 'battle-combat-v1') {
+    const battle = pack.manifest.battleStartup?.battleRounds,
+      victory = battle ? follow(battle.victoryEvent) : [];
     invariant(
       new Set(cap.partyBonus.skills.map((s) => s.cardId)).size === cap.partyBonus.skills.length,
       'Binding delle abilità equipaggiate duplicato.',
@@ -69,10 +87,23 @@ export function validateFailureCapability(pack: ScenarioPack) {
         next.op === 'nextAdventure' &&
         next.source === cap.next.source &&
         next.id === cap.next.id &&
-        operations.length === 3 &&
-        operations.every((a) => path.some((s) => s.actions.includes(a))),
+        operations.length === (battle ? 4 : 3) &&
+        operations.every((a) => [...path, ...victory].some((s) => s.actions.includes(a))),
       'Seguito terminale A2 fuori dalla fonte.',
     );
+    if (battle) {
+      const won = victory[0]?.actions[0];
+      const guarded = victory[2]?.actions[0]?.op === 'ownsProducts';
+      invariant(
+        victory.length === (guarded ? 5 : 4) &&
+          won?.op === 'set' &&
+          won.value === true &&
+          victory[1]?.actions.map((a) => a.op).join(',') === 'message,lore,awardXP' &&
+          victory[guarded ? 3 : 2] === path[3] &&
+          victory[guarded ? 4 : 3] === path[4],
+        'Vittoria battaglia senza seguito completo.',
+      );
+    }
     return;
   }
   invariant(

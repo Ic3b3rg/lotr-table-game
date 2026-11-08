@@ -10,7 +10,7 @@ test('schema19 migrates structurally; all older formats reject lair capability, 
   const raw = (await readBackup(host)).payload.state;
   const previous = { ...raw, schemaVersion: 19 },
     before = structuredClone(previous);
-  assert.deepEqual(runtime.parseState(previous), { ...previous, schemaVersion: 34 });
+  assert.deepEqual(runtime.parseState(previous), { ...previous, schemaVersion: 35 });
   assert.deepEqual(previous, before);
   const cases = [
     { pack: { manifest: { lair: {} } } },

@@ -14,11 +14,18 @@ import {
 import { digest } from '../../dist/map-freeze-library.mjs';
 import { battleRuntime as runtime } from '../battle-combat-runtime.mjs';
 
-export async function reviewBattle({ grant = false, movement = false } = {}) {
+export async function reviewBattle({
+  grant = false,
+  movement = false,
+  sourceEdit = () => {},
+  heroCount = 3,
+} = {}) {
   const f = await departureFixture();
   attachBattleCombat(
     f.input.pack,
-    { preparation: { heroes: f.catalog.heroes.slice(0, 3).map((h) => ({ heroId: h.id })) } },
+    {
+      preparation: { heroes: f.catalog.heroes.slice(0, heroCount).map((h) => ({ heroId: h.id })) },
+    },
     f.catalog,
     (_departure, source) => {
       for (const a of source.assets.filter((a) => a.cls === 'EnemyActivationModel')) {
@@ -49,9 +56,14 @@ export async function reviewBattle({ grant = false, movement = false } = {}) {
           },
         ];
       }
+      sourceEdit(_departure, source, f.input.pack, {
+        preparation: {
+          heroes: f.catalog.heroes.slice(0, heroCount).map((h) => ({ heroId: h.id })),
+        },
+      });
     },
   );
-  const prep = frontFixture().context.preparation;
+  const prep = frontFixture(heroCount).context.preparation;
   prep.heroes.forEach((h, n) => {
     h.itemCopies = [`sword:${n + 1}`, `armor:${n + 1}`];
   });
@@ -136,7 +148,7 @@ export async function reviewBattle({ grant = false, movement = false } = {}) {
   physical.version = 3;
   physical.cycle = { version: 3, seed: {}, records: [], pending: null };
   const state = {
-    schemaVersion: 34,
+    schemaVersion: 35,
     id: randomUUID(),
     generation: randomUUID(),
     revision: 7,
@@ -205,7 +217,7 @@ export function reviewAttack(state) {
   };
 }
 
-export function advanceReview(state, stop) {
+export function advanceReview(state, stop, choose = () => null) {
   for (let n = 0; n < 200; n++) {
     if (stop()) return;
     const q = state.physical.snapshot.active;
@@ -215,9 +227,11 @@ export function advanceReview(state, stop) {
           ? {
               kind: 'physical-choice',
               option:
+                choose(q, state) ??
                 ['reveal', 'resolve', 'apply', 'close', 'keep', 'close-rest'].find((id) =>
                   q.options.some((o) => o.id === id && !o.unavailable),
-                ) ?? q.options.find((o) => !o.unavailable).id,
+                ) ??
+                q.options.find((o) => !o.unavailable).id,
             }
           : q.mode === 'select'
             ? { kind: 'physical-select', ids: q.options.slice(0, q.minimum).map((o) => o.id) }

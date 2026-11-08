@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import type { CampDepartureCapability } from '../shared/camp-departure';
-import type { DeployedGroup } from '../shared/deployment';
-import { compileSourceDeployment, meetsEnemyFilter } from '../combat/deployment-compiler';
+import type { DeploymentSource, DeployedGroup } from '../shared/deployment';
+import {
+  compileSourceDeployment,
+  meetsEnemyFilter,
+  linkedEnemySources,
+} from '../combat/deployment-compiler';
 import { assignGroupTokens } from '../combat/deployment';
 import { createFigures } from '../combat/figures';
 import { verifyBattleMapArtifact } from '../battle-map';
@@ -13,6 +17,23 @@ export function generateBattleDeployment(
   cap: CampDepartureCapability,
   heroes: number,
   entropy: string,
+  wave?: {
+    source: DeploymentSource;
+    points: {
+      perHero: number;
+      filter: { MustHaveAny: number; MustHaveAll: number; ExcludeIfAny: number };
+      anchor: string;
+      cell: string;
+      position: [number, number, number];
+    }[];
+    enemyPoints: number;
+    inPlay: DeployedGroup[];
+    reserved: { source: string; count: number }[];
+    reservedEliteBanners: number;
+    cursor: number;
+    id: string;
+    banners: { normal: number[]; elite: number[] };
+  },
 ) {
   invariant(
     cap.spawnPolicy === 'source-spawn-points-v1' &&
@@ -21,12 +42,17 @@ export function generateBattleDeployment(
       /^[a-f0-9]{64}$/.test(entropy),
     'Fonte/casualità spawn battaglia non valida.',
   );
-  const a = compileSourceDeployment(cap.deployment).compiled;
+  const a = compileSourceDeployment(wave?.source ?? cap.deployment).compiled;
   const map = verifyBattleMapArtifact(cap.board, { artifactFingerprint: cap.boardFingerprint });
   const layout = map.compiled.layouts.find((l) => l.id === map.compiled.selectedAlternative)!;
-  const points = cap.instructions.filter((i) => i.op === 'spawn');
+  const points = wave?.points ?? cap.instructions.filter((i) => i.op === 'spawn');
+  const inPlay = wave?.inPlay ?? [],
+    reserved = wave?.reserved ?? cap.reserved,
+    reservedEliteBanners = wave?.reservedEliteBanners ?? cap.reservedEliteBanners;
   invariant(
-    points.length === 3 && a.eliteBanners.length === 6 && a.normalBanners.length === 6,
+    (wave ? points.length > 0 : points.length === 3) &&
+      a.eliteBanners.length === 6 &&
+      a.normalBanners.length === 6,
     'Punti o riserva stendardi non attestati.',
   );
   const budgets = points.map((p) => p.perHero * heroes),
@@ -34,13 +60,17 @@ export function generateBattleDeployment(
     pending: DeployedGroup[][] = points.map(() => []),
     creation: DeployedGroup[] = [];
   const attempts = points.map((_, n) => ({
-    effectId: `battle:${cap.instructions.indexOf(points[n]!)}`,
+    effectId: wave
+      ? `${wave.id}/point/${n}`
+      : `battle:${cap.instructions.findIndex((i) => i.op === 'spawn' && i.anchor === points[n]!.anchor)}`,
     groups: [] as string[],
     remaining: 0,
     reason: null as 'no-budget' | 'no-eligible-model' | null,
     draws: [] as { kind: string; population: string[]; value: number; cursor: number }[],
   }));
-  let cursor = 0,
+  if (wave) for (let n = 0; n < wave.enemyPoints; n++) budgets[n % points.length]!++;
+  const initialBudgets = [...budgets];
+  let cursor = wave?.cursor ?? 0,
     sequence = 0,
     point = 0;
   const word = () =>
@@ -88,8 +118,21 @@ export function generateBattleDeployment(
   const cost = (rows: { size: number; points: number }[], n: number) =>
     rows.find((r) => r.size === n)?.points ?? -1;
   const total = (source: string) =>
-    creation.filter((g) => g.source === source).reduce((n, g) => n + g.figures.length, 0) +
-    cap.reserved.filter((r) => r.source === source).reduce((n, r) => n + r.count, 0);
+    creation
+      .filter((g) =>
+        wave ? linkedEnemySources(wave.source, g.source, source) : g.source === source,
+      )
+      .reduce((n, g) => n + g.figures.length, 0) +
+    inPlay
+      .filter((g) =>
+        wave ? linkedEnemySources(wave.source, g.source, source) : g.source === source,
+      )
+      .reduce((n, g) => n + g.figures.filter((f) => f.health > 0).length, 0) +
+    reserved
+      .filter((r) =>
+        wave ? linkedEnemySources(wave.source, r.source, source) : r.source === source,
+      )
+      .reduce((n, r) => n + r.count, 0);
   const eligible = () =>
     a.models.filter(
       (m) =>
@@ -99,7 +142,7 @@ export function generateBattleDeployment(
     );
   const withBonuses = (groups: DeployedGroup[]) => groups.filter((g) => g.bonuses.length).length;
   const addBonus = () => {
-    const mayBecomeElite = withBonuses(creation) < 6 - cap.reservedEliteBanners;
+    const mayBecomeElite = withBonuses(creation) + withBonuses(inPlay) < 6 - reservedEliteBanners;
     for (const g of pending[point]!) {
       if ((!g.bonuses.length && !mayBecomeElite) || g.bonuses.length >= a.maxBonusCount) continue;
       const choices = model(g)
@@ -153,9 +196,12 @@ export function generateBattleDeployment(
       groups = pending[point]!;
     let newGroup = !groups.length;
     if (!newGroup) {
-      let groupWeight = choices.length ? f(f(heroes * heroes) / f(groups.length)) : 0;
+      let groupWeight = choices.length
+        ? f(f(heroes * heroes) / f(groups.length + inPlay.length))
+        : 0;
       const bonusWeight = f(
-        f(f(heroes * heroes) / f(heroes + withBonuses(groups))) * f(a.preferences.bonus),
+        f(f(heroes * heroes) / f(heroes + withBonuses(groups) + withBonuses(inPlay))) *
+          f(a.preferences.bonus),
       );
       let figureWeight = f(f(heroes + 3) * f(a.preferences.figure));
       const selected = f(f(word() / 0xffffffff) * f(f(groupWeight + bonusWeight) + figureWeight));
@@ -182,8 +228,10 @@ export function generateBattleDeployment(
       if (!choices.length) finished[point] = true;
       else {
         const m = pick('model', choices, (m) => m.source),
-          anchor = layout.placements.find((p) => p.id === points[point]!.anchor)!,
-          id = `battle-spawn/group/${sequence++}`;
+          anchor = wave
+            ? wave.points[point]!
+            : layout.placements.find((p) => p.id === points[point]!.anchor)!,
+          id = `${wave?.id ?? 'battle-spawn'}/group/${sequence++}`;
         const g: DeployedGroup = {
           id,
           source: m.source,
@@ -205,8 +253,12 @@ export function generateBattleDeployment(
   }
   // Reservation reduces elite capacity; the source allocates remaining IDs in order.
   assignGroupTokens(
-    { ...a, eliteBanners: a.eliteBanners.slice(0, 6 - cap.reservedEliteBanners) },
-    [],
+    {
+      ...a,
+      normalBanners: wave?.banners.normal ?? a.normalBanners,
+      eliteBanners: wave?.banners.elite ?? a.eliteBanners.slice(0, 6 - reservedEliteBanners),
+    },
+    inPlay,
     creation,
   );
   for (const [n, groups] of pending.entries()) {
@@ -214,5 +266,10 @@ export function generateBattleDeployment(
     attempts[n]!.remaining = budgets[n]!;
     attempts[n]!.reason = budgets[n] === 0 ? 'no-budget' : 'no-eligible-model';
   }
-  return { groups: pending.flat(), attempts, cursor };
+  return {
+    groups: pending.flat(),
+    attempts,
+    cursor,
+    ...(wave ? { battleWave: { budgets: initialBudgets, sharedPoints: wave.enemyPoints } } : {}),
+  };
 }

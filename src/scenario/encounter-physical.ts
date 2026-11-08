@@ -12,12 +12,14 @@ import { syncPhysicalDefeat } from '../server/physical-defeat';
 import { liveGroupRules } from './live-groups';
 import { searchDefinition } from './searches';
 import { threatTokenDefinition } from './threat-tokens';
+import { sourceActor, battleCallback, battlePhase } from './battle-phase-runtime';
+import { defeatedHeroes } from '../server/physical-defeat';
 
 /** Resolve actor and parameters from the source frame, never from a physical input. */
 export function encounterProgram(state: State, action: ScenarioAction): PhysicalProgram {
   const sc = state.scenario!,
     p = state.physical!,
-    attempt = sc.play!.attempts.find((a) => a.id === sc.play!.active)!;
+    attempt = sourceActor(state)!;
   invariant(attempt, 'Istruzione incontro senza attore del padre.');
   const hero = p.heroes.findIndex((h) => h.heroId === attempt.heroId);
   invariant(hero >= 0, 'Attore incontro fuori compagnia.');
@@ -61,6 +63,18 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
     );
     invariant(sc.pack.manifest.linked, 'Titolo senza capacità congelata.');
     children = [{ kind: 'scenario-title', hero: recipient, grant: sc.pack.manifest.linked.title }];
+  } else if (action.op === 'message' && action.battleSuffering) {
+    const cb = battleCallback(state),
+      group = sc.enemies!.groups.find((g) => g.id === cb?.groupId);
+    invariant(cb && group, 'Colpo senza il proprio callback nemico.');
+    const heroes = p.heroes.flatMap((h, n) => {
+      const position = state.journey!.heroes.find((j) => j.heroId === h.heroId)!;
+      const cell = sc.spaceBindings.find((b) => b.id === position.spaceId)?.sourceId;
+      return cell === group.spaceId && !defeatedHeroes(state).includes(h.heroId) ? [n] : [];
+    });
+    children = heroes.length
+      ? [{ kind: 'group-suffer', hero: heroes[0]!, heroes, ...action.battleSuffering }]
+      : [];
   } else if (action.op === 'sourceTest' || action.op === 'challenge')
     children = [
       {
@@ -90,21 +104,28 @@ export function encounterProgram(state: State, action: ScenarioAction): Physical
       },
     ];
   }
-  invariant(state.mapGeneration?.status === 'frozen', 'Incontro senza realizzazione.');
-  const projection = state.mapGeneration.projection;
-  const darknessHeroes = p.heroes.flatMap((h, n) => {
-    const position = state.journey!.heroes.find((j) => j.heroId === h.heroId)!;
-    const source = sc.spaceBindings.find((b) => b.id === position.spaceId)!.sourceId;
-    return projection.spaces.find((s) => s.id === source)!.hasDarkness ? [n] : [];
-  });
+  invariant(
+    battlePhase(state) || state.mapGeneration?.status === 'frozen',
+    'Incontro senza realizzazione.',
+  );
+  const projection =
+    state.mapGeneration?.status === 'frozen' ? state.mapGeneration.projection : undefined;
+  const darknessHeroes = battlePhase(state)
+    ? sourceDarknessHeroes(state)
+    : p.heroes.flatMap((h, n) => {
+        const position = state.journey!.heroes.find((j) => j.heroId === h.heroId)!;
+        const source = sc.spaceBindings.find((b) => b.id === position.spaceId)!.sourceId;
+        return projection!.spaces.find((s) => s.id === source)!.hasDarkness ? [n] : [];
+      });
   return {
     profile: 'source-fronts-v1',
     ...(p.cycle?.interactionLookRules && (action.op === 'confirm' || action.op === 'choice')
       ? {
           interactionLookRules: p.cycle.interactionLookRules,
-          interactionBefore: attempt.beforeInteraction
-            ? ('already-completed' as const)
-            : ('once' as const),
+          interactionBefore:
+            'beforeInteraction' in attempt && attempt.beforeInteraction
+              ? ('already-completed' as const)
+              : ('once' as const),
         }
       : {}),
     ...(isSearch || (searchOwner && threatTokenDefinition(sc.pack, searchOwner.definition))
@@ -206,7 +227,7 @@ export function openSourcePhysical(
   return parentId;
 }
 export function beginEncounterPhysical(state: State, effect: SourceEffect, action: ScenarioAction) {
-  invariant(state.scenario!.play?.active, 'Incontro senza padre.');
+  invariant(sourceActor(state), 'Incontro senza padre.');
   const parentId = openSourcePhysical(state, effect, action, encounterProgram(state, action));
   if (
     state.physical!.cycle?.interactionLookRules &&

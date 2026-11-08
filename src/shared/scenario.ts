@@ -26,7 +26,11 @@ import { PhysicalProgramSchema, PhysicalInputSchema } from './physical';
 import { StatSchema } from './skill-tests';
 import { ScenarioTitleGrantSchema } from './scenario-title';
 import { ItemGrantSchema } from './item-inventory';
-import { RoundSourceSchema, SourceRoundStateSchema } from './source-rounds';
+import {
+  RoundSourceSchema,
+  SourceRoundStateSchema,
+  BattleRoundSourceSchema,
+} from './source-rounds';
 import { DeploymentSourceSchema, DeploymentStateSchema } from './deployment';
 import { NegatedSufferingSchema } from './negated-suffering';
 import { ThreatContinuationsSchema, ThreatCauseSchema } from './threat-continuations';
@@ -409,6 +413,15 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
     recovery: SearchRecoverySchema.optional(),
     boon: BoonKindSchema.optional(),
     sprint: z.literal(1).optional(),
+    battleSuffering: z
+      .strictObject({
+        amount: z.literal(2),
+        negate: z.literal('might'),
+        family: z.literal('damage'),
+        face: z.literal('faceup'),
+      })
+      .optional(),
+    battlePlacement: z.string().min(1).max(350).optional(),
     consequence: z
       .strictObject({
         family: z.enum(['damage', 'fear']),
@@ -497,6 +510,31 @@ export const ScenarioActionSchema = z.discriminatedUnion('op', [
   action('stop', {}),
   action('revealNode', {}),
   action('hideNode', {}),
+  action('sourceInt', {
+    definition: SourceSchema,
+    name: z.string().min(1).max(150),
+    target: VariableRefSchema,
+  }),
+  action('battleThreat', { source: SourceSchema, value: intValue }),
+  action('sumInt', { target: VariableRefSchema, left: intValue, right: intValue }),
+  action('divideInt', { target: VariableRefSchema, left: intValue, right: intValue }),
+  action('whenTrue', { ref: VariableRefSchema, event: z.string().min(1).max(100) }),
+  action('battleSpawn', {
+    plan: z.int().nonnegative().max(31),
+    text: SourceTextSchema,
+  }),
+  action('battleReady', { target: VariableRefSchema }),
+  action('battleExhaust', { group: SourceSchema }),
+  action('battleVisible', {
+    anchor: z.string().min(1).max(100),
+    trueEvent: z.string().min(1).max(100),
+    falseEvent: z.string().min(1).max(100),
+  }),
+  action('battleNode', { anchor: z.string().min(1).max(100), visible: z.boolean() }),
+  action('battleReserve', {
+    enemy: SourceSchema.nullable(),
+    amount: z.int().min(1).max(32),
+  }),
   action('addInt', { target: VariableRefSchema, value: intValue }),
   action('subtractInt', { target: VariableRefSchema, left: intValue, right: intValue }),
   action('multiplyInt', { target: VariableRefSchema, left: intValue, right: intValue }),
@@ -634,7 +672,7 @@ export const ScenarioPackSchema = z.strictObject({
     rounds: RoundSourceSchema.optional(),
     followup: z
       .strictObject({
-        version: z.literal('source-shadow-followup-v1'),
+        version: z.enum(['source-shadow-followup-v1', 'source-battle-followup-v1']),
         projectionFingerprint: HashSchema,
         evidenceHash: HashSchema,
         playerCountBinding: z.string().min(1).max(150),
@@ -673,8 +711,20 @@ export const ScenarioPackSchema = z.strictObject({
             }),
           )
           .max(200),
-        explorationText: z.strictObject({ single: SourceTextSchema, plural: SourceTextSchema }),
+        explorationText: z.strictObject({
+          single: z.array(SourceTextSchema.element).max(200),
+          plural: z.array(SourceTextSchema.element).max(200),
+        }),
       })
+      .refine(
+        (s) =>
+          s.version === 'source-battle-followup-v1'
+            ? !s.explorationNodes.length &&
+              !s.explorationText.single.length &&
+              !s.explorationText.plural.length
+            : !!s.explorationText.single.length && !!s.explorationText.plural.length,
+        'Testi e nodi esplorazione diversi dal tipo di mappa.',
+      )
       .optional(),
     scope: z.enum([
       'startup-only',
@@ -900,7 +950,11 @@ export const ScenarioSchema = z.strictObject({
   firstCombat: FirstCombatStateSchema.optional(),
   conclusion: z
     .strictObject({
-      version: z.enum(['source-adventure-failure-v1', 'source-lair-victory-v1']),
+      version: z.enum([
+        'source-adventure-failure-v1',
+        'source-lair-victory-v1',
+        'source-battle-victory-v1',
+      ]),
       id: z.uuid(),
       outcome: z.enum(['failure', 'victory']),
       timing: z.enum([
@@ -1202,6 +1256,50 @@ export const ScenarioSchema = z.strictObject({
 export type Scenario = z.infer<typeof ScenarioSchema>;
 const publicExplorations = ScenarioSchema.shape.explorations.unwrap();
 export const ScenarioViewSchema = ScenarioSchema.extend({
+  battleRound: z
+    .strictObject({
+      enabled: z.literal(true),
+      groups: z
+        .array(
+          z.strictObject({
+            groupId: z.string().min(1).max(350),
+            name: z.string().min(1).max(1000),
+            bonuses: z
+              .array(
+                z.strictObject({ name: z.string().max(1000), description: z.string().max(16384) }),
+              )
+              .max(10),
+          }),
+        )
+        .max(100),
+      placement: z
+        .strictObject({ groupId: z.string().min(1).max(350), spaceId: z.string().min(1).max(350) })
+        .nullable(),
+      round: z.int().positive(),
+      threat: z.int().nonnegative(),
+      limit: z.int().positive(),
+      stage: z.string().max(30).nullable(),
+      threshold: z.int().nullable(),
+      darkness: z.boolean(),
+      change: z
+        .strictObject({
+          before: z.int(),
+          after: z.int(),
+          delta: z.int(),
+          heroes: z.int(),
+          tokens: z.int(),
+        })
+        .nullable(),
+      lastTest: z
+        .strictObject({
+          heroId: ContentIdSchema,
+          stat: StatSchema,
+          successes: z.int().nonnegative(),
+          total: z.int().nullable(),
+        })
+        .nullable(),
+    })
+    .optional(),
   conclusion: ScenarioSchema.shape.conclusion.unwrap().omit({ episodeHash: true }).optional(),
   enemies: DeploymentStateSchema.omit({ entropy: true }).optional(),
   explorations: publicExplorations
@@ -1221,6 +1319,139 @@ export const ScenarioViewSchema = ScenarioSchema.extend({
 export type ScenarioView = z.infer<typeof ScenarioViewSchema>;
 export function scenarioView(sc: Scenario | null): ScenarioView | null {
   if (!sc) return null;
+  const authority = sc.pack.manifest.battleStartup?.battleRounds,
+    phaseRounds = sc.rounds;
+  if (authority && phaseRounds?.version === 'source-battle-rounds-v1') {
+    const { battleRounds: _authority, ...departure } = sc.pack.manifest.battleStartup!,
+      base = departure.combat!,
+      phaseSource = BattleRoundSourceSchema.parse(authority.rounds),
+      frame = phaseRounds.frames.find((f) => f.id === phaseRounds.active),
+      lastTest = sc.play?.tests.at(-1),
+      legacyPack = ScenarioPackSchema.parse({
+        ...sc.pack,
+        sources: base.combat.source.files,
+        globals: base.terminal.globals,
+        definitions: [base.terminal.definition],
+        timers: [],
+        manifest: {
+          scope: 'battle-combat-v1',
+          evidenceHash: base.evidenceHash,
+          prefabs: [],
+          battleStartup: departure,
+          combat: base.combat,
+          failure: base.terminal.failure,
+        },
+      });
+    const { rounds: _rounds, ...withoutRounds } = sc;
+    const clean = structuredClone(withoutRounds);
+    clean.pack = legacyPack;
+    clean.instances = clean.instances
+      .filter((i) => i.kind === 'principal')
+      .map((i) => ({ ...i, variables: {}, started: [], completed: [] }));
+    clean.globals = Object.fromEntries(
+      legacyPack.globals.map((v) => [v.name, sc.globals[v.name] ?? v.value]),
+    );
+    clean.tasks = [];
+    clean.threats = [];
+    clean.events = [];
+    clean.commands = [];
+    clean.effects = clean.effects.filter((e) => e.id.startsWith('battle:'));
+    clean.messageLog = clean.messageLog.map((m, n) => ({ id: `message-${n}`, text: m.text }));
+    if (clean.play) {
+      clean.play.active = null;
+      clean.play.attempts = [];
+      clean.play.tests = [];
+    }
+    if (clean.enemies) {
+      clean.enemies.attempts = [];
+      clean.enemies.groups = clean.enemies.groups.map(({ battleRecipe: _recipe, ...g }) => ({
+        ...g,
+        logic: null,
+      }));
+    }
+    const pending = (q: ScenarioRequest | null) =>
+      q ? { ...q, instanceId: 'principal', state: 0, entry: 0, action: 0 } : null;
+    clean.pending = pending(clean.pending);
+    if (clean.conclusion) {
+      clean.conclusion.suspendedRequest = pending(clean.conclusion.suspendedRequest);
+      clean.conclusion.suspendedPrincipal.variables = {};
+      if ('kind' in clean.conclusion.cause && clean.conclusion.cause.kind === 'source-victory')
+        clean.conclusion.cause = {
+          ...clean.conclusion.cause,
+          instanceId: 'principal',
+          effectId: 'conclusion',
+          attemptId: clean.conclusion.id,
+        };
+    }
+    const text = (key: unknown) =>
+      authority.deployment.texts[String(key)] ??
+      authority.combat.source.texts.find((t) => t.key === key)?.value;
+    const visibleGroups = (sc.enemies?.groups ?? [])
+      .filter((g) => g.placed)
+      .map((g) => {
+        const model = authority.combat.source.assets.find((a) => a.source === g.source)!.data;
+        return {
+          groupId: g.id,
+          name: text(g.figures.length > 1 ? model.KeyPlural : model.KeySingular)!,
+          bonuses: g.bonuses.map((ref) => {
+            const b = authority.combat.source.assets.find((a) => a.source === ref)!.data;
+            return { name: text(b.KeyName)!, description: text(b.KeyDescription)! };
+          }),
+        };
+      });
+    const task = sc.tasks.at(-1),
+      attempt =
+        task?.kind === 'spawnRandom'
+          ? sc.enemies?.attempts.find((a) => a.effectId === task.effectId)
+          : undefined;
+    const placementGroup =
+      sc.pending?.kind === 'deployment'
+        ? sc.enemies?.groups.find(
+            (g) =>
+              g.id ===
+              (task?.kind === 'spawnRandom'
+                ? attempt?.groups[task.groupIndex]
+                : phaseRounds.battle.callbacks.find((c) => !c.returned)?.nextGroupId),
+          )
+        : undefined;
+    const placementSpace = sc.spaceBindings.find((b) => b.sourceId === placementGroup?.spaceId);
+    return {
+      ...scenarioView(clean)!,
+      battleRound: {
+        enabled: true,
+        groups: visibleGroups,
+        placement:
+          placementGroup && placementSpace
+            ? { groupId: placementGroup.id, spaceId: placementSpace.id }
+            : null,
+        round: Number(sc.globals[phaseSource.bindings.round]),
+        threat: Number(sc.globals[phaseSource.bindings.threat]),
+        limit: 13 * authority.heroIds.length,
+        stage: frame?.stage ?? null,
+        threshold: frame?.threshold
+          ? (sc.threats.find((t) => t.source === frame.threshold)?.threshold ?? null)
+          : null,
+        darkness: sc.globals[base.darkness.global] === true,
+        change: frame?.threat
+          ? {
+              before: frame.threat.before,
+              after: frame.threat.after,
+              delta: frame.threat.delta,
+              heroes: frame.threat.heroes * 2,
+              tokens: frame.threat.tokens.length,
+            }
+          : null,
+        lastTest: lastTest
+          ? {
+              heroId: lastTest.heroId,
+              stat: lastTest.stat,
+              successes: lastTest.successes,
+              total: lastTest.total,
+            }
+          : null,
+      },
+    };
+  }
   const { enemies, explorations, conclusion, ...visible } = sc;
   const publicEnemies = enemies ? (({ entropy: _entropy, ...rest }) => rest)(enemies) : null;
   let publicConclusion: ScenarioView['conclusion'];

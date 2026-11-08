@@ -28,20 +28,25 @@ export function scenarioMapView(session: Pick<Session, 'scenario' | 'journey' | 
     const groups = (sc.enemies?.groups ?? [])
       .filter((g) => g.placed)
       .map((g) => {
-        const model = cap.deployment.assets.find((a) => a.source === g.source)!.data;
+        const display = sc.battleRound?.groups.find((d) => d.groupId === g.id),
+          model = cap.deployment.assets.find((a) => a.source === g.source)!.data;
         return {
           ...g,
           spaceId: sc.spaceBindings.find((b) => b.sourceId === g.spaceId)!.id,
-          name: cap.deployment.texts[
-            String(g.figures.length > 1 ? model.KeyPlural : model.KeySingular)
-          ]!,
-          bonuses: g.bonuses.map((source) => {
-            const b = cap.deployment.assets.find((a) => a.source === source)!.data;
-            return {
-              name: cap.deployment.texts[String(b.KeyName)]!,
-              description: cap.deployment.texts[String(b.KeyDescription)]!,
-            };
-          }),
+          name:
+            display?.name ??
+            cap.deployment.texts[
+              String(g.figures.length > 1 ? model.KeyPlural : model.KeySingular)
+            ]!,
+          bonuses:
+            display?.bonuses ??
+            g.bonuses.map((source) => {
+              const b = cap.deployment.assets.find((a) => a.source === source)!.data;
+              return {
+                name: cap.deployment.texts[String(b.KeyName)]!,
+                description: cap.deployment.texts[String(b.KeyDescription)]!,
+              };
+            }),
         };
       });
     const placements = sc.battle.placements

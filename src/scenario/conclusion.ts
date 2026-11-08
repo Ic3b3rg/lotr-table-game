@@ -5,6 +5,7 @@ import {
 } from '../shared/camp-preparation';
 import { transactCampItem } from './camp-items';
 import type { CampItemReceipt } from '../shared/camp-items';
+import { battlePhase, battleCallback } from './battle-phase-runtime';
 import type { State } from '../server/state';
 import type { ScenarioAction, ScenarioRequest, ScenarioPack, Scenario } from '../shared/scenario';
 import { definitionId } from '../shared/preparation';
@@ -67,7 +68,9 @@ export function beginThreatFailure(
   requestId: string,
 ): boolean {
   const sc = state.scenario!,
-    cap = sc.pack.manifest.threatContinuations,
+    cap =
+      sc.pack.manifest.threatContinuations ??
+      (battlePhase(state) ? { methods: battlePhase(state)!.cap.methods } : undefined),
     rounds = sc.pack.manifest.rounds;
   if (sc.conclusion || !cap || !rounds) return false;
   const value = sc.globals[rounds.bindings.threat];
@@ -111,6 +114,7 @@ export function beginSourceVictory(
   instanceId: string,
   effectId: string,
   requestId: string,
+  probe = false,
 ) {
   const sc = state.scenario!,
     cap = sc.pack.manifest.lair,
@@ -120,28 +124,39 @@ export function beginSourceVictory(
       .find((d) => d.source === instance?.definition)
       ?.states.find((s) => s.index === effect?.state)
       ?.actions.find((a) => a.index === effect?.action),
-    attempt = sc.play?.attempts.find((a) => a.id === sc.play?.active);
+    attempt = battleCallback(state) ?? sc.play?.attempts.find((a) => a.id === sc.play?.active),
+    battle = battlePhase(state);
   invariant(
     !sc.conclusion &&
-      cap &&
-      instance?.prefab === cap.prefab &&
+      ((cap && instance?.prefab === cap.prefab) ||
+        (battle && instance?.id === battleCallback(state)?.logicInstanceId)) &&
       effect?.instanceId === instanceId &&
       action?.op === 'endGame' &&
       action.success &&
-      attempt?.instanceId === instanceId &&
+      attempt &&
+      ('instanceId' in attempt
+        ? attempt.instanceId === instanceId
+        : attempt.logicInstanceId === instanceId) &&
       requestId,
     'Vittoria senza istruzione, attore e tentativo del covo.',
   );
-  return beginConclusion(state, 'victory', 'source-end', requestId, {
-    kind: 'source-victory',
-    instanceId,
-    effectId,
-    instructionHash: digest(action),
-    attemptId: attempt.id,
-    heroId: attempt.heroId,
-    playerId: attempt.playerId,
-    controllerHash: sc.pack.manifest.failure!.methods.signal.bodyHash,
-  });
+  return beginConclusion(
+    state,
+    'victory',
+    'source-end',
+    requestId,
+    {
+      kind: 'source-victory',
+      instanceId,
+      effectId,
+      instructionHash: digest(action),
+      attemptId: attempt.id,
+      heroId: attempt.heroId,
+      playerId: attempt.playerId,
+      controllerHash: sc.pack.manifest.failure!.methods.signal.bodyHash,
+    },
+    probe,
+  );
 }
 function beginConclusion(
   state: State,
@@ -149,6 +164,7 @@ function beginConclusion(
   timing: NonNullable<Scenario['conclusion']>['timing'],
   requestId: string,
   cause: NonNullable<Scenario['conclusion']>['cause'],
+  probe = false,
 ) {
   const sc = state.scenario!,
     cap = sc.pack.manifest.failure!;
@@ -163,20 +179,29 @@ function beginConclusion(
     ? cap.partyBonus.amount
     : 0;
   sc.conclusion = {
-    version: outcome === 'victory' ? sc.pack.manifest.lair!.version : cap.version,
+    version:
+      outcome === 'victory'
+        ? battlePhase(state)
+          ? 'source-battle-victory-v1'
+          : sc.pack.manifest.lair!.version
+        : cap.version,
     id: cycleUUID({ scenario: sc.id, requestId, timing, cause }),
     outcome,
     timing,
     cause,
     triggerRequestId: requestId,
-    episodeHash: digest({
-      scenario: sc,
-      physical: state.physical,
-      round: state.round,
-      journey: state.journey,
-      preparation: state.preparation,
-      combat: state.combat ?? null,
-    }),
+    // Disposable source probes inspect the continuation but never publish a
+    // conclusion or consume this digest. Actual execution always hashes all domains.
+    episodeHash: probe
+      ? '0'.repeat(64)
+      : digest({
+          scenario: sc,
+          physical: state.physical,
+          round: state.round,
+          journey: state.journey,
+          preparation: state.preparation,
+          combat: state.combat ?? null,
+        }),
     suspendedRequest: structuredClone(sc.pending),
     suspendedPrincipal: structuredClone(principal),
     stage: 'conclusion',
@@ -203,7 +228,9 @@ function beginConclusion(
     startPhaseEvent(
       state,
       principal.id,
-      outcome === 'victory' ? sc.pack.manifest.lair!.event : cap.event,
+      outcome === 'victory'
+        ? (battlePhase(state)?.cap.victoryEvent ?? sc.pack.manifest.lair!.event)
+        : cap.event,
       true,
     ),
     'Conclusione senza ricevitore principale.',

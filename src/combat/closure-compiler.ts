@@ -20,6 +20,16 @@ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 export function compileCombatClosure(raw: unknown) {
   bounded(raw);
   const source = CombatClosureSourceSchema.parse(raw);
+  check(
+    source.scriptedGroups === undefined || source.shadow?.version === 'source-battle-shadow-v1',
+    'Ricette fuori dalla fonte battaglia.',
+  );
+  check(
+    source.shadow?.version === 'source-battle-shadow-v1' ||
+      (!source.additions.some((a) => a.effect.op === 'discard-boons') &&
+        !source.shadow?.instructions.some((i) => i.alternativeTarget !== undefined)),
+    'Policy battaglia introdotta in una fonte storica.',
+  );
   if (source.shadow) {
     unique(
       source.shadow.instructions.map((i) => i.source),
@@ -196,9 +206,33 @@ export function compileCombatClosure(raw: unknown) {
   if (source.shadow)
     check(
       digest(source.shadow.instructions.map((i) => i.source).sort()) ===
-        digest([...instructionRefs].sort()),
+        digest(
+          (source.shadow.version === 'source-battle-shadow-v1'
+            ? [...new Set(instructionRefs)]
+            : [...instructionRefs]
+          ).sort(),
+        ),
       'Closure attivazioni incompleta o estranea.',
     );
+  for (const recipe of source.scriptedGroups ?? []) {
+    check(
+      source.shadow?.version === 'source-battle-shadow-v1',
+      'Ricetta fuori dalla fonte battaglia.',
+    );
+    check(
+      models.some((m) => m.source === recipe.model),
+      'Modello della ricetta assente.',
+    );
+    unique(recipe.bonuses, 'Bonus ricetta');
+    for (const ref of recipe.bonuses) {
+      asset(ref, 'EnemyBonusModel');
+      if (!bonusRefs.includes(ref)) bonusRefs.push(ref);
+    }
+  }
+  unique(
+    (source.scriptedGroups ?? []).map((r) => r.key),
+    'Ricetta gruppo',
+  );
   const bonuses = bonusRefs.map((ref) => {
     const d = asset(ref, 'EnemyBonusModel').data;
     const mask = integer(d.BlocksModifiers, 'Immunità modificatori', 0, 63);

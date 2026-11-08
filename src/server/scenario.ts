@@ -238,6 +238,13 @@ export function allowScenarioPlay(state: State, command: Command) {
         )
       )
         return;
+      if (
+        sc.pack.manifest.battleStartup?.battleRounds &&
+        ['BEGIN_SHADOW', 'CONFIRM_SHADOW_STEP', 'START_RALLY_SCOUT', 'END_RALLY'].includes(
+          command.type,
+        )
+      )
+        return;
     }
     if (
       sc.phase === 'action' &&

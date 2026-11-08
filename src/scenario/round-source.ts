@@ -1,9 +1,10 @@
+import { battleLogicGroup } from './battle-phase-runtime';
 import type { State } from '../server/state';
 import { ApiError } from '../server/errors';
 import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { processRoundEvent, startPhaseEvent, pumpPhaseEvent, resumeScenario } from './runtime';
-import { defeatedHeroes } from '../server/physical-defeat';
+import { defeatedHeroes, syncPhysicalDefeat } from '../server/physical-defeat';
 import { spawnPhysicalProgram } from './encounter-physical';
 import { validatePhysicalProgram } from '../physical-resolution/program';
 import { validatePhysical } from '../physical-resolution/runtime';
@@ -14,7 +15,10 @@ import { activeCompany, activationTargets } from '../combat/movement';
 import { effectiveGroup, reachableBoonKinds } from '../combat/group';
 import { beginHeroFailure, beginThreatFailure, validateFailureParty } from './conclusion';
 import { preflightBoonRequests, type BoonRequest } from '../physical-resolution/boon-stock';
+import { boonAcquisitionProblems } from '../physical-resolution/boon-stock';
+import { BoonKindSchema } from '../shared/combat';
 import { firstCombatRefreshReady } from './first-combat';
+import { battlePhase } from './battle-phase-runtime';
 
 function fail(message: string): never {
   throw new ApiError(409, 'ROUND_SOURCE_CAPABILITY', message);
@@ -42,14 +46,21 @@ function threat(state: State) {
   const data = source(state),
     sc = state.scenario!,
     heroes = state.preparation!.heroes.length;
-  const tokens = sc.instances
-    .filter(
-      (i) =>
-        i.visible &&
-        sc.pack.manifest.prefabs.some((p) => p.source === i.prefab && p.sourceNodeType === 2),
-    )
-    .map((i) => i.id);
-  const tiles = sc.tiles.filter((t) => t.visible && !t.explored).map((t) => t.source);
+  const battle = battlePhase(state);
+  const tokens = battle
+    ? battle.cap.nodes
+        .filter(
+          (n) => n.kind === 'threat' && sc.battle!.placements.some((p) => p.anchor === n.anchor),
+        )
+        .map((n) => n.source)
+    : sc.instances
+        .filter(
+          (i) =>
+            i.visible &&
+            sc.pack.manifest.prefabs.some((p) => p.source === i.prefab && p.sourceNodeType === 2),
+        )
+        .map((i) => i.id);
+  const tiles = battle ? [] : sc.tiles.filter((t) => t.visible && !t.explored).map((t) => t.source);
   const before = Math.max(0, integer(state, data.bindings.threat));
   const delta =
     heroes * data.threat.perHero +
@@ -60,7 +71,7 @@ function threat(state: State) {
 function threatBoundary(state: State, after: number) {
   const data = source(state),
     sc = state.scenario!;
-  if (after >= data.threat.limit && !sc.pack.manifest.threatContinuations)
+  if (after >= data.threat.limit && !sc.pack.manifest.threatContinuations && !battlePhase(state))
     fail(
       'La minaccia raggiungerebbe la perdita dell’avventura, il cui seguito non è ancora disponibile. Nessun tick o aumento è stato applicato.',
     );
@@ -87,10 +98,38 @@ export function preflightSourceShadow(state: State, entropy?: string) {
   }
   if (
     integer(state, data.bindings.threat) >= data.threat.limit &&
-    state.scenario!.pack.manifest.threatContinuations
+    (state.scenario!.pack.manifest.threatContinuations || battlePhase(state))
   ) {
     validateFailureParty(state);
     return;
+  }
+  const battle = battlePhase(state);
+  if (battle) {
+    const kinds = [
+      ...new Set(
+        battle.cap.combat.source.additions.flatMap((a) =>
+          a.effect.op === 'gain-boon'
+            ? a.effect.boon
+              ? [a.effect.boon]
+              : BoonKindSchema.options
+            : [],
+        ),
+      ),
+    ];
+    const p = state.physical!;
+    if (
+      kinds.length &&
+      (!p.boons ||
+        boonAcquisitionProblems(
+          p.boons,
+          p.snapshot.resolution?.resources?.boonCustody ?? [],
+          kinds,
+          state.preparation!.heroes.map((h) => h.heroId),
+        ).length)
+    )
+      fail(
+        'Una possibile conseguenza della chiusura completa richiede benefici la cui riserva non è verificata o disponibile. Nessun effetto, carta, tick o casualità è stato applicato.',
+      );
   }
   invariant(!data.configuration.initialEnemyGroups.length, 'Attivazioni nemiche non disponibili.');
   const shadow = state.scenario!.pack.manifest.combat?.source.shadow;
@@ -126,9 +165,20 @@ export function preflightSourceShadow(state: State, entropy?: string) {
     for (const d of work.scenario!.pack.definitions)
       for (const s of d.states)
         s.actions = s.actions.map((a) =>
-          a.op === 'spawnRandom'
-            ? { index: a.index, op: 'set' as const, target: a.points, value: 0, origin: a.origin }
-            : a,
+          a.op === 'battleSpawn'
+            ? {
+                index: a.index,
+                op: 'addInt' as const,
+                target: {
+                  scope: 'global' as const,
+                  name: work.scenario!.pack.manifest.followup!.enemyPointsBinding,
+                },
+                value: { kind: 'literal' as const, value: 0 },
+                origin: a.origin,
+              }
+            : a.op === 'spawnRandom'
+              ? { index: a.index, op: 'set' as const, target: a.points, value: 0, origin: a.origin }
+              : a,
         );
   try {
     if (work.scenario!.pack.manifest.followup) {
@@ -241,7 +291,7 @@ function preflightActivations(state: State) {
     );
   const work = structuredClone(state);
   for (const g of livingEnemyGroups(work)) {
-    if (g.logic && !firstCombatRefreshReady(work, g))
+    if (g.logic && !(firstCombatRefreshReady(work, g) || battleLogicGroup(work, g)))
       fail(
         'Il seguito e il refresh di questo gruppo non sono ancora disponibili. Nessun effetto dell’Ombra è stato applicato.',
       );
@@ -325,7 +375,8 @@ export function sourceShadowAvailability(state: State) {
   )
     return undefined;
   try {
-    if (state.scenario.pack.manifest.threatContinuations) preflightSourceShadow(state);
+    if (state.scenario.pack.manifest.threatContinuations || battlePhase(state))
+      preflightSourceShadow(state);
     else preflightActivations(state);
     return { enabled: true, reason: null };
   } catch (e) {
@@ -363,7 +414,7 @@ function refreshSourceGroups(state: State) {
   const frame = activeFrame(state);
   for (const g of livingEnemyGroups(state)) {
     invariant(
-      !g.logic || firstCombatRefreshReady(state, g),
+      !g.logic || firstCombatRefreshReady(state, g) || battleLogicGroup(state, g),
       'BEFORE_UNEXHAUST richiede il consumer della logica nemica.',
     );
     // Source groups with no logic have no receiver for BEFORE_UNEXHAUST.
@@ -447,7 +498,7 @@ export function advanceSourceShadow(state: State): boolean {
       .sort((a, b) => a.threshold - b.threshold)[0];
     if (!next) {
       if (
-        sc.pack.manifest.threatContinuations &&
+        (sc.pack.manifest.threatContinuations || battlePhase(state)) &&
         integer(state, sc.pack.manifest.rounds!.bindings.threat) >=
           sc.pack.manifest.rounds!.threat.limit
       ) {
@@ -509,7 +560,7 @@ export function applySourceThreat(state: State, requestId?: string) {
     frame = sc.rounds!.frames.find((f) => f.id === sc.rounds!.active)!;
   invariant(frame?.stage === 'threat' && frame.threat, 'Minaccia senza richiesta corrente.');
   threatBoundary(state, frame.threat.after);
-  if (sc.pack.manifest.threatContinuations) {
+  if (sc.pack.manifest.threatContinuations || battlePhase(state)) {
     invariant(requestId, 'Aumento senza comando fonte.');
     frame.threatRequestId = requestId;
   }
@@ -530,6 +581,7 @@ export function finishSourceReset(state: State) {
   frame.stage = 'rally';
   state.round!.phase = 'rally';
   state.round!.shadowStep = null;
+  if (sc.rounds?.version === 'source-battle-rounds-v1') syncPhysicalDefeat(state);
 }
 export function finishSourceRally(state: State) {
   const sc = state.scenario!,

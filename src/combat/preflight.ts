@@ -1,3 +1,4 @@
+import { battleLogicGroup, battleCallbackProblems } from '../scenario/battle-phase-runtime';
 import type { State } from '../server/state';
 import type { DeployedGroup } from '../shared/deployment';
 import type { CombatClosure } from './compiler';
@@ -54,8 +55,13 @@ export function preflightCombatOperation(
       }))
         missing.add(dep);
       if (g.logic) {
-        if (!firstCombatGroup(state, g)) missing.add('scenario-combat-continuation');
-        else for (const problem of firstCombatCallbackProblems(state)) missing.add(problem);
+        if (!(firstCombatGroup(state, g) || battleLogicGroup(state, g)))
+          missing.add('scenario-combat-continuation');
+        else
+          for (const problem of battleLogicGroup(state, g)
+            ? battleCallbackProblems(state, g)
+            : firstCombatCallbackProblems(state))
+            missing.add(problem);
       }
       const model = a.compiled.models.find((m) => m.source === g.source)!;
       const size = g.figures.filter((f) => f.health > 0).length;

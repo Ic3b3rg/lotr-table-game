@@ -3,6 +3,7 @@ import { ContentIdSchema, CampaignSkillDefinitionSchema } from './catalog';
 import { HashSchema, SourceSchema, Int32Schema, VectorSchema } from './generated-map';
 import { DeploymentSourceSchema } from './deployment';
 import { BattleCombatCapabilitySchema } from './battle-combat';
+import { BattleRoundsCapabilitySchema } from './battle-rounds';
 
 const id = ContentIdSchema,
   hash = HashSchema;
@@ -83,6 +84,7 @@ const card = z.strictObject({
 });
 /** Prospective authority. Embedded artifacts are fully recompiled by the server before use. */
 export const CampDepartureCapabilitySchema = z.strictObject({
+  battleRounds: BattleRoundsCapabilitySchema.optional(),
   combat: BattleCombatCapabilitySchema.optional(),
   version: z.literal('source-camp-departure-v1'),
   catalogHash: hash,

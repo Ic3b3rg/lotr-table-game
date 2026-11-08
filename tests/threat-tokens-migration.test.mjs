@@ -54,7 +54,7 @@ test('schema26 migration preserves whole ordinary states and treats dictionary n
   });
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const raw = (await readBackup(r.host)).payload.state;
-  assert.equal(raw.schemaVersion, 34);
+  assert.equal(raw.schemaVersion, 35);
   for (let schemaVersion = 10; schemaVersion <= 25; schemaVersion++) {
     const old = { ...structuredClone(raw), schemaVersion };
     if (schemaVersion === 10) delete old.physical;

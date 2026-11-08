@@ -11,6 +11,10 @@ export function sourceDarknessHeroes(state: State): number[] {
   const data = state.scenario!.pack.manifest.rounds!,
     sc = state.scenario!;
   if (data.configuration.disableDarkness) return [];
+  if (data.version === 'source-battle-rounds-v1')
+    return battleDarknessHeroes(state).filter(
+      (n) => !defeatedHeroes(state).includes(state.preparation!.heroes[n]!.heroId),
+    );
   if (sc.globals[data.bindings.darknessOverride] !== '')
     fail(
       'L’istruzione di oscurità di questa fonte richiede un consumer ulteriore. Nessuna pesca è stata applicata.',

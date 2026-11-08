@@ -43,6 +43,7 @@ export const DeployedGroupSchema = z.strictObject({
   exhausted: z.boolean(),
   attackReduction: count.optional(),
   logic: SourceSchema.nullable(),
+  battleRecipe: z.string().min(1).max(350).optional(),
   placed: z.boolean(),
   removed: z.literal('timer').optional(),
   spaceId: z.string().max(200),
@@ -70,6 +71,9 @@ export const DeploymentStateSchema = z.strictObject({
     .array(
       z.strictObject({
         effectId: z.string().max(300),
+        battleWave: z
+          .strictObject({ budgets: z.array(count).min(1).max(16), sharedPoints: count })
+          .optional(),
         groups: z.array(z.string().max(300)).max(100),
         remaining: count,
         reason: z.enum(['no-budget', 'no-space', 'no-eligible-model']).nullable(),
