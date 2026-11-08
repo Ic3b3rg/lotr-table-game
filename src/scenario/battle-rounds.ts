@@ -296,6 +296,10 @@ export function validateBattleRoundsSource(departure: CampDepartureCapability) {
   for (const key of ['items', 'definitions', 'clauses', 'heroes', 'additions'] as const) {
     const original = base.combat.source[key];
     invariant(
+      key === 'additions' || digest(combat.source[key]) === digest(original),
+      'Compagnia delle fasi diversa dalla partenza congelata.',
+    );
+    invariant(
       original.every((v) => combat.source[key].some((next) => digest(next) === digest(v))),
       'Clausola o conseguenza storica omessa o alterata.',
     );

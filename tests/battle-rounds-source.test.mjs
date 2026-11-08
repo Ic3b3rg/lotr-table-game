@@ -1,3 +1,5 @@
+import { compileCombatClosure } from '../dist/combat-library.mjs';
+import { hash } from './fixtures/map-freeze.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { departureFixture } from './fixtures/camp-departure.mjs';
@@ -89,4 +91,24 @@ test('prospective authority rejects missing mandatory owners, methods, bindings,
   const forged = structuredClone(cap);
   forged.combat.combat = structuredClone(forged.battleRounds.combat);
   assert.throws(() => runtime.battleRoundsPack(forged), /combattimento|fonte/i);
+});
+
+test('a recompiled expanded company cannot replace the three heroes frozen at departure', async () => {
+  const cap = await phaseAuthority(),
+    source = structuredClone(cap.battleRounds.combat.source);
+  source.heroes.push({
+    ...source.heroes[0],
+    heroId: 'hero-4',
+    definitionHash: hash('invented fourth hero'),
+  });
+  source.shadow.companyFingerprint = hash({
+    items: source.items,
+    definitions: source.definitions,
+    clauses: source.clauses,
+    heroes: source.heroes,
+  });
+  cap.battleRounds.combat = compileCombatClosure(source);
+  cap.battleRounds.heroIds.push('hero-4');
+  cap.battleRounds.rounds.threat.limit = 52;
+  assert.throws(() => runtime.battleRoundsPack(cap), /Compagnia.*partenza congelata/);
 });
