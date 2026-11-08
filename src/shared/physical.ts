@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TerrainTestViewSchema } from './battle-test-terrain';
 import { NegatedSufferingSchema } from './negated-suffering';
 import {
   AttackTestChildSchema,
@@ -18,6 +19,7 @@ import { SearchRecoverySchema } from './search-recovery';
 import { InteractionRulesSchema } from './interaction-look';
 
 export const SourceTestViewSchema = z.strictObject({
+  terrain: TerrainTestViewSchema.optional(),
   heroId: ContentIdSchema,
   stat: StatSchema,
   target: z.int().min(1).max(99).nullable(),
@@ -26,6 +28,11 @@ export const SourceTestViewSchema = z.strictObject({
   cards: z
     .array(
       z.strictObject({
+        excluded: z.literal(true).optional(),
+        copy: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
         skillId: ContentIdSchema,
         name: z.string().max(1000),
         success: z.int().nonnegative(),
@@ -261,7 +268,9 @@ const activeBase = {
   actorPlayerId: z.uuid(),
 };
 export const PhysicalDecisionSchema = z.strictObject({
-  purpose: z.enum(['group-order', 'negation', 'interaction-order', 'interaction-look']).optional(),
+  purpose: z
+    .enum(['group-order', 'negation', 'interaction-order', 'interaction-look', 'terrain-test'])
+    .optional(),
   scoutTopAllowed: z.boolean().optional(),
   scoutPrepareAllowed: z.literal(false).optional(),
   ...activeBase,

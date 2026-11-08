@@ -495,6 +495,17 @@ export function createGuidedStart(sync: () => Promise<void>) {
         label = 'Apri il prossimo passo';
         topic = 'physical';
       }
+      if (session.physical?.sourceTest?.terrain && session.physical.active) {
+        const terrain = session.physical.sourceTest.terrain;
+        heading =
+          terrain.kind === 'attack'
+            ? 'Falò: scegli carte e modificatore'
+            : 'Massi: converti gratis per negare';
+        message = `${session.players.find((p) => p.id === session.physical!.active!.actorPlayerId)?.name ?? 'Il proprietario indicato'} risolve la prova; gli altri attendono. ${session.combat?.current?.returnLabel ?? 'Poi riprende la fonte.'}`;
+        target = '#physical-resolution';
+        label = 'Apri le scelte della prova';
+        topic = 'combat';
+      }
       if (
         session.physical?.active?.kind === 'decision' &&
         ['interaction-look', 'interaction-order'].includes(session.physical.active.purpose ?? '')

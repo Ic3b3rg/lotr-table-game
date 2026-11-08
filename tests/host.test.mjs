@@ -6,7 +6,7 @@ test('la vista condivisa non occupa posti e possono entrare cinque giocatori', a
   const host = await startHost();
   t.after(() => host.dispose());
   const initial = await (await host.request('/api/session')).json();
-  assert.equal(initial.schemaVersion, 33);
+  assert.equal(initial.schemaVersion, 34);
   assert.deepEqual(initial.players, []);
   for (const name of ['Ada', 'Bilbo', 'Ciro', 'Dora', 'Elio']) {
     const response = await joinPlayer(host, name);
@@ -28,4 +28,19 @@ test('un host limitato al loopback non pubblica QR per le interfacce LAN', async
   const info = await (await host.request('/api/host')).json();
   assert.deepEqual(info.addresses, []);
   assert.equal(info.isLoopbackOnly, true);
+});
+
+test('le richieste di test sopravvivono alla verifica sincrona oltre la scadenza delle connessioni', async (t) => {
+  const host = await startHost();
+  t.after(() => host.dispose());
+  const before = await (await host.request('/api/backups')).json();
+  await (await host.request('/api/backups')).json();
+  // Replay validation can block this client while the independent host expires
+  // idle sockets (Node24 defaults: 5s keep-alive plus a 1s buffer).
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 7000);
+  const response = await host.request('/api/backups');
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).payload, before.payload);
+  await host.stop();
+  await assert.rejects(host.request('/api/backups'));
 });

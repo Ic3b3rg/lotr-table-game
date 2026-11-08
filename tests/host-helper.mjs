@@ -57,6 +57,9 @@ export async function startHost(extraEnv = {}) {
       return fetch(url + path, {
         method: body === undefined ? 'GET' : 'POST',
         headers: {
+          // Synchronous replay can outlive the independent host's idle timeout.
+          // Use a fresh connection instead of reusing a socket with unread EOF.
+          connection: 'close',
           ...(body === undefined ? {} : { 'content-type': 'application/json' }),
           ...(cookie ? { cookie } : {}),
         },

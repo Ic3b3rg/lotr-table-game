@@ -12,6 +12,7 @@ export function resolveFigureHits(
   figures: { id: string; health: number; armor: number; sorcery: number }[],
   hits: number,
   pierce: boolean,
+  smite = false,
 ) {
   const wasAlive = figures.some((f) => f.health > 0);
   const removed: string[] = [];
@@ -20,7 +21,7 @@ export function resolveFigureHits(
   for (const f of figures) {
     if (!f.health) continue;
     if (!pierce) residual -= Math.min(residual, f.armor);
-    residual -= Math.min(residual, f.sorcery);
+    if (!smite) residual -= Math.min(residual, f.sorcery);
     const suffered = Math.min(residual, f.health);
     f.health -= suffered;
     residual -= suffered;

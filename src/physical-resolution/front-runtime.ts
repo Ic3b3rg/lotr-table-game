@@ -1,4 +1,5 @@
 import { validatePhysicalProgram } from './program';
+import { TerrainAccounting, type FateIcon } from './terrain-accounting';
 import { preparationProblem } from '../shared/preparation';
 import { createHash } from 'node:crypto';
 import { requirePhysicalFamily, type PhysicalCard } from '../physical-content/catalog';
@@ -1682,6 +1683,25 @@ class FrontReplay {
   ): number {
     return this.frame(path, hero, null, 'test', 0, () => {
       const visibleSource = sourceTarget !== undefined || (!!this.combat && !lastStand);
+      const terrainContext = this.run.spatial?.testTerrain;
+      const terrain =
+        terrainContext &&
+        (attack || negate) &&
+        !lastStand &&
+        terrainContext.tokens.some(
+          (t) =>
+            t.spaceId === this.run.spatial!.heroes[hero]!.spaceId &&
+            t.kind === (attack ? 'fire' : 'rock'),
+        )
+          ? new TerrainAccounting(
+              terrainContext,
+              this.run.spatial!.heroes[hero]!.spaceId,
+              attack ? 'attack' : 'negate',
+              (copy) => this.skillSymbols(copy),
+              (copy) => this.skillName(copy),
+              (copy) => frontToken(this.p.entropy, `${this.run.id}:${path}:${copy}`),
+            )
+          : undefined;
       stat = this.beforeTest(hero, stat, path, attack?.replaceCopy);
       const h = this.hero(hero),
         definition = this.catalog.heroes.find((h) => h.id === this.hero(hero).heroId)!;
@@ -1723,28 +1743,40 @@ class FrontReplay {
       // symbols, while inspiration and independently paid abilities stay paid.
       let bonusSuccesses = successes - printed,
         serial = 0;
-      let icons: { id: string; copy: string; state: 'free' | 'converted' | 'spent' }[] = [];
+      let icons: FateIcon[] = [];
+      const identityAccounting = !!this.p.boons || !!terrain;
       const addIcons = (copies: string[]) => {
         for (const copy of copies)
-          for (let i = 0; i < this.skillSymbols(copy).fate; i++)
-            icons.push({ id: `fate:${serial++}:${copy}`, copy, state: 'free' });
+          if (!terrain?.excludes(copy))
+            for (let i = 0; i < this.skillSymbols(copy).fate; i++)
+              icons.push({
+                id: `fate:${serial++}:${terrain ? terrain.token(copy) : copy}`,
+                copy,
+                state: 'free',
+              });
       };
-      if (this.p.boons) addIcons(cards);
+      if (identityAccounting) addIcons(cards);
       const useFates = (count: number, state: 'converted' | 'spent', suffix: string) => {
-        if (!this.p.boons) return;
+        if (!identityAccounting) return;
         const free = icons.filter((i) => i.state === 'free');
         const chosen = this.select(
           hero,
           `${path}/${suffix}`,
           'Scegli le icone fato da usare: le altre restano disponibili.',
-          free.map((i) => ({ id: i.id, label: `${this.skillName(i.copy)} · fato` })),
+          free.map((i) => ({
+            id: i.id,
+            label: `${this.skillName(i.copy)}${terrain ? ` · copia ${terrain.token(i.copy).slice(0, 8)} · fato ${Number(i.id.split(':')[1]) + 1}` : ' · fato'}`,
+          })),
           count,
         );
         for (const id of chosen) icons.find((i) => i.id === id)!.state = state;
       };
       const updateTest = () => {
-        if (this.p.boons) {
-          printed = cards.reduce((n, c) => n + this.skillSymbols(c).success, 0);
+        if (identityAccounting) {
+          printed = cards.reduce(
+            (n, c) => n + (terrain?.excludes(c) ? 0 : this.skillSymbols(c).success),
+            0,
+          );
           successes =
             printed + bonusSuccesses + icons.filter((i) => i.state === 'converted').length;
           fate = icons.filter((i) => i.state === 'free').length;
@@ -1764,12 +1796,15 @@ class FrontReplay {
           };
         if (visibleSource)
           this.r.sourceTest = {
+            ...(terrain ? { terrain: terrain.view(fate) } : {}),
             heroId: h.heroId,
             stat,
             target: sourceTarget ?? null,
             successes,
             fateRemaining: fate,
             cards: cards.map((c) => ({
+              ...(terrain ? { copy: terrain.token(c) } : {}),
+              ...(terrain?.excludes(c) ? { excluded: true as const } : {}),
               skillId: definitionId(c),
               name: this.skillName(c),
               success: this.skillSymbols(c).success,
@@ -1794,6 +1829,14 @@ class FrontReplay {
             fate: this.skillSymbols(c).fate,
           })),
         };
+      };
+      const payFire = (id: string, spent = 0) => {
+        const copy = terrain!.pay(id, cards, icons, successes, spent);
+        cards.splice(cards.indexOf(copy), 1);
+        icons = icons.filter((i) => i.copy !== copy);
+        h.discard.push(copy);
+        this.r.revealed.at(-1)!.cards = [...cards];
+        updateTest();
       };
       while (true) {
         updateTest();
@@ -1824,6 +1867,8 @@ class FrontReplay {
             ...this.company(hero, 'attack-test').filter((o) => o.clause.effect.op === 'strike'),
           );
         const options = [
+          ...(terrain?.boulders(fate) ?? []),
+          ...(terrain?.fire(cards, icons, successes).map(({ id, label }) => ({ id, label })) ?? []),
           ...this.boonEffects(hero)
             .filter(
               (b) =>
@@ -1864,6 +1909,7 @@ class FrontReplay {
         let selected: string;
         if (lastStand || visibleSource) {
           const input = this.ask(hero, decisionPath, {
+            ...(terrain ? { purpose: 'terrain-test' as const } : {}),
             mode: 'choose',
             title,
             options,
@@ -1878,6 +1924,15 @@ class FrontReplay {
           selected = input.option;
         } else selected = this.choose(hero, decisionPath, title, options);
         if (selected === 'resolve') break;
+        if (selected.startsWith('terrain:fire:')) {
+          payFire(selected);
+          continue;
+        }
+        if (selected.startsWith('terrain:boulder:')) {
+          terrain!.useBoulder(selected, fate);
+          useFates(1, 'converted', `boulder-fate-${n}`);
+          continue;
+        }
         const boon = this.boonEffects(hero).find(
           (b) => selected === `boon:${b.copyId}:${b.effect.op}`,
         );
@@ -2008,7 +2063,25 @@ class FrontReplay {
           }
         }
       }
-      if (attack) this.spendAttackSlots(hero, attack, successes, addedHits, `${path}/slots`);
+      if (attack)
+        this.spendAttackSlots(
+          hero,
+          attack,
+          successes,
+          addedHits,
+          `${path}/slots`,
+          terrain
+            ? {
+                options: (spent) =>
+                  terrain
+                    .fire(cards, icons, successes, spent)
+                    .map(({ id, label }) => ({ id, label })),
+                pay: payFire,
+                successes: () => successes,
+                modifiers: () => terrain.modifiers(),
+              }
+            : undefined,
+        );
       this.r.revealed.pop();
       h.discard.push(...cards);
       if (
@@ -2034,6 +2107,12 @@ class FrontReplay {
     successes: number,
     addedHits: number,
     path: string,
+    terrain?: {
+      options: (spent: number) => { id: string; label: string }[];
+      pay: (id: string, spent: number) => void;
+      successes: () => number;
+      modifiers: () => ('pierce' | 'smite')[];
+    },
   ) {
     invariant(
       new Set(attack.slots.map((s) => s.id)).size === attack.slots.length,
@@ -2043,7 +2122,9 @@ class FrontReplay {
     let spent = 0,
       hits = addedHits;
     const modifiers: NonNullable<typeof this.result.attack>['modifiers'] = [];
+    let terrainDecisions = 0;
     while (true) {
+      if (terrain) successes = terrain.successes();
       this.r.attackTest = {
         heroId: this.hero(hero).heroId,
         groupId: attack.groupId,
@@ -2084,13 +2165,16 @@ class FrontReplay {
             }))
           : [],
       );
-      const decisionPath = this.scenarioTitles.size
-        ? `${path}/${allocations.length}/${modifiers.length}`
-        : `${path}/${allocations.length}`;
+      const decisionPath = terrain
+        ? `${path}/${allocations.length}/${modifiers.length}/${terrainDecisions}`
+        : this.scenarioTitles.size
+          ? `${path}/${allocations.length}/${modifiers.length}`
+          : `${path}/${allocations.length}`;
       const input = this.ask(hero, decisionPath, {
         mode: 'choose',
         title: `${successes - spent} successi disponibili; ${spent} spesi. Anteprima: ${hits} colpi. Ogni slot può essere pagato una sola volta.`,
         options: [
+          ...(terrain?.options(spent) ?? []),
           { id: 'apply', label: `Conferma ${hits} colpi e prosegui` },
           ...choices.map((s) => ({
             id: `slot:${s.id}`,
@@ -2104,6 +2188,11 @@ class FrontReplay {
       });
       invariant(input.kind === 'physical-choice', 'Scelta slot richiesta.');
       if (input.option === 'apply') break;
+      if (input.option.startsWith('terrain:fire:') && terrain) {
+        terrain.pay(input.option, spent);
+        terrainDecisions++;
+        continue;
+      }
       const title = titleOffers.find((o) => o.id === input.option);
       if (title) {
         this.removeTitle(hero, title.copy);
@@ -2126,7 +2215,7 @@ class FrontReplay {
       allocations,
       unspent: successes - spent,
       hits,
-      modifiers: [...new Set(modifiers)],
+      modifiers: [...new Set([...modifiers, ...(terrain?.modifiers() ?? [])])],
     };
   }
   private additionEligible(hero: number, addition: CombatAddition, outcome: AttackOutcome) {

@@ -76,7 +76,7 @@ test('schema29 migration preserves whole gameplay and similarly named ordinary d
   });
   assert.equal((await startScenario(r.host, r.player)).status, 200);
   const current = (await readBackup(r.host)).payload.state;
-  assert.equal(current.schemaVersion, 33);
+  assert.equal(current.schemaVersion, 34);
   for (let schemaVersion = 10; schemaVersion <= 28; schemaVersion++) {
     const old = { ...structuredClone(current), schemaVersion };
     if (schemaVersion === 10) delete old.physical;

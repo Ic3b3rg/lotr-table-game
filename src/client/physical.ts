@@ -155,7 +155,10 @@ export function createPhysicalControls(
         );
         const cards = text('ul', '', 'physical-test-cards');
         for (const c of t.cards) {
-          const row = text('li', `${c.success} successi · ${c.fate} fati`),
+          const row = text(
+              'li',
+              `${c.success} successi · ${c.fate} fati${c.copy ? ` · copia ${c.copy.slice(0, 8)}` : ''}${c.excluded ? ' · icone escluse dal falò per tutta questa prova' : ''}`,
+            ),
             card =
               catalog?.skills.find((skill) => skill.id === c.skillId) ??
               session.physical?.lastStand?.titles.find((title) => title.skill.id === c.skillId)
@@ -171,6 +174,54 @@ export function createPhysicalControls(
         );
         status.setAttribute('role', 'status');
         root.append(cards, status);
+        if (t.terrain) {
+          const terrain = t.terrain,
+            section = document.createElement('section');
+          section.dataset.terrainTest = terrain.kind;
+          section.append(
+            text(
+              'h4',
+              terrain.kind === 'attack' ? 'Falò e prova di attacco' : 'Massi e prova per negare',
+            ),
+          );
+          const colocated = terrain.tokens
+            .map((token) => `${token.kind === 'fire' ? 'Falò' : 'Masso'} ${token.anchor}`)
+            .join(', ');
+          section.append(
+            text(
+              'p',
+              colocated
+                ? `Nella tua casella: ${colocated}.`
+                : 'Nessun falò o masso nella tua casella per questa prova.',
+              'company-help',
+            ),
+          );
+          if (terrain.kind === 'negate')
+            section.append(
+              text(
+                'p',
+                `${terrain.freeRemaining} conversioni gratuite ancora disponibili con i fati rimasti · ${terrain.bouldersUsed.length} massi usati in questa prova · 0 ispirazione. Ogni masso torna disponibile in una nuova prova per negare.`,
+                'physical-test-total',
+              ),
+            );
+          else
+            section.append(
+              text(
+                'p',
+                'Puoi scegliere un solo pagamento del falò: scarta una copia rivelata con fato per Perforante (ignora armatura) oppure Punizione (ignora stregoneria). Tutte le icone della copia sono escluse; gli altri costi pagati restano spesi.',
+                'company-help',
+              ),
+            );
+          if (terrain.fire)
+            section.append(
+              text(
+                'p',
+                `Pagato: ${terrain.fire.name} · copia ${terrain.fire.copy.slice(0, 8)} scartata per ${terrain.fire.modifier === 'pierce' ? 'Perforante' : 'Punizione'}. Esclusi ${terrain.fire.excludedSuccess} successi e ${terrain.fire.excludedFate} fati stampati, incluse le loro conversioni.`,
+                'physical-test-total',
+              ),
+            );
+          root.append(section);
+        }
       }
       if (view.attackTest) {
         const attack = view.attackTest;
@@ -316,21 +367,23 @@ export function createPhysicalControls(
         root.append(
           text(
             'h4',
-            purpose === 'interaction-look'
-              ? 'Lettura privata prima dell’interazione'
-              : purpose === 'interaction-order'
-                ? 'Ordine prima dell’interazione'
-                : purpose === 'group-order'
-                  ? 'Ordine dei superstiti'
-                  : purpose === 'negation'
-                    ? `Negazione per ${name(active.heroId)}`
-                    : active.kind === 'prevent'
-                      ? `Prevenzione per ${name(active.heroId)}`
-                      : active.kind === 'discard'
-                        ? `Scarto per ${name(active.heroId)}`
-                        : active.kind === 'decision'
-                          ? `Decisione per ${name(active.heroId)}`
-                          : `Conseguenza sospesa per ${name(active.heroId)}`,
+            purpose === 'terrain-test'
+              ? `Scelte del terreno per ${name(active.heroId)}`
+              : purpose === 'interaction-look'
+                ? 'Lettura privata prima dell’interazione'
+                : purpose === 'interaction-order'
+                  ? 'Ordine prima dell’interazione'
+                  : purpose === 'group-order'
+                    ? 'Ordine dei superstiti'
+                    : purpose === 'negation'
+                      ? `Negazione per ${name(active.heroId)}`
+                      : active.kind === 'prevent'
+                        ? `Prevenzione per ${name(active.heroId)}`
+                        : active.kind === 'discard'
+                          ? `Scarto per ${name(active.heroId)}`
+                          : active.kind === 'decision'
+                            ? `Decisione per ${name(active.heroId)}`
+                            : `Conseguenza sospesa per ${name(active.heroId)}`,
           ),
         );
         root.append(

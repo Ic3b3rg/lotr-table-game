@@ -7,6 +7,7 @@ import { LastStandSnapshotSchema } from '../shared/last-stand';
 import { CycleStateSchema } from '../shared/physical-cycle';
 import { ContentIdSchema } from '../shared/catalog';
 import { HashSchema } from '../shared/generated-map';
+import { BattleTestTerrainContextSchema } from '../shared/battle-test-terrain';
 import {
   PhysicalActiveSchema,
   PhysicalParentSchema,
@@ -108,6 +109,7 @@ export const PhysicalStateSchema = z.strictObject({
         context: FrontResourcesSchema.optional(),
         spatial: z
           .strictObject({
+            testTerrain: BattleTestTerrainContextSchema.optional(),
             heroes: z.array(PhysicalHeroSchema).min(1).max(5),
             connections: z.array(z.tuple([z.string().max(200), z.string().max(200)])).max(1000),
             enemies: z

@@ -202,9 +202,36 @@ performCommand(store,process.argv[3],CommandSchema.parse(JSON.parse(process.argv
   const callback = structuredClone(complete);
   callback.payload.state.scenario.pack.manifest.failure.next.id = 19;
   await reject(callback);
-  const receipt = structuredClone(complete);
-  receipt.payload.commands.at(-1).receipt.appliedRevision++;
-  await reject(receipt);
+  // Export order is player/request UUID order, not episode order. Select
+  // replay-owned receipts from their recorded intents, never an arbitrary
+  // preparation/generation receipt from before the source episode.
+  const receiptCases = new Map();
+  for (const record of complete.payload.state.physical.cycle.records) {
+    const stored = complete.payload.commands.find(
+      (c) => c.playerId === record.playerId && c.requestId === record.requestId,
+    );
+    assert.ok(stored, 'Every recorded episode intent retains its receipt');
+    if (
+      !receiptCases.has(record.intent.type) &&
+      stored.receipt.appliedRevision < complete.payload.state.revision
+    )
+      receiptCases.set(record.intent.type, record);
+  }
+  for (const type of ['START_ATTACK', 'CYCLE_INPUT', 'SCENARIO_INPUT'])
+    assert.ok(receiptCases.has(type), `The real episode must exercise ${type}`);
+  for (const [type, record] of receiptCases) {
+    const receipt = structuredClone(complete),
+      stored = receipt.payload.commands.find(
+        (c) => c.playerId === record.playerId && c.requestId === record.requestId,
+      );
+    stored.receipt.appliedRevision++;
+    assert.ok(
+      stored.receipt.appliedRevision <= receipt.payload.state.revision,
+      'Rejection must reconcile the receipt, rather than only reject a future revision',
+    );
+    await reject(receipt);
+    t.diagnostic(`${type}: replay-owned receipt alteration rejected with full payload unchanged`);
+  }
   // Construct a second, individually valid physical history through ordinary
   // commands, then pair it with the first frozen ordinary journal. Neither
   // a checksum nor agreement of the alternative physical snapshots is authority.
