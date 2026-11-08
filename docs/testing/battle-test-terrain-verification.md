@@ -87,3 +87,69 @@ NULL/UNVERIFIED/BLOCKED, original156 remains STATIC/GATED, and no original party
 State or save was constructed or played. This slice does not certify devices,
 Unity, the whole original campaign, A2 Shadow/A3, #135 special orders or the
 separate acceptance issues. The parent owns fresh review, integration and closure.
+
+## Final Root review and verification
+
+The final frozen executable/test revision is
+`8e9260b105c466735631710990de690c7b0f1ec0`. Exactly one complete canonical at that
+revision passed: **1147 tests, 1147 pass, zero fail/cancelled/skipped/todo**,
+`1774305.351041 ms`; actual npm and driver exits were both **0**. The command was
+`python3 .scratch/root-review-139/run.py canonical-final-8e9260b npm test`, using
+the existing concurrency4 command and owned temporary/cache directories with
+the npm update notifier disabled before the first npm subprocess.
+
+Root independently checked all12 final manifest entries, the raw footer and
+exits, byte-identical Root/owned reports, all944 ordinary product rows and exact
+file sets before/after/current. The672 total driver rows also remained identical.
+The final report is4333 bytes/SHA256
+`df84fe9f80dd878ba124bf9cd6ea33a71cd5d41dde75a33bd78e62f9d9f0df15`;
+the3434-byte manifest SHA256 is
+`f0ab862caf34e3212355663f7ec74220b41d1eb11debd3891dd3c64e81502f7d`.
+They are retained under the owned `.scratch/root-review-139/final-canonical-8e9260b/`.
+This documentation is added after the frozen run; executable inputs stay pinned
+to that tested revision.
+
+**Standards:** no required whole-range violation. The optional
+`boonEnemyPositions` naming suggestion is deferred. Fresh scoped reviews of the
+two Root corrections found no required violations or new actionable smells.
+
+**Spec:** the original recovery-test acceptance failure is addressed within the
+source-owned replay contract. An export is sorted by player/request identity;
+its array tail does not identify a replay-owned receipt. The corrected test
+selects actual journal identities and checks every exercised intent family,
+requiring attack, cycle and scenario coverage. Altered revisions stay within the
+current revision, so rejection requires reconciliation rather than the generic
+future-revision bound. HTTP422, `INVALID_INPUT`, complete unchanged payloads and
+the later alternative-history checks remain mandatory. The focused recovery
+reached all six families. No production receipt validator changed.
+
+The earlier worker canonical1145/1146 exit1 is preserved. Its selected receipt
+type was not recorded and remains unknown. A separate finite invented94-receipt
+probe rejected all89 source-owned mutations but accepted five pre-scenario
+administrative/generation header mutations. **Ruling:** retain the existing
+legacy semantics and triage retrospective administrative authentication in
+[#140](https://github.com/Ic3b3rg/lotr-table-game/issues/140), rather than infer a
+new journal from missing historical intents. **Cost:** a coherent backup can
+still carry a forged pre-scenario administrative `appliedRevision` header. Full
+historical receipt-table authenticity is not certified.
+
+A separate frozen1764d68 canonical1145/1146 exit1 is also retained. It stopped on
+`fetch failed`/`ECONNRESET` while reading a backup before the final forged-restore
+check. A real-host regression reproduced reuse of an expired pooled connection
+after synchronous client validation. The test helper now sends
+`Connection: close`; it adds no retry, cache, catch or server-timeout change.
+The regression fails before that correction and passes after it, also requiring
+stopped-host failures to propagate. All six focused host/combat/terrain recovery
+cases then passed, zero skips, exit0 (`251015.968291 ms`). **Cost:** this Node-fetch
+helper no longer covers connection-pool reuse; native browser networking is
+unchanged. The precise socket lifecycle of the original failed canonical was
+not captured, so the reproduced mechanism is not retrospective proof of that
+instance. No failed attempt is represented as green.
+
+Native verification remains finite invented gameplay with three independent
+owners and a shared PC view, on the same Mac/Chrome at320/768/1024/1440. Root
+personally opened the final320px fire and boulder captures; the worker's other
+capture inspections are listed separately. Physical phones/LAN, Windows,
+Safari, Unity and the complete original campaign remain uncertified. #57 stays
+blocked with unknown quantities, original156 stays static/gated, and A2 Shadow,
+A3 and the separate original-game acceptance issues remain open.
