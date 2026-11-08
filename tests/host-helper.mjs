@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 
-export async function startHost(extraEnv = {}) {
+export async function startHost(extraEnv = {}, { startupTimeoutMs = 8000 } = {}) {
   const ownsDirectory = !extraEnv.LOTR_DATA_DIR;
   const dataDir = extraEnv.LOTR_DATA_DIR ?? (await mkdtemp(join(tmpdir(), 'lotr-host-test-')));
   const child = spawn(process.execPath, ['dist/host.mjs'], {
@@ -26,7 +26,7 @@ export async function startHost(extraEnv = {}) {
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error(`Host non avviato: ${diagnostics}`));
-    }, 8000);
+    }, startupTimeoutMs);
     child.once('exit', (code) => {
       clearTimeout(timer);
       reject(new Error(`Host terminato (${code}): ${diagnostics}`));

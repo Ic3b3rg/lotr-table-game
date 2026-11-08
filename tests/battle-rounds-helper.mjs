@@ -19,6 +19,7 @@ export function readyBattleRounds(
   {
     outcome = 'win',
     sourceEdit = () => {},
+    catalogEdit = () => {},
     weaponBody = '1 Success: 2 hits\n2 Successes: 4 hits',
     ...options
   } = {},
@@ -38,6 +39,7 @@ export function readyBattleRounds(
         card.success = card.kind === 'weakness' ? 0 : 1;
         card.fate = card.kind === 'weakness' ? 0 : 1;
       }
+      catalogEdit(catalog);
     },
     edit: (departure, source, pack, ...args) => {
       if (outcome === 'loss') {
