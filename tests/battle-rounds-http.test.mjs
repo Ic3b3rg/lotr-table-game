@@ -1,3 +1,5 @@
+import { startHost } from './host-helper.mjs';
+import { join } from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -220,6 +222,30 @@ test('real camp episode reaches the named source victory through actual phases, 
         .filter((g) => g.battleRecipe)
         .map((g) => ({ recipe: g.battleRecipe, figures: g.figures })),
     }),
+  );
+  assert.ok(
+    Buffer.byteLength(JSON.stringify(accepted)) > 4_194_304,
+    'The real multi-phase journal exceeds the former restore transport limit',
+  );
+  const empty = await startHost({ LOTR_DATA_DIR: join(r.directory, 'named-victory-empty') });
+  t.after(() => empty.stop());
+  const fresh = await readSession(empty);
+  await ok(
+    empty.request('/api/restores', {
+      backup: accepted,
+      generation: fresh.generation,
+      expectedRevision: fresh.revision,
+      confirmed: true,
+    }),
+  );
+  const restored = (await readBackup(empty)).payload,
+    expected = structuredClone(accepted.payload);
+  for (const key of ['generation', 'revision', 'updatedAt'])
+    expected.state[key] = restored.state[key];
+  assert.deepEqual(
+    restored,
+    expected,
+    'The entire late source victory domain and all receipts restore without external packs',
   );
   assert.equal(final.scenario.conclusion?.outcome, 'victory');
   assert.equal(final.scenario.conclusion.cause.kind, 'source-victory');
