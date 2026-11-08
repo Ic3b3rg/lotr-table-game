@@ -87,6 +87,13 @@ free conversions, paid copy, excluded icons and keyword. Old views serialize
 without these fields. Hidden deck order, raw copy associations, source/history
 hashes and future fate are never added to public projections.
 
+Fire exclusion lasts for the entire test, even if reset, Scout and a subsequent
+exchange legally reveal the paid physical copy again. Such a copy is marked as
+excluded in the test view and contributes no printed or converted icons. The
+finite-figure helper accepts smite only through the prospective controller
+branch; its default historical closure still rejects it. Other offensive
+keyword/source closures keep their existing gates.
+
 ## Acceptance and limits
 
 Meaningful consumer RED must reach the current fire and boulder gates through
