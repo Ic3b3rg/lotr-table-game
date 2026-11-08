@@ -86,10 +86,11 @@ class Selection {
   private sequence: number[] = [];
   private history: { sectionId: number; tileId: number }[] = [];
   private invalid = new PrefixTree();
-  private scalingOrder = [0, 1, 2, 3];
+  private scalingOrder: number[];
   private pools: ReturnType<typeof createPools>;
 
   constructor(private input: SelectionInput) {
+    this.scalingOrder = input.sections.map((s) => s.index);
     this.pools = createPools(input);
     this.standard = [...input.standard];
     this.standardFlags = new Map(

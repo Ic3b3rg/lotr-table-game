@@ -24,8 +24,8 @@ export function projectRealization(
     throw new Error('Pipeline non completa.');
   const data = ProjectionDataSchema.parse({
     formatVersion: 1,
-    algorithm: 'frozen-A1-v1',
-    validationVersion: 'A1-semantic-v1',
+    algorithm: context.adventureId === 3 ? 'frozen-A3-v1' : 'frozen-A1-v1',
+    validationVersion: context.adventureId === 3 ? 'A3-semantic-v1' : 'A1-semantic-v1',
     sourceParity: 'not-certified',
     provenance: input.placement.provenance,
     packFingerprint: digest(pack),
@@ -124,9 +124,9 @@ export function projectRealization(
       status: 'pending-startup',
       pending: [
         'selected-prefab-closure',
-        'scout-2-each-hero',
+        context.adventureId === 3 ? 'scout-3-each-hero' : 'scout-2-each-hero',
         'initial-nodes',
-        'spirit-1',
+        context.adventureId === 3 ? 'source-startup-children' : 'spirit-1',
         'objective-0',
       ],
       gameplayRng: null,

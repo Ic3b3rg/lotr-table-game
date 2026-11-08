@@ -41,8 +41,13 @@ function validateRngSequence(
 }
 export function validateContext(c: GenerationContext) {
   invariant(
-    !c.usedEncounterIds.length && !c.usedGroupIds.length && !c.unlockedChainIds.length,
+    c.policy === 'camp-A3-v1' ||
+      (!c.usedEncounterIds.length && !c.usedGroupIds.length && !c.unlockedChainIds.length),
     'La storia iniziale di una nuova A1 deve essere vuota.',
+  );
+  invariant(
+    (c.policy === 'camp-A3-v1') === (c.adventureId === 3),
+    'Identità del contesto non corrispondente.',
   );
   invariant(
     c.heroCount === c.heroes.length && same(c.ownedProductIds, [0]),
@@ -104,14 +109,17 @@ function validateGeometry(p: Projection) {
   visit(p.selectedModels);
   visit(p.chosenGroup);
   visit(p.geometrySettings);
+  const ids = Array.from({ length: p.context.adventureId === 3 ? 7 : 4 }, (_, i) => i);
   invariant(
     same(
       p.sections.map((s) => s.id),
-      [0, 1, 2, 3],
-    ),
+      ids,
+    ) &&
+      same(p.builderOrder, ids) &&
+      p.geometrySettings.sections.length === ids.length,
     'Ordine builder incompleto.',
   );
-  invariant(same([...p.mapOrder].sort(), [0, 1, 2, 3]), 'Ordine mappa incompleto.');
+  invariant(same([...p.mapOrder].sort(), ids), 'Ordine mappa incompleto.');
   const tiles = p.sections.flatMap((s) => s.tiles);
   unique(
     tiles.map((t) => t.source),
@@ -560,6 +568,32 @@ export function validateProjection(raw: unknown): Projection {
   invariant(
     digest(data) === fingerprint && digest(p.context) === p.contextFingerprint,
     'Fingerprint incoerente.',
+  );
+  const a3 = p.context.adventureId === 3;
+  invariant(
+    (p.algorithm === 'frozen-A3-v1') === a3 && (p.validationVersion === 'A3-semantic-v1') === a3,
+    'Formato della proiezione non corrispondente.',
+  );
+  invariant(
+    same(
+      p.continuation.pending,
+      a3
+        ? [
+            'selected-prefab-closure',
+            'scout-3-each-hero',
+            'initial-nodes',
+            'source-startup-children',
+            'objective-0',
+          ]
+        : [
+            'selected-prefab-closure',
+            'scout-2-each-hero',
+            'initial-nodes',
+            'spirit-1',
+            'objective-0',
+          ],
+    ),
+    'Obblighi iniziali della proiezione incoerenti.',
   );
   validateContext(p.context);
   invariant(

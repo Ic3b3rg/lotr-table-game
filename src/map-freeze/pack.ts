@@ -32,7 +32,7 @@ const mapping = z.strictObject({
 });
 const schema = z.strictObject({
   formatVersion: z.literal(1),
-  algorithm: z.literal('session-A1-generator-pack-v1'),
+  algorithm: z.enum(['session-A1-generator-pack-v1', 'session-A3-generator-pack-v1']),
   catalog: z.strictObject({
     id: ContentIdSchema,
     fingerprint: HashSchema,
@@ -42,7 +42,7 @@ const schema = z.strictObject({
       .max(20),
   }),
   identity: z.strictObject({
-    adventureId: z.literal(1),
+    adventureId: z.union([z.literal(1), z.literal(3)]),
     adventureSource: SourceSchema,
     builderSource: SourceSchema,
   }),
@@ -75,10 +75,16 @@ function inputFrom(
 ) {
   return parseEncounterInput({
     formatVersion: 1,
-    algorithm: 'source-map-encounters-v1',
+    algorithm:
+      template.selection.algorithm === 'source-selection-A3-v1'
+        ? 'source-map-encounters-A3-v1'
+        : 'source-map-encounters-v1',
     assembly: {
       formatVersion: 1,
-      algorithm: 'source-map-assembly-v1',
+      algorithm:
+        template.selection.algorithm === 'source-selection-A3-v1'
+          ? 'source-map-assembly-A3-v1'
+          : 'source-map-assembly-v1',
       selection: { ...template.selection, context },
       geometry: template.geometry,
       execution: {
@@ -99,6 +105,12 @@ function inputFrom(
 /** A private raw template has no company/seed or caller-supplied checkpoints. */
 export function parseGeneratorPack(value: unknown) {
   const p = schema.parse(value);
+  const a3 = p.algorithm === 'session-A3-generator-pack-v1';
+  if (
+    (p.identity.adventureId === 3) !== a3 ||
+    (p.template.selection.algorithm === 'source-selection-A3-v1') !== a3
+  )
+    throw new Error('Identità e formato del generatore non corrispondenti.');
   if ('context' in p.template.selection)
     throw new Error('Il pacchetto non deve contenere una compagnia.');
   const selection = {
@@ -112,7 +124,7 @@ export function parseGeneratorPack(value: unknown) {
   const parsed = inputFrom(
     { ...p.template, selection },
     {
-      adventureId: 1,
+      adventureId: p.identity.adventureId,
       seed: 0,
       heroCount: 1,
       language: p.campaign.language,
@@ -199,7 +211,7 @@ export function deriveContext(
   }
   const groupItems = pack.campaign.groupItemCatalogIds.map(mappedItem);
   return GenerationContextSchema.parse({
-    policy: 'new-base-A1-v1',
+    policy: pack.identity.adventureId === 3 ? 'camp-A3-v1' : 'new-base-A1-v1',
     ...pack.identity,
     catalogId: c.id,
     catalogFingerprint: digest(c),
