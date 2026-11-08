@@ -5,6 +5,9 @@ import { hash } from './fixtures/physical-fronts.mjs';
 import { terrainPolicy } from './fixtures/battle-test-terrain.mjs';
 import { attackChild } from './fixtures/battle-test-terrain-physical.mjs';
 import { validatePhysical } from '../dist/physical-resolution-library.mjs';
+import { inventedLastStand } from './fixtures/last-stand.mjs';
+import { suffer } from './fixtures/physical-resolution.mjs';
+import { finishPhysical } from './fixtures/battle-test-terrain-physical.mjs';
 
 test('fire exclusion follows its exact copy through a legal reset/scout/exchange during the same attack', () => {
   const f = runtimeBoons((f) => {
@@ -68,4 +71,45 @@ test('fire exclusion follows its exact copy through a legal reset/scout/exchange
   f.answer('apply');
   assert.equal(f.p.snapshot.parents[0].returnCount, 1);
   assert.doesNotThrow(() => validatePhysical(JSON.parse(JSON.stringify(f.p))));
+});
+
+test('the paid fire copy and attack result survive an actual P2 child and one source return', () => {
+  const f = runtimeBoons((f) => {
+    f.lastStandInput = inventedLastStand(f.raw);
+    f.catalog.heroes[0].stats.damage = 1;
+    f.catalog.heroes[0].stats.might = 3;
+    for (const c of f.catalog.skills) {
+      c.success = 1;
+      c.fate = 1;
+    }
+  });
+  f.p.version = 3;
+  const spatial = {
+    heroes: f.heroes,
+    connections: [],
+    testTerrain: {
+      policy: terrainPolicy(),
+      capabilityFingerprint: hash('invented P2 source'),
+      boardFingerprint: hash('invented board'),
+      tokens: [{ anchor: 'invented-fire', kind: 'fire', spaceId: f.heroes[0].spaceId }],
+    },
+  };
+  f.open([attackChild, suffer(0, 1, 0)], spatial);
+  const rawPaid = f.p.snapshot.resolution.revealed[0].cards[0],
+    copy = f.p.snapshot.resolution.sourceTest.cards[0].copy;
+  f.answer(`terrain:fire:${copy}:smite`);
+  finishPhysical(f);
+  assert.ok(f.p.snapshot.lastStand.selections.length > 0, 'Actual LastStandRuntime must execute');
+  assert.ok(f.p.snapshot.lastStand.heroes[0].difficulty > 1, 'The finite test actually passed P2');
+  assert.deepEqual(f.p.snapshot.parents[0].results[0].attack.modifiers, ['smite']);
+  assert.equal(f.p.snapshot.parents[0].results[0].attack.successes, 2);
+  const h = f.p.snapshot.resolution.resources.preparation.heroes[0];
+  assert.equal([...h.deck, ...h.discard, ...h.prepared].filter((c) => c === rawPaid).length, 1);
+  assert.equal(
+    f.p.runs[0].answers.filter(
+      (a) => a.input.kind === 'physical-choice' && a.input.option.startsWith('terrain:fire:'),
+    ).length,
+    1,
+  );
+  assert.equal(f.p.snapshot.parents[0].returnCount, 1);
 });
