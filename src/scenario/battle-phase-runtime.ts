@@ -36,8 +36,9 @@ export function sourceActor(state: State) {
 }
 /** The reciprocal group/logic binding is created only by the certified source spawn. */
 export function battleLogicGroup(state: State, group: DeployedGroup) {
+  if (!group.battleRecipe) return false;
   const phase = battlePhase(state);
-  if (!phase || !group.battleRecipe) return false;
+  if (!phase) return false;
   const binding = phase.data.groups.find((g) => g.groupId === group.id),
     recipe = phase.cap.combat.source.scriptedGroups?.find((r) => r.key === group.battleRecipe),
     instance = state.scenario!.instances.find((i) => i.id === binding?.logicInstanceId);
