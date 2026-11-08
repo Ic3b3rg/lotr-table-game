@@ -24,6 +24,9 @@ export function preflightCombatOperation(
   });
   if (battleProblems.includes('battle-mandatory-physical-terminal')) return battleProblems;
   if (cause === 'counterattack') {
+    // A hero can defeat this target even when it cannot answer the attack.
+    if (battleLogicGroup(state, first))
+      battleProblems.push(...battleCallbackProblems(state, first));
     const effect = effectiveGroup(a, first);
     if ((!effect.elite && first.exhausted) || !groupInRange(state, heroId, first, effect.ranged))
       return battleProblems;

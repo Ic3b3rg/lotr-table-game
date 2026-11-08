@@ -7,11 +7,15 @@ import { battleRuntime as runtime } from './battle-combat-runtime.mjs';
 import { reviewAttack, advanceReview } from './fixtures/battle-combat-review.mjs';
 import { physicalInput } from './battle-rounds-helper.mjs';
 
-async function namedState(heroCount = 3) {
+async function namedState(heroCount = 3, { ranged = false } = {}) {
   const f = await phaseState({
     heroCount,
     sourceEdit: (_cap, source) => {
-      for (const i of source.items) if (i.stat) i.body = '1 Success: 20 hits\n2 Successes: 30 hits';
+      for (const i of source.items)
+        if (i.stat) {
+          i.body = '1 Success: 20 hits\n2 Successes: 30 hits';
+          if (ranged) i.ranged = true;
+        }
     },
   });
   const { state } = f;
@@ -69,6 +73,64 @@ function finishCallback(state) {
   }
   runtime.advanceCombat(state);
 }
+
+test('a ranged named attack rejects unavailable callback supply before costs or cards even without a counterattack', async () => {
+  const { state, named, cap } = await namedState(3, { ranged: true });
+  const hero = state.preparation.heroes[0],
+    position = state.journey.heroes[0],
+    layout = cap.board.compiled.layouts.find(
+      (l) => l.id === cap.board.compiled.selectedAlternative,
+    ),
+    forbidden = new Set(
+      cap.combat.terrain
+        .filter((t) => ['fire', 'rock'].includes(t.kind))
+        .map((t) => layout.placements.find((p) => p.id === t.anchor).cell),
+    );
+  const adjacent = state.scenario.spaceBindings.find((b) => {
+    if (forbidden.has(b.sourceId)) return false;
+    position.spaceId = b.id;
+    return (
+      runtime.groupInRange(state, hero.heroId, named, true) &&
+      !runtime.groupInRange(state, hero.heroId, named, false)
+    );
+  });
+  assert.ok(adjacent, 'The invented ranged weapon must reach the melee group from another cell');
+  position.spaceId = adjacent.id;
+  // Technical finite snapshot: keep every physical copy, facedown in hero areas.
+  const snapshot = state.physical.snapshot;
+  snapshot.decks.damage.splice(2).forEach((copy, i) => {
+    snapshot.areas[i % snapshot.areas.length].damage.push(copy);
+  });
+  const offer = runtime.combatView(state).attacks.find((o) => o.groupId === named.id);
+  assert.ok(offer, 'The target is legally in the hero weapon range');
+  const intent = {
+    type: 'START_ATTACK',
+    roundId: state.round.id,
+    turnId: state.round.turnId,
+    heroId: hero.heroId,
+    groupId: offer.groupId,
+    itemCopies: offer.itemCopies,
+    stat: offer.stat,
+    replaceCopy: null,
+    grantId: null,
+  };
+  const before = structuredClone(state);
+  assert.ok(
+    runtime
+      .preflightCombatOperation(state, cap.battleRounds.combat, named, hero.heroId, 'counterattack')
+      .includes('battle-callback-damage-supply'),
+    'The defeat continuation is mandatory even when no enemy response can occur',
+  );
+  assert.throws(
+    () => runtime.startHeroAttack(state, hero.playerId, intent, randomUUID()),
+    (error) => error.code === 'ATTACK_CLOSURE',
+  );
+  assert.deepEqual(
+    state,
+    before,
+    'No action, reveal, physical copy, entropy or source history changes',
+  );
+});
 
 test('real defeat callback performs its Agility test, applies preset bonuses once, preserves readiness and returns once', async () => {
   const { state, named } = await namedState();
