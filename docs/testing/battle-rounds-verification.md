@@ -38,3 +38,35 @@ The reader's Escape/focus return, guide, waiting owner, native labelled controls
 ## Preserved limits
 
 Original156 is STATIC/GATED; #57 remains NULL/UNVERIFIED/BLOCKED. Unknown quantities are never substituted. #135 special timings remain gated. #140's coherent pre-scenario administrative appliedRevision forgery limitation remains. Original campaign #33/#89/#65, optional quests/terrain interactions, A3 startup and device acceptance stay open. The Node test helper's `Connection: close` remains; browser networking is unchanged.
+
+
+## Root review and final integration verification — 8 November 2026
+
+Full-range Standards and Spec reviews examined all changes from `0eba8b6` through `633beee`. Standards reported one required finding; Spec reported that same named-target finding and a second historical-admission finding. Root corrected both, then corrected a regression found by the complete suite:
+
+- The named target's mandatory defeat continuation is checked before counterattack range/readiness shortcuts. A ranged hero cannot pay or reveal cards before discovering an unsupported required callback. Ordinary enemy-response closure remains conditional on whether the response can execute.
+- Historical schemas1–34 reject new `discard-boons` forms inside actual `source-fronts-v1` combat-addition/enemy-attack children, including source actions, saved physical runs, cycle-seed scenario copies and archived episodes. Unrelated dictionary words remain data. Complete valid synthetic schema35 HTTP-startup payloads masked as34 demonstrate the admission boundary.
+- Ordinary groups without `battleRecipe` return false before reading battle phase authority. The first corrected-product canonical at `f9225dc` failed1175/1173/2 because this predicate unnecessarily read a missing manifest in the two existing ordinary preflight tests. Its raw output and exit1 are retained. Commit `67c5462` fixes that applicability guard without padding fixtures or weakening assertions; tagged reciprocal bindings remain checked.
+
+The intended review regressions first failed (9tests,5pass,4fail). An earlier technical named-target fixture failed at physical-history validation after the missed preflight; that attempt is retained and is not called the intended RED. The corrected named-target module fixture checks the literal dependency, actual `ATTACK_CLOSURE` and unchanged whole technical State; it is not an accepted HTTP journal. After the final predicate fix, all25 covering tests passed, including the two ordinary failures and the previous17 callback/migration/boulder/grant/forced-movement/P1 tests. Subsequent real build, typecheck, formatting and diff checks exited0. Both fresh scoped review pairs found no additional required changes; the last Standards review also reported no optional suggestions.
+
+Exactly one final canonical ran on frozen `67c54626c734f036e4bcd361e0e4dc15af4913bd` after that diagnosed product change:
+
+```text
+npm test
+ℹ tests 1175
+ℹ suites 0
+ℹ pass 1175
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1084980.65725
+npm exit 0; terminal-driver exit 0
+```
+
+UTC09:17:09–09:35:14. Own TMPDIR/npm cache and update-notifier=false were set before npm. Root independently checked all16 final-manifest entries, complete literal footer/exits, mirrored reports, all937 tracked and26 build-file rows and exact sets before/after/current. The included build is byte-deterministic. No unchanged passing full suite was rerun. The earlier worker1172/1172 pass and failed `f9225dc` run remain separate historical results. This integration report changes documentation only after the executable freeze; executable/test/configuration and build bytes are checked unchanged.
+
+The worker's11 interactive heredoc inputs missing from its filesystem command metadata were recovered verbatim from the completed task activity, with original item identities and timestamps, in a separate Root evidence file. All11 bodies are complete; no historical command or raw record was rerun or rewritten. Standalone source checkers remain in the private evidence. Root separately inspected the320px terminal and768px phase captures; generated screenshots are not silently counted as inspected images.
+
+Native coverage remains the two invented startup selections, phase progression and source threat failure, plus same-journal terminal recovery. Named A2 victory has HTTP coverage, not native victory certification. The Node helper excludes pooled connection reuse coverage. The #57/#135/#140/device/A3/original-game limits above remain; this does not close #33/#89/#65. Work below blocking/critical priority remains suspended by the owner's direction.
