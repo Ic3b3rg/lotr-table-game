@@ -12,6 +12,7 @@ import { invariant } from '../map-freeze/validate';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { plus, turn } from '../map-assembly/physical';
 import { compileCombatClosure } from '../combat/compiler';
+import { validateStartupPreparationMaterials } from './startup-preparation';
 
 /** This decoder owns the prospective recipe; the client never supplies any of it. */
 export function validateJourneyDepartureSource(raw: unknown) {
@@ -21,7 +22,8 @@ export function validateJourneyDepartureSource(raw: unknown) {
     'Ricetta viaggio diversa dalla fonte prospettica.',
   );
   const generator = parseGeneratorPack(s.generator),
-    startup = compileScenarioPack(s.startup);
+    startup = compileScenarioPack(s.startup),
+    fronts = FrontArtifactSchema.parse(s.fronts);
   const pack = startup.pack,
     cap = pack.manifest.journeyStartup;
   invariant(
@@ -40,8 +42,10 @@ export function validateJourneyDepartureSource(raw: unknown) {
       pack.manifest.rounds?.version === 'source-rounds-v1',
     'Closure viaggio3, compagnia o modello non corrispondenti.',
   );
+  validateStartupPreparationMaterials(pack, s.catalogHash, fronts);
   invariant(
-    s.preparationHash === digest(s.camp.preparation) &&
+    s.frontsFingerprint === fronts.fingerprint &&
+      s.preparationHash === digest(s.camp.preparation) &&
       s.camp.preparation.skillsFingerprint === digest(s.camp.skills) &&
       s.camp.preparation.itemsFingerprint === digest(s.camp.items) &&
       [
@@ -207,7 +211,7 @@ export function validateJourneyDepartureSource(raw: unknown) {
             'Conseguenza iniziale viaggio3 diversa dal messaggio fonte.',
           );
         }
-  return { s, generator, startup, fronts: FrontArtifactSchema.parse(s.fronts), board: null };
+  return { s, generator, startup, fronts, board: null };
 }
 
 /** Rebuild the second camp from authority frozen before the NEW A2 origin. */

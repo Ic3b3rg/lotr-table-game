@@ -1,7 +1,7 @@
 import { buildSync } from 'esbuild';
 const code = buildSync({
   stdin: {
-    contents: `export * from './src/scenario/journey-startup-source'; export {validateScenarioBinding} from './src/scenario/pack'; export {parseState,StateSchema} from './src/server/state'; export {validateEpisodeState,validateEpisodeReceipts} from './src/server/episode-state'; export {campDepartureOffer,beginCampDeparture} from './src/scenario/camp-departure';`,
+    contents: `export * from './src/scenario/journey-startup-source'; export {validateScenarioBinding} from './src/scenario/pack'; export {parseState,StateSchema} from './src/server/state'; export {validateEpisodeState,validateEpisodeReceipts} from './src/server/episode-state'; export {validateCampDepartureSource,campDepartureOffer,beginCampDeparture} from './src/scenario/camp-departure';`,
     resolveDir: process.cwd(),
     loader: 'ts',
   },

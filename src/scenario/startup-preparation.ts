@@ -18,12 +18,22 @@ export function validateStartupPreparationSource(
   catalog: State['content'],
   artifact?: FrontArtifact,
 ) {
+  if (!pack.manifest.startupPreparation) return;
+  validateStartupPreparationMaterials(pack, catalog ? digest(catalog) : undefined, artifact);
+}
+
+/** Bind the same preparation policy before a future episode has a live State. */
+export function validateStartupPreparationMaterials(
+  pack: ScenarioPack,
+  catalogHash: string | undefined,
+  artifact?: FrontArtifact,
+) {
   const cap = pack.manifest.startupPreparation;
   if (!cap) return;
   invariant(
-    catalog &&
+    catalogHash &&
       artifact &&
-      cap.catalogHash === digest(catalog) &&
+      cap.catalogHash === catalogHash &&
       cap.frontsFingerprint === artifact.fingerprint,
     'Preparazione iniziale senza catalogo e artifact corrispondenti.',
   );

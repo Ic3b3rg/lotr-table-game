@@ -24,7 +24,7 @@ export async function journeyAuthority() {
     { preparation: { heroes: f.catalog.heroes.slice(0, 3).map((h) => ({ heroId: h.id })) } },
     f.catalog,
     (dep, src, pack, frozen, catalog) => {
-      dep.combat.terminal.failure.next = { id: 3, source: 'example.assets:990' };
+      Object.assign(dep.combat.terminal.failure.next, { id: 3, source: 'example.assets:990' });
       for (const s of dep.combat.terminal.definition.states)
         for (const a of s.actions)
           if (a.op === 'nextAdventure') {
@@ -54,6 +54,53 @@ test('prospective journey authority compiles every startup owner and shared enco
     'Retain the whole finite future skill population.',
   );
   assert.throws(() => compileCombatClosure({ ...combat.source, format: 'combat-closure-v1' }));
+});
+
+test('prospective A2 authority rejects re-signed A3 preparation and material mismatches', async () => {
+  const original = await journeyAuthority();
+  assert.doesNotThrow(() => runtime.validateCampDepartureSource(original));
+  for (const [label, edit, error] of [
+    [
+      'catalog',
+      (c) => (c.startup.pack.manifest.startupPreparation.catalogHash = '0'.repeat(64)),
+      /Preparazione iniziale/,
+    ],
+    [
+      'front artifact',
+      (c) => (c.startup.pack.manifest.startupPreparation.frontsFingerprint = '0'.repeat(64)),
+      /Preparazione iniziale/,
+    ],
+    [
+      'material fingerprint',
+      (c) => (c.frontsFingerprint = '0'.repeat(64)),
+      /Materiali del secondo campo/,
+    ],
+    [
+      'prepared policy',
+      (c) => {
+        c.startup.pack.preparedEffects = [
+          {
+            skillId: c.deckCatalog.cards.find((card) => card.kind === 'basic').id,
+            cardHash: '0'.repeat(64),
+            effect: 'inspiration',
+            amount: 1,
+          },
+        ];
+      },
+      /Policy di preparazione/,
+    ],
+  ]) {
+    const changed = structuredClone(original),
+      continuation = changed.continuation;
+    edit(continuation);
+    continuation.startup.startupPreparationCertificate.instructionHash = hash(
+      continuation.startup.pack.manifest.startupPreparation,
+    );
+    continuation.startupHash = hash(continuation.startup);
+    const before = structuredClone(changed);
+    assert.throws(() => runtime.validateCampDepartureSource(changed), error, label);
+    assert.deepEqual(changed, before, label);
+  }
 });
 
 test('A3 runs every section through selection, assembly, encounters and replay with the entire ordered bucket', async () => {
