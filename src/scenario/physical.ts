@@ -176,7 +176,7 @@ export function beginPhysicalAction(
     'La prova fisica richiede lo startup fonte completato.',
   );
   validatePhysicalProgram(action.program, state.preparation!.heroes.length);
-  if (state.physical.boons && (sc.phase !== 'setup' || state.physical.cycle))
+  if (state.physical.boons && !sc.journeyStartup && (sc.phase !== 'setup' || state.physical.cycle))
     throw new ApiError(
       409,
       'BOON_SOURCE_CONTEXT',
@@ -184,34 +184,40 @@ export function beginPhysicalAction(
     );
   const context =
     action.program.profile === 'source-fronts-v1'
-      ? {
-          preparation: structuredClone(state.preparation!),
-          depletion: structuredClone(
-            state.physical.snapshot.resolution?.resources?.depletion ?? [],
-          ),
-          boons: structuredClone(state.physical.snapshot.resolution?.resources?.boons ?? []),
-          ...(state.physical.boons
-            ? {
-                boonCustody: structuredClone(
-                  state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
-                ),
-                ...(state.physical.snapshot.resolution?.resources?.combatUses
-                  ? {
-                      combatUses: structuredClone(
-                        state.physical.snapshot.resolution.resources.combatUses,
-                      ),
-                    }
-                  : {}),
-              }
-            : {}),
-        }
+      ? sc.journeyStartup
+        ? {
+            ...structuredClone(state.physical.snapshot.resolution!.resources!),
+            preparation: structuredClone(state.preparation!),
+          }
+        : {
+            preparation: structuredClone(state.preparation!),
+            depletion: structuredClone(
+              state.physical.snapshot.resolution?.resources?.depletion ?? [],
+            ),
+            boons: structuredClone(state.physical.snapshot.resolution?.resources?.boons ?? []),
+            ...(state.physical.boons
+              ? {
+                  boonCustody: structuredClone(
+                    state.physical.snapshot.resolution?.resources?.boonCustody ?? [],
+                  ),
+                  ...(state.physical.snapshot.resolution?.resources?.combatUses
+                    ? {
+                        combatUses: structuredClone(
+                          state.physical.snapshot.resolution.resources.combatUses,
+                        ),
+                      }
+                    : {}),
+                }
+              : {}),
+          }
       : undefined;
   const parentId = openPhysical(
     state.physical,
     physicalOrigin(effect, action),
     action.program,
     context,
-    state.physical.boons && action.program.children.some((c) => c.kind === 'end-turn')
+    state.physical.boons &&
+      (sc.journeyStartup || action.program.children.some((c) => c.kind === 'end-turn'))
       ? {
           heroes: state.physical.heroes.map((h) => ({
             ...h,

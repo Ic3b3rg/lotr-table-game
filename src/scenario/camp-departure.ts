@@ -11,6 +11,7 @@ import {
 import { validateJourneyDepartureSource } from './journey-startup-source';
 import { campDeckCapability, materializeCampDecks, verifyCampDeckArtifact } from '../camp-decks';
 import { verifyBattleMapArtifact } from '../battle-map';
+import { verifyCombatClosure } from '../combat/compiler';
 import { compileSourceDeployment } from '../combat/deployment-compiler';
 import { FrontArtifactSchema, validateFrontArtifact } from '../physical-resolution/front-program';
 import { digest } from '../map-freeze/hash';
@@ -395,6 +396,47 @@ function preflight(state: State, raw: unknown) {
         .concat(s.deckCatalog.cards.filter((c) => c.kind === 'weakness').map((c) => c.id)),
     ),
   ];
+  if (s.version === 'source-camp-departure-A3-v1') {
+    const checked = validateJourneyDepartureSource(s),
+      combat = checked.startup.pack.manifest.combat
+        ? verifyCombatClosure(checked.startup.pack.manifest.combat)
+        : undefined;
+    if (combat) {
+      for (const cardId of selected) {
+        const skill =
+            state.content!.skills.find((c) => c.id === cardId) ??
+            s.campaignSkills.find((c) => c.id === cardId),
+          item = state.content!.items.find((c) => c.id === cardId);
+        invariant(
+          skill
+            ? combat.source.definitions.some(
+                (d) => d.id === cardId && d.definitionHash === digest(skill),
+              )
+            : !!item &&
+                combat.compiled.items.some(
+                  (i) =>
+                    i.id === cardId &&
+                    i.definitionHash === digest(item) &&
+                    i.model ===
+                      checked.generator.mapping.items.find((m) => m.catalogId === cardId)?.source,
+                ),
+          'Materiali di una possibile provocazione viaggio3 non congelati prima della partenza: ' +
+            cardId +
+            '.',
+        );
+      }
+      invariant(
+        state.preparation!.heroes.every((h) =>
+          combat.compiled.heroes.some(
+            (c) =>
+              c.heroId === h.heroId &&
+              c.definitionHash === digest(state.content!.heroes.find((c) => c.id === h.heroId)),
+          ),
+        ),
+        'Eroi della provocazione viaggio3 diversi dal catalogo.',
+      );
+    }
+  }
   for (const choice of deckSource.choices.filter((h) => h.accessory)) {
     const policy = fronts.policies.find((p) => p.id === definitionId(choice.accessory!));
     invariant(

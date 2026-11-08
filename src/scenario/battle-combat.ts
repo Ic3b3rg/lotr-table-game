@@ -33,6 +33,10 @@ export function verifiedBattleBoard(cap: CampDepartureCapability) {
 export function validateBattleCombatSource(departure: CampDepartureCapability) {
   const cap = departure.combat;
   invariant(cap, 'Capacità fonte combattimento battaglia assente.');
+  invariant(
+    cap.combat.source.format === 'combat-closure-v1',
+    'Provocazioni viaggio3 su autorità battaglia storica.',
+  );
   if (cap.testTerrain) BattleTestTerrainPolicySchema.parse(cap.testTerrain);
   const deployment = compileSourceDeployment(departure.deployment),
     combat = verifyCombatClosure(cap.combat),

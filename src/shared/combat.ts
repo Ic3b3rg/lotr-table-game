@@ -165,81 +165,94 @@ const ShadowSourceSchema = z.discriminatedUnion('version', [
     }),
   }),
 ]);
-export const CombatClosureSourceSchema = z.strictObject({
-  format: z.literal('combat-closure-v1'),
-  evidenceHash: HashSchema,
-  projectionFingerprint: HashSchema,
-  deploymentFingerprint: HashSchema,
-  files: z
-    .array(z.strictObject({ file: id, sha256: HashSchema }))
-    .min(1)
-    .max(32),
-  models: z.array(SourceSchema).min(1).max(32),
-  assets: z.array(asset).min(1).max(300),
-  texts: z
-    .array(
-      z.strictObject({
-        key: id,
-        value: z.string().max(20000),
-        file: id,
-        locator: id,
-        sha256: HashSchema,
-      }),
-    )
-    .max(300),
-  additions: z.array(CombatAdditionSchema).max(100),
-  items: z
-    .array(
-      z.strictObject({
-        id: ContentIdSchema,
-        model: SourceSchema,
-        definitionHash: HashSchema,
-        originalHash: HashSchema,
-        file: id,
-        locator: id,
-        ranged: z.boolean(),
-        stat: StatSchema.nullable(),
-        body: z.string().max(20000),
-      }),
-    )
-    .max(32),
-  clauses: z.array(CompanyClauseSchema).max(200),
-  heroes: z
-    .array(
-      z.strictObject({
-        heroId: ContentIdSchema,
-        definitionHash: HashSchema,
-        originalHash: HashSchema,
-        locator: id,
-        effect: z.enum([
-          'rally-extra-card',
-          'after-strike-scout-once',
-          'before-interact-fate-inspiration',
-        ]),
-      }),
-    )
-    .max(5),
-  definitions: z
-    .array(
-      z.strictObject({
-        id: ContentIdSchema,
-        definitionHash: HashSchema,
-        originalHash: HashSchema,
-        locator: id,
-        clauses: z.int().min(0).max(16),
-      }),
-    )
-    .max(100),
-  shadow: ShadowSourceSchema.optional(),
-  scriptedGroups: z.array(ScriptedCombatGroupSchema).max(16).optional(),
-});
+export const CombatClosureSourceSchema = z
+  .strictObject({
+    format: z.enum(['combat-closure-v1', 'combat-closure-A3-v1']),
+    evidenceHash: HashSchema,
+    projectionFingerprint: HashSchema,
+    deploymentFingerprint: HashSchema,
+    files: z
+      .array(z.strictObject({ file: id, sha256: HashSchema }))
+      .min(1)
+      .max(32),
+    models: z.array(SourceSchema).min(1).max(32),
+    assets: z.array(asset).min(1).max(300),
+    texts: z
+      .array(
+        z.strictObject({
+          key: id,
+          value: z.string().max(20000),
+          file: id,
+          locator: id,
+          sha256: HashSchema,
+        }),
+      )
+      .max(300),
+    additions: z.array(CombatAdditionSchema).max(100),
+    items: z
+      .array(
+        z.strictObject({
+          id: ContentIdSchema,
+          model: SourceSchema,
+          definitionHash: HashSchema,
+          originalHash: HashSchema,
+          file: id,
+          locator: id,
+          ranged: z.boolean(),
+          stat: StatSchema.nullable(),
+          body: z.string().max(20000),
+        }),
+      )
+      .max(32),
+    clauses: z.array(CompanyClauseSchema).max(200),
+    heroes: z
+      .array(
+        z.strictObject({
+          heroId: ContentIdSchema,
+          definitionHash: HashSchema,
+          originalHash: HashSchema,
+          locator: id,
+          effect: z.enum([
+            'rally-extra-card',
+            'after-strike-scout-once',
+            'before-interact-fate-inspiration',
+          ]),
+        }),
+      )
+      .max(5),
+    definitions: z
+      .array(
+        z.strictObject({
+          id: ContentIdSchema,
+          definitionHash: HashSchema,
+          originalHash: HashSchema,
+          locator: id,
+          clauses: z.int().min(0).max(16),
+        }),
+      )
+      .max(321),
+    shadow: ShadowSourceSchema.optional(),
+    scriptedGroups: z.array(ScriptedCombatGroupSchema).max(16).optional(),
+  })
+  .refine(
+    (s) =>
+      s.format === 'combat-closure-A3-v1'
+        ? !s.shadow && !s.scriptedGroups
+        : s.definitions.length <= 100,
+    'Inventario o consumer diversi dal formato combattimento.',
+  );
 export type CombatClosureSource = z.infer<typeof CombatClosureSourceSchema>;
-export const CombatClosureArtifactSchema = z.strictObject({
-  version: z.literal('combat-closure-v1'),
-  source: CombatClosureSourceSchema,
-  compiled: z.unknown(),
-  fingerprint: HashSchema,
-});
+export const CombatClosureArtifactSchema = z
+  .strictObject({
+    version: z.enum(['combat-closure-v1', 'combat-closure-A3-v1']),
+    source: CombatClosureSourceSchema,
+    compiled: z.unknown(),
+    fingerprint: HashSchema,
+  })
+  .refine(
+    (a) => a.version === a.source.format,
+    'Versione artefatto diversa dalla fonte combattimento.',
+  );
 export const CombatStreamsSchema = z.strictObject({
   instruction: z.int().min(0).max(1000000),
   reduction: z.int().min(0).max(1000000),

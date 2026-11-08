@@ -329,7 +329,13 @@ export function replayEpisode(state: State, cycle: CycleState): Proof {
       cycle.version === 4 ? !!record.generation : record.generation === undefined,
       'Generation del comando fuori dalla propria versione.',
     );
-    if (record.generation) result.work.generation = record.generation;
+    if (record.generation && record.generation !== result.work.generation) {
+      invariant(
+        record.intent.expectedRevision > result.work.revision,
+        'Generation modificata senza un confine amministrativo.',
+      );
+      result.work.generation = record.generation;
+    }
     invariant(
       record.intent.expectedRevision >= result.work.revision,
       'Ordine episodio2 modificato.',

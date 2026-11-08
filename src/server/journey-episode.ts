@@ -19,6 +19,7 @@ import { invariant } from '../map-freeze/validate';
 import { cycleUUID } from '../physical-resolution/cycle-request';
 import { newRound } from './rounds';
 import { ApiError } from './errors';
+import { initialCombat } from '../combat/controller';
 
 /** The third origin uses the existing generator, scenario executor and physical ledger. */
 export function activateJourneyEpisode(
@@ -220,6 +221,7 @@ export function activateJourneyEpisode(
       },
     },
   );
+  if (parsed.pack.manifest.combat) state.combat = initialCombat(state);
   const receipt = {
     version: 'camp-departure-v2' as const,
     episodeNumber: 3 as const,

@@ -21,6 +21,14 @@ export function compileCombatClosure(raw: unknown) {
   bounded(raw);
   const source = CombatClosureSourceSchema.parse(raw);
   check(
+    source.format === 'combat-closure-A3-v1' || source.definitions.length <= 100,
+    'Inventario abilità ampliato fuori dal formato prospettico.',
+  );
+  check(
+    source.format !== 'combat-closure-A3-v1' || (!source.shadow && !source.scriptedGroups),
+    'Formato provocazione viaggio3 con consumer successivi.',
+  );
+  check(
     source.scriptedGroups === undefined || source.shadow?.version === 'source-battle-shadow-v1',
     'Ricette fuori dalla fonte battaglia.',
   );
@@ -317,7 +325,7 @@ export function compileCombatClosure(raw: unknown) {
   );
   const compiled = { models, bonuses, items, clauses: source.clauses, heroes: source.heroes };
   return {
-    version: 'combat-closure-v1' as const,
+    version: source.format,
     source,
     compiled,
     fingerprint: digest({ source, compiled }),

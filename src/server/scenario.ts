@@ -213,6 +213,7 @@ export function allowScenarioPlay(state: State, command: Command) {
   if (sc.journeyStartup) {
     if (command.type === 'SCENARIO_INPUT' && sc.pending) return;
     if (command.type === 'CYCLE_INPUT' && state.physical?.cycle?.pending) return;
+    if (command.type === 'COMBAT_INPUT' && state.combat?.operation) return;
     if (!['START_TURN', 'END_TURN', 'START_TRAVEL', 'MOVE_HERO'].includes(command.type))
       throw new ApiError(
         409,

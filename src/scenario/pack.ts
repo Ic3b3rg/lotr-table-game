@@ -31,6 +31,11 @@ import {
 } from './first-combat';
 export function parseScenarioPack(raw: unknown) {
   const pack = ScenarioPackSchema.parse(raw);
+  invariant(
+    pack.manifest.combat?.source.format !== 'combat-closure-A3-v1' ||
+      !!pack.manifest.journeyStartup,
+    'Provocazioni viaggio3 in un’autorità storica.',
+  );
   if (pack.manifest.battleStartup) {
     invariant(
       pack.manifest.scope ===

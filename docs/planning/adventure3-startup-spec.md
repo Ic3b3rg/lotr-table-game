@@ -18,6 +18,8 @@ The starting space is random (`SpecifyIndex=false`), rather than the first adven
 
 ## Authority and persistence
 
+Startup can place a ready enemy in the heroes' space. The new recipe therefore requires the existing source combat closure for mandatory travel provocations before the A2 origin. This reuses the ordinary combat/physical controller and retains every eligible model and instruction. It does not enable later A3 attacks, encounters or Shadow. Missing authority blocks departure before effects; an older A2 origin never gains a program retrospectively.
+
 Freeze second-camp and Adventure 3 authority prospectively in the new Adventure 2 departure recipe, before creating that episode. Existing Adventure 2 origins remain gated. Clients continue to send the existing commands and opaque offer/request fingerprints; they cannot supply seeds, programs or artifacts.
 
 The new boundary extends the existing linear archive with the complete Adventure 2 domain while retaining Adventure 1 unchanged. Archives contain domains, not nested State or copies of authentication and receipt tables. Replay validates each prefix with its original authority and semantics, then reconstructs each departure and every active command. New schema/cycle discriminators must reject new forms disguised as historical schemas without scanning arbitrary dictionaries for words.

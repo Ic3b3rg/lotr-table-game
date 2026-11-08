@@ -11,6 +11,7 @@ import { digest } from '../map-freeze/hash';
 import { invariant } from '../map-freeze/validate';
 import { verifySourceDeployment } from '../combat/deployment-compiler';
 import { plus, turn } from '../map-assembly/physical';
+import { compileCombatClosure } from '../combat/compiler';
 
 /** This decoder owns the prospective recipe; the client never supplies any of it. */
 export function validateJourneyDepartureSource(raw: unknown) {
@@ -34,6 +35,8 @@ export function validateJourneyDepartureSource(raw: unknown) {
       digest(cap.heroIds) === digest(s.heroIds) &&
       pack.manifest.startupPreparation &&
       pack.manifest.followup &&
+      pack.manifest.combat?.source.format === 'combat-closure-A3-v1' &&
+      !pack.manifest.combat.source.shadow &&
       pack.manifest.rounds?.version === 'source-rounds-v1',
     'Closure viaggio3, compagnia o modello non corrispondenti.',
   );
@@ -251,6 +254,11 @@ export function bindJourneyStartup(
     evidenceHash: digest({ space: space.source, hasDarkness: space.hasDarkness }),
   }));
   pack.manifest.followup.projectionFingerprint = p.fingerprint;
+  if (pack.manifest.combat) {
+    const combat = structuredClone(pack.manifest.combat.source);
+    combat.projectionFingerprint = p.fingerprint;
+    pack.manifest.combat = compileCombatClosure(combat);
+  }
   pack.manifest.followup.explorationNodes = p.sections.flatMap((section) =>
     section.tiles.map((tile) => {
       const node = pack.manifest.journeyStartup!.explorationNodes.find(

@@ -8,6 +8,8 @@ function scenario(value: unknown) {
   return (
     s.journeyStartup !== undefined ||
     m.journeyStartup !== undefined ||
+    object(m.combat).version === 'combat-closure-A3-v1' ||
+    object(object(m.combat).source).format === 'combat-closure-A3-v1' ||
     object(m.campDeparture).version === 'source-camp-departure-A3-v1' ||
     [m.campDeparture, m.battleStartup].some((d) => object(d).continuation !== undefined) ||
     object(pack.identity).adventureId === 3 ||

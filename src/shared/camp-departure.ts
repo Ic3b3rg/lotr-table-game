@@ -287,6 +287,7 @@ export const JourneyStartupCapabilitySchema = z.strictObject({
     .min(1)
     .max(120),
   startSpacePolicy: z.literal('unity-range-port-v1'),
+  provocationPolicy: z.literal('source-provocation-A3-v1'),
   rangerPrefab: SourceSchema,
   rangerTileBinding: z.string().min(1).max(150),
   previousOutcomeBinding: z.string().min(1).max(150),

@@ -15,6 +15,8 @@ test('schemas1–35 reject A3 only at the actual authority, origin and projectio
     { journeyStartup: {} },
     { pack: { identity: { adventureId: 3 } } },
     { pack: { manifest: { journeyStartup: {} } } },
+    { pack: { manifest: { combat: { version: 'combat-closure-A3-v1' } } } },
+    { pack: { manifest: { combat: { source: { format: 'combat-closure-A3-v1' } } } } },
     { pack: { manifest: { campDeparture: { version: 'source-camp-departure-A3-v1' } } } },
     { pack: { manifest: { campDeparture: { continuation: {} } } } },
     { pack: { manifest: { battleStartup: { continuation: {} } } } },

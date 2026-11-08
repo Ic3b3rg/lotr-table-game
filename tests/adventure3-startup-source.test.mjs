@@ -15,6 +15,7 @@ import { attachBattleCombat } from './fixtures/battle-combat.mjs';
 import { attachBattleRounds } from './fixtures/battle-rounds.mjs';
 import { certificates } from './fixtures/exploration.mjs';
 import { runtime } from './adventure3-startup-runtime.mjs';
+import { compileCombatClosure } from '../dist/combat-library.mjs';
 
 export async function journeyAuthority() {
   const f = await departureFixture();
@@ -46,6 +47,13 @@ test('prospective journey authority compiles every startup owner and shared enco
   assert.equal(checked.startup.pack.identity.adventureId, 3);
   assert.equal(checked.startup.pack.manifest.prefabs.length, 4);
   assert.equal(new Set(checked.startup.pack.manifest.prefabs.map((p) => p.source)).size, 2);
+  const combat = checked.startup.pack.manifest.combat;
+  assert.equal(combat.source.format, 'combat-closure-A3-v1');
+  assert.ok(
+    combat.source.definitions.length > 100,
+    'Retain the whole finite future skill population.',
+  );
+  assert.throws(() => compileCombatClosure({ ...combat.source, format: 'combat-closure-v1' }));
 });
 
 test('A3 runs every section through selection, assembly, encounters and replay with the entire ordered bucket', async () => {
@@ -104,6 +112,8 @@ test('re-signed prospective sources reject missing owners, altered counters, old
     (c) => (c.startup.pack.manifest.journeyStartup.reserved[0].count = 0),
     (c) => (c.startup.pack.definitions[0].states[2].actions[0].scoutCount = 2),
     (c) => delete c.startup.pack.manifest.startupPreparation,
+    (c) => delete c.startup.pack.manifest.combat,
+    (c) => delete c.startup.pack.manifest.journeyStartup.provocationPolicy,
   ]) {
     const changed = structuredClone(original);
     edit(changed);

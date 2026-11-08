@@ -4,8 +4,7 @@ import { addEncounter } from './map-encounters.mjs';
 import { hash } from './map-freeze.mjs';
 import { action, state, text } from './scenario.mjs';
 import { certificates } from './exploration.mjs';
-import { compileSourceDeployment } from '../../dist/combat-library.mjs';
-import { deploymentSource } from './source-deployment.mjs';
+import { compileSourceDeployment, compileCombatClosure } from '../../dist/combat-library.mjs';
 export function adventure3Generator(catalog) {
   const g = generatorFixture(catalog),
     t = g.template,
@@ -142,11 +141,11 @@ export function attachAdventure3(departure, _source, a1, frozen, catalog) {
     }),
     say = (body, mode = 'ordinary', extra = {}) =>
       action(0, 'message', { mode, text: text(body), ignoreLog: false, ...extra });
-  const deployment = deploymentSource();
+  const deployment = structuredClone(departure.deployment);
   deployment.assets.find((a) => a.source === deployment.adventure).source =
     generator.identity.adventureSource;
   deployment.adventure = generator.identity.adventureSource;
-  deployment.files.push({ file: 'example.assets', sha256: '9'.repeat(64) });
+  deployment.files.find((f) => f.file === 'example.assets').sha256 = '9'.repeat(64);
   deployment.assets.find((a) => a.cls === 'AdventureModel').data.GlobalEnemyFilter = {
     MustHaveAny: 0,
     MustHaveAll: 0,
@@ -198,6 +197,7 @@ export function attachAdventure3(departure, _source, a1, frozen, catalog) {
         generatorHash,
         heroIds,
         startSpacePolicy: 'unity-range-port-v1',
+        provocationPolicy: 'source-provocation-A3-v1',
         explorationNodes: generator.template.geometry.tiles.map((tile, n) => ({
           tileSource: tile.source,
           source: `example.assets:${300000 + n}`,
@@ -483,6 +483,32 @@ export function attachAdventure3(departure, _source, a1, frozen, catalog) {
       capabilities: ['adventure3-later-encounter'],
     });
   }
+  const combat = structuredClone(_source);
+  combat.format = 'combat-closure-A3-v1';
+  delete combat.shadow;
+  delete combat.scriptedGroups;
+  combat.files = pack.sources;
+  for (const item of combat.items)
+    item.model = generator.mapping.items.find((m) => m.catalogId === item.id).source;
+  for (const card of departure.campaignSkills)
+    if (!combat.definitions.some((d) => d.id === card.id))
+      combat.definitions.push({
+        id: card.id,
+        definitionHash: hash(card),
+        originalHash: hash(['invented A3 skill', card.id]),
+        locator: 'Invented!A3',
+        clauses: 0,
+      });
+  combat.projectionFingerprint = '0'.repeat(64);
+  combat.deploymentFingerprint = compileSourceDeployment(deployment).fingerprint;
+  combat.models = compileSourceDeployment(deployment).compiled.models.map((m) => m.source);
+  combat.assets = [
+    ...deployment.assets.filter(
+      (a) => combat.models.includes(a.source) || a.cls === 'EnemyBonusModel',
+    ),
+    ...combat.assets.filter((a) => a.cls === 'EnemyActivationModel'),
+  ];
+  pack.manifest.combat = compileCombatClosure(combat);
   const cs = certificates(pack);
   for (const row of pack.manifest.followup.instances) {
     const d = pack.definitions.find((d) => d.source === row.definition),
