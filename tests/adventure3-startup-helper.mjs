@@ -189,9 +189,13 @@ async function defeatBattleHero(r) {
   const destination = s.scenario.spaceBindings.find((b) => b.sourceId === group.spaceId).id;
   await ok(cycleCommand(r, 'START_TURN', { heroId: hero.heroId }, actor));
   await ok(cycleCommand(r, 'START_TRAVEL', { heroId: hero.heroId }, actor));
-  for (const to of [destination, from]) {
+  // A legal first Last Stand can succeed. Spend the second ordinary travel action
+  // when needed, retaining its higher difficulty instead of assuming early defeat.
+  for (const to of [destination, from, destination, from]) {
     s = await readSession(r.host);
     if (s.physical.lastStand.heroes.find((h) => h.heroId === hero.heroId).defeated) break;
+    if (!s.journey.travel.remaining)
+      await ok(cycleCommand(r, 'START_TRAVEL', { heroId: hero.heroId }, actor));
     await ok(
       cycleCommand(
         r,
