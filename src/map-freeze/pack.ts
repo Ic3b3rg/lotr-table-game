@@ -173,7 +173,11 @@ export function loadGeneratorPack(path: string) {
 }
 export function deriveContext(
   pack: GeneratorPack,
-  state: { content: Catalog | null; preparation: Preparation | null },
+  state: {
+    content: Catalog | null;
+    preparation: Preparation | null;
+    groupItemCatalogIds?: string[];
+  },
 ): GenerationContext {
   const c = state.content,
     p = state.preparation;
@@ -209,7 +213,11 @@ export function deriveContext(
     )
       throw new Error('Quantità o upgrade del catalogo incompatibili.');
   }
-  const groupItems = pack.campaign.groupItemCatalogIds.map(mappedItem);
+  const groupItems = (
+    pack.identity.adventureId === 3 && state.groupItemCatalogIds
+      ? state.groupItemCatalogIds
+      : pack.campaign.groupItemCatalogIds
+  ).map(mappedItem);
   return GenerationContextSchema.parse({
     policy: pack.identity.adventureId === 3 ? 'camp-A3-v1' : 'new-base-A1-v1',
     ...pack.identity,

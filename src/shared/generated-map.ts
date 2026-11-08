@@ -392,12 +392,20 @@ export const MapGenerationSchema = z.discriminatedUnion('status', [
       'worker-failed',
     ]),
   }),
-  z.strictObject({
-    status: z.literal('frozen'),
-    id: z.uuid(),
-    projection: ProjectionSchema,
-    requests: z.array(requestKey).min(1).max(65),
-  }),
+  z
+    .strictObject({
+      status: z.literal('frozen'),
+      id: z.uuid(),
+      projection: ProjectionSchema,
+      requests: z.array(requestKey).max(65),
+    })
+    .superRefine((g, ctx) => {
+      if (g.projection.algorithm === 'frozen-A1-v1' ? !g.requests.length : !!g.requests.length)
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Ricevute della realizzazione fuori dal proprio formato.',
+        });
+    }),
 ]);
 export type MapGeneration = z.infer<typeof MapGenerationSchema>;
 export const GenerationOfferSchema = z.strictObject({

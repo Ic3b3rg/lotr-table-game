@@ -223,7 +223,7 @@ export function battleCombatProblems(
     !state.physical?.fronts ||
     !state.physical.lastStand ||
     state.physical.version !== 3 ||
-    state.physical.cycle?.version !== 3 ||
+    (state.physical.cycle?.version !== 3 && state.physical.cycle?.version !== 4) ||
     !sc.pack.manifest.failure
   )
     return ['battle-mandatory-physical-terminal'];

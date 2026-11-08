@@ -10,7 +10,11 @@ export function validateCampPreparationCapability(pack: ScenarioPack) {
     items = pack.manifest.campItems;
   const unique = (values: unknown[]) => new Set(values).size === values.length;
   invariant(
-    pack.manifest.scope === 'original-encounter-v1' &&
+    (pack.manifest.scope === 'original-encounter-v1' ||
+      (pack.manifest.scope === 'battle-combat-v1' &&
+        pack.manifest.battleStartup?.continuation !== undefined &&
+        digest(pack.manifest.campDeparture) ===
+          digest(pack.manifest.battleStartup.continuation))) &&
       skills &&
       items &&
       cap.skillsFingerprint === digest(skills) &&

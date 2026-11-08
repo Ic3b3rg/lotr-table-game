@@ -24,6 +24,7 @@ import {
   validatePhysicalProgram,
 } from '../physical-resolution/runtime';
 import { digest } from '../map-freeze/hash';
+import { cycleUUID } from '../physical-resolution/cycle-request';
 import { invariant } from '../map-freeze/validate';
 import { ApiError } from '../server/errors';
 import { validateScenarioTitle } from '../physical-resolution/scenario-title';
@@ -112,6 +113,11 @@ export function initializeScenarioPhysical(
   state: State,
   startSpaceId: string,
   source?: ReturnType<typeof loadPhysicalSource>,
+  continuation?: {
+    entropy: string;
+    campaignSkills: import('../shared/catalog').CampaignSkillDefinition[];
+    episode: NonNullable<State['physical']>['episode'];
+  },
 ) {
   if (!needsPhysical(state.scenario!.pack)) {
     invariant(!state.physical, 'Consumer fisico senza fonte.');
@@ -139,13 +145,20 @@ export function initializeScenarioPhysical(
       playerId: h.playerId,
       spaceId: startSpaceId,
     })),
-    undefined,
+    continuation?.entropy,
     source.rawSha256,
     ['synthetic-physical-p1', 'original-encounter-v1'].includes(sc.pack.manifest.scope)
-      ? { artifact: FrontArtifactSchema.parse(source.fronts), catalog: state.content! }
+      ? {
+          artifact: FrontArtifactSchema.parse(source.fronts),
+          catalog: state.content!,
+          ...(continuation?.campaignSkills.length
+            ? { campaignSkills: continuation.campaignSkills }
+            : {}),
+        }
       : undefined,
     source.lastStand,
-    sc.pack.manifest.boons ? source.boons : undefined,
+    sc.pack.manifest.boons || continuation ? source.boons : undefined,
+    continuation?.episode,
   );
 }
 export function beginPhysicalAction(
@@ -208,6 +221,7 @@ export function beginPhysicalAction(
           ...boonEnemyPositions(state),
         }
       : undefined,
+    sc.journeyStartup ? cycleUUID({ scenario: sc.id, effect: effect.id }) : undefined,
   );
   syncPhysicalResources(state);
   sc.tasks.push({

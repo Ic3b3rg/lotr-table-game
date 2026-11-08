@@ -234,6 +234,12 @@ export function parseAssemblyInput(value: unknown) {
   };
   const a3 = selection.algorithm === 'source-selection-A3-v1';
   if (
+    !a3 &&
+    p.execution.clock.policy === 'replay-clock-v1' &&
+    p.execution.clock.observations.some((o) => o.depth > 4)
+  )
+    fail('Clock di una fonte con un diverso numero di sezioni.');
+  if (
     g.sections.length !== (a3 ? 7 : 4) ||
     (p.algorithm === 'source-map-assembly-A3-v1') !== a3 ||
     (g.algorithm === 'source-map-geometry-pack-A3-v1') !== a3 ||

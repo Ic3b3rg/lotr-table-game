@@ -57,7 +57,7 @@ export const CyclePendingSchema = z.strictObject({
 });
 export const CycleStateSchema = z.strictObject({
   interactionLookRules: InteractionRulesSchema.optional(),
-  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   seed: z.strictObject({
     departure: EpisodeBoundarySchema.optional(),
     revision: z.int().nonnegative(),
@@ -81,6 +81,7 @@ export const CycleStateSchema = z.strictObject({
         lastStandRules: z.literal('source-last-stand-v1').optional(),
         explorationEntropy: hash.optional(),
         shadowEntropy: hash.optional(),
+        generation: z.uuid().optional(),
       }),
     )
     .min(0)

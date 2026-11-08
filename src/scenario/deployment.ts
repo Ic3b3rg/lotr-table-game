@@ -84,7 +84,7 @@ export function materializeDeployment(
     excludeGameEnemyPoints: a.excludeGameEnemyPoints,
     filter: a.filter,
     sections: a.sections,
-    reserved: [],
+    reserved: sc.pack.manifest.journeyStartup?.reserved ?? [],
     inPlay: livingEnemyGroups(state),
     spaces,
   });

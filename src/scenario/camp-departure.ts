@@ -6,7 +6,9 @@ import {
   type CampDepartureCapability,
   type CampDepartureOffer,
   type CampDepartureInput,
+  type DepartureCapability,
 } from '../shared/camp-departure';
+import { validateJourneyDepartureSource } from './journey-startup-source';
 import { campDeckCapability, materializeCampDecks, verifyCampDeckArtifact } from '../camp-decks';
 import { verifyBattleMapArtifact } from '../battle-map';
 import { compileSourceDeployment } from '../combat/deployment-compiler';
@@ -17,7 +19,7 @@ import { boundPhysicalInput } from '../physical-content/validation';
 import { definitionId } from '../shared/preparation';
 import { physicalTitleSkills } from '../physical-resolution/title-skills';
 import { ApiError } from '../server/errors';
-import { archiveDomain, activateEpisode } from '../server/episode-state';
+import { archiveDomain, activateEpisode, validateEpisodeState } from '../server/episode-state';
 import { validateBattleCombatSource } from './battle-combat';
 import { validateBattleRoundsSource, battleRoundsPack } from './battle-rounds';
 
@@ -30,7 +32,21 @@ export function validateCampDepartureSource(raw: unknown) {
   return structuredClone(sourceCache.result);
 }
 function compileDepartureSource(raw: unknown) {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    'version' in raw &&
+    raw.version === 'source-camp-departure-A3-v1'
+  )
+    return validateJourneyDepartureSource(raw);
   const s = CampDepartureCapabilitySchema.parse(raw);
+  if (s.continuation !== undefined) {
+    const next = validateJourneyDepartureSource(s.continuation).s;
+    invariant(
+      s.battleRounds && s.combat && next.catalogHash === s.catalogHash,
+      'Continuazione senza origine A2 completa e prospettica.',
+    );
+  }
   const board = verifyBattleMapArtifact(s.board, { artifactFingerprint: s.boardFingerprint });
   const layout = board.compiled.layouts.find((l) => l.id === board.compiled.selectedAlternative)!;
   invariant(
@@ -188,7 +204,7 @@ function compileDepartureSource(raw: unknown) {
   return { s, board, layout, deployment, fronts: FrontArtifactSchema.parse(s.fronts) };
 }
 
-export function projectCampDeckSource(state: State, cap: CampDepartureCapability): CampDeckSource {
+export function projectCampDeckSource(state: State, cap: DepartureCapability): CampDeckSource {
   const sc = state.scenario!,
     c = sc.conclusion!,
     campaign = c.campaign!,
@@ -283,9 +299,15 @@ function preflight(state: State, raw: unknown) {
     'Confermate le scelte dalla preparazione del campo.',
   );
   invariant(
-    !state.episodes && state.physical?.cycle?.version === 2,
-    'Partenza fuori dal primo campo verificato.',
+    raw &&
+      typeof raw === 'object' &&
+      'version' in raw &&
+      raw.version === 'source-camp-departure-A3-v1'
+      ? state.episodes?.length === 1 && state.physical?.cycle?.version === 4
+      : !state.episodes && state.physical?.cycle?.version === 2,
+    'Partenza fuori dalla catena prospettica verificata.',
   );
+  if (state.episodes) validateEpisodeState(state);
   const source = validateCampDepartureSource(raw),
     { s, fronts } = source,
     sc = state.scenario!;
@@ -313,13 +335,22 @@ function preflight(state: State, raw: unknown) {
     ),
     'Ogni proprietario deve confermare il riepilogo corrente.',
   );
-  if (c.outcome === 'failure')
+  if (c.outcome === 'failure' && s.version === 'source-camp-departure-v1')
     invariant(
       new Set(state.preparation!.heroes.map((h) => h.playerId)).size ===
         state.preparation!.heroes.length,
       'Il messaggio EN dopo sconfitta richiede un proprietario per eroe; contesto multihero non attestato.',
     );
   validateFrontArtifact(state.physical!.raw, fronts, state.content!, s.campaignSkills);
+  if (s.version === 'source-camp-departure-A3-v1') {
+    const checked = validateJourneyDepartureSource(s),
+      cap = checked.startup.pack.manifest.journeyStartup!;
+    invariant(
+      digest(s.heroIds) === digest(state.preparation!.heroes.map((h) => h.heroId)) &&
+        typeof sc.battle?.campaign.globals[cap.previousOutcomeBinding] === 'boolean',
+      'Compagnia o esito precedente senza binding fonte prima della partenza.',
+    );
+  }
   invariant(fronts.fingerprint === s.frontsFingerprint, 'Fronti partenza non corrispondenti.');
   const purchases = sc.pack.manifest
       .campSkills!.roles.flatMap((r) => r.upgrades)
