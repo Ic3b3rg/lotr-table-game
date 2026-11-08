@@ -1,6 +1,19 @@
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 const rows = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+function program(value: unknown) {
+  const p = object(value);
+  return (
+    p.profile === 'source-fronts-v1' &&
+    rows(p.children).some((value) => {
+      const child = object(value);
+      return (
+        ['combat-addition', 'enemy-attack'].includes(String(child.kind)) &&
+        object(object(child.addition).effect).op === 'discard-boons'
+      );
+    })
+  );
+}
 
 function scenario(value: unknown) {
   const s = object(value),
@@ -37,7 +50,8 @@ function scenario(value: unknown) {
               'battleReserve',
             ].includes(String(object(a).op)) ||
             object(a).battleSuffering !== undefined ||
-            object(a).battlePlacement !== undefined,
+            object(a).battlePlacement !== undefined ||
+            (object(a).op === 'physical' && program(object(a).program)),
         ),
       ),
     ) ||
@@ -52,8 +66,12 @@ function scenario(value: unknown) {
 /** Actual save locations only: ordinary dictionary names never become capabilities. */
 export function hasBattleRoundForms(value: unknown): boolean {
   const s = object(value),
-    seed = object(object(object(s.physical).cycle).seed);
+    physical = object(s.physical),
+    seed = object(object(physical.cycle).seed);
   return (
-    scenario(s.scenario) || scenario(seed.scenario) || rows(s.episodes).some(hasBattleRoundForms)
+    scenario(s.scenario) ||
+    scenario(seed.scenario) ||
+    rows(physical.runs).some((run) => program(object(run).program)) ||
+    rows(s.episodes).some(hasBattleRoundForms)
   );
 }
